@@ -41,6 +41,14 @@ export const AuthProvider = ({ children }) => {
                 },
             },
         })
+
+        // Set display_name in auth profile
+        if (!error && data.user) {
+            await supabase.auth.updateUser({
+                data: { display_name: fullName }
+            })
+        }
+
         return { data, error }
     }
 

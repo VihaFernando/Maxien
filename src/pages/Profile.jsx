@@ -10,7 +10,7 @@ export default function Profile() {
     const [error, setError] = useState("")
 
     useEffect(() => {
-        if (user) setFullName(user.user_metadata?.full_name || "")
+        if (user) setFullName(user.user_metadata?.display_name || user.user_metadata?.full_name || "")
     }, [user])
 
     const handleSave = async (e) => {
@@ -20,7 +20,7 @@ export default function Profile() {
         setError("")
         try {
             const { error: updateError } = await supabase.auth.updateUser({
-                data: { full_name: fullName },
+                data: { full_name: fullName, display_name: fullName },
             })
             if (updateError) setError(updateError.message)
             else {
@@ -34,13 +34,13 @@ export default function Profile() {
         }
     }
 
-    const initials = user?.user_metadata?.full_name
-        ? user.user_metadata.full_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    const initials = user?.user_metadata?.display_name
+        ? user.user_metadata.display_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
         : user?.email?.[0]?.toUpperCase() || "U"
 
     return (
         <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-             <header className="space-y-2">
+            <header className="space-y-2">
                 <h2 className="text-[36px] font-bold text-[#1d1d1f] tracking-tight leading-tight">Settings</h2>
                 <p className="text-[#86868b] text-[19px] font-medium">Manage your personal information and preferences.</p>
             </header>
@@ -70,7 +70,7 @@ export default function Profile() {
                 <form onSubmit={handleSave} className="max-w-xl space-y-8">
                     {error && (
                         <div className="bg-red-50 text-red-600 text-[14px] font-medium px-5 py-4 rounded-[20px] border border-red-100 flex items-center gap-3">
-                             <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                             {error}
                         </div>
                     )}

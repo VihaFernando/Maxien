@@ -2,7 +2,7 @@
 
 export default function DashboardHome() {
     const { user } = useAuth()
-    const name = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there"
+    const name = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there"
     const firstName = name.split(" ")[0]
 
     return (
@@ -21,7 +21,7 @@ export default function DashboardHome() {
                     { label: "Member", value: "Premium Tier", color: "#6366f1", icon: <path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /> }
                 ].map((stat, i) => (
                     <div key={i} className="bg-white rounded-[32px] p-8 shadow-sm border border-[#d2d2d7]/50 hover:shadow-xl hover:shadow-black/[0.02] transition-all duration-500 group">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-black/[0.05] transition-transform duration-500 group-hover:scale-110`} style={{backgroundColor: `${stat.color}15`}}>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-black/[0.05] transition-transform duration-500 group-hover:scale-110`} style={{ backgroundColor: `${stat.color}15` }}>
                             <svg className="w-6 h-6" fill="none" stroke={stat.color} viewBox="0 0 24 24" strokeWidth={2}>
                                 {stat.icon}
                             </svg>
@@ -37,7 +37,7 @@ export default function DashboardHome() {
                     <h3 className="text-[22px] font-bold text-[#1d1d1f]">Fast Actions</h3>
                     <div className="px-4 py-1.5 bg-[#f5f5f7] rounded-full text-[12px] font-bold text-[#86868b]">UPDATED JUST NOW</div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {[
                         { title: "Complete your profile", desc: "Update your bio and avatar", action: "Go to Profile" },
