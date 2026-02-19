@@ -46,8 +46,8 @@ export default function Dashboard() {
                         <Link
                             to="/dashboard"
                             className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-300 ${isActive("/dashboard")
-                                    ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
-                                    : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                                 }`}
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,8 +58,8 @@ export default function Dashboard() {
                         <Link
                             to="/dashboard/profile"
                             className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-300 ${isActive("/dashboard/profile")
-                                    ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
-                                    : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                                 }`}
                         >
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -73,9 +73,17 @@ export default function Dashboard() {
                 <div className="mt-auto p-8 pt-0">
                     <div className="bg-[#f5f5f7] rounded-[24px] p-5">
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#1d1d1f] font-bold text-sm shadow-sm ring-1 ring-black/5">
-                                {initials}
-                            </div>
+                            {user?.user_metadata?.picture ? (
+                                <img
+                                    src={user.user_metadata.picture}
+                                    alt="Avatar"
+                                    className="w-10 h-10 rounded-full object-cover shadow-sm ring-1 ring-black/5"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-[#1d1d1f] font-bold text-sm shadow-sm ring-1 ring-black/5">
+                                    {initials}
+                                </div>
+                            )}
                             <div className="min-w-0">
                                 <p className="text-[13px] font-bold text-[#1d1d1f] truncate">
                                     {user?.user_metadata?.full_name || "User"}

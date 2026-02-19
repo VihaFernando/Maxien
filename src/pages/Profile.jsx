@@ -48,9 +48,17 @@ export default function Profile() {
             <div className="bg-white rounded-[40px] p-10 shadow-sm border border-[#d2d2d7]/50 space-y-12">
                 <section className="flex flex-col md:flex-row gap-10 items-start md:items-center">
                     <div className="relative">
-                        <div className="w-32 h-32 rounded-[40px] bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center text-[#1d1d1f] text-4xl font-black shadow-2xl shadow-[#C6FF00]/40">
-                            {initials}
-                        </div>
+                        {user?.user_metadata?.picture ? (
+                            <img
+                                src={user.user_metadata.picture}
+                                alt="Profile"
+                                className="w-32 h-32 rounded-[40px] object-cover shadow-2xl"
+                            />
+                        ) : (
+                            <div className="w-32 h-32 rounded-[40px] bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center text-[#1d1d1f] text-4xl font-black shadow-2xl shadow-[#C6FF00]/40">
+                                {initials}
+                            </div>
+                        )}
                         <button className="absolute -bottom-2 -right-2 bg-white rounded-2xl p-3 shadow-xl border border-[#d2d2d7] hover:scale-110 transition-transform">
                             <svg className="w-5 h-5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                         </button>
