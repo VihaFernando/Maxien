@@ -1,197 +1,120 @@
-# Maxien - Authentication & Profile Management App
+Maxien — Personal Life OS
 
-A fully functional React Vite application with Supabase authentication featuring Google OAuth and email/password login, signup, and profile management.
+Maxien is a personal productivity web application designed to centralize and manage all aspects of daily life — including work, university, personal tasks, clients, knowledge, and documentation — in one unified system.
 
-## Features
+It is built as a modular platform that grows over time, allowing features to be added gradually while maintaining a simple and clean workflow.
 
-✅ **Authentication**
-- Email and password signup/login
-- Google OAuth authentication
-- Secure session management with Supabase
-- Protected routes
+✨ Overview
 
-✅ **User Management**
-- Profile page with editable full name
-- User information display
-- Account creation date tracking
-- Last sign-in timestamp
+Maxien acts as a personal control center where you can organize tasks, manage projects, store documents, track reminders, and integrate external tools like Google services — all in one place.
 
-✅ **Dashboard**
-- Personalized welcome message
-- Account overview cards
-- Quick tips and guidance
-- Sidebar navigation
+The goal is to create a flexible system tailored to personal workflows instead of forcing rigid productivity structures.
 
-✅ **Design**
-- Modern dark theme
-- Responsive layout
-- Theme color: #2596be
-- Tailwind CSS styling
-- Gradient backgrounds
+🚀 Features (Planned & In Progress)
 
-## Prerequisites
+🔐 Authentication & User Profile
 
-- Node.js 16+ and npm
-- Supabase account and project
-- Google OAuth credentials (for Google login)
+📊 Dashboard Overview
 
-## Installation
+📝 Notes & Documentation
 
-### 1. Clone or setup the project
+✅ Task & Reminder Management
 
-```bash
-npm install
-```
+📅 Calendar Integration
 
-### 2. Configure Supabase
+💼 Project & Client Management
 
-Create a `.env.local` file in the project root:
+📁 File & Attachment System
 
-```env
-VITE_SUPABASE_URL=https://tnvpoxlnneirapttutod.supabase.co
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key-here
-```
+🔔 Notifications
 
-**How to get your Supabase credentials:**
-1. Go to [Supabase](https://supabase.com)
-2. Open your project
-3. Navigate to Settings → API
-4. Copy the Anon Key and paste it in `.env.local`
+🔗 Google Integrations (Drive, Docs, Sheets, Gmail)
 
-### 3. Google OAuth Setup (Optional)
+🧩 Modular Feature Expansion
 
-To enable Google login:
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable Google+ API
-4. Create OAuth 2.0 credentials (Web application)
-5. Add `http://localhost:5173` to Authorized JavaScript origins
-6. In Supabase, go to Authentication → Providers
-7. Enable Google provider
-8. Add your Google OAuth credentials
+📚 Knowledge Base
 
-## Development
+🎯 Goals & Life Tracking
 
-Start the development server:
+🏗️ Tech Stack
 
-```bash
-npm run dev
-```
+Frontend
 
-The app will be available at `http://localhost:5173/`
+React (Vite)
 
-## Building for Production
+Tailwind CSS
 
-```bash
-npm run build
-```
+Zustand / React Query
 
-Preview the production build:
+Backend / Services
 
-```bash
-npm run preview
-```
+Supabase (Database & Auth)
 
-## Project Structure
+Supabase Edge Functions
 
-```
-src/
-├── pages/
-│   ├── Login.jsx          # Email/password login
-│   ├── Signup.jsx         # Email/password signup
-│   ├── Dashboard.jsx      # Main dashboard layout
-│   ├── DashboardHome.jsx  # Dashboard overview
-│   └── Profile.jsx        # Profile management
-├── context/
-│   └── AuthContext.jsx    # Authentication context
-├── lib/
-│   └── supabase.js        # Supabase client setup
-├── App.jsx                # Main app with routing
-├── main.jsx               # React entry point
-└── index.css              # Tailwind CSS
-```
+Storage
 
-## Usage
+Google Drive API
 
-### 1. Sign Up
-- Enter full name, email, and password
-- Or sign up with Google
-- Verify email if email verification is enabled
+Integrations
 
-### 2. Sign In
-- Use email and password
-- Or sign in with Google
-- Stay logged in across sessions
+Google APIs
 
-### 3. Profile Management
-- Navigate to "Profile Settings" from dashboard
-- Edit your full name
-- View account information
-- See account creation and last sign-in dates
+🧠 Architecture
 
-## Environment Variables
+Maxien follows a modular architecture where features are built as independent modules connected through a central database.
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_SUPABASE_URL` | Your Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Your Supabase anon key |
+The application uses Supabase as a backend-as-a-service, reducing infrastructure overhead while allowing secure and scalable data handling.
 
-## Theme Color
+🎯 Project Goals
 
-Primary color: `#2596be` (Light Blue)
+Create a single source of truth for daily life management
 
-Customize by editing `tailwind.config.js`:
-```js
-theme: {
-  extend: {
-    colors: {
-      primary: '#your-color-here',
-    }
-  },
-}
-```
+Reduce context switching between tools
 
-## Technologies Used
+Build a flexible productivity system
 
-- **React 19** - UI framework
-- **Vite** - Build tool
-- **React Router** - Client-side routing
-- **Supabase** - Backend and authentication
-- **Tailwind CSS** - Styling
-- **PostCSS** - CSS processing
+Maintain a lightweight and fast user experience
 
-## Security
+Keep the project fully free and self-maintained
 
-- Supabase handles password hashing and storage
-- Route protection on dashboard pages
-- Auth context prevents unauthorized access
-- Environment variables keep sensitive data secure
+Continuously evolve based on personal workflow needs
 
-## Troubleshooting
+📂 Project Structure
+maxien/
+│
+├── src/
+│   ├── components/
+│   ├── modules/
+│   ├── pages/
+│   ├── hooks/
+│   ├── services/
+│   ├── utils/
+│   └── styles/
+│
+├── public/
+├── supabase/
+└── README.md
 
-### "Cannot connect to Supabase"
-- Check if `.env.local` file exists
-- Verify `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are correct
-- Ensure Supabase project is active
+🔒 Security
 
-### "Google login not working"
-- Confirm Google OAuth is enabled in Supabase
-- Check Google OAuth credentials in Google Cloud Console
-- Verify redirect URLs are correct
+Authentication and access control are handled through Supabase. Sensitive operations and integrations are managed through secure serverless functions.
 
-### "Profile changes not saving"
-- Check browser console for errors
-- Verify Supabase user authentication is successful
-- Ensure Supabase auth is properly configured
+🛠️ Development Approach
 
-## License
+Maxien is built incrementally, with features added one at a time to ensure stability and maintainability.
 
-This project is open source and available under the MIT License.
+The focus is on usability and real-world practicality rather than feature overload.
 
-## Support
+🌱 Future Vision
 
-For issues or questions, please refer to:
-- [Supabase Documentation](https://supabase.com/docs)
-- [React Documentation](https://react.dev)
-- [Vite Documentation](https://vitejs.dev)
+Maxien aims to evolve into a fully integrated personal operating system that intelligently connects tasks, knowledge, projects, and life planning into a seamless workflow.
 
+👤 Author
+
+Vihanga Fernando
+Software Engineer
+
+📜 License
+
+This project is for personal use and development.
