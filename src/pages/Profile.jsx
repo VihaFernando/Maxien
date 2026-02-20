@@ -48,11 +48,12 @@ export default function Profile() {
             <div className="bg-white rounded-[32px] sm:rounded-[36px] lg:rounded-[40px] p-6 sm:p-8 lg:p-10 shadow-sm border border-[#d2d2d7]/50 space-y-8 sm:space-y-10 lg:space-y-12">
                 <section className="flex flex-col sm:flex-row gap-6 sm:gap-8 lg:gap-10 items-start sm:items-center">
                     <div className="relative">
-                        {user?.user_metadata?.picture ? (
+                        {user?.user_metadata?.avatar_url || user?.user_metadata?.picture ? (
                             <img
-                                src={user.user_metadata.picture}
+                                src={user.user_metadata?.avatar_url || user.user_metadata?.picture}
                                 alt="Profile"
                                 className="w-24 sm:w-28 lg:w-32 h-24 sm:h-28 lg:h-32 rounded-[24px] sm:rounded-[32px] lg:rounded-[40px] object-cover shadow-2xl"
+                                onError={(e) => { e.target.style.display = 'none'; e.target.nextElementSibling.style.display = 'flex'; }}
                             />
                         ) : (
                             <div className="w-24 sm:w-28 lg:w-32 h-24 sm:h-28 lg:h-32 rounded-[24px] sm:rounded-[32px] lg:rounded-[40px] bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center text-[#1d1d1f] text-2xl sm:text-3xl lg:text-4xl font-black shadow-2xl shadow-[#C6FF00]/40">

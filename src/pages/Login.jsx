@@ -56,7 +56,7 @@ export default function Login() {
                 </div>
 
                 {/* Main Card */}
-                <div className="bg-white/70 backdrop-blur-2xl rounded-[2rem] shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-white/60 p-6 sm:p-10">
+                <div className="bg-white/70 backdrop-blur-2xl rounded-4xl shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-white/60 p-6 sm:p-10">
 
                     {error && (
                         <div className="bg-red-50 text-red-600 text-[13px] font-medium px-4 py-3 rounded-xl mb-6 flex items-center gap-2 border border-red-100/50">
