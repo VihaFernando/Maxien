@@ -1,12 +1,14 @@
-﻿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
+import { FaHome, FaUser, FaCheckSquare, FaCog, FaChevronDown, FaCalendarAlt } from "react-icons/fa"
 
 export default function Dashboard() {
     const { user, loading, signOut } = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
     const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [systemOpen, setSystemOpen] = useState(false)
 
     useEffect(() => {
         if (!loading && !user) navigate("/login")
@@ -56,9 +58,7 @@ export default function Dashboard() {
                                 : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                                 }`}
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
+                            <FaHome className="w-5 h-5" />
                             Overview
                         </Link>
                         <Link
@@ -68,11 +68,57 @@ export default function Dashboard() {
                                 : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                                 }`}
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
+                            <FaUser className="w-5 h-5" />
                             Profile
                         </Link>
+
+                        <Link
+                            to="/dashboard/tasks"
+                            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-300 ${isActive("/dashboard/tasks")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaCheckSquare className="w-5 h-5" />
+                            Tasks
+                        </Link>
+
+                        <Link
+                            to="/dashboard/calendar"
+                            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-300 ${isActive("/dashboard/calendar")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaCalendarAlt className="w-5 h-5" />
+                            Calendar
+                        </Link>
+
+                        <div>
+                            <button
+                                onClick={() => setSystemOpen(!systemOpen)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-300 ${systemOpen
+                                    ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                    : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                    }`}
+                            >
+                                <FaCog className="w-5 h-5" />
+                                <span className="flex-1 text-left">Components</span>
+                                <FaChevronDown className={`w-4 h-4 transition-transform duration-300 ${systemOpen ? "rotate-180" : ""}`} />
+                            </button>
+                            {systemOpen && (
+                                <Link
+                                    to="/dashboard/task-types"
+                                    className={`flex items-center gap-3 px-4 py-3 ml-4 mt-1 rounded-2xl text-[14px] font-semibold transition-all duration-300 ${isActive("/dashboard/task-types")
+                                        ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    <FaCheckSquare className="w-4 h-4" />
+                                    Task Types
+                                </Link>
+                            )}
+                        </div>
                     </nav>
                 </div>
 
@@ -144,9 +190,7 @@ export default function Dashboard() {
                                 : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                                 }`}
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
+                            <FaHome className="w-5 h-5" />
                             Overview
                         </Link>
                         <Link
@@ -156,11 +200,57 @@ export default function Dashboard() {
                                 : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                                 }`}
                         >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
+                            <FaUser className="w-5 h-5" />
                             Profile
                         </Link>
+
+                        <Link
+                            to="/dashboard/tasks"
+                            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-300 ${isActive("/dashboard/tasks")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaCheckSquare className="w-5 h-5" />
+                            Tasks
+                        </Link>
+
+                        <Link
+                            to="/dashboard/calendar"
+                            className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-300 ${isActive("/dashboard/calendar")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaCalendarAlt className="w-5 h-5" />
+                            Calendar
+                        </Link>
+
+                        <div>
+                            <button
+                                onClick={() => setSystemOpen(!systemOpen)}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[15px] font-semibold transition-all duration-300 ${systemOpen
+                                    ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                    : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                    }`}
+                            >
+                                <FaCog className="w-5 h-5" />
+                                <span className="flex-1 text-left">System</span>
+                                <FaChevronDown className={`w-4 h-4 transition-transform duration-300 ${systemOpen ? "rotate-180" : ""}`} />
+                            </button>
+                            {systemOpen && (
+                                <Link
+                                    to="/dashboard/task-types"
+                                    className={`flex items-center gap-3 px-4 py-3 ml-4 mt-1 rounded-2xl text-[14px] font-semibold transition-all duration-300 ${isActive("/dashboard/task-types")
+                                        ? "bg-[#C6FF00] text-[#1d1d1f] shadow-lg shadow-[#C6FF00]/25"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    <FaCheckSquare className="w-4 h-4" />
+                                    Task Types
+                                </Link>
+                            )}
+                        </div>
                     </nav>
 
                     <div className="mt-auto pt-8 border-t border-[#d2d2d7]">
@@ -222,7 +312,7 @@ export default function Dashboard() {
                     </button>
                 </header>
 
-                <div className="max-w-5xl w-full mx-auto px-6 py-10 md:px-12 md:py-16">
+                <div className="w-full flex-1 px-4 sm:px-10 lg:px-14 py-8 sm:py-10 md:py-12">
                     <Outlet />
                 </div>
             </main>

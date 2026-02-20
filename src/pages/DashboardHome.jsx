@@ -1,4 +1,5 @@
 ﻿import { useAuth } from "../context/AuthContext"
+import { Link } from "react-router-dom"
 
 export default function DashboardHome() {
     const { user } = useAuth()
@@ -40,17 +41,25 @@ export default function DashboardHome() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-4">
                     {[
-                        { title: "Complete your profile", desc: "Update your bio and avatar", action: "Go to Profile" },
-                        { title: "Security Checkup", desc: "Review your recent activity", action: "Review" }
-                    ].map((item, i) => (
-                        <div key={i} className="p-5 sm:p-6 rounded-[24px] sm:rounded-[28px] bg-[#f5f5f7] hover:bg-[#C6FF00]/10 border border-transparent hover:border-[#C6FF00]/20 transition-all duration-300 group cursor-pointer active:scale-95 sm:active:scale-100">
-                            <h4 className="text-[16px] sm:text-[17px] font-bold text-[#1d1d1f] mb-1">{item.title}</h4>
-                            <p className="text-[#86868b] text-[13px] sm:text-[14px] mb-4">{item.desc}</p>
-                            <span className="text-[12px] sm:text-[13px] font-bold text-[#1d1d1f] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                                {item.action} <svg className="w-4 h-4 text-[#C6FF00]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path d="M9 5l7 7-7 7" /></svg>
-                            </span>
-                        </div>
-                    ))}
+                        { title: "Complete your profile", desc: "Update your bio and avatar", action: "Go to Profile", link: "/dashboard/profile" },
+                        { title: "Security Checkup", desc: "Review your recent activity", action: "Review", link: "/dashboard/profile" },
+                        { title: "Add a task", desc: "Create a new to‑do item", action: "New task", link: "/dashboard/tasks" }
+                    ].map((item, i) => {
+                        const Wrapper = item.link ? Link : "div"
+                        return (
+                            <Wrapper
+                                key={i}
+                                to={item.link}
+                                className="p-5 sm:p-6 rounded-[24px] sm:rounded-[28px] bg-[#f5f5f7] hover:bg-[#C6FF00]/10 border border-transparent hover:border-[#C6FF00]/20 transition-all duration-300 group cursor-pointer active:scale-95 sm:active:scale-100"
+                            >
+                                <h4 className="text-[16px] sm:text-[17px] font-bold text-[#1d1d1f] mb-1">{item.title}</h4>
+                                <p className="text-[#86868b] text-[13px] sm:text-[14px] mb-4">{item.desc}</p>
+                                <span className="text-[12px] sm:text-[13px] font-bold text-[#1d1d1f] flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                                    {item.action} <svg className="w-4 h-4 text-[#C6FF00]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}><path d="M9 5l7 7-7 7" /></svg>
+                                </span>
+                            </Wrapper>
+                        )
+                    })}
                 </div>
             </section>
         </div>
