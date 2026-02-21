@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState, useMemo } from "react"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { Link } from "react-router-dom"
-import { FaSearch, FaEllipsisH, FaChevronDown, FaTimes, FaClock, FaCalendar, FaFlag } from "react-icons/fa"
+import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder } from "react-icons/fa"
+import { formatTimestamp } from "../lib/dateUtils"
 
 export default function Tasks() {
     const { user } = useAuth()
@@ -17,11 +18,13 @@ export default function Tasks() {
 
     const [tasks, setTasks] = useState([])
     const [types, setTypes] = useState([])
+    const [projects, setProjects] = useState([])
     const [loading, setLoading] = useState(false)
     const [form, setForm] = useState({
         title: "",
         description: "",
         type_id: "",
+        project_id: "",
         due_date: "",
         due_time: getCurrentTime(),
         priority: "Medium",
@@ -114,9 +117,25 @@ export default function Tasks() {
     useEffect(() => {
         if (!user) return
         fetchTypes()
+        fetchProjects()
         fetchTasks()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user])
+
+    const fetchProjects = async () => {
+        try {
+            const { data, error } = await supabase
+                .from("projects")
+                .select("*")
+                .eq("user_id", user.id)
+                .eq("status", "Active")
+                .order("created_at", { ascending: false })
+            if (error) setProjects([])
+            else setProjects(data || [])
+        } catch {
+            setProjects([])
+        }
+    }
 
     const fetchTypes = async () => {
         try {
@@ -175,6 +194,7 @@ export default function Tasks() {
             title: form.title.trim(),
             description: (form.description || "").trim() || null,
             type_id: form.type_id,
+            project_id: form.project_id || null,
             status: form.status || "To Do",
             priority: form.priority || "Medium",
             due_at: due_at,
@@ -192,14 +212,14 @@ export default function Tasks() {
                 const { data, error } = await supabase.from("tasks").insert([payload]).select().single()
                 if (error) {
                     setTasks(prev => [{ ...payload, id: Date.now() }, ...prev])
-                    setMessage("Saved locally — server insert failed.")
+                    setMessage("Saved locally â€” server insert failed.")
                 } else {
                     setTasks(prev => [data, ...prev])
                     setMessage("Task created.")
                 }
             }
 
-            setForm({ title: "", description: "", type_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
+            setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
             setEditing(null)
             setShowTaskModal(false)
             setTimeout(() => setMessage(""), 2000)
@@ -240,6 +260,7 @@ export default function Tasks() {
             title: `${task.title} (copy)`,
             description: task.description,
             type_id: task.type_id,
+            project_id: task.project_id,
             status: "To Do",
             priority: task.priority,
             due_at: task.due_at,
@@ -277,504 +298,468 @@ export default function Tasks() {
             const matchesPriority = !filterPriority || task.priority === filterPriority
             return matchesSearch && matchesStatus && matchesType && matchesPriority
         })
-
         filtered.sort((a, b) => {
             if (sortBy === "due_at") {
-                const dateA = a.due_at ? new Date(a.due_at) : new Date(9999, 0, 0)
-                const dateB = b.due_at ? new Date(b.due_at) : new Date(9999, 0, 0)
-                return dateA - dateB
+                const da = a.due_at ? new Date(a.due_at) : new Date(9999, 0, 0)
+                const db = b.due_at ? new Date(b.due_at) : new Date(9999, 0, 0)
+                return da - db
             } else if (sortBy === "priority") {
-                const priorityOrder = { "Urgent": 0, "High": 1, "Medium": 2, "Low": 3 }
-                return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2)
-            } else {
-                return new Date(b.created_at) - new Date(a.created_at)
+                const o = { "Urgent": 0, "High": 1, "Medium": 2, "Low": 3 }
+                return (o[a.priority] || 2) - (o[b.priority] || 2)
             }
+            return new Date(b.created_at) - new Date(a.created_at)
         })
-
         return filtered
     }
 
-    const groupTasksBySection = () => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const sections = useMemo(() => {
         const filtered = filterAndSortTasks()
-        const sections = {
-            overdue: [],
-            today: [],
-            upcoming: [],
-            completed: [],
-            other: []
-        }
-
+        const s = { overdue: [], today: [], upcoming: [], other: [], completed: [] }
         filtered.forEach(task => {
-            if (task.status === "Done") {
-                sections.completed.push(task)
-            } else if (isOverdueTask(task)) {
-                sections.overdue.push(task)
-            } else if (isTodayTask(task.due_at)) {
-                sections.today.push(task)
-            } else if (isUpcomingTask(task.due_at)) {
-                sections.upcoming.push(task)
-            } else {
-                sections.other.push(task)
-            }
+            if (task.status === "Done" || task.status === "Cancelled") s.completed.push(task)
+            else if (isOverdueTask(task)) s.overdue.push(task)
+            else if (isTodayTask(task.due_at)) s.today.push(task)
+            else if (isUpcomingTask(task.due_at)) s.upcoming.push(task)
+            else s.other.push(task)
         })
+        return s
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [tasks, searchTerm, filterStatus, filterType, filterPriority, sortBy])
 
-        return sections
+    const taskStats = useMemo(() => ({
+        total: tasks.length,
+        todo: tasks.filter(t => t.status === "To Do").length,
+        inProgress: tasks.filter(t => t.status === "In Progress").length,
+        done: tasks.filter(t => t.status === "Done").length,
+        overdue: tasks.filter(t => isOverdueTask(t)).length,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [tasks])
+
+    const priorityBgs = { "Low": "#f5f5f7", "Medium": "#eff6ff", "High": "#fff7ed", "Urgent": "#fef2f2" }
+    const statusColors = {
+        "To Do": { bg: "#f5f5f7", text: "#86868b" },
+        "In Progress": { bg: "#eff6ff", text: "#3b82f6" },
+        "Done": { bg: "#f0fdf4", text: "#16a34a" },
+        "Cancelled": { bg: "#fef2f2", text: "#dc2626" }
+    }
+
+    const openCreate = () => {
+        setEditing(null)
+        setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
+        setShowTaskModal(true)
+    }
+
+    const openEdit = (task) => {
+        const { date, time } = extractDateAndTime(task.due_at)
+        setForm({ title: task.title || "", description: task.description || "", type_id: task.type_id || "", project_id: task.project_id || "", due_date: date, due_time: time, priority: task.priority || "Medium", status: task.status || "To Do" })
+        setEditing(task.id)
+        setSelectedTask(null)
+        setActionMenu(null)
+        setShowTaskModal(true)
+    }
+
+    const resetForm = () => {
+        setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
+        setEditing(null)
+        setShowTaskModal(false)
     }
 
     const TaskCard = ({ task }) => {
         const taskType = types.find(t => t.id === task.type_id)
         const overdue = isOverdueTask(task)
+        const isDone = task.status === "Done" || task.status === "Cancelled"
+        const project = projects.find(p => p.id === task.project_id)
 
         return (
-            <div
-                key={task.id}
-                className={`p-4 rounded-[16px] flex items-start justify-between gap-4 transition-all duration-300 ${task.status === "Done"
-                    ? "bg-[#f5f5f7] opacity-75"
-                    : overdue
-                        ? "bg-red-50 border border-red-200/50"
-                        : "bg-white border border-[#d2d2d7]/50"
-                    }`}
-            >
-                <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                        <button
-                            onClick={() => toggleComplete(task)}
-                            className={`w-6 h-6 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${task.status === "Done"
-                                ? "bg-[#22c55e] text-white"
-                                : "bg-white ring-2 ring-[#C6FF00] hover:ring-[#b8f000]"
-                                }`}
-                        >
-                            {task.status === "Done" && (
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <path strokeWidth="3" d="M5 13l4 4L19 7" />
-                                </svg>
-                            )}
-                        </button>
-                        <h4 className={`font-bold text-[15px] truncate ${task.status === "Done" ? "line-through text-[#86868b]" : "text-[#1d1d1f]"
-                            }`}>
-                            {task.title}
-                        </h4>
-                        {overdue && (
-                            <span className="text-[11px] font-bold text-red-600 bg-red-100 px-2 py-1 rounded-full flex-shrink-0">
-                                OVERDUE
-                            </span>
-                        )}
-                    </div>
-                    {task.description && (
-                        <p className="text-[13px] text-[#86868b] mb-2 truncate">{task.description}</p>
+            <div className={`group relative flex items-start gap-3 p-3.5 sm:p-4 rounded-[16px] sm:rounded-[18px] transition-all duration-200 ${isDone ? "bg-[#f9f9f9] opacity-70" :
+                overdue ? "bg-red-50 border border-red-200/60" :
+                    "bg-white border border-[#d2d2d7]/50 hover:border-[#d2d2d7] hover:shadow-sm"
+                }`}>
+                {/* Checkbox */}
+                <button
+                    onClick={() => toggleComplete(task)}
+                    className={`mt-0.5 w-5 h-5 sm:w-[22px] sm:h-[22px] rounded-full flex items-center justify-center flex-shrink-0 transition-all ${task.status === "Done" ? "bg-[#22c55e]" : "border-2 border-[#d2d2d7] hover:border-[#C6FF00] bg-white"
+                        }`}
+                >
+                    {task.status === "Done" && (
+                        <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                            <path d="M5 13l4 4L19 7" />
+                        </svg>
                     )}
-                    <div className="flex flex-wrap items-center gap-2">
-                        {taskType && (
-                            <span
-                                className="text-[12px] font-bold px-3 py-1.5 rounded-full text-white"
-                                style={{ backgroundColor: taskType.color || "#C6FF00", color: "#1d1d1f" }}
+                </button>
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                            <p className={`text-[13px] sm:text-[14px] font-semibold leading-snug ${isDone ? "line-through text-[#86868b]" : "text-[#1d1d1f]"}`}>
+                                {task.title}
+                            </p>
+                            {task.description && (
+                                <p className="text-[11px] sm:text-[12px] text-[#86868b] mt-0.5 line-clamp-1">{task.description}</p>
+                            )}
+                        </div>
+                        {/* Three-dot menu */}
+                        <div className="relative flex-shrink-0">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setActionMenu(actionMenu === task.id ? null : task.id) }}
+                                className="p-1.5 rounded-lg hover:bg-[#f5f5f7] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                             >
+                                <FaEllipsisH className="w-3.5 h-3.5 text-[#86868b]" />
+                            </button>
+                            {actionMenu === task.id && (
+                                <div className="absolute right-0 mt-1 bg-white rounded-[12px] border border-[#d2d2d7]/80 shadow-xl z-50 min-w-[150px] overflow-hidden" onClick={e => e.stopPropagation()}>
+                                    <button onClick={() => { setSelectedTask(task); setActionMenu(null) }} className="w-full text-left px-3.5 py-2.5 hover:bg-[#f5f5f7] text-[12px] font-medium text-[#1d1d1f]">View Details</button>
+                                    <button onClick={() => openEdit(task)} className="w-full text-left px-3.5 py-2.5 hover:bg-[#f5f5f7] text-[12px] font-medium text-[#1d1d1f]">Edit</button>
+                                    <button onClick={() => { duplicateTask(task); setActionMenu(null) }} className="w-full text-left px-3.5 py-2.5 hover:bg-[#f5f5f7] text-[12px] font-medium text-[#1d1d1f]">Duplicate</button>
+                                    <div className="border-t border-[#f0f0f0]" />
+                                    <button onClick={() => deleteTask(task.id)} className="w-full text-left px-3.5 py-2.5 hover:bg-red-50 text-[12px] font-medium text-red-600">Delete</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    {/* Tags */}
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        {overdue && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">OVERDUE</span>}
+                        {task.status && <span className="text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full" style={{ backgroundColor: statusColors[task.status]?.bg, color: statusColors[task.status]?.text }}>{task.status}</span>}
+                        {taskType && (
+                            <span className="text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-white"
+                                style={{ backgroundColor: taskType.color || "#C6FF00", color: "#1d1d1f" }}>
                                 {taskType.name}
                             </span>
                         )}
-                        <span
-                            className="text-[12px] font-bold px-3 py-1.5 rounded-full"
-                            style={{ backgroundColor: `${priorityColors[task.priority]}20`, color: priorityColors[task.priority] }}
-                        >
-                            <FaFlag className="inline mr-1 w-3 h-3" />
+                        <span className="text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full"
+                            style={{ backgroundColor: priorityBgs[task.priority], color: priorityColors[task.priority] }}>
                             {task.priority}
                         </span>
                         {task.due_at && (
-                            <span className="text-[12px] text-[#86868b] flex items-center gap-1">
-                                <FaCalendar className="w-3 h-3" />
+                            <span className={`text-[10px] sm:text-[11px] font-medium flex items-center gap-1 ${overdue ? "text-red-500" : "text-[#86868b]"}`}>
+                                <FaCalendar className="w-2.5 h-2.5" />
                                 {formatDueDateTime(task.due_at)}
+                            </span>
+                        )}
+                        {project && (
+                            <span className="text-[10px] sm:text-[11px] font-medium flex items-center gap-1 text-[#86868b]">
+                                <FaFolder className="w-2.5 h-2.5" />
+                                {project.name}
                             </span>
                         )}
                     </div>
                 </div>
+            </div>
+        )
+    }
 
-                <div className="relative">
-                    <button
-                        onClick={() => setActionMenu(actionMenu === task.id ? null : task.id)}
-                        className="p-2 rounded-lg hover:bg-[#f5f5f7] transition-colors flex-shrink-0"
-                    >
-                        <FaEllipsisH className="w-4 h-4 text-[#86868b]" />
-                    </button>
-
-                    {actionMenu === task.id && (
-                        <div className="absolute right-0 mt-2 bg-white rounded-[12px] border border-[#d2d2d7] shadow-lg z-50 min-w-[150px]">
-                            <button
-                                onClick={() => { setSelectedTask(task); setActionMenu(null); }}
-                                className="w-full text-left px-4 py-2 hover:bg-[#f5f5f7] rounded-t-[12px] text-[13px] font-medium text-[#1d1d1f]"
-                            >
-                                View Details
-                            </button>
-                            <button
-                                onClick={() => {
-                                    const { date, time } = extractDateAndTime(task.due_at)
-                                    setForm({
-                                        title: task.title || "",
-                                        description: task.description || "",
-                                        type_id: task.type_id || "",
-                                        due_date: date,
-                                        due_time: time,
-                                        priority: task.priority || "Medium",
-                                        status: task.status || "To Do"
-                                    })
-                                    setEditing(task.id)
-                                    setShowTaskModal(true)
-                                    setActionMenu(null)
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-[#f5f5f7] text-[13px] font-medium text-[#1d1d1f]"
-                            >
-                                Edit
-                            </button>
-                            <button
-                                onClick={() => { duplicateTask(task); setActionMenu(null); }}
-                                className="w-full text-left px-4 py-2 hover:bg-[#f5f5f7] text-[13px] font-medium text-[#1d1d1f]"
-                            >
-                                Duplicate
-                            </button>
-                            <button
-                                onClick={() => { deleteTask(task.id); }}
-                                className="w-full text-left px-4 py-2 hover:bg-red-50 rounded-b-[12px] text-[13px] font-medium text-red-600"
-                            >
-                                Delete
-                            </button>
-                        </div>
-                    )}
+    const TaskSection = ({ title, tasks: taskList, accentColor, dotColor }) => {
+        if (taskList.length === 0) return null
+        return (
+            <div>
+                <div className="flex items-center gap-2 mb-3 px-0.5">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor || "#d2d2d7" }}></div>
+                    <h3 className="text-[11px] sm:text-[12px] font-bold uppercase tracking-widest" style={{ color: accentColor || "#86868b" }}>{title}</h3>
+                    <span className="text-[10px] font-semibold text-[#86868b] bg-[#f5f5f7] rounded-full px-2 py-0.5">{taskList.length}</span>
+                </div>
+                <div className="space-y-2 sm:space-y-2.5">
+                    {taskList.map(task => <TaskCard key={task.id} task={task} />)}
                 </div>
             </div>
         )
     }
 
-    const TaskSection = ({ title, tasks: taskList, icon }) => {
-        if (taskList.length === 0) return null
-        return (
-            <div className="space-y-3">
-                <h3 className="text-[14px] font-bold text-[#1d1d1f] uppercase tracking-wider flex items-center gap-2 px-1">
-                    {icon && <span className="text-[#C6FF00]">{icon}</span>}
-                    {title}
-                </h3>
-                {taskList.map(task => <TaskCard key={task.id} task={task} />)}
-            </div>
-        )
-    }
-
-    const sections = groupTasksBySection()
+    const totalVisible = filterAndSortTasks().length
 
     return (
-        <div className="space-y-8 sm:space-y-10 lg:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <header className="space-y-2 px-1">
-                {showTaskModal && (
-                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                        <div className="bg-white rounded-[28px] p-6 shadow-sm w-full max-w-lg relative">
-                            <button
-                                onClick={() => setShowTaskModal(false)}
-                                className="absolute top-4 right-4 p-2 hover:bg-[#f5f5f7] rounded-full"
-                            >
-                                <FaTimes className="w-5 h-5 text-[#86868b]" />
+        <div className="animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-10" onClick={() => setActionMenu(null)}>
+
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6 sm:mb-8 px-0.5">
+                <div>
+                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest mb-1">Workspace</p>
+                    <h1 className="text-[20px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight">Tasks</h1>
+                </div>
+                <button
+                    onClick={(e) => { e.stopPropagation(); openCreate() }}
+                    className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold rounded-[11px] sm:rounded-[12px] text-[13px] sm:text-[14px] transition-colors self-start sm:self-auto"
+                >
+                    <FaPlus className="w-3 h-3" />
+                    New Task
+                </button>
+            </div>
+
+            {/* Stats Banner */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 mb-5 sm:mb-6">
+                {[
+                    { label: "Total", value: taskStats.total, color: "#3b82f6" },
+                    { label: "To Do", value: taskStats.todo, color: "#86868b" },
+                    { label: "In Progress", value: taskStats.inProgress, color: "#f59e0b" },
+                    { label: "Completed", value: taskStats.done, color: "#22c55e" },
+                    { label: "Overdue", value: taskStats.overdue, color: "#ef4444" },
+                ].map(s => (
+                    <div key={s.label} className="bg-white rounded-[16px] sm:rounded-[18px] border border-[#d2d2d7]/50 px-3.5 sm:px-4 py-3 sm:py-3.5 shadow-sm">
+                        <p className="text-[10px] sm:text-[11px] font-semibold text-[#86868b] uppercase tracking-wide mb-1">{s.label}</p>
+                        <p className="text-[20px] sm:text-[22px] font-bold leading-tight" style={{ color: s.color }}>{s.value}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Search + Filter Bar */}
+            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm p-4 sm:p-5 mb-5 sm:mb-6">
+                <div className="flex gap-2.5 sm:gap-3">
+                    <div className="flex-1 relative">
+                        <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b] w-3.5 h-3.5" />
+                        <input
+                            type="text"
+                            placeholder="Search tasks..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white text-[13px] sm:text-[14px] transition-all outline-none"
+                            onClick={e => e.stopPropagation()}
+                        />
+                    </div>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setShowFilters(!showFilters) }}
+                        className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-[11px] border text-[12px] sm:text-[13px] font-semibold transition-all ${showFilters ? "bg-[#C6FF00] border-[#C6FF00] text-[#1d1d1f]" : "bg-[#f5f5f7] border-[#d2d2d7] text-[#1d1d1f] hover:bg-white"}`}
+                    >
+                        <FaFilter className="w-3 h-3" />
+                        <span className="hidden sm:inline">Filters</span>
+                        {(filterStatus || filterType || filterPriority) && <span className="w-1.5 h-1.5 rounded-full bg-[#1d1d1f]"></span>}
+                    </button>
+                </div>
+                {showFilters && (
+                    <div className="mt-4 pt-4 border-t border-[#f0f0f0]">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5" onClick={e => e.stopPropagation()}>
+                            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+                                className="px-3 py-2.5 bg-[#f5f5f7] rounded-[10px] text-[12px] sm:text-[13px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white outline-none transition-all">
+                                <option value="">All Statuses</option>
+                                {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
+                                className="px-3 py-2.5 bg-[#f5f5f7] rounded-[10px] text-[12px] sm:text-[13px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white outline-none transition-all">
+                                <option value="">All Types</option>
+                                {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                            </select>
+                            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}
+                                className="px-3 py-2.5 bg-[#f5f5f7] rounded-[10px] text-[12px] sm:text-[13px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white outline-none transition-all">
+                                <option value="">All Priorities</option>
+                                {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+                                className="px-3 py-2.5 bg-[#f5f5f7] rounded-[10px] text-[12px] sm:text-[13px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white outline-none transition-all">
+                                <option value="due_at">Sort: Due Date</option>
+                                <option value="priority">Sort: Priority</option>
+                                <option value="created_at">Sort: Created</option>
+                            </select>
+                        </div>
+                        {(filterStatus || filterType || filterPriority || searchTerm) && (
+                            <button onClick={() => { setFilterStatus(""); setFilterType(""); setFilterPriority(""); setSearchTerm("") }}
+                                className="mt-3 text-[11px] font-semibold text-[#86868b] hover:text-[#1d1d1f] transition-colors flex items-center gap-1">
+                                <FaTimes className="w-2.5 h-2.5" /> Clear all filters
                             </button>
-                            {/* Reuse existing form markup by copying inner contents here */}
-                            <h3 className="text-[16px] font-bold mb-4">{editing ? "Edit Task" : "New Task"}</h3>
-                            <form onSubmit={createTask} className="space-y-4">
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Task List */}
+            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm p-4 sm:p-5 md:p-6">
+                {loading ? (
+                    <div className="flex items-center justify-center py-16">
+                        <div className="w-7 h-7 border-4 border-[#C6FF00] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                ) : totalVisible === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <div className="w-14 h-14 rounded-full bg-[#f5f5f7] flex items-center justify-center">
+                            <svg className="w-7 h-7 text-[#d2d2d7]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                                <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                            </svg>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[14px] font-semibold text-[#1d1d1f]">No tasks found</p>
+                            <p className="text-[12px] text-[#86868b] mt-0.5">{tasks.length === 0 ? "Create your first task to get started." : "Try adjusting your filters."}</p>
+                        </div>
+                        {tasks.length === 0 && (
+                            <button onClick={openCreate} className="mt-1 px-4 py-2 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold rounded-[10px] text-[13px] transition-colors">
+                                Create a Task
+                            </button>
+                        )}
+                    </div>
+                ) : (
+                    <div className="space-y-6 sm:space-y-8">
+                        <TaskSection title="Overdue" tasks={sections.overdue} accentColor="#ef4444" dotColor="#ef4444" />
+                        <TaskSection title="Today" tasks={sections.today} accentColor="#f59e0b" dotColor="#f59e0b" />
+                        <TaskSection title="Upcoming" tasks={sections.upcoming} accentColor="#3b82f6" dotColor="#3b82f6" />
+                        <TaskSection title="Other" tasks={sections.other} accentColor="#86868b" dotColor="#d2d2d7" />
+                        <TaskSection title="Completed" tasks={sections.completed} accentColor="#22c55e" dotColor="#22c55e" />
+                    </div>
+                )}
+            </div>
+
+            {/* â”€â”€ Create / Edit Modal â”€â”€ */}
+            {showTaskModal && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] overflow-y-auto z-50" onClick={() => { setShowTaskModal(false); setEditing(null) }}>
+                    <div className="flex min-h-full items-start sm:items-center pt-[80px] sm:pt-0 justify-center p-0 sm:p-4">
+                        <div className="bg-white w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[24px] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-[#f0f0f0]">
                                 <div>
-                                    <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Title</label>
-                                    <input
-                                        value={form.title}
-                                        onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))}
-                                        placeholder="e.g. Finish report"
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white text-[14px]"
-                                    />
+                                    <h3 className="text-[16px] sm:text-[18px] font-bold text-[#1d1d1f]">{editing ? "Edit Task" : "New Task"}</h3>
+                                    <p className="text-[12px] text-[#86868b] mt-0.5">{editing ? "Update task details" : "Add a new task to your workspace"}</p>
+                                </div>
+                                <button onClick={() => { setShowTaskModal(false); setEditing(null) }} className="p-2 hover:bg-[#f5f5f7] rounded-full transition-colors">
+                                    <FaTimes className="w-4 h-4 text-[#86868b]" />
+                                </button>
+                            </div>
+                            <form onSubmit={createTask} className="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto max-h-[75vh] sm:max-h-[80vh]">
+                                <div>
+                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Title *</label>
+                                    <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Finish report"
+                                        className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all" />
                                 </div>
                                 <div>
-                                    <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Type</label>
-                                    <select
-                                        value={form.type_id}
-                                        onChange={(e) => setForm(f => ({ ...f, type_id: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent text-[14px]"
-                                    >
+                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Type *</label>
+                                    <select value={form.type_id} onChange={(e) => setForm(f => ({ ...f, type_id: e.target.value }))}
+                                        className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all">
                                         <option value="">Select a type</option>
                                         {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                     </select>
                                     {types.length === 0 && (
-                                        <p className="text-[12px] text-[#86868b] mt-2">No active types. <Link to="/dashboard/task-types" className="text-[#86b300] font-medium">Create types</Link></p>
+                                        <p className="text-[11px] text-[#86868b] mt-1.5">No active types. <Link to="/dashboard/task-types" className="text-[#86b300] font-semibold hover:underline">Create types</Link></p>
                                     )}
                                 </div>
                                 <div>
-                                    <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Priority</label>
-                                    <select
-                                        value={form.priority}
-                                        onChange={(e) => setForm(f => ({ ...f, priority: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent text-[14px]"
-                                    >
-                                        {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Status</label>
-                                    <select
-                                        value={form.status}
-                                        onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent text-[14px]"
-                                    >
-                                        {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Project</label>
+                                    <select value={form.project_id} onChange={(e) => setForm(f => ({ ...f, project_id: e.target.value }))}
+                                        className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all">
+                                        <option value="">No Project</option>
+                                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
                                 </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Due Date</label>
-                                        <input
-                                            type="date"
-                                            value={form.due_date}
-                                            onChange={(e) => setForm(f => ({ ...f, due_date: e.target.value }))}
-                                            className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent text-[14px]"
-                                        />
+                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Priority</label>
+                                        <select value={form.priority} onChange={(e) => setForm(f => ({ ...f, priority: e.target.value }))}
+                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all">
+                                            {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
+                                        </select>
                                     </div>
                                     <div>
-                                        <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Time</label>
-                                        <input
-                                            type="time"
-                                            value={form.due_time}
-                                            onChange={(e) => setForm(f => ({ ...f, due_time: e.target.value }))}
-                                            className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent text-[14px]"
-                                        />
+                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Status</label>
+                                        <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
+                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all">
+                                            {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Due Date</label>
+                                        <input type="date" value={form.due_date} onChange={(e) => setForm(f => ({ ...f, due_date: e.target.value }))}
+                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all" />
+                                    </div>
+                                    <div>
+                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Time</label>
+                                        <input type="time" value={form.due_time} onChange={(e) => setForm(f => ({ ...f, due_time: e.target.value }))}
+                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all" />
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Notes</label>
-                                    <textarea
-                                        value={form.description || ""}
-                                        onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
-                                        rows={3}
-                                        placeholder="Add details..."
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent text-[14px] resize-none"
-                                    />
+                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Notes</label>
+                                    <textarea value={form.description || ""} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Add details or notes..."
+                                        className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] resize-none outline-none transition-all" />
                                 </div>
-
-                                {error && <div className="text-red-600 text-[13px] font-medium">{error}</div>}
-                                {message && <div className="text-green-700 text-[13px] font-medium">{message}</div>}
-                                <div className="flex gap-2">
-                                    <button
-                                        disabled={loading}
-                                        className="flex-1 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-semibold py-3 rounded-xl"
-                                    >
+                                {error && <p className="text-[12px] text-red-600 font-medium bg-red-50 px-3 py-2 rounded-[8px]">{error}</p>}
+                                {message && <p className="text-[12px] text-green-700 font-medium bg-green-50 px-3 py-2 rounded-[8px]">{message}</p>}
+                                <div className="flex gap-2.5 pt-1 pb-1 sm:pb-0">
+                                    <button type="submit" disabled={loading}
+                                        className="flex-1 bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-60 text-[#1d1d1f] font-bold py-2.5 sm:py-3 rounded-[11px] text-[14px] transition-colors">
                                         {loading ? (editing ? "Saving..." : "Creating...") : (editing ? "Update Task" : "Create Task")}
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => { setEditing(null); setForm({ title: "", description: "", type_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" }); setShowTaskModal(false) }}
-                                        className="px-4 py-3 rounded-xl bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f]"
-                                    >
+                                    <button type="button" onClick={resetForm}
+                                        className="px-5 py-2.5 sm:py-3 rounded-[11px] bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white transition-colors">
                                         Cancel
                                     </button>
                                 </div>
                             </form>
                         </div>
                     </div>
-                )}
-                <h2 className="text-[28px] sm:text-[32px] lg:text-[36px] font-bold text-[#1d1d1f] tracking-tight leading-tight">Tasks</h2>
-                <p className="text-[#86868b] text-[15px] sm:text-[17px] lg:text-[19px] font-medium">Create and manage your tasks with priority and status tracking.</p>
-            </header>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Add New Task Button */}
-                <div className="lg:col-span-3">
-                    {!showTaskModal && (
-                    <button
-                        onClick={() => { setEditing(null); setForm({ title: "", description: "", type_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" }); setShowTaskModal(true); }}
-                        className="px-6 py-3 bg-[#C6FF00] text-[#1d1d1f] rounded-xl font-semibold hover:bg-[#b8f000] transition-colors"
-                    >
-                        + Add Task
-                    </button>
-                    )}
                 </div>
-                {/** the creation form is rendered in overlay below **/}
+            )}
 
-                {/* Task List */}
-                <div className="lg:col-span-3 space-y-6">
-                    {/* Search and Filters */}
-                    <div className="bg-white rounded-[28px] p-6 shadow-sm border border-[#d2d2d7]/50 space-y-4">
-                        <div className="flex gap-3">
-                            <div className="flex-1 relative">
-                                <FaSearch className="absolute left-4 top-3.5 text-[#86868b] w-4 h-4" />
-                                <input
-                                    type="text"
-                                    placeholder="Search tasks..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/50 text-[14px]"
-                                />
-                            </div>
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className="px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-[#d2d2d7] font-semibold text-[14px] text-[#1d1d1f] hover:bg-white transition-colors"
-                            >
-                                <FaChevronDown className={`inline w-4 h-4 mr-2 transition-transform ${showFilters ? "rotate-180" : ""}`} />
-                                Filters
-                            </button>
-                        </div>
-
-                        {showFilters && (
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[#d2d2d7]">
-                                <select
-                                    value={filterStatus}
-                                    onChange={(e) => setFilterStatus(e.target.value)}
-                                    className="px-3 py-2 bg-[#f5f5f7] rounded-[10px] text-[13px] border border-[#d2d2d7]"
-                                >
-                                    <option value="">All Statuses</option>
-                                    {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
-                                </select>
-                                <select
-                                    value={filterType}
-                                    onChange={(e) => setFilterType(e.target.value)}
-                                    className="px-3 py-2 bg-[#f5f5f7] rounded-[10px] text-[13px] border border-[#d2d2d7]"
-                                >
-                                    <option value="">All Types</option>
-                                    {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                </select>
-                                <select
-                                    value={filterPriority}
-                                    onChange={(e) => setFilterPriority(e.target.value)}
-                                    className="px-3 py-2 bg-[#f5f5f7] rounded-[10px] text-[13px] border border-[#d2d2d7]"
-                                >
-                                    <option value="">All Priorities</option>
-                                    {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
-                                </select>
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value)}
-                                    className="px-3 py-2 bg-[#f5f5f7] rounded-[10px] text-[13px] border border-[#d2d2d7]"
-                                >
-                                    <option value="due_at">Sort: Due Date</option>
-                                    <option value="priority">Sort: Priority</option>
-                                    <option value="created_at">Sort: Created</option>
-                                </select>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Tasks by Section */}
-                    <div className="space-y-8">
-                        {loading ? (
-                            <div className="bg-white rounded-[28px] p-12 text-center text-[#86868b]">Loading…</div>
-                        ) : filterAndSortTasks().length === 0 ? (
-                            <div className="bg-white rounded-[28px] p-12 text-center text-[#86868b]">No tasks found. Create one to get started.</div>
-                        ) : (
-                            <>
-                                {sections.overdue.length > 0 && <TaskSection title="Overdue" tasks={sections.overdue} icon="⚠️" />}
-                                {sections.today.length > 0 && <TaskSection title="Today" tasks={sections.today} icon="📌" />}
-                                {sections.upcoming.length > 0 && <TaskSection title="Upcoming" tasks={sections.upcoming} icon="📅" />}
-                                {sections.completed.length > 0 && <TaskSection title="Completed" tasks={sections.completed} icon="✅" />}
-                                {sections.other.length > 0 && <TaskSection title="Other" tasks={sections.other} />}
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Task Details Modal */}
+            {/* â”€â”€ Task Details Modal â”€â”€ */}
             {selectedTask && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-[28px] p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-[24px] font-bold text-[#1d1d1f]">Task Details</h2>
-                            <button
-                                onClick={() => setSelectedTask(null)}
-                                className="p-2 hover:bg-[#f5f5f7] rounded-lg transition-colors"
-                            >
-                                <FaTimes className="w-5 h-5 text-[#86868b]" />
-                            </button>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div>
-                                <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Title</label>
-                                <p className="text-[18px] font-bold text-[#1d1d1f] mt-2">{selectedTask.title}</p>
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] overflow-y-auto z-50" onClick={() => setSelectedTask(null)}>
+                    <div className="flex min-h-full items-start sm:items-center pt-[80px] sm:pt-0 justify-center p-0 sm:p-4">
+                        <div className="bg-white w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[24px] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-[#f0f0f0]">
+                                <h3 className="text-[16px] sm:text-[18px] font-bold text-[#1d1d1f]">Task Details</h3>
+                                <button onClick={() => setSelectedTask(null)} className="p-2 hover:bg-[#f5f5f7] rounded-full transition-colors">
+                                    <FaTimes className="w-4 h-4 text-[#86868b]" />
+                                </button>
                             </div>
-
-                            {selectedTask.description && (
+                            <div className="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto max-h-[70vh] sm:max-h-[75vh]">
                                 <div>
-                                    <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Notes</label>
-                                    <p className="text-[15px] text-[#1d1d1f] mt-2 whitespace-pre-wrap">{selectedTask.description}</p>
+                                    <div className="flex items-start justify-between gap-3 mb-1">
+                                        <h4 className={`text-[16px] sm:text-[18px] font-bold leading-snug ${selectedTask.status === "Done" ? "line-through text-[#86868b]" : "text-[#1d1d1f]"}`}>
+                                            {selectedTask.title}
+                                        </h4>
+                                        <span className="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                                            style={{ backgroundColor: statusColors[selectedTask.status]?.bg, color: statusColors[selectedTask.status]?.text }}>
+                                            {selectedTask.status}
+                                        </span>
+                                    </div>
+                                    {selectedTask.description && (
+                                        <p className="text-[13px] text-[#86868b] mt-2 whitespace-pre-wrap leading-relaxed">{selectedTask.description}</p>
+                                    )}
                                 </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Status</label>
-                                    <p className="text-[15px] font-bold text-[#1d1d1f] mt-2">{selectedTask.status}</p>
+                                <div className="space-y-0">
+                                    <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
+                                        <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Priority</span>
+                                        <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full"
+                                            style={{ backgroundColor: priorityBgs[selectedTask.priority], color: priorityColors[selectedTask.priority] }}>
+                                            {selectedTask.priority}
+                                        </span>
+                                    </div>
+                                    {selectedTask.type_id && (
+                                        <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
+                                            <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Type</span>
+                                            {(() => { const t = types.find(x => x.id === selectedTask.type_id); return t ? <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full" style={{ backgroundColor: t.color || "#C6FF00", color: "#1d1d1f" }}>{t.name}</span> : <span className="text-[13px] font-semibold text-[#1d1d1f]">â€”</span> })()}
+                                        </div>
+                                    )}
+                                    {selectedTask.project_id && (
+                                        <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
+                                            <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Project</span>
+                                            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1d1d1f]">
+                                                <FaFolder className="w-3.5 h-3.5 text-[#C6FF00]" />
+                                                {projects.find(p => p.id === selectedTask.project_id)?.name || "â€”"}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {selectedTask.due_at && (
+                                        <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
+                                            <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Due Date</span>
+                                            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1d1d1f]">
+                                                <FaCalendar className="w-3.5 h-3.5 text-[#86868b]" />
+                                                {formatDueDateTime(selectedTask.due_at)}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-                                <div>
-                                    <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Priority</label>
-                                    <span
-                                        className="inline-block text-[13px] font-bold px-3 py-1 mt-2 rounded-full"
-                                        style={{ backgroundColor: `${priorityColors[selectedTask.priority]}20`, color: priorityColors[selectedTask.priority] }}
-                                    >
-                                        {selectedTask.priority}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {selectedTask.type_id && (
-                                <div>
-                                    <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Type</label>
-                                    <p className="text-[15px] font-bold text-[#1d1d1f] mt-2">
-                                        {types.find(t => t.id === selectedTask.type_id)?.name || "—"}
-                                    </p>
-                                </div>
-                            )}
-
-                            {selectedTask.due_at && (
-                                <div>
-                                    <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Due Date & Time</label>
-                                    <p className="text-[15px] font-bold text-[#1d1d1f] mt-2 flex items-center gap-2">
-                                        <FaCalendar className="w-4 h-4" />
-                                        {formatDueDateTime(selectedTask.due_at)}
-                                    </p>
-                                </div>
-                            )}
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Created</label>
-                                    <p className="text-[13px] text-[#1d1d1f] mt-2">{new Date(selectedTask.created_at).toLocaleDateString()}</p>
-                                </div>
-                                <div>
-                                    <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Last Updated</label>
-                                    <p className="text-[13px] text-[#1d1d1f] mt-2">{new Date(selectedTask.updated_at).toLocaleDateString()}</p>
+                                <div className="bg-[#f9f9f9] rounded-[12px] p-3.5 space-y-2">
+                                    <div className="flex justify-between"><span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider">Created</span><span className="text-[11px] text-[#1d1d1f]">{formatTimestamp(selectedTask.created_at)}</span></div>
+                                    <div className="flex justify-between"><span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider">Updated</span><span className="text-[11px] text-[#1d1d1f]">{formatTimestamp(selectedTask.updated_at)}</span></div>
+                                    {selectedTask.completed_at && <div className="flex justify-between"><span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider">Completed</span><span className="text-[11px] text-[#1d1d1f]">{formatTimestamp(selectedTask.completed_at)}</span></div>}
                                 </div>
                             </div>
-
-                            {selectedTask.completed_at && (
-                                <div>
-                                    <label className="text-[12px] font-bold text-[#86868b] uppercase tracking-wider">Completed</label>
-                                    <p className="text-[13px] text-[#1d1d1f] mt-2">{new Date(selectedTask.completed_at).toLocaleDateString()}</p>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex gap-3 mt-8 pt-6 border-t border-[#d2d2d7]">
-                            <button
-                                onClick={() => {
-                                    const { date, time } = extractDateAndTime(selectedTask.due_at)
-                                    setForm({
-                                        title: selectedTask.title || "",
-                                        description: selectedTask.description || "",
-                                        type_id: selectedTask.type_id || "",
-                                        due_date: date,
-                                        due_time: time,
-                                        priority: selectedTask.priority || "Medium",
-                                        status: selectedTask.status || "To Do"
-                                    })
-                                    setEditing(selectedTask.id)
-                                    setSelectedTask(null)
-                                }}
-                                className="flex-1 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-semibold py-3 rounded-xl transition-colors"
-                            >
-                                Edit
-                            </button>
-                            <button
-                                onClick={() => { setSelectedTask(null); }}
-                                className="px-6 py-3 bg-[#f5f5f7] hover:bg-white border border-[#d2d2d7] text-[#1d1d1f] font-semibold rounded-xl transition-colors"
-                            >
-                                Close
-                            </button>
+                            <div className="flex gap-2.5 px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-[#f0f0f0]">
+                                <button onClick={() => openEdit(selectedTask)}
+                                    className="flex-1 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold py-2.5 sm:py-3 rounded-[11px] text-[14px] transition-colors">
+                                    Edit Task
+                                </button>
+                                <button onClick={() => setSelectedTask(null)}
+                                    className="px-5 py-2.5 sm:py-3 rounded-[11px] bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white transition-colors">
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

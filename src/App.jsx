@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import DashboardHome from './pages/DashboardHome'
 import Profile from './pages/Profile'
 import Tasks from './pages/Tasks'
+import Projects from './pages/Projects'
 import TaskTypes from './pages/TaskTypes'
 import Calendar from './pages/Calendar'
 import './App.css'
@@ -20,6 +21,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />}>
             <Route index element={<DashboardHome />} />
             <Route path="tasks" element={<Tasks />} />
+            <Route path="projects" element={<Projects />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="task-types" element={<TaskTypes />} />
             <Route path="profile" element={<Profile />} />
