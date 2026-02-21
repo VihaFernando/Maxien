@@ -44,8 +44,8 @@ export default function Login() {
 
                 {/* Header Section */}
                 <div className="flex flex-col items-center mb-8">
-                    <div className="w-14 h-14 rounded-2xl bg-[#C6FF00] flex items-center justify-center shadow-[0_8px_16px_rgba(198,255,0,0.25)] mb-6 transition-transform hover:scale-105 duration-300">
-                        <span className="text-[#1D1D1F] font-bold text-2xl tracking-tighter">M</span>
+                    <div className="w-14 h-14 mb-6 transition-transform hover:scale-105 duration-300 shadow-[0_8px_16px_rgba(198,255,0,0.25)]">
+                        <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                     </div>
                     <h1 className="text-2xl sm:text-[28px] font-semibold text-[#1D1D1F] tracking-tight text-center mb-2">
                         Sign in to Maxien

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
+  <defs>
+    <linearGradient id="logoGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#C6FF00" />
+      <stop offset="100%" stop-color="#A8DB00" />
+    </linearGradient>
+  </defs>
+  <!-- geometric "M" shape -->
+  <path d="M10,90 L10,10 L40,50 L70,10 L70,90 L50,90 L50,40 L40,60 L30,40 L30,90 Z" fill="url(#logoGradient)"/>
+</svg>

@@ -44,8 +44,9 @@ export default function Dashboard() {
             <aside className="w-[260px] hidden lg:flex flex-col bg-white border-r border-[#d2d2d7] sticky top-0 h-screen">
                 <div className="p-8">
                     <div className="flex items-center gap-3 mb-10">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center shadow-lg shadow-[#C6FF00]/20">
-                            <span className="text-[#1d1d1f] font-bold text-xl tracking-tighter">M</span>
+                        {/* logo component renders a stylized M SVG */}
+                        <div className="w-10 h-10">
+                            <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                         </div>
                         <span className="text-[#1d1d1f] font-bold text-xl tracking-tight">Maxien</span>
                     </div>
@@ -167,8 +168,8 @@ export default function Dashboard() {
                 <div className="p-8 h-full flex flex-col overflow-y-auto">
                     <div className="flex items-center justify-between gap-3 mb-10">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center shadow-lg shadow-[#C6FF00]/20">
-                                <span className="text-[#1d1d1f] font-bold text-xl tracking-tighter">M</span>
+                            <div className="w-10 h-10">
+                                <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                             </div>
                             <span className="text-[#1d1d1f] font-bold text-xl tracking-tight">Maxien</span>
                         </div>
