@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
+import { useSearchParams } from "react-router-dom"
+import GithubIntegrations from "../components/GithubIntegrations"
 
 const NAV = [
     {
@@ -15,11 +17,35 @@ const NAV = [
         id: "preferences", label: "Preferences",
         icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
     },
+    {
+        id: "integrations", label: "Integrations",
+        icon: <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+    },
 ]
+
+const LANG_COLORS = {
+    JavaScript: "#f1e05a", TypeScript: "#2b7489", Python: "#3572A5",
+    HTML: "#e34c26", CSS: "#563d7c", Rust: "#dea584", Go: "#00ADD8",
+    Java: "#b07219", "C++": "#f34b7d", C: "#555555", Ruby: "#701516",
+    PHP: "#4F5D95", Swift: "#ffac45", Kotlin: "#A97BFF", Dart: "#00B4AB",
+    Shell: "#89e051", Vue: "#41b883", default: "#8b8b8b"
+}
+
+function timeAgo(dateStr) {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 60) return `${mins}m ago`
+    const hrs = Math.floor(mins / 60)
+    if (hrs < 24) return `${hrs}h ago`
+    const days = Math.floor(hrs / 24)
+    if (days < 30) return `${days}d ago`
+    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+}
 
 export default function Profile() {
     const { user } = useAuth()
-    const [activeTab, setActiveTab] = useState("profile")
+    const [searchParams] = useSearchParams()
+    const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile")
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState("")
     const [error, setError] = useState("")
@@ -292,6 +318,9 @@ export default function Profile() {
                                 <p className="text-[12px] text-[#86868b]">Theme, notifications and app preferences will be here.</p>
                             </div>
                         </div>
+                    )}
+                    {activeTab === "integrations" && (
+                        <GithubIntegrations />
                     )}
                 </div>
             </div>

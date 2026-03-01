@@ -9,6 +9,8 @@ import Tasks from './pages/Tasks'
 import Projects from './pages/Projects'
 import TaskTypes from './pages/TaskTypes'
 import Calendar from './pages/Calendar'
+import AIAssistant from './pages/AIAssistant'
+import GithubCallback from './pages/GithubCallback'
 import './App.css'
 
 function App() {
@@ -23,9 +25,11 @@ function App() {
             <Route path="tasks" element={<Tasks />} />
             <Route path="projects" element={<Projects />} />
             <Route path="calendar" element={<Calendar />} />
+            <Route path="ai-assistant" element={<AIAssistant />} />
             <Route path="task-types" element={<TaskTypes />} />
             <Route path="profile" element={<Profile />} />
           </Route>
+          <Route path="/auth/github/callback" element={<GithubCallback />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AuthProvider>

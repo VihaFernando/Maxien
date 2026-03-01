@@ -121,8 +121,14 @@ export default function DashboardHome() {
     }, [tasks])
 
     const upcomingTasks = useMemo(() => {
+        const now = new Date()
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
         return tasks
-            .filter(t => t.status !== "Done")
+            .filter(t => {
+                if (t.status === "Done" || t.status === "Cancelled") return false
+                if (!t.due_at) return true // no due date — not past
+                return new Date(t.due_at) >= startOfToday // today or future only
+            })
             .sort((a, b) => {
                 if (!a.due_at && !b.due_at) return 0
                 if (!a.due_at) return 1
@@ -200,15 +206,15 @@ export default function DashboardHome() {
                                 {/* Stats grid */}
                                 <div className="flex-1 grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 w-full">
                                     {[
-                                        { label: "Total", value: stats.total, color: "#3b82f6" },
-                                        { label: "Completed", value: stats.completed, color: "#22c55e" },
-                                        { label: "Pending", value: stats.pending, color: "#f59e0b" },
-                                        { label: "Overdue", value: stats.overdue, color: "#ef4444" },
+                                        { label: "Total", value: stats.total, color: "#3b82f6", section: "" },
+                                        { label: "Completed", value: stats.completed, color: "#22c55e", section: "completed" },
+                                        { label: "Pending", value: stats.pending, color: "#f59e0b", section: "" },
+                                        { label: "Overdue", value: stats.overdue, color: "#ef4444", section: "overdue" },
                                     ].map(s => (
-                                        <div key={s.label} className="w-full bg-white/70 backdrop-blur-sm rounded-xl px-3 sm:px-4 py-3 sm:py-2.5 border border-white/80">
+                                        <Link key={s.label} to={`/dashboard/tasks${s.section ? `?section=${s.section}` : ""}`} className="w-full bg-white/70 backdrop-blur-sm rounded-xl px-3 sm:px-4 py-3 sm:py-2.5 border border-white/80 hover:bg-white/90 hover:shadow-sm transition-all duration-150 cursor-pointer">
                                             <p className="text-[9px] sm:text-[10px] font-semibold text-[#86868b] uppercase tracking-wide mb-0.5">{s.label}</p>
                                             <p className="text-[18px] sm:text-[22px] font-bold leading-tight" style={{ color: s.color }}>{s.value}</p>
-                                        </div>
+                                        </Link>
                                     ))}
                                 </div>
                             </div>
@@ -347,14 +353,14 @@ export default function DashboardHome() {
                                 </div>
                                 {/* Inline Stats - Responsive */}
                                 <div className="flex gap-1.5 sm:gap-3">
-                                    <div className="flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg bg-[#e0f2ff] border border-[#bfdbfe]/40">
+                                    <Link to="/dashboard/tasks?section=today" className="flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg bg-[#e0f2ff] border border-[#bfdbfe]/40 hover:bg-[#bfdbfe]/40 transition-colors cursor-pointer">
                                         <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[#3b82f6] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                         <div className="min-w-0">
                                             <p className="text-[7px] sm:text-[10px] font-semibold text-[#3b82f6] uppercase leading-none">Due Today</p>
                                             <p className="text-[12px] sm:text-[15px] font-bold text-[#1d1d1f] leading-none mt-0.5">{stats.dueToday}</p>
                                         </div>
-                                    </div>
-                                    <div className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg border ${stats.overdue > 0 ? "bg-[#fee2e2] border-[#fecaca]/40" : "bg-[#f0fdf4] border-[#bbf7d0]/40"}`}>
+                                    </Link>
+                                    <Link to="/dashboard/tasks?section=overdue" className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg border hover:opacity-80 transition-opacity cursor-pointer ${stats.overdue > 0 ? "bg-[#fee2e2] border-[#fecaca]/40" : "bg-[#f0fdf4] border-[#bbf7d0]/40"}`}>
                                         {stats.overdue > 0
                                             ? <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[#dc2626] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                             : <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[#16a34a] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
@@ -363,14 +369,14 @@ export default function DashboardHome() {
                                             <p className={`text-[7px] sm:text-[10px] font-semibold uppercase leading-none ${stats.overdue > 0 ? "text-[#dc2626]" : "text-[#16a34a]"}`}>Overdue</p>
                                             <p className={`text-[12px] sm:text-[15px] font-bold leading-none mt-0.5 ${stats.overdue > 0 ? "text-[#dc2626]" : "text-[#16a34a]"}`}>{stats.overdue > 0 ? stats.overdue : "—"}</p>
                                         </div>
-                                    </div>
-                                    <div className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg ${stats.highPriority > 0 ? "bg-[#fff7ed] border border-[#fed7aa]/40" : "bg-[#f5f5f7] border border-[#d1d5db]/50"}`}>
+                                    </Link>
+                                    <Link to="/dashboard/tasks" className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${stats.highPriority > 0 ? "bg-[#fff7ed] border border-[#fed7aa]/40" : "bg-[#f5f5f7] border border-[#d1d5db]/50"}`}>
                                         <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[#f97316] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M5 3l14 9-14 9V3z" /></svg>
                                         <div className="min-w-0">
                                             <p className="text-[7px] sm:text-[10px] font-semibold text-[#f97316] uppercase leading-none">Urg/High</p>
                                             <p className="text-[12px] sm:text-[15px] font-bold text-[#1d1d1f] leading-none mt-0.5">{stats.highPriority}</p>
                                         </div>
-                                    </div>
+                                    </Link>
                                 </div>
                             </div>
 

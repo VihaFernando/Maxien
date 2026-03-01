@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState, useMemo } from "react"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
-import { Link } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder } from "react-icons/fa"
 import { formatTimestamp } from "../lib/dateUtils"
 
@@ -114,6 +114,8 @@ export default function Tasks() {
         return due > today && due <= upcoming
     }
 
+    const location = useLocation()
+
     useEffect(() => {
         if (!user) return
         fetchTypes()
@@ -121,6 +123,23 @@ export default function Tasks() {
         fetchTasks()
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user])
+
+    // Scroll to section based on ?section= URL param after tasks load
+    useEffect(() => {
+        if (loading) return
+        const params = new URLSearchParams(location.search)
+        const section = params.get("section")
+        if (!section) return
+        const attempt = (tries = 0) => {
+            const el = document.getElementById(`section-${section}`)
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" })
+            } else if (tries < 8) {
+                setTimeout(() => attempt(tries + 1), 150)
+            }
+        }
+        attempt()
+    }, [loading, location.search])
 
     const fetchProjects = async () => {
         try {
@@ -451,10 +470,10 @@ export default function Tasks() {
         )
     }
 
-    const TaskSection = ({ title, tasks: taskList, accentColor, dotColor }) => {
+    const TaskSection = ({ title, tasks: taskList, accentColor, dotColor, sectionId }) => {
         if (taskList.length === 0) return null
         return (
-            <div>
+            <div id={sectionId}>
                 <div className="flex items-center gap-2 mb-3 px-0.5">
                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor || "#d2d2d7" }}></div>
                     <h3 className="text-[11px] sm:text-[12px] font-bold uppercase tracking-widest" style={{ color: accentColor || "#86868b" }}>{title}</h3>
@@ -586,11 +605,11 @@ export default function Tasks() {
                     </div>
                 ) : (
                     <div className="space-y-6 sm:space-y-8">
-                        <TaskSection title="Overdue" tasks={sections.overdue} accentColor="#ef4444" dotColor="#ef4444" />
-                        <TaskSection title="Today" tasks={sections.today} accentColor="#f59e0b" dotColor="#f59e0b" />
-                        <TaskSection title="Upcoming" tasks={sections.upcoming} accentColor="#3b82f6" dotColor="#3b82f6" />
-                        <TaskSection title="Other" tasks={sections.other} accentColor="#86868b" dotColor="#d2d2d7" />
-                        <TaskSection title="Completed" tasks={sections.completed} accentColor="#22c55e" dotColor="#22c55e" />
+                        <TaskSection title="Overdue" tasks={sections.overdue} accentColor="#ef4444" dotColor="#ef4444" sectionId="section-overdue" />
+                        <TaskSection title="Today" tasks={sections.today} accentColor="#f59e0b" dotColor="#f59e0b" sectionId="section-today" />
+                        <TaskSection title="Upcoming" tasks={sections.upcoming} accentColor="#3b82f6" dotColor="#3b82f6" sectionId="section-upcoming" />
+                        <TaskSection title="Other" tasks={sections.other} accentColor="#86868b" dotColor="#d2d2d7" sectionId="section-other" />
+                        <TaskSection title="Completed" tasks={sections.completed} accentColor="#22c55e" dotColor="#22c55e" sectionId="section-completed" />
                     </div>
                 )}
             </div>
