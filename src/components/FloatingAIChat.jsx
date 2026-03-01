@@ -805,7 +805,7 @@ function FloatingAIChatInner({
 
                             {/* Input */}
                             <div className="px-3 py-3 flex-shrink-0 bg-white">
-                                <div className="flex items-end gap-2">
+                                <div className="flex items-center gap-2">
                                     <div className="flex-1 relative">
                                         <textarea
                                             ref={inputRef}
@@ -815,7 +815,7 @@ function FloatingAIChatInner({
                                             placeholder="Ask me anything… (Enter to send)"
                                             rows={1}
                                             disabled={sending}
-                                            className="w-full px-3.5 py-2.5 pr-3 text-[12.5px] bg-[#f5f5f7] border border-[#e8e8ed] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all resize-none placeholder:text-[#aeaeb2] disabled:opacity-60 leading-relaxed"
+                                            className="w-full px-3.5 py-2.5 pr-3 text-[12.5px] bg-[#f5f5f7] border border-[#e8e8ed] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all resize-none placeholder:text-[#aeaeb2] disabled:opacity-60 leading-relaxed hide-scrollbar"
                                             style={{ maxHeight: "100px", overflowY: "auto" }}
                                             onInput={e => {
                                                 e.target.style.height = "auto"
@@ -826,7 +826,7 @@ function FloatingAIChatInner({
                                     <button
                                         onClick={() => handleSend()}
                                         disabled={!input.trim() || sending}
-                                        className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 shadow-sm mb-0.5"
+                                        className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 shadow-sm"
                                     >
                                         {sending ? (
                                             <div className="w-3.5 h-3.5 border-2 border-[#1d1d1f]/30 border-t-[#1d1d1f] rounded-full animate-spin" />
