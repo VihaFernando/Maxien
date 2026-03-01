@@ -150,6 +150,15 @@ export function useVoice() {
             const googleVoices = voices.filter(v => v.lang.startsWith("en") && /Google/i.test(v.name))
             voicesRef.current = googleVoices
             setAvailableVoices(googleVoices)
+
+            // Set UK English Female as default if no voice preference is saved
+            if (!localStorage.getItem("maxien_voice_name")) {
+                const ukFemaleIndex = googleVoices.findIndex(v => /Google UK English Female/i.test(v.name))
+                if (ukFemaleIndex !== -1) {
+                    setSelectedVoiceIndex(ukFemaleIndex)
+                    setSelectedVoiceName(googleVoices[ukFemaleIndex].name)
+                }
+            }
         }
         load()
         window.speechSynthesis.addEventListener("voiceschanged", load)
