@@ -761,7 +761,7 @@ function FloatingAIChatInner({
                         /* Chat */
                         <div className="flex-1 flex flex-col min-h-0">
                             {/* Messages */}
-                            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth">
+                            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scroll-smooth hide-scrollbar">
                                 {messages.map(msg => (
                                     <ChatBubble
                                         key={msg.id}
