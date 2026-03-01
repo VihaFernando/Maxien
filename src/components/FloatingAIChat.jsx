@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
+import { useVoice } from "../lib/useVoice"
 
 // ─── Icons ─────────────────────────────────────────────────────────────────
 const SparkleIcon = ({ className }) => (
@@ -46,6 +47,44 @@ const MinimizeIcon = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
         <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
     </svg>
+)
+
+const MicIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <line strokeLinecap="round" x1="12" y1="19" x2="12" y2="23" />
+        <line strokeLinecap="round" x1="8" y1="23" x2="16" y2="23" />
+    </svg>
+)
+
+const SpeakerOnIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <polygon strokeLinecap="round" strokeLinejoin="round" points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+)
+
+const SpeakerOffIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <polygon strokeLinecap="round" strokeLinejoin="round" points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <line strokeLinecap="round" x1="23" y1="9" x2="17" y2="15" />
+        <line strokeLinecap="round" x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+)
+
+// ─── Inline voice waveform (5 bars) ─────────────────────────────────────────
+const VoiceWave = ({ color = "#C6FF00", size = 14 }) => (
+    <div className="flex items-end gap-[2px]" style={{ height: size }}>
+        {[0.5, 0.9, 1, 0.7, 0.45].map((h, i) => (
+            <span
+                key={i}
+                className="voice-bar rounded-full"
+                style={{ width: 2.5, height: size * h, background: color, display: "block" }}
+            />
+        ))}
+    </div>
 )
 
 // ─── Action colours ─────────────────────────────────────────────────────────
@@ -320,6 +359,7 @@ export default function FloatingAIChat() {
     const [pendingClarification, setPendingClarification] = useState(null)
     const [unreadCount, setUnreadCount] = useState(0)
     const [showKeySettings, setShowKeySettings] = useState(false)
+    const [showVoiceSettings, setShowVoiceSettings] = useState(false)
     const [keyInput, setKeyInput] = useState("")
     const [keyLoading, setKeyLoading] = useState(false)
     const [keyError, setKeyError] = useState("")
@@ -351,6 +391,8 @@ export default function FloatingAIChat() {
         setUnreadCount={setUnreadCount}
         showKeySettings={showKeySettings}
         setShowKeySettings={setShowKeySettings}
+        showVoiceSettings={showVoiceSettings}
+        setShowVoiceSettings={setShowVoiceSettings}
         keyInput={keyInput}
         setKeyInput={setKeyInput}
         keyLoading={keyLoading}
@@ -367,7 +409,7 @@ function FloatingAIChatInner({
     user, isOpen, setIsOpen, hasKey, setHasKey,
     messages, setMessages, input, setInput,
     sending, setSending, pendingClarification, setPendingClarification,
-    unreadCount, setUnreadCount, showKeySettings, setShowKeySettings,
+    unreadCount, setUnreadCount, showKeySettings, setShowKeySettings, showVoiceSettings, setShowVoiceSettings,
     keyInput, setKeyInput, keyLoading, setKeyLoading, keyError, setKeyError,
     bottomRef, inputRef, navigate,
 }) {
@@ -446,6 +488,35 @@ function FloatingAIChatInner({
         return () => window.removeEventListener("maxien:open-ai-chat", handleCustomOpen)
     }, [])
 
+    // ── Voice ────────────────────────────────────────────────────────────
+    const voice = useVoice()
+
+    // track whether last message originated from voice input
+    const lastWasVoiceRef = useRef(false)
+
+    // Auto-send when voice transcript arrives
+    useEffect(() => {
+        if (voice.transcript) {
+            lastWasVoiceRef.current = true
+            handleSend(voice.transcript.text, { viaVoice: true })
+        }
+    }, [voice.transcript])
+
+    // Auto-speak new AI responses, but only if the user spoke their query
+    useEffect(() => {
+        const last = messages[messages.length - 1]
+        if (last?.role === "ai" && last?.status !== "loading" && last?.id !== "welcome") {
+            if (lastWasVoiceRef.current) {
+                voice.speak(last.content)
+            }
+        }
+    }, [messages])
+
+    // Stop speaking when chat is closed
+    useEffect(() => {
+        if (!isOpen) voice.stopSpeaking()
+    }, [isOpen])
+
     const handleOpen = () => {
         setIsOpen(true)
         setUnreadCount(0)
@@ -453,6 +524,7 @@ function FloatingAIChatInner({
 
     const handleClose = () => {
         setIsOpen(false)
+        voice.stopListening()
     }
 
     // ── Save key (from settings panel inside widget) ─────────────────────────
@@ -518,9 +590,11 @@ function FloatingAIChatInner({
     }
 
     // ── Send message ─────────────────────────────────────────────────────────
-    const handleSend = async (messageText) => {
+    const handleSend = async (messageText, { viaVoice = false } = {}) => {
         const text = (messageText || input).trim()
         if (!text || sending) return
+
+        lastWasVoiceRef.current = viaVoice
 
         const userMsg = { id: Date.now().toString(), role: "user", content: text, ts: new Date() }
         const loadingMsg = { id: "loading-" + Date.now(), role: "ai", content: "", ts: new Date(), status: "loading" }
@@ -675,14 +749,42 @@ function FloatingAIChatInner({
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
                                     <p className="text-[10.5px] text-white/50 truncate">Powered by Groq · llama-3.3-70b</p>
-                                    <span className="text-[9px] px-1.5 py-0.5 bg-white/10 text-white/60 rounded-full hidden sm:inline">
-                                        {/Mac|iPhone|iPad|iPod/.test(navigator.platform) ? "Cmd+/" : "Alt+C"}
-                                    </span>
                                 </div>
                             </div>
 
                             {/* Actions */}
                             <div className="flex items-center gap-1 flex-shrink-0">
+                                {/* Voice settings button */}
+                                {voice.ttsSupported && (
+                                    <button
+                                        onClick={() => setShowVoiceSettings(s => !s)}
+                                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${showVoiceSettings ? "bg-white/20 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"
+                                            }`}
+                                        title="Voice settings"
+                                    >
+                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                            <circle cx="12" cy="12" r="1" />
+                                            <circle cx="19" cy="12" r="1" />
+                                            <circle cx="5" cy="12" r="1" />
+                                        </svg>
+                                    </button>
+                                )}
+                                {/* Voice toggle button (toggle on/off) */}
+                                {voice.ttsSupported && hasKey && (
+                                    <button
+                                        onClick={() => { voice.setVoiceEnabled(v => !v); if (voice.isSpeaking) voice.stopSpeaking() }}
+                                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${voice.voiceEnabled ? "text-[#C6FF00]/90 hover:bg-white/10" : "text-white/35 hover:bg-white/10 hover:text-white/60"
+                                            }`}
+                                        title={voice.voiceEnabled ? "Voice responses on" : "Voice responses off"}
+                                    >
+                                        {voice.isSpeaking
+                                            ? <VoiceWave size={12} color="#C6FF00" />
+                                            : voice.voiceEnabled
+                                                ? <SpeakerOnIcon className="w-3.5 h-3.5" />
+                                                : <SpeakerOffIcon className="w-3.5 h-3.5" />
+                                        }
+                                    </button>
+                                )}
                                 {hasKey && (
                                     <button
                                         onClick={() => setShowKeySettings(s => !s)}
@@ -708,6 +810,80 @@ function FloatingAIChatInner({
                             </div>
                         </div>
                     </div>
+
+                    {/* ── Voice settings panel ──────────────────────────────── */}
+                    {showVoiceSettings && voice.ttsSupported && (
+                        <div className="flex-shrink-0 border-b border-[#f0f0f5] bg-[#fafafa] px-4 py-3 space-y-3">
+                            {/* Voice select */}
+                            {voice.availableVoices.length > 0 && (
+                                <div>
+                                    <label className="text-[10px] font-semibold text-[#1d1d1f] block mb-1.5">VOICE</label>
+                                    <select
+                                        value={voice.selectedVoiceIndex}
+                                        onChange={e => voice.setSelectedVoiceIndex(Number(e.target.value))}
+                                        className="w-full px-2.5 py-1.5 text-[11px] bg-white border border-[#e5e5ea] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all"
+                                    >
+                                        {voice.availableVoices.map((v, i) => (
+                                            <option key={i} value={i}>
+                                                {v.name} ({v.lang})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* Speech rate */}
+                            <div>
+                                <label className="text-[10px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-1.5">
+                                    <span>SPEED</span>
+                                    <span className="text-[#86868b]">{voice.speechRate.toFixed(1)}x</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="2"
+                                    step="0.1"
+                                    value={voice.speechRate}
+                                    onChange={e => voice.setSpeechRate(Number(e.target.value))}
+                                    className="w-full h-1.5 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                />
+                            </div>
+
+                            {/* Speech pitch */}
+                            <div>
+                                <label className="text-[10px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-1.5">
+                                    <span>PITCH</span>
+                                    <span className="text-[#86868b]">{voice.speechPitch.toFixed(1)}</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0.5"
+                                    max="2"
+                                    step="0.1"
+                                    value={voice.speechPitch}
+                                    onChange={e => voice.setSpeechPitch(Number(e.target.value))}
+                                    className="w-full h-1.5 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                />
+                            </div>
+
+                            {/* Speech volume */}
+                            <div>
+                                <label className="text-[10px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-1.5">
+                                    <span>VOLUME</span>
+                                    <span className="text-[#86868b]">{Math.round(voice.speechVolume * 100)}%</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="1"
+                                    step="0.05"
+                                    value={voice.speechVolume}
+                                    onChange={e => voice.setSpeechVolume(Number(e.target.value))}
+                                    className="w-full h-1.5 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                />
+                            </div>
+                        </div>
+                    )}
 
                     {/* ── Key settings panel ──────────────────────────────── */}
                     {showKeySettings && hasKey && (
@@ -812,9 +988,9 @@ function FloatingAIChatInner({
                                             value={input}
                                             onChange={e => setInput(e.target.value)}
                                             onKeyDown={handleKeyDown}
-                                            placeholder="Ask me anything… (Enter to send)"
+                                            placeholder={voice.isListening ? "" : "Ask me anything… (Enter to send)"}
                                             rows={1}
-                                            disabled={sending}
+                                            disabled={sending || voice.isListening}
                                             className="w-full px-3.5 py-2.5 pr-3 text-[12.5px] bg-[#f5f5f7] border border-[#e8e8ed] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all resize-none placeholder:text-[#aeaeb2] disabled:opacity-60 leading-relaxed hide-scrollbar"
                                             style={{ maxHeight: "100px", overflowY: "auto" }}
                                             onInput={e => {
@@ -822,10 +998,37 @@ function FloatingAIChatInner({
                                                 e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px"
                                             }}
                                         />
+                                        {/* Listening overlay */}
+                                        {voice.isListening && (
+                                            <div className="absolute inset-0 bg-[#f5f5f7] border border-[#C6FF00] rounded-[14px] flex items-center gap-2.5 px-3.5 pointer-events-none">
+                                                <VoiceWave size={16} color="#1d1d1f" />
+                                                <span className="text-[12px] text-[#1d1d1f] flex-1 truncate">
+                                                    {voice.interimText || "Listening…"}
+                                                </span>
+                                            </div>
+                                        )}
                                     </div>
+                                    {/* Mic button */}
+                                    {voice.sttSupported && (
+                                        <button
+                                            onClick={voice.isListening ? voice.stopListening : voice.startListening}
+                                            disabled={sending}
+                                            title={voice.isListening ? "Stop listening" : "Speak your message"}
+                                            className={`w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-[14px] transition-all disabled:opacity-40 ${voice.isListening
+                                                ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.4)] scale-105"
+                                                : "bg-[#f5f5f7] border border-[#e8e8ed] text-[#86868b] hover:bg-[#ebebed] hover:text-[#1d1d1f] active:scale-95"
+                                                }`}
+                                        >
+                                            {voice.isListening
+                                                ? <VoiceWave size={14} color="white" />
+                                                : <MicIcon className="w-3.5 h-3.5" />
+                                            }
+                                        </button>
+                                    )}
+                                    {/* Send button */}
                                     <button
                                         onClick={() => handleSend()}
-                                        disabled={!input.trim() || sending}
+                                        disabled={!input.trim() || sending || voice.isListening}
                                         className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 shadow-sm"
                                     >
                                         {sending ? (
@@ -836,7 +1039,7 @@ function FloatingAIChatInner({
                                     </button>
                                 </div>
                                 <p className="text-[9.5px] text-[#c7c7cc] mt-1.5 text-center">
-                                    AI can make mistakes · Review changes in Tasks & Projects
+                                    {voice.isListening ? "Speak clearly · tap mic to stop" : "AI can make mistakes · Review changes in Tasks & Projects"}
                                 </p>
                             </div>
                         </div>

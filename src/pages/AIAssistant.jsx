@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
+import { useVoice } from "../lib/useVoice"
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const SparkleIcon = ({ className }) => (
@@ -28,6 +29,44 @@ const TrashIcon = ({ className }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
+)
+
+const MicIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <line strokeLinecap="round" x1="12" y1="19" x2="12" y2="23" />
+        <line strokeLinecap="round" x1="8" y1="23" x2="16" y2="23" />
+    </svg>
+)
+
+const SpeakerOnIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <polygon strokeLinecap="round" strokeLinejoin="round" points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+    </svg>
+)
+
+const SpeakerOffIcon = ({ className }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <polygon strokeLinecap="round" strokeLinejoin="round" points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <line strokeLinecap="round" x1="23" y1="9" x2="17" y2="15" />
+        <line strokeLinecap="round" x1="17" y1="9" x2="23" y2="15" />
+    </svg>
+)
+
+// ─── Voice waveform ──────────────────────────────────────────────────────────
+const VoiceWave = ({ color = "#C6FF00", size = 16 }) => (
+    <div className="flex items-end gap-[2px]" style={{ height: size }}>
+        {[0.5, 0.9, 1, 0.7, 0.45].map((h, i) => (
+            <span
+                key={i}
+                className="voice-bar rounded-full"
+                style={{ width: 3, height: size * h, background: color, display: "block" }}
+            />
+        ))}
+    </div>
 )
 
 // ─── Action badge colours ─────────────────────────────────────────────────────
@@ -184,6 +223,7 @@ export default function AIAssistant() {
     // Key management
     const [hasKey, setHasKey] = useState(null)   // null = checking
     const [showSettings, setShowSettings] = useState(false)
+    const [showVoiceSettings, setShowVoiceSettings] = useState(false)
     const [keyInput, setKeyInput] = useState("")
     const [keyLoading, setKeyLoading] = useState(false)
     const [keyError, setKeyError] = useState("")
@@ -198,6 +238,9 @@ export default function AIAssistant() {
     const bottomRef = useRef(null)
     const inputRef = useRef(null)
     const chatRef = useRef(null)
+
+    // ── Voice ────────────────────────────────────────────────────────────
+    const voice = useVoice()
 
     // ── Check if user has key ──────────────────────────────────────────────────
     useEffect(() => {
@@ -297,9 +340,13 @@ export default function AIAssistant() {
     }
 
     // ── Send message ───────────────────────────────────────────────────────────
-    const handleSend = async (messageText) => {
+    const lastWasVoiceRef = useRef(false)
+
+    const handleSend = async (messageText, { viaVoice = false } = {}) => {
         const text = (messageText || input).trim()
         if (!text || sending) return
+
+        lastWasVoiceRef.current = viaVoice
 
         const userMsg = { id: Date.now().toString(), role: "user", content: text, ts: new Date() }
         const loadingMsg = { id: "loading-" + Date.now(), role: "ai", content: "", ts: new Date(), status: "loading" }
@@ -381,6 +428,21 @@ export default function AIAssistant() {
         if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend() }
     }
 
+    // Auto-send when voice transcript arrives
+    useEffect(() => {
+        if (voice.transcript) handleSend(voice.transcript.text, { viaVoice: true })
+    }, [voice.transcript])
+
+    // Auto-speak new AI responses only when voice input triggered it
+    useEffect(() => {
+        const last = messages[messages.length - 1]
+        if (last?.role === "ai" && last?.status !== "loading" && last?.id !== "welcome") {
+            if (lastWasVoiceRef.current) {
+                voice.speak(last.content)
+            }
+        }
+    }, [messages])
+
     // ── Loading state ──────────────────────────────────────────────────────────
     if (hasKey === null) {
         return (
@@ -412,18 +474,144 @@ export default function AIAssistant() {
                     </h1>
                 </div>
                 {hasKey && (
-                    <button
-                        onClick={() => setShowSettings(s => !s)}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showSettings
-                            ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                            : "bg-white text-[#1d1d1f] border-[#d2d2d7] hover:bg-[#f5f5f7]"
-                            }`}
-                    >
-                        <KeyIcon className="w-3.5 h-3.5" />
-                        Manage API Key
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Voice settings button */}
+                        {voice.ttsSupported && (
+                            <button
+                                onClick={() => setShowVoiceSettings(s => !s)}
+                                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showVoiceSettings
+                                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
+                                    : "bg-white text-[#1d1d1f] border-[#d2d2d7] hover:bg-[#f5f5f7]"
+                                    }`}
+                                title="Voice settings"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                    <circle cx="12" cy="12" r="1" />
+                                    <circle cx="19" cy="12" r="1" />
+                                    <circle cx="5" cy="12" r="1" />
+                                </svg>
+                                <span className="hidden sm:inline">Voice Settings</span>
+                            </button>
+                        )}
+                        {/* Voice toggle */}
+                        {voice.ttsSupported && (
+                            <button
+                                onClick={() => { voice.setVoiceEnabled(v => !v); if (voice.isSpeaking) voice.stopSpeaking() }}
+                                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${voice.voiceEnabled
+                                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
+                                    : "bg-white text-[#86868b] border-[#d2d2d7] hover:bg-[#f5f5f7]"
+                                    }`}
+                                title={voice.voiceEnabled ? "Voice responses on" : "Voice responses off"}
+                            >
+                                {voice.isSpeaking
+                                    ? <VoiceWave size={14} color="#C6FF00" />
+                                    : voice.voiceEnabled
+                                        ? <SpeakerOnIcon className="w-3.5 h-3.5" />
+                                        : <SpeakerOffIcon className="w-3.5 h-3.5" />
+                                }
+                                <span className="hidden sm:inline">
+                                    {voice.isSpeaking ? "Speaking…" : voice.voiceEnabled ? "Voice On" : "Voice Off"}
+                                </span>
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setShowSettings(s => !s)}
+                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showSettings
+                                ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
+                                : "bg-white text-[#1d1d1f] border-[#d2d2d7] hover:bg-[#f5f5f7]"
+                                }`}
+                        >
+                            <KeyIcon className="w-3.5 h-3.5" />
+                            Manage API Key
+                        </button>
+                    </div>
                 )}
             </div>
+
+            {/* ── Voice Settings Panel ── */}
+            {showVoiceSettings && voice.ttsSupported && hasKey && (
+                <div className="flex-shrink-0 mb-4 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                    <div className="px-5 sm:px-6 py-4 border-b border-[#f0f0f0] flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                            <SpeakerOnIcon className="w-3.5 h-3.5 text-blue-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-[13px] font-bold text-[#1d1d1f]">Voice Settings</h3>
+                            <p className="text-[10px] text-[#86868b]">Customize how the AI speaks to you</p>
+                        </div>
+                    </div>
+                    <div className="px-5 sm:px-6 py-4 space-y-4">
+                        {/* Voice select */}
+                        {voice.availableVoices.length > 0 && (
+                            <div>
+                                <label className="text-[11px] font-semibold text-[#1d1d1f] block mb-2">VOICE</label>
+                                <select
+                                    value={voice.selectedVoiceIndex}
+                                    onChange={e => voice.setSelectedVoiceIndex(Number(e.target.value))}
+                                    className="w-full px-3 py-2 text-[12px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all"
+                                >
+                                    {voice.availableVoices.map((v, i) => (
+                                        <option key={i} value={i}>
+                                            {v.name} ({v.lang})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Speech rate */}
+                        <div>
+                            <label className="text-[11px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-2">
+                                <span>SPEED</span>
+                                <span className="text-[#86868b]">{voice.speechRate.toFixed(1)}x</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="0.5"
+                                max="2"
+                                step="0.1"
+                                value={voice.speechRate}
+                                onChange={e => voice.setSpeechRate(Number(e.target.value))}
+                                className="w-full h-2 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                            />
+                        </div>
+
+                        {/* Speech pitch */}
+                        <div>
+                            <label className="text-[11px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-2">
+                                <span>PITCH</span>
+                                <span className="text-[#86868b]">{voice.speechPitch.toFixed(1)}</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="0.5"
+                                max="2"
+                                step="0.1"
+                                value={voice.speechPitch}
+                                onChange={e => voice.setSpeechPitch(Number(e.target.value))}
+                                className="w-full h-2 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                            />
+                        </div>
+
+                        {/* Speech volume */}
+                        <div>
+                            <label className="text-[11px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-2">
+                                <span>VOLUME</span>
+                                <span className="text-[#86868b]">{Math.round(voice.speechVolume * 100)}%</span>
+                            </label>
+                            <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={voice.speechVolume}
+                                onChange={e => voice.setSpeechVolume(Number(e.target.value))}
+                                className="w-full h-2 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── Settings panel ── */}
             {showSettings && hasKey && (
@@ -627,9 +815,9 @@ export default function AIAssistant() {
                                     value={input}
                                     onChange={e => setInput(e.target.value)}
                                     onKeyDown={handleKeyDown}
-                                    placeholder="Create a task, project, or update something… (Enter to send)"
+                                    placeholder={voice.isListening ? "" : "Create a task, project, or update something… (Enter to send)"}
                                     rows={1}
-                                    disabled={sending}
+                                    disabled={sending || voice.isListening}
                                     className="w-full px-4 py-3 pr-3 text-[13px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all resize-none placeholder:text-[#86868b] disabled:opacity-60 leading-relaxed"
                                     style={{ maxHeight: "120px", overflowY: "auto" }}
                                     onInput={e => {
@@ -637,10 +825,38 @@ export default function AIAssistant() {
                                         e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"
                                     }}
                                 />
+                                {/* Listening overlay */}
+                                {voice.isListening && (
+                                    <div className="absolute inset-0 bg-[#f5f5f7] border border-[#C6FF00] rounded-[14px] flex items-center gap-3 px-4 pointer-events-none">
+                                        <VoiceWave size={20} color="#1d1d1f" />
+                                        <span className="text-[13px] text-[#1d1d1f] flex-1 truncate">
+                                            {voice.interimText || "Listening…"}
+                                        </span>
+                                        <span className="text-[11px] text-[#C6FF00] font-semibold bg-[#1d1d1f] px-2 py-0.5 rounded-full">LIVE</span>
+                                    </div>
+                                )}
                             </div>
+                            {/* Mic button */}
+                            {voice.sttSupported && (
+                                <button
+                                    onClick={voice.isListening ? voice.stopListening : voice.startListening}
+                                    disabled={sending}
+                                    title={voice.isListening ? "Stop listening" : "Speak your message"}
+                                    className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-[14px] transition-all disabled:opacity-40 mb-0.5 ${voice.isListening
+                                        ? "bg-red-500 text-white shadow-[0_0_16px_rgba(239,68,68,0.45)] scale-110"
+                                        : "bg-[#f5f5f7] border border-[#e5e5ea] text-[#86868b] hover:bg-[#ebebed] hover:text-[#1d1d1f] active:scale-[0.95]"
+                                        }`}
+                                >
+                                    {voice.isListening
+                                        ? <VoiceWave size={16} color="white" />
+                                        : <MicIcon className="w-4 h-4" />
+                                    }
+                                </button>
+                            )}
+                            {/* Send button */}
                             <button
                                 onClick={() => handleSend()}
-                                disabled={!input.trim() || sending}
+                                disabled={!input.trim() || sending || voice.isListening}
                                 className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.95] shadow-sm mb-0.5"
                             >
                                 {sending ? (
@@ -651,7 +867,7 @@ export default function AIAssistant() {
                             </button>
                         </div>
                         <p className="text-[10px] text-[#86868b] mt-2 text-center">
-                            AI can make mistakes. Review important changes in Tasks & Projects.
+                            {voice.isListening ? "Speak clearly · click mic or wait for silence to send" : "AI can make mistakes. Review important changes in Tasks & Projects."}
                         </p>
                     </div>
                 </div>

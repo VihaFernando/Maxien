@@ -1,5 +1,45 @@
 /* App specific styles */
 
+/* ─── Voice waveform bars ───────────────────────────────────────────────── */
+@keyframes voice-bar {
+
+    0%,
+    100% {
+        transform: scaleY(0.3);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: scaleY(1);
+        opacity: 1;
+    }
+}
+
+.voice-bar {
+    animation: voice-bar 0.9s ease-in-out infinite;
+    transform-origin: center bottom;
+}
+
+.voice-bar:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.voice-bar:nth-child(2) {
+    animation-delay: 0.15s;
+}
+
+.voice-bar:nth-child(3) {
+    animation-delay: 0.30s;
+}
+
+.voice-bar:nth-child(4) {
+    animation-delay: 0.15s;
+}
+
+.voice-bar:nth-child(5) {
+    animation-delay: 0s;
+}
+
 /* hide scrollbar but keep scrolling functionality */
 .hide-scrollbar {
     -ms-overflow-style: none;
