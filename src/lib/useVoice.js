@@ -173,6 +173,20 @@ export function useVoice() {
         }
     }, [selectedVoiceIndex])
 
+    // If the saved voice name isn't in the current list (e.g. on mobile/desktop)
+    // pick the best available voice and update the selection. This ensures
+    // we don't silently drift to a random voice when the chosen one disappears.
+    useEffect(() => {
+        if (!selectedVoiceName) return
+        const idx = voicesRef.current.findIndex(v => v.name === selectedVoiceName)
+        if (idx === -1 && voicesRef.current.length > 0) {
+            const best = getBestVoice(voicesRef.current)
+            const bestIndex = voicesRef.current.indexOf(best)
+            setSelectedVoiceIndex(bestIndex)
+            setSelectedVoiceName(best.name)
+        }
+    }, [availableVoices, selectedVoiceName])
+
     // Set up SpeechRecognition
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition

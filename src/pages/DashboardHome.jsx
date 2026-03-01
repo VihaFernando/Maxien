@@ -400,7 +400,11 @@ export default function DashboardHome() {
                                             const day = d ? d.getDate() : null
                                             const time = d ? d.toLocaleString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : null
                                             return (
-                                                <div key={task.id} className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2.5 rounded-lg hover:bg-[#f5f5f7] transition-colors duration-200 group border border-[#d2d2d7]/30">
+                                                <Link
+                                                    key={task.id}
+                                                    to={`/dashboard/tasks?task=${task.id}`}
+                                                    className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2.5 rounded-lg hover:bg-[#f5f5f7] transition-colors duration-200 group border border-[#d2d2d7]/30"
+                                                >
                                                     <div className="bg-[#f5f5f7] group-hover:bg-white rounded-lg flex flex-col items-center justify-center w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 transition-colors border border-[#d2d2d7]/40 text-[8px] sm:text-[10px]">
                                                         {hasDueDate ? (
                                                             <>
@@ -428,7 +432,7 @@ export default function DashboardHome() {
                                                             <p className="text-[8px] sm:text-[10px] font-semibold text-[#86868b]">{time}</p>
                                                         </div>
                                                     )}
-                                                </div>
+                                                </Link>
                                             )
                                         })}
                                     </div>
