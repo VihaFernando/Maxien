@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react"
+import { useNavigate } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 
@@ -37,6 +38,7 @@ const ACTION_STYLES = {
     update_project: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100", label: "Project Updated" },
     link_task_project: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100", label: "Task Linked" },
     none: { bg: "bg-[#f5f5f7]", text: "text-[#86868b]", border: "border-[#e5e5ea]", label: "No Action" },
+    clarify: { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-100", label: "Select One" },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,19 +56,58 @@ const EXAMPLE_PROMPTS = [
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
 function MessageBubble({ msg }) {
+    const navigate = useNavigate()
     const isUser = msg.role === "user"
     const isLoading = msg.status === "loading"
 
+    const handleItemClick = (item) => {
+        if (item.type === "task") {
+            navigate(`/dashboard/tasks?task=${item.id}`)
+        } else if (item.type === "project") {
+            navigate(`/dashboard/projects?project=${item.id}`)
+        }
+    }
+
+    const getStatusColor = (status) => {
+        switch (status?.split("•")[0]?.trim()?.toLowerCase()) {
+            case "to do": return "bg-gray-100 text-gray-700"
+            case "in progress": return "bg-blue-100 text-blue-700"
+            case "done": return "bg-green-100 text-green-700"
+            case "active": return "bg-blue-100 text-blue-700"
+            case "on hold": return "bg-amber-100 text-amber-700"
+            case "paused": return "bg-amber-100 text-amber-700"
+            case "completed": return "bg-green-100 text-green-700"
+            default: return "bg-gray-100 text-gray-700"
+        }
+    }
+
+    // Filter content: show only summary when items exist (remove detailed list)
+    const getDisplayContent = () => {
+        if (!msg.items || msg.items.length === 0) return msg.content
+
+        // Extract only the summary part (before numbered/bulleted list)
+        const lines = msg.content.split('\n')
+        const summaryLines = []
+
+        for (const line of lines) {
+            // Stop at numbered list items (1., 2., 3., etc) or bullet points
+            if (/^\d+\.|^[-•*]\s/.test(line.trim())) break
+            summaryLines.push(line)
+        }
+
+        return summaryLines.join('\n').trim() || msg.content
+    }
+
     return (
-        <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} items-end`}>
+        <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} items-start`}>
             {/* Avatar */}
             {!isUser && (
-                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center flex-shrink-0 shadow-sm mb-0.5">
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
                     <SparkleIcon className="w-3.5 h-3.5 text-[#1d1d1f]" />
                 </div>
             )}
 
-            <div className={`flex flex-col gap-1.5 max-w-[85%] sm:max-w-[72%] ${isUser ? "items-end" : "items-start"}`}>
+            <div className={`flex flex-col gap-2 max-w-[85%] sm:max-w-[72%] ${isUser ? "items-end" : "items-start"}`}>
                 {/* Bubble */}
                 <div className={`px-4 py-3 rounded-[18px] ${isUser
                     ? "bg-[#1d1d1f] text-white rounded-br-[6px]"
@@ -80,10 +121,38 @@ function MessageBubble({ msg }) {
                         </div>
                     ) : (
                         <p className={`text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-wrap ${isUser ? "text-white" : "text-[#1d1d1f]"}`}>
-                            {msg.content}
+                            {getDisplayContent()}
                         </p>
                     )}
                 </div>
+
+                {/* Items grid (tasks/projects) */}
+                {!isLoading && msg.items && msg.items.length > 0 && (
+                    <div className={`grid grid-cols-1 gap-2 w-full ${msg.items.length > 1 ? "sm:grid-cols-2 lg:grid-cols-3" : ""}`}>
+                        {msg.items.map((item) => (
+                            <button
+                                key={`${item.type}-${item.id}`}
+                                onClick={() => handleItemClick(item)}
+                                className={`flex flex-col gap-1.5 p-3 rounded-[12px] border text-left transition-colors hover:bg-opacity-100 active:scale-95 ${item.type === "task"
+                                    ? "bg-blue-50 border-blue-100 hover:bg-blue-75"
+                                    : "bg-violet-50 border-violet-100 hover:bg-violet-75"
+                                    }`}
+                            >
+                                <p className="font-semibold text-[13px] text-[#1d1d1f] line-clamp-2">
+                                    {item.title}
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${getStatusColor(item.meta)}`}>
+                                        {item.meta.split("•")[0]?.trim()}
+                                    </span>
+                                    <span className="text-[11px] text-[#86868b]">
+                                        {item.meta.split("•").slice(1).join("•").trim()}
+                                    </span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Action badge */}
                 {!isLoading && msg.action && msg.action !== "none" && msg.action !== "error" && (
@@ -124,6 +193,7 @@ export default function AIAssistant() {
     const [messages, setMessages] = useState([])
     const [input, setInput] = useState("")
     const [sending, setSending] = useState(false)
+    const [pendingClarification, setPendingClarification] = useState(null)
 
     const bottomRef = useRef(null)
     const inputRef = useRef(null)
@@ -240,6 +310,25 @@ export default function AIAssistant() {
 
         try {
             const { data: { session } } = await supabase.auth.getSession()
+
+            // Get user's current local date/time and timezone offset for AI to use
+            const now = new Date()
+            const userLocalNow = now.toISOString()
+            const timezoneOffsetMinutes = now.getTimezoneOffset() // minutes (positive = behind UTC, negative = ahead)
+
+            // If disambiguation is pending, send clarify_resolve instead of chat
+            const reqBody = pendingClarification
+                ? {
+                    type: "clarify_resolve",
+                    selection: text,
+                    entity_type: pendingClarification.entityType,
+                    options: pendingClarification.options,
+                    pending_action: pendingClarification.pendingAction,
+                    userLocalNow,
+                    timezoneOffsetMinutes,
+                }
+                : { type: "chat", message: text, userLocalNow, timezoneOffsetMinutes }
+
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`, {
                 method: "POST",
                 headers: {
@@ -247,9 +336,20 @@ export default function AIAssistant() {
                     "Authorization": `Bearer ${session.access_token}`,
                     "apikey": import.meta.env.VITE_SUPABASE_ANON_KEY,
                 },
-                body: JSON.stringify({ type: "chat", message: text }),
+                body: JSON.stringify(reqBody),
             })
             const data = await res.json()
+
+            if (data.action === "clarify") {
+                setPendingClarification({
+                    entityType: data.clarify.entityType,
+                    options: data.clarify.options,
+                    pendingAction: data.clarify.pendingAction,
+                })
+            } else if (data.action !== "clarify_error") {
+                // clarify_error = bad selection, keep pendingClarification so user can retry
+                setPendingClarification(null)
+            }
 
             setMessages(prev => prev.filter(m => m.status !== "loading").concat({
                 id: "ai-" + Date.now(),
@@ -258,8 +358,11 @@ export default function AIAssistant() {
                 ts: new Date(),
                 action: data.error ? "error" : (data.action || "none"),
                 status: data.error ? "error" : "success",
+                options: data.clarify?.options || null,
+                items: data.items || null,
             }))
         } catch {
+            setPendingClarification(null)
             setMessages(prev => prev.filter(m => m.status !== "loading").concat({
                 id: "err-" + Date.now(),
                 role: "ai",
@@ -468,7 +571,11 @@ export default function AIAssistant() {
                     {/* Chat messages area */}
                     <div ref={chatRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
                         {messages.map(msg => (
-                            <MessageBubble key={msg.id} msg={msg} />
+                            <MessageBubble
+                                key={msg.id}
+                                msg={msg}
+                                onSelectOption={pendingClarification && msg.options?.length ? (val) => handleSend(val) : null}
+                            />
                         ))}
                         <div ref={bottomRef} />
                     </div>
@@ -494,6 +601,22 @@ export default function AIAssistant() {
 
                     {/* Divider */}
                     <div className="border-t border-[#f0f0f0] flex-shrink-0"></div>
+
+                    {/* Pending clarification banner */}
+                    {pendingClarification && (
+                        <div className="px-4 sm:px-5 py-2.5 bg-sky-50 border-b border-sky-100 flex items-center gap-2.5 flex-shrink-0">
+                            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse flex-shrink-0"></span>
+                            <p className="text-[11px] text-sky-700 font-medium flex-1">
+                                Waiting for your selection — type a number or the name
+                            </p>
+                            <button
+                                onClick={() => setPendingClarification(null)}
+                                className="text-[10px] text-sky-500 hover:text-sky-700 font-semibold flex-shrink-0"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    )}
 
                     {/* Input area */}
                     <div className="px-4 sm:px-5 py-3.5 flex-shrink-0">

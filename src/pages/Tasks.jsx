@@ -124,6 +124,18 @@ export default function Tasks() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user])
 
+    // Handle task selection from AI Assistant query parameter
+    useEffect(() => {
+        const params = new URLSearchParams(location.search)
+        const taskId = params.get("task")
+        if (taskId && tasks.length > 0) {
+            const task = tasks.find(t => t.id === taskId)
+            if (task) {
+                setSelectedTask(task)
+            }
+        }
+    }, [location.search, tasks])
+
     // Scroll to section based on ?section= URL param after tasks load
     useEffect(() => {
         if (loading) return

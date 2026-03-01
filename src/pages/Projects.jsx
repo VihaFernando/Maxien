@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useLocation } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { FaPlus, FaEllipsisH, FaTimes, FaSearch, FaChevronDown, FaArchive, FaSync, FaCheckSquare } from "react-icons/fa"
@@ -6,6 +7,7 @@ import { formatTimestamp, formatDate } from "../lib/dateUtils"
 
 export default function Projects() {
     const { user } = useAuth()
+    const location = useLocation()
     const [projects, setProjects] = useState([])
 
     // Utility: Check if task is overdue (local comparison)
@@ -61,6 +63,18 @@ export default function Projects() {
         fetchTypes()
         fetchProjects()
     }, [user])
+
+    // Handle project selection from AI Assistant query parameter
+    useEffect(() => {
+        const params = new URLSearchParams(location.search)
+        const projectId = params.get("project")
+        if (projectId && projects.length > 0) {
+            const project = projects.find(p => p.id === projectId)
+            if (project) {
+                setSelectedProject(project)
+            }
+        }
+    }, [location.search, projects])
 
     const fetchTypes = async () => {
         try {

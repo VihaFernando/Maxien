@@ -2,6 +2,9 @@ import { useEffect, useState } from "react"
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { FaHome, FaUser, FaCheckSquare, FaCog, FaChevronDown, FaCalendarAlt, FaFolder, FaBrain } from "react-icons/fa"
+import AIShortcutHint from "../components/AIShortcutHint"
+
+const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-chat"))
 
 export default function Dashboard() {
     const { user, loading, signOut } = useAuth()
@@ -146,6 +149,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-auto px-5 pb-5">
+                    <AIShortcutHint onOpen={openAIChat} />
                     <div className="bg-[#f5f5f7] rounded-2xl p-4">
                         <div className="flex items-center gap-3 mb-3">
                             {user?.user_metadata?.picture ? (
@@ -300,6 +304,7 @@ export default function Dashboard() {
                     </nav>
 
                     <div className="mt-auto pt-5 border-t border-[#e5e5ea]">
+                        <AIShortcutHint onOpen={openAIChat} />
                         <div className="bg-[#f5f5f7] rounded-2xl p-4">
                             <div className="flex items-center gap-3 mb-3">
                                 {user?.user_metadata?.picture ? (
