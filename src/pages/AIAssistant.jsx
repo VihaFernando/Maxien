@@ -460,26 +460,28 @@ export default function AIAssistant() {
     }
 
     return (
-        <div className="animate-in fade-in duration-500 h-[calc(100vh-120px)] flex flex-col">
+        <div className="animate-in fade-in duration-500 flex flex-col sm:h-[calc(100vh-120px)]">
 
             {/* ── Page header ── */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-4 sm:mb-5 px-0.5 flex-shrink-0">
-                <div>
-                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest mb-0.5">Maxien</p>
-                    <h1 className="text-[20px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight flex items-center gap-2.5">
-                        <span className="inline-flex w-7 h-7 rounded-lg bg-gradient-to-br from-[#C6FF00] to-[#a8db00] items-center justify-center flex-shrink-0">
-                            <SparkleIcon className="w-4 h-4 text-[#1d1d1f]" />
-                        </span>
-                        AI Assistant
-                    </h1>
+            <div className="flex flex-row items-center justify-between gap-2 mb-3 sm:mb-5 px-0.5 flex-shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                    <span className="inline-flex w-7 h-7 rounded-lg bg-gradient-to-br from-[#C6FF00] to-[#a8db00] items-center justify-center flex-shrink-0">
+                        <SparkleIcon className="w-4 h-4 text-[#1d1d1f]" />
+                    </span>
+                    <div className="min-w-0">
+                        <p className="hidden sm:block text-[11px] font-semibold text-[#86868b] uppercase tracking-widest leading-none mb-0.5">Maxien</p>
+                        <h1 className="text-[15px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight truncate">
+                            AI Assistant
+                        </h1>
+                    </div>
                 </div>
                 {hasKey && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                         {/* Voice settings button */}
                         {voice.ttsSupported && (
                             <button
                                 onClick={() => setShowVoiceSettings(s => !s)}
-                                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showVoiceSettings
+                                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showVoiceSettings
                                     ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
                                     : "bg-white text-[#1d1d1f] border-[#d2d2d7] hover:bg-[#f5f5f7]"
                                     }`}
@@ -497,7 +499,7 @@ export default function AIAssistant() {
                         {voice.ttsSupported && (
                             <button
                                 onClick={() => { voice.setVoiceEnabled(v => !v); if (voice.isSpeaking) voice.stopSpeaking() }}
-                                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${voice.voiceEnabled
+                                className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${voice.voiceEnabled
                                     ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
                                     : "bg-white text-[#86868b] border-[#d2d2d7] hover:bg-[#f5f5f7]"
                                     }`}
@@ -516,13 +518,13 @@ export default function AIAssistant() {
                         )}
                         <button
                             onClick={() => setShowSettings(s => !s)}
-                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showSettings
+                            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showSettings
                                 ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
                                 : "bg-white text-[#1d1d1f] border-[#d2d2d7] hover:bg-[#f5f5f7]"
                                 }`}
                         >
                             <KeyIcon className="w-3.5 h-3.5" />
-                            Manage API Key
+                            <span className="hidden sm:inline">Manage API Key</span>
                         </button>
                     </div>
                 )}
@@ -754,10 +756,10 @@ export default function AIAssistant() {
                 </div>
             ) : (
                 /* ── Chat interface ── */
-                <div className="flex-1 flex flex-col min-h-0 bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                <div className="flex flex-col sm:flex-1 sm:min-h-0 bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
 
                     {/* Chat messages area */}
-                    <div ref={chatRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5">
+                    <div ref={chatRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5 min-h-[40vh] sm:min-h-0">
                         {messages.map(msg => (
                             <MessageBubble
                                 key={msg.id}
@@ -808,16 +810,18 @@ export default function AIAssistant() {
 
                     {/* Input area */}
                     <div className="px-4 sm:px-5 py-3.5 flex-shrink-0">
-                        <div className="flex items-end gap-3">
+                        <div className="flex items-center gap-3">
                             <div className="flex-1 relative">
                                 <textarea
                                     ref={inputRef}
                                     value={input}
                                     onChange={e => setInput(e.target.value)}
                                     onKeyDown={handleKeyDown}
-                                    placeholder={voice.isListening ? "" : "Create a task, project, or update something… (Enter to send)"}
+                                    placeholder={voice.isListening ? "" : "Ask me to create or update…"}
                                     rows={1}
                                     disabled={sending || voice.isListening}
+                                    enterKeyHint="send"
+                                    inputMode="text"
                                     className="w-full px-4 py-3 pr-3 text-[13px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all resize-none placeholder:text-[#86868b] disabled:opacity-60 leading-relaxed"
                                     style={{ maxHeight: "120px", overflowY: "auto" }}
                                     onInput={e => {
@@ -842,7 +846,7 @@ export default function AIAssistant() {
                                     onClick={voice.isListening ? voice.stopListening : voice.startListening}
                                     disabled={sending}
                                     title={voice.isListening ? "Stop listening" : "Speak your message"}
-                                    className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-[14px] transition-all disabled:opacity-40 mb-0.5 ${voice.isListening
+                                    className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-[14px] transition-all disabled:opacity-40 ${voice.isListening
                                         ? "bg-red-500 text-white shadow-[0_0_16px_rgba(239,68,68,0.45)] scale-110"
                                         : "bg-[#f5f5f7] border border-[#e5e5ea] text-[#86868b] hover:bg-[#ebebed] hover:text-[#1d1d1f] active:scale-[0.95]"
                                         }`}
@@ -857,7 +861,7 @@ export default function AIAssistant() {
                             <button
                                 onClick={() => handleSend()}
                                 disabled={!input.trim() || sending || voice.isListening}
-                                className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.95] shadow-sm mb-0.5"
+                                className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.95] shadow-sm"
                             >
                                 {sending ? (
                                     <div className="w-4 h-4 border-2 border-[#1d1d1f]/30 border-t-[#1d1d1f] rounded-full animate-spin"></div>
@@ -867,7 +871,10 @@ export default function AIAssistant() {
                             </button>
                         </div>
                         <p className="text-[10px] text-[#86868b] mt-2 text-center">
-                            {voice.isListening ? "Speak clearly · click mic or wait for silence to send" : "AI can make mistakes. Review important changes in Tasks & Projects."}
+                            {voice.isListening
+                                ? "Speak clearly · tap mic again to stop"
+                                : <span className="hidden sm:inline">AI can make mistakes. Review important changes in Tasks &amp; Projects.</span>
+                            }
                         </p>
                     </div>
                 </div>
