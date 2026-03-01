@@ -95,6 +95,9 @@ export function useVoice() {
     const [selectedVoiceIndex, setSelectedVoiceIndex] = useState(() => {
         try { return parseInt(localStorage.getItem("maxien_voice_index") || "0") } catch { return 0 }
     })
+    const [selectedVoiceName, setSelectedVoiceName] = useState(() => {
+        try { return localStorage.getItem("maxien_voice_name") || "" } catch { return "" }
+    })
     const [speechRate, setSpeechRate] = useState(() => {
         try { return parseFloat(localStorage.getItem("maxien_speech_rate") || "1") } catch { return 1 }
     })
@@ -126,6 +129,9 @@ export function useVoice() {
         try { localStorage.setItem("maxien_voice_index", String(selectedVoiceIndex)) } catch { }
     }, [selectedVoiceIndex])
     useEffect(() => {
+        try { localStorage.setItem("maxien_voice_name", String(selectedVoiceName)) } catch { }
+    }, [selectedVoiceName])
+    useEffect(() => {
         try { localStorage.setItem("maxien_speech_rate", String(speechRate)) } catch { }
     }, [speechRate])
     useEffect(() => {
@@ -149,6 +155,14 @@ export function useVoice() {
         window.speechSynthesis.addEventListener("voiceschanged", load)
         return () => window.speechSynthesis.removeEventListener("voiceschanged", load)
     }, [])
+
+    // Sync voice name when index changes (to persist the specific voice selected)
+    useEffect(() => {
+        const voice = voicesRef.current[selectedVoiceIndex]
+        if (voice) {
+            setSelectedVoiceName(voice.name)
+        }
+    }, [selectedVoiceIndex])
 
     // Set up SpeechRecognition
     useEffect(() => {
@@ -234,12 +248,22 @@ export function useVoice() {
         utterance.pitch = speechPitch
         utterance.volume = speechVolume
 
-        // Use selected voice if available
-        const selectedVoice = voicesRef.current[selectedVoiceIndex]
+        // Try to find voice by name first (survives voice re-filtering)
+        let selectedVoice = null
+        if (selectedVoiceName) {
+            selectedVoice = voicesRef.current.find(v => v.name === selectedVoiceName)
+        }
+        // Fall back to index if name not found
+        if (!selectedVoice) {
+            selectedVoice = voicesRef.current[selectedVoiceIndex]
+        }
+        // Fall back to best voice if still not found
+        if (!selectedVoice && voicesRef.current.length > 0) {
+            selectedVoice = getBestVoice(voicesRef.current)
+        }
+
         if (selectedVoice) {
             utterance.voice = selectedVoice
-        } else if (voicesRef.current.length > 0) {
-            utterance.voice = getBestVoice(voicesRef.current)
         }
 
         utterance.onstart = () => setIsSpeaking(true)
@@ -248,7 +272,7 @@ export function useVoice() {
 
         window.speechSynthesis.speak(utterance)
         setIsSpeaking(true)
-    }, [speechRate, speechPitch, speechVolume, selectedVoiceIndex])
+    }, [speechRate, speechPitch, speechVolume, selectedVoiceIndex, selectedVoiceName])
 
     // ── stopSpeaking ──────────────────────────────────────────────────────────
     const stopSpeaking = useCallback(() => {
