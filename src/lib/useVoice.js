@@ -73,6 +73,9 @@ function getBestVoice(voices) {
         v => /Google UK English Female/i.test(v.name),
         v => /Google US English/i.test(v.name),
         v => /Google.*English/i.test(v.name),
+        v => /British|UK/i.test(v.name),  // Mac fallback
+        v => /English Female|Emma|Victoria/i.test(v.name),  // Mac system voices
+        v => v.lang.startsWith("en"),  // Last resort: any English voice
     ]
     for (const check of checks) {
         const match = voices.find(check)
@@ -146,17 +149,26 @@ export function useVoice() {
         if (!window.speechSynthesis) return
         const load = () => {
             const voices = window.speechSynthesis.getVoices()
-            // Filter to Google English voices only (best natural sounding)
-            const googleVoices = voices.filter(v => v.lang.startsWith("en") && /Google/i.test(v.name))
-            voicesRef.current = googleVoices
-            setAvailableVoices(googleVoices)
+            // Try Google voices first (Chrome), fall back to all English voices
+            let filteredVoices = voices.filter(v => v.lang.startsWith("en") && /Google/i.test(v.name))
+            if (filteredVoices.length === 0) {
+                // Mac/Safari fallback: use all English voices
+                filteredVoices = voices.filter(v => v.lang.startsWith("en"))
+            }
+            voicesRef.current = filteredVoices
+            setAvailableVoices(filteredVoices)
 
             // Set UK English Female as default if no voice preference is saved
+            // But fall back to best available voice if UK Female isn't available (Mac)
             if (!localStorage.getItem("maxien_voice_name")) {
-                const ukFemaleIndex = googleVoices.findIndex(v => /Google UK English Female/i.test(v.name))
+                const ukFemaleIndex = filteredVoices.findIndex(v => /Google UK English Female|British/i.test(v.name))
                 if (ukFemaleIndex !== -1) {
                     setSelectedVoiceIndex(ukFemaleIndex)
-                    setSelectedVoiceName(googleVoices[ukFemaleIndex].name)
+                    setSelectedVoiceName(filteredVoices[ukFemaleIndex].name)
+                } else if (filteredVoices.length > 0) {
+                    // Mac fallback: pick the first available voice
+                    setSelectedVoiceIndex(0)
+                    setSelectedVoiceName(filteredVoices[0].name)
                 }
             }
         }

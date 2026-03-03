@@ -70,12 +70,22 @@ async function callGroq(
     apiKey: string,
     taskTypes: { id: string; name: string }[],
     projects: { id: string; name: string }[],
-    userLocalNow: string = new Date().toISOString()
+    userLocalNow: string = new Date().toISOString(),
+    timezoneOffsetMinutes: number = 0
 ): Promise<GeminiResult> {
     const now = userLocalNow
 
+    // Convert UTC ISO time to user's local time string for the prompt
+    const utcDate = new Date(now)
+    const localDate = new Date(utcDate.getTime() - timezoneOffsetMinutes * 60000)
+    const localTimeString = localDate.toLocaleString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: true
+    })
+
     const systemPrompt = `You are an AI assistant for Maxien, a productivity app.
-Current date/time (user's local): ${now}
+Current date/time (user's local): ${localTimeString}
 
 Available task types (use exact name when possible):
 ${taskTypes.length > 0 ? taskTypes.map(t => `- "${t.name}"`).join("\n") : "- (none created yet)"}
@@ -822,10 +832,10 @@ serve(async (req) => {
 
             let groqResult: GeminiResult
             try {
-                groqResult = await callGroq(userMessage, groqKey, taskTypes || [], projects || [], userLocalNow)
+                groqResult = await callGroq(userMessage, groqKey, taskTypes || [], projects || [], userLocalNow, timezoneOffsetMinutes)
             } catch (firstErr) {
                 try {
-                    groqResult = await callGroq(userMessage, groqKey, taskTypes || [], projects || [], userLocalNow)
+                    groqResult = await callGroq(userMessage, groqKey, taskTypes || [], projects || [], userLocalNow, timezoneOffsetMinutes)
                 } catch { throw firstErr }
             }
 
