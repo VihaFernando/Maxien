@@ -215,7 +215,7 @@ function ChatBubble({ msg, onSelectOption }) {
                                 className="text-left px-3 py-2 text-[11.5px] font-medium bg-sky-50 hover:bg-sky-100 text-sky-800 rounded-[10px] border border-sky-100 transition-colors active:scale-95"
                             >
                                 <span className="font-bold text-sky-600 mr-1.5">{i + 1}.</span>
-                                {opt.name || opt.title || opt}
+                                {opt.label || opt.name || opt.title || opt}
                             </button>
                         ))}
                     </div>
