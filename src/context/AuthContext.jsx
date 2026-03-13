@@ -3,34 +3,43 @@ import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
 
+const getOAuthRedirectTo = (path = '/dashboard') => {
+    const configuredOrigin = import.meta.env.VITE_AUTH_REDIRECT_ORIGIN
+    const baseOrigin = configuredOrigin || window.location.origin
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    return `${baseOrigin}${normalizedPath}`
+}
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
+    const [session, setSession] = useState(null)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         // Initial check for session
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session: s } }) => {
+            setSession(s || null)
             setUser(prevUser => {
-                const newUser = session?.user || null
-                // Only update if user actually changed
+                const newUser = s?.user || null
                 if (prevUser?.id !== newUser?.id) {
                     return newUser
                 }
                 return prevUser
             })
             setLoading(false)
-        }).catch((error) => {
+        }).catch(() => {
             console.log('Session check: user not authenticated')
+            setSession(null)
             setUser(null)
             setLoading(false)
         })
 
         // Subscribe to auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (event, session) => {
+            (event, s) => {
+                setSession(s || null)
                 setUser(prevUser => {
-                    const newUser = session?.user || null
-                    // Only update if user actually changed (by ID comparison)
+                    const newUser = s?.user || null
                     if (prevUser?.id !== newUser?.id) {
                         return newUser
                     }
@@ -78,7 +87,24 @@ export const AuthProvider = ({ children }) => {
         const { data, error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
-                redirectTo: window.location.origin + '/dashboard',
+                scopes: 'openid email profile',
+                redirectTo: getOAuthRedirectTo('/dashboard'),
+            },
+        })
+        return { data, error }
+    }, [])
+
+    const connectGoogleCalendar = useCallback(async () => {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                scopes: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+                redirectTo: getOAuthRedirectTo('/dashboard/calendar'),
+                queryParams: {
+                    access_type: 'offline',
+                    prompt: 'consent',
+                    include_granted_scopes: 'true',
+                },
             },
         })
         return { data, error }
@@ -91,12 +117,14 @@ export const AuthProvider = ({ children }) => {
 
     const value = useMemo(() => ({
         user,
+        session,
         loading,
         signUp,
         signIn,
         signInWithGoogle,
+        connectGoogleCalendar,
         signOut,
-    }), [user, loading, signUp, signIn, signInWithGoogle, signOut])
+    }), [user, session, loading, signUp, signIn, signInWithGoogle, connectGoogleCalendar, signOut])
 
     return (
         <AuthContext.Provider value={value}>
