@@ -5,6 +5,57 @@ import { FaChevronLeft, FaChevronRight, FaTimes, FaClock, FaFlag, FaPlus, FaCale
 import { fetchGoogleEvents, createGoogleEvent, updateGoogleEvent, deleteGoogleEvent } from "../lib/googleCalendar"
 import GoogleEventModal from "../components/GoogleEventModal"
 
+const GOOGLE_TOKEN_CACHE_KEY = 'maxien_google_provider_token'
+const GOOGLE_TOKEN_FALLBACK_TTL_MS = 55 * 60 * 1000
+
+const readCachedGoogleProviderToken = () => {
+    try {
+        const raw = localStorage.getItem(GOOGLE_TOKEN_CACHE_KEY)
+        if (!raw) return null
+
+        const parsed = JSON.parse(raw)
+        const token = typeof parsed?.token === 'string' ? parsed.token : null
+        const expiresAt = Number(parsed?.expiresAt || 0)
+
+        if (!token) {
+            localStorage.removeItem(GOOGLE_TOKEN_CACHE_KEY)
+            return null
+        }
+
+        if (expiresAt && Date.now() >= expiresAt) {
+            localStorage.removeItem(GOOGLE_TOKEN_CACHE_KEY)
+            return null
+        }
+
+        return token
+    } catch {
+        try { localStorage.removeItem(GOOGLE_TOKEN_CACHE_KEY) } catch { return null }
+        return null
+    }
+}
+
+const writeCachedGoogleProviderToken = (token, expiresAtSeconds) => {
+    if (!token) return
+
+    const expiresAt = expiresAtSeconds
+        ? (expiresAtSeconds * 1000)
+        : (Date.now() + GOOGLE_TOKEN_FALLBACK_TTL_MS)
+
+    try {
+        localStorage.setItem(GOOGLE_TOKEN_CACHE_KEY, JSON.stringify({ token, expiresAt }))
+    } catch {
+        // ignore cache write failures
+    }
+}
+
+const clearCachedGoogleProviderToken = () => {
+    try {
+        localStorage.removeItem(GOOGLE_TOKEN_CACHE_KEY)
+    } catch {
+        // ignore cache cleanup failures
+    }
+}
+
 export default function Calendar() {
     const { user, connectGoogleCalendar } = useAuth()
     const [tasks, setTasks] = useState([])
@@ -56,11 +107,35 @@ export default function Calendar() {
 
     // Sync provider token from Supabase session (needed for Google Calendar API)
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setProviderToken(session?.provider_token || null)
-        })
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-            setProviderToken(session?.provider_token || null)
+        supabase.auth.getSession()
+            .then(({ data: { session } }) => {
+                const liveProviderToken = session?.provider_token || null
+                if (liveProviderToken) {
+                    writeCachedGoogleProviderToken(liveProviderToken, session?.expires_at)
+                    setProviderToken(liveProviderToken)
+                    return
+                }
+
+                setProviderToken(readCachedGoogleProviderToken())
+            })
+            .catch(() => {
+                setProviderToken(readCachedGoogleProviderToken())
+            })
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+                clearCachedGoogleProviderToken()
+                setProviderToken(null)
+                return
+            }
+
+            const liveProviderToken = session?.provider_token || null
+            if (liveProviderToken) {
+                writeCachedGoogleProviderToken(liveProviderToken, session?.expires_at)
+                setProviderToken(liveProviderToken)
+                return
+            }
+
+            setProviderToken(readCachedGoogleProviderToken())
         })
         return () => subscription.unsubscribe()
     }, [])
@@ -121,7 +196,12 @@ export default function Calendar() {
             setGoogleEvents([])
             setCalendarConnected(false)
             const msg = err?.message || ''
+            const isAuthError = /unauthorized|invalid.*token|token.*expired|401/i.test(msg)
             const isScopeError = /insufficient|permission|scope|forbidden|403/i.test(msg)
+            if (isAuthError) {
+                clearCachedGoogleProviderToken()
+                setProviderToken(null)
+            }
             setGCalError(isScopeError ? null : msg)
         } finally {
             setGCalLoading(false)

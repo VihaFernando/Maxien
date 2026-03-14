@@ -16,40 +16,68 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        // Initial check for session
-        supabase.auth.getSession().then(({ data: { session: s } }) => {
-            setSession(s || null)
+        let isMounted = true
+
+        const syncAuthState = (nextSession) => {
+            if (!isMounted) return
+
+            setSession(nextSession || null)
             setUser(prevUser => {
-                const newUser = s?.user || null
-                if (prevUser?.id !== newUser?.id) {
-                    return newUser
+                const nextUser = nextSession?.user || null
+                if (prevUser?.id !== nextUser?.id) {
+                    return nextUser
                 }
                 return prevUser
             })
             setLoading(false)
-        }).catch(() => {
-            console.log('Session check: user not authenticated')
-            setSession(null)
-            setUser(null)
-            setLoading(false)
-        })
+        }
+
+        const initializeSession = async () => {
+            try {
+                const { data: { session: currentSession } } = await supabase.auth.getSession()
+
+                const isExpired = currentSession?.expires_at
+                    ? currentSession.expires_at * 1000 <= Date.now()
+                    : false
+
+                if (isExpired) {
+                    const { data, error } = await supabase.auth.refreshSession()
+                    if (error) {
+                        syncAuthState(null)
+                        return
+                    }
+                    syncAuthState(data?.session || null)
+                    return
+                }
+
+                syncAuthState(currentSession || null)
+            } catch {
+                syncAuthState(null)
+            }
+        }
+
+        initializeSession()
 
         // Subscribe to auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, s) => {
-                setSession(s || null)
-                setUser(prevUser => {
-                    const newUser = s?.user || null
-                    if (prevUser?.id !== newUser?.id) {
-                        return newUser
-                    }
-                    return prevUser
-                })
-                setLoading(false)
+                if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+                    syncAuthState(null)
+                    return
+                }
+
+                syncAuthState(s || null)
+
+                if (event === 'TOKEN_REFRESH_FAILED') {
+                    supabase.auth.signOut().catch(() => {
+                        // keep app stable if sign-out fails
+                    })
+                }
             }
         )
 
         return () => {
+            isMounted = false
             if (subscription) subscription.unsubscribe()
         }
     }, [])
@@ -133,6 +161,7 @@ export const AuthProvider = ({ children }) => {
     )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
     const context = useContext(AuthContext)
     if (!context) {
