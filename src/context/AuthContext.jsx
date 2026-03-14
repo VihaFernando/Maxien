@@ -19,6 +19,7 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         let isMounted = true
+        let hasHydrated = false
 
         const syncAuthState = (nextSession) => {
             if (!isMounted) return
@@ -31,27 +32,13 @@ export const AuthProvider = ({ children }) => {
                 }
                 return prevUser
             })
+            hasHydrated = true
             setLoading(false)
         }
 
         const initializeSession = async () => {
             try {
                 const { data: { session: currentSession } } = await supabase.auth.getSession()
-
-                const isExpired = currentSession?.expires_at
-                    ? currentSession.expires_at * 1000 <= Date.now()
-                    : false
-
-                if (isExpired) {
-                    const { data, error } = await supabase.auth.refreshSession()
-                    if (error) {
-                        syncAuthState(null)
-                        return
-                    }
-                    syncAuthState(data?.session || null)
-                    return
-                }
-
                 syncAuthState(currentSession || null)
             } catch {
                 syncAuthState(null)
@@ -63,6 +50,11 @@ export const AuthProvider = ({ children }) => {
         // Subscribe to auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             (event, s) => {
+                if (!hasHydrated) {
+                    syncAuthState(s || null)
+                    return
+                }
+
                 if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
                     syncAuthState(null)
                     return

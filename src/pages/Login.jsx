@@ -1,4 +1,4 @@
-﻿import { useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 
@@ -8,7 +8,13 @@ export default function Login() {
     const [error, setError] = useState("")
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
-    const { signIn, signInWithGoogle } = useAuth()
+    const { signIn, signInWithGoogle, user, loading: authLoading } = useAuth()
+
+    useEffect(() => {
+        if (!authLoading && user) {
+            navigate("/dashboard", { replace: true })
+        }
+    }, [authLoading, user, navigate])
 
     const handleEmailLogin = async (e) => {
         e.preventDefault()
