@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState, useMemo, useCallback } 
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext(null)
+const GOOGLE_TOKEN_CACHE_KEY = 'maxien_google_provider_token'
+const GOOGLE_CALENDAR_DISCONNECTED_KEY = 'maxien_google_calendar_disconnected'
 
 const getOAuthRedirectTo = (path = '/dashboard') => {
     const configuredOrigin = import.meta.env.VITE_AUTH_REDIRECT_ORIGIN
@@ -139,6 +141,12 @@ export const AuthProvider = ({ children }) => {
     }, [])
 
     const signOut = useCallback(async () => {
+        try {
+            localStorage.removeItem(GOOGLE_TOKEN_CACHE_KEY)
+            localStorage.removeItem(GOOGLE_CALENDAR_DISCONNECTED_KEY)
+        } catch {
+            // ignore local cache cleanup failures
+        }
         const { error } = await supabase.auth.signOut()
         return { error }
     }, [])

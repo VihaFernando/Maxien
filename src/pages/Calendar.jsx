@@ -6,7 +6,28 @@ import { fetchGoogleEvents, createGoogleEvent, updateGoogleEvent, deleteGoogleEv
 import GoogleEventModal from "../components/GoogleEventModal"
 
 const GOOGLE_TOKEN_CACHE_KEY = 'maxien_google_provider_token'
+const GOOGLE_CALENDAR_DISCONNECTED_KEY = 'maxien_google_calendar_disconnected'
 const GOOGLE_TOKEN_FALLBACK_TTL_MS = 55 * 60 * 1000
+
+const isGoogleCalendarDisconnected = () => {
+    try {
+        return localStorage.getItem(GOOGLE_CALENDAR_DISCONNECTED_KEY) === 'true'
+    } catch {
+        return false
+    }
+}
+
+const setGoogleCalendarDisconnected = (disconnected) => {
+    try {
+        if (disconnected) {
+            localStorage.setItem(GOOGLE_CALENDAR_DISCONNECTED_KEY, 'true')
+            return
+        }
+        localStorage.removeItem(GOOGLE_CALENDAR_DISCONNECTED_KEY)
+    } catch {
+        // ignore disconnect flag storage failures
+    }
+}
 
 const readCachedGoogleProviderToken = () => {
     try {
@@ -109,6 +130,11 @@ export default function Calendar() {
     useEffect(() => {
         supabase.auth.getSession()
             .then(({ data: { session } }) => {
+                if (isGoogleCalendarDisconnected()) {
+                    setProviderToken(null)
+                    return
+                }
+
                 const liveProviderToken = session?.provider_token || null
                 if (liveProviderToken) {
                     writeCachedGoogleProviderToken(liveProviderToken, session?.expires_at)
@@ -124,6 +150,12 @@ export default function Calendar() {
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
                 clearCachedGoogleProviderToken()
+                setGoogleCalendarDisconnected(false)
+                setProviderToken(null)
+                return
+            }
+
+            if (isGoogleCalendarDisconnected()) {
                 setProviderToken(null)
                 return
             }
@@ -248,6 +280,7 @@ export default function Calendar() {
     const handleConnectCalendar = async () => {
         setGCalError(null)
         setConnectingCalendar(true)
+        setGoogleCalendarDisconnected(false)
         try {
             const { error } = await connectGoogleCalendar()
             if (error) setGCalError(error.message)
@@ -256,6 +289,15 @@ export default function Calendar() {
         } finally {
             setConnectingCalendar(false)
         }
+    }
+
+    const handleDisconnectCalendar = () => {
+        setGoogleCalendarDisconnected(true)
+        clearCachedGoogleProviderToken()
+        setProviderToken(null)
+        setGoogleEvents([])
+        setCalendarConnected(false)
+        setGCalError(null)
     }
 
     const getGoogleEventsForDate = (date) => {
@@ -658,7 +700,15 @@ export default function Calendar() {
                     </div>
                 </div>
                 {calendarConnected ? (
-                    <span className="px-3 py-1.5 rounded-xl text-[12px] font-bold bg-[#e8f5e9] text-[#2e7d32] w-fit">Connected</span>
+                    <div className="flex items-center gap-2">
+                        <span className="px-3 py-1.5 rounded-xl text-[12px] font-bold bg-[#e8f5e9] text-[#2e7d32] w-fit">Connected</span>
+                        <button
+                            onClick={handleDisconnectCalendar}
+                            className="px-3 py-1.5 rounded-xl text-[12px] font-bold bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-all"
+                        >
+                            Disconnect
+                        </button>
+                    </div>
                 ) : (
                     <button
                         onClick={handleConnectCalendar}
