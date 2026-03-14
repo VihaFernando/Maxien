@@ -69,12 +69,6 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 syncAuthState(s || null)
-
-                if (event === 'TOKEN_REFRESH_FAILED') {
-                    supabase.auth.signOut().catch(() => {
-                        // keep app stable if sign-out fails
-                    })
-                }
             }
         )
 

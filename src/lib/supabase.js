@@ -19,21 +19,8 @@ const createSafeStorage = () => {
         getItem: (key) => {
             try {
                 const storage = getNativeStorage()
-                const raw = storage ? storage.getItem(key) : memoryStore.get(key) ?? null
-                if (!raw) return null
-
-                const looksLikeJson = raw.startsWith('{') || raw.startsWith('[')
-                if (looksLikeJson) JSON.parse(raw)
-
-                return raw
+                return storage ? storage.getItem(key) : memoryStore.get(key) ?? null
             } catch {
-                try {
-                    const storage = getNativeStorage()
-                    if (storage) storage.removeItem(key)
-                    memoryStore.delete(key)
-                } catch {
-                    // ignore storage cleanup failures
-                }
                 return null
             }
         },
@@ -68,7 +55,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        flowType: 'pkce',
+        storageKey: 'maxien.auth.token',
         storage: createSafeStorage(),
     },
 })
