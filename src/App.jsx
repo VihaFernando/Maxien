@@ -12,6 +12,7 @@ import Calendar from './pages/Calendar'
 import AIAssistant from './pages/AIAssistant'
 import GithubCallback from './pages/GithubCallback'
 import FloatingAIChat from './components/FloatingAIChat'
+import GlobalCommandPalette from './components/GlobalCommandPalette'
 import './App.css'
 
 function App() {
@@ -33,6 +34,7 @@ function App() {
           <Route path="/auth/github/callback" element={<GithubCallback />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
+        <GlobalCommandPalette />
         <FloatingAIChat />
       </AuthProvider>
     </Router>

@@ -37,8 +37,14 @@ export default function Dashboard() {
         )
     }
 
-    const initials = user?.user_metadata?.display_name
-        ? user.user_metadata.display_name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
+    const profileName = user?.user_metadata?.display_name
+        || user?.user_metadata?.full_name
+        || user?.user_metadata?.name
+        || user?.email?.split("@")[0]
+        || "User"
+
+    const initials = profileName
+        ? profileName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)
         : user?.email?.[0]?.toUpperCase() || "U"
 
     return (
@@ -165,7 +171,7 @@ export default function Dashboard() {
                             )}
                             <div className="min-w-0">
                                 <p className="text-[12px] font-bold text-[#1d1d1f] truncate">
-                                    {user?.user_metadata?.full_name || "User"}
+                                    {profileName}
                                 </p>
                                 <p className="text-[10px] font-medium text-[#86868b] truncate">
                                     {user?.email}
@@ -320,7 +326,7 @@ export default function Dashboard() {
                                 )}
                                 <div className="min-w-0">
                                     <p className="text-[12px] font-bold text-[#1d1d1f] truncate">
-                                        {user?.user_metadata?.full_name || "User"}
+                                        {profileName}
                                     </p>
                                     <p className="text-[10px] font-medium text-[#86868b] truncate">
                                         {user?.email}

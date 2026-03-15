@@ -76,6 +76,25 @@ export default function Projects() {
         }
     }, [location.search, projects])
 
+    useEffect(() => {
+        const params = new URLSearchParams(location.search)
+        if (params.get("action") === "create") {
+            setSelectedProject(null)
+            setSelectedProjectTasks(null)
+            setActionMenu(null)
+            setEditing(null)
+            setForm({
+                name: "",
+                description: "",
+                type_id: "",
+                status: "Active",
+                start_date: "",
+                target_end_date: ""
+            })
+            setShowForm(true)
+        }
+    }, [location.search])
+
     const fetchTypes = async () => {
         try {
             const { data } = await supabase

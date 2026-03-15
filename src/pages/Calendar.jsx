@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react"
+import { useLocation } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { FaChevronLeft, FaChevronRight, FaTimes, FaClock, FaFlag, FaPlus, FaCalendarAlt, FaVideo, FaExternalLinkAlt, FaSync } from "react-icons/fa"
@@ -79,6 +80,7 @@ const clearCachedGoogleProviderToken = () => {
 
 export default function Calendar() {
     const { user, connectGoogleCalendar } = useAuth()
+    const location = useLocation()
     const [tasks, setTasks] = useState([])
     const [types, setTypes] = useState([])
     const [currentDate, setCurrentDate] = useState(new Date())
@@ -243,6 +245,33 @@ export default function Calendar() {
     useEffect(() => {
         loadGoogleEvents()
     }, [loadGoogleEvents])
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search)
+
+        if (params.get('action') === 'create-event') {
+            setEditingGoogleEvent(null)
+            setSelectedGoogleEvent(null)
+            setNewEventDefaultDate(new Date())
+            setShowEventModal(true)
+        }
+
+        const eventId = params.get('event')
+        if (!eventId || googleEvents.length === 0) return
+
+        const matchedEvent = googleEvents.find(event => event.id === eventId)
+        if (matchedEvent) {
+            setSelectedGoogleEvent(matchedEvent)
+            const eventDate = matchedEvent.start?.dateTime || matchedEvent.start?.date
+            if (eventDate) {
+                const nextDate = new Date(eventDate)
+                if (!Number.isNaN(nextDate.getTime())) {
+                    setCurrentDate(nextDate)
+                    setSelectedDate(nextDate)
+                }
+            }
+        }
+    }, [location.search, googleEvents])
 
     const handleCreateGoogleEvent = async (eventData) => {
         try {

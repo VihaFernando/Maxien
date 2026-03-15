@@ -9,6 +9,9 @@ export default function DashboardHome() {
     const name = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there"
     const firstName = name.split(" ")[0]
 
+    const hour = new Date().getHours()
+    const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"
+
     // Utility: Check if task is overdue (not done and past due time)
     const isOverdueTask = (task) => {
         if (!task.due_at || task.status === "Done" || task.status === "Cancelled") return false
@@ -162,7 +165,7 @@ export default function DashboardHome() {
                 <div>
                     <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest mb-1">Overview</p>
                     <h1 className="text-[20px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight">
-                        Welcome back, {firstName}
+                        {greeting}, {firstName}
                     </h1>
                 </div>
                 <p className="text-[12px] font-medium text-[#86868b] sm:pb-0.5">{currentDate}</p>

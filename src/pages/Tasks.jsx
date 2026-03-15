@@ -136,6 +136,17 @@ export default function Tasks() {
         }
     }, [location.search, tasks])
 
+    useEffect(() => {
+        const params = new URLSearchParams(location.search)
+        if (params.get("action") === "create") {
+            setSelectedTask(null)
+            setActionMenu(null)
+            setEditing(null)
+            setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
+            setShowTaskModal(true)
+        }
+    }, [location.search])
+
     // Scroll to section based on ?section= URL param after tasks load
     useEffect(() => {
         if (loading) return
