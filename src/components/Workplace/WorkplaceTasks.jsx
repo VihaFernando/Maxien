@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FaPlus } from "react-icons/fa"
 import { createWorkplaceTask } from "../../lib/workplaces"
+import { getUsersByIds, getDisplayName } from "../../lib/users"
 
 export default function WorkplaceTasks({
     tasks,
@@ -18,6 +19,7 @@ export default function WorkplaceTasks({
 }) {
     const [showForm, setShowForm] = useState(false)
     const [formLoading, setFormLoading] = useState(false)
+    const [userMap, setUserMap] = useState({})
     const [newTask, setNewTask] = useState({
         title: "",
         description: "",
@@ -27,14 +29,32 @@ export default function WorkplaceTasks({
         due_time: "",
         priority: "Medium",
         status: "To Do",
-        assigned_to: "",
+        assigned_to: [],
     })
 
-    const buildDueAt = (date, time) => {
-        if (!date) return null
-        const timeValue = time || "09:00"
-        const localDate = new Date(`${date}T${timeValue}:00`)
-        return localDate.toISOString()
+    const memberIds = useMemo(() => members.map((m) => m.user_id), [members])
+
+    useEffect(() => {
+        const loadUsers = async () => {
+            if (!memberIds.length) return
+            try {
+                const users = await getUsersByIds(memberIds)
+                setUserMap(users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {}))
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        loadUsers()
+    }, [memberIds])
+
+    const assignedUsers = useMemo(() => {
+        return (newTask.assigned_to || []).map((id) => userMap[id]).filter(Boolean)
+    }, [newTask.assigned_to, userMap])
+
+    const formatTaskAssignees = (task) => {
+        const ids = task?.task_assignees?.map((a) => a.user_id) || []
+        return getAssignedNames(ids)
     }
 
     const handleSubmit = async (e) => {
@@ -72,7 +92,7 @@ export default function WorkplaceTasks({
                 due_time: "",
                 priority: "Medium",
                 status: "To Do",
-                assigned_to: "",
+                assigned_to: [],
             })
             setMessage("Workplace task created.")
             setShowForm(false)
@@ -86,6 +106,16 @@ export default function WorkplaceTasks({
     }
 
     const acceptedMembers = members.filter((m) => m.status === "accepted")
+
+    const getAssignedNames = (ids) => {
+        if (!ids || !Array.isArray(ids)) return []
+        return ids
+            .map((id) => {
+                const user = userMap[id]
+                return user ? getDisplayName(user) : id
+            })
+            .filter(Boolean)
+    }
 
     return (
         <div className="animate-in fade-in duration-500">
@@ -138,7 +168,11 @@ export default function WorkplaceTasks({
                                 </div>
                                 <div className="flex flex-wrap gap-3 text-[12px] text-[#86868b]">
                                     <span>Priority: {t.priority || "—"}</span>
-                                    {t.assigned_to && <span>Assigned: {t.assigned_to.slice(0, 12)}…</span>}
+                                    {t.task_assignees?.length > 0 && (
+                                        <span>
+                                            Assigned: {formatTaskAssignees(t).join(", ")}
+                                        </span>
+                                    )}
                                     {t.due_at && (
                                         <span>Due: {new Date(t.due_at).toLocaleDateString()}</span>
                                     )}
@@ -259,17 +293,27 @@ export default function WorkplaceTasks({
                                         Assign To
                                     </label>
                                     <select
+                                        multiple
                                         value={newTask.assigned_to}
-                                        onChange={(e) => setNewTask((v) => ({ ...v, assigned_to: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
+                                        onChange={(e) =>
+                                            setNewTask((v) => ({
+                                                ...v,
+                                                assigned_to: Array.from(e.target.selectedOptions, (o) => o.value),
+                                            }))
+                                        }
+                                        className="h-32 w-full px-3 py-2 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
                                     >
-                                        <option value="">Optional</option>
                                         {acceptedMembers.map((m) => (
                                             <option key={m.user_id} value={m.user_id}>
-                                                {m.user_id}
+                                                {getDisplayName(userMap[m.user_id] || { id: m.user_id })}
                                             </option>
                                         ))}
                                     </select>
+                                    {newTask.assigned_to.length > 0 && (
+                                        <p className="text-[12px] text-[#86868b] mt-2">
+                                            Assigned to: {getAssignedNames(newTask.assigned_to).join(", ")}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 

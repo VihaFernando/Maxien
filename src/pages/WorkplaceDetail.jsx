@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import {
   listMyWorkplaces,
+  getWorkplaceById,
   listWorkplaceMembers,
   listWorkplaceProjects,
   listWorkplaceTasks,
@@ -31,11 +32,12 @@ export default function WorkplaceDetail() {
   const [projects, setProjects] = useState([])
   const [types, setTypes] = useState([])
 
+  const [workplace, setWorkplace] = useState(null)
+
   const currentMembership = useMemo(() => {
-    return myRows.find((r) => r.workplaces?.id === id && r.status === "accepted") || null
+    return myRows.find((r) => r.workplace_id === id && r.status === "accepted") || null
   }, [myRows, id])
 
-  const workplace = currentMembership?.workplaces || null
   const isOwner = currentMembership?.role === "owner" || workplace?.owner_id === user?.id
 
   const refresh = async () => {
@@ -50,11 +52,22 @@ export default function WorkplaceDetail() {
         listWorkplaceProjects({ workplaceId: id }),
         listWorkplaceTaskTypes({ workplaceId: id }),
       ])
+
       setMyRows(my)
       setMembers(mem)
       setTasks(t)
       setProjects(p)
       setTypes(tt)
+
+      const membership = my.find((r) => r.workplace_id === id && r.status === "accepted")
+      if (membership?.workplace_id) {
+        try {
+          const workplaceData = await getWorkplaceById(membership.workplace_id)
+          setWorkplace(workplaceData)
+        } catch (ignored) {
+          // keep existing workplace state if fetch fails
+        }
+      }
     } catch (e) {
       setError(e?.message || "Failed to load workplace.")
     } finally {

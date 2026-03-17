@@ -3,9 +3,31 @@ import { supabase } from "./supabase"
 export async function listMyWorkplaces(userId) {
   const { data, error } = await supabase
     .from("workplace_members")
-    .select("id, role, status, workplace_id, workplaces ( id, name, description, banner_url, owner_id, created_at )")
+    .select("id, role, status, workplace_id")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
+
+  if (error) throw error
+  return data || []
+}
+
+export async function getWorkplaceById(workplaceId) {
+  const { data, error } = await supabase
+    .from("workplaces")
+    .select("*")
+    .eq("id", workplaceId)
+    .single()
+
+  if (error) throw error
+  return data
+}
+
+export async function getWorkplacesByIds(workplaceIds) {
+  if (!workplaceIds || workplaceIds.length === 0) return []
+  const { data, error } = await supabase
+    .from("workplaces")
+    .select("*")
+    .in("id", workplaceIds)
 
   if (error) throw error
   return data || []
@@ -57,12 +79,29 @@ export async function listWorkplaceMembers(workplaceId) {
 export async function listWorkplaceTasks({ workplaceId }) {
   const { data, error } = await supabase
     .from("tasks")
-    .select("*")
+    .select(
+      `*,
+      task_assignees!left(task_id) ( user_id )`
+    )
     .eq("workplace_id", workplaceId)
     .order("created_at", { ascending: false })
 
   if (error) throw error
   return data || []
+}
+
+export async function assignTaskUsers({ taskId, userIds }) {
+  if (!taskId || !userIds?.length) return
+  const payload = userIds.map((user_id) => ({ task_id: taskId, user_id }))
+  const { data, error } = await supabase.from("task_assignees").insert(payload)
+  if (error) throw error
+  return data
+}
+
+export async function clearTaskAssignees({ taskId }) {
+  const { data, error } = await supabase.from("task_assignees").delete().eq("task_id", taskId)
+  if (error) throw error
+  return data
 }
 
 export async function listWorkplaceProjects({ workplaceId }) {
@@ -88,9 +127,30 @@ export async function listWorkplaceTaskTypes({ workplaceId }) {
 }
 
 export async function createWorkplaceTask(payload) {
-  const { data, error } = await supabase.from("tasks").insert([payload]).select().single()
-  if (error) throw error
-  return data
+  const taskPayload = {
+    ...payload,
+  }
+
+  // Create the task first, then assign users via task_assignees join table
+  const { data: task, error: taskError } = await supabase
+    .from("tasks")
+    .insert([taskPayload])
+    .select()
+    .single()
+
+  if (taskError) throw taskError
+
+  const userIds = Array.isArray(payload.assigned_to)
+    ? payload.assigned_to.filter(Boolean)
+    : payload.assigned_to
+      ? [payload.assigned_to]
+      : []
+
+  if (userIds.length) {
+    await assignTaskUsers({ taskId: task.id, userIds })
+  }
+
+  return task
 }
 
 export async function createWorkplaceProject(payload) {

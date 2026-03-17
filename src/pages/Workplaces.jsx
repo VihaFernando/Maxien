@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext"
 import {
   createWorkplace,
   listMyWorkplaces,
+  getWorkplacesByIds,
   setMyMembershipStatus,
 } from "../lib/workplaces"
 import { FaPlus, FaTimes } from "react-icons/fa"
@@ -33,7 +34,23 @@ export default function Workplaces() {
     setError("")
     try {
       const data = await listMyWorkplaces(user.id)
-      setRows(data)
+      const workplaceIds = Array.from(new Set(data.map((r) => r.workplace_id).filter(Boolean)))
+
+      let workplacesMap = {}
+      if (workplaceIds.length) {
+        const workplaces = await getWorkplacesByIds(workplaceIds)
+        workplacesMap = workplaces.reduce((acc, w) => {
+          acc[w.id] = w
+          return acc
+        }, {})
+      }
+
+      setRows(
+        data.map((r) => ({
+          ...r,
+          workplaces: workplacesMap[r.workplace_id] || null,
+        })),
+      )
     } catch (e) {
       setError(e?.message || "Failed to load workplaces.")
       setRows([])
