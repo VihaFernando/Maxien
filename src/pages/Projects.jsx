@@ -4,11 +4,9 @@ import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { FaPlus, FaEllipsisH, FaTimes, FaSearch, FaChevronDown, FaArchive, FaSync, FaCheckSquare } from "react-icons/fa"
 import { formatTimestamp, formatDate } from "../lib/dateUtils"
-import { useWorkplace } from "../context/WorkplaceContext"
 
 export default function Projects() {
     const { user } = useAuth()
-    const { selectedWorkplaceId } = useWorkplace()
     const location = useLocation()
     const [projects, setProjects] = useState([])
 
@@ -64,7 +62,7 @@ export default function Projects() {
         if (!user) return
         fetchTypes()
         fetchProjects()
-    }, [user, selectedWorkplaceId])
+    }, [user])
 
     // Handle project selection from AI Assistant query parameter
     useEffect(() => {
@@ -99,17 +97,12 @@ export default function Projects() {
 
     const fetchTypes = async () => {
         try {
-            let query = supabase
+            const { data } = await supabase
                 .from("task_types")
                 .select("*")
+                .eq("user_id", user.id)
                 .eq("status", "Active")
                 .order("created_at", { ascending: false })
-
-            query = selectedWorkplaceId
-                ? query.eq("workplace_id", selectedWorkplaceId)
-                : query.eq("user_id", user.id).is("workplace_id", null)
-
-            const { data } = await query
             setTypes(data || [])
         } catch {
             setTypes([])
@@ -119,16 +112,11 @@ export default function Projects() {
     const fetchProjects = async () => {
         setLoading(true)
         try {
-            let query = supabase
+            const { data, error: err } = await supabase
                 .from("projects")
                 .select("*, task_types(id, name), tasks(id, status)")
+                .eq("user_id", user.id)
                 .order("created_at", { ascending: false })
-
-            query = selectedWorkplaceId
-                ? query.eq("workplace_id", selectedWorkplaceId)
-                : query.eq("user_id", user.id).is("workplace_id", null)
-
-            const { data, error: err } = await query
 
             if (err) {
                 setError("Failed to load projects")
@@ -147,17 +135,12 @@ export default function Projects() {
     const fetchProjectTasks = async (projectId) => {
         setTaskLoading(true)
         try {
-            let query = supabase
+            const { data, error: err } = await supabase
                 .from("tasks")
                 .select("*")
                 .eq("project_id", projectId)
+                .eq("user_id", user.id)
                 .order("created_at", { ascending: false })
-
-            query = selectedWorkplaceId
-                ? query.eq("workplace_id", selectedWorkplaceId)
-                : query.eq("user_id", user.id).is("workplace_id", null)
-
-            const { data, error: err } = await query
 
             if (err) {
                 setProjectTasksData([])
@@ -182,7 +165,6 @@ export default function Projects() {
 
         const payload = {
             user_id: user.id,
-            workplace_id: selectedWorkplaceId || null,
             name: form.name.trim(),
             description: (form.description || "").trim() || null,
             type_id: form.type_id,
@@ -196,14 +178,11 @@ export default function Projects() {
         try {
             if (editing) {
                 // Update existing project
-                let query = supabase
+                const { error: err } = await supabase
                     .from("projects")
                     .update({ ...payload, created_at: undefined })
                     .eq("id", editing)
-
-                query = selectedWorkplaceId ? query : query.eq("user_id", user.id).is("workplace_id", null)
-
-                const { error: err } = await query
+                    .eq("user_id", user.id)
 
                 if (err) {
                     setError("Failed to update project")
@@ -249,14 +228,11 @@ export default function Projects() {
 
     const updateProjectStatus = async (projectId, newStatus) => {
         try {
-            let query = supabase
+            await supabase
                 .from("projects")
                 .update({ status: newStatus, updated_at: new Date().toISOString() })
                 .eq("id", projectId)
-
-            query = selectedWorkplaceId ? query : query.eq("user_id", user.id).is("workplace_id", null)
-
-            await query
+                .eq("user_id", user.id)
 
             setProjects(prev => prev.map(p =>
                 p.id === projectId ? { ...p, status: newStatus } : p
@@ -273,14 +249,11 @@ export default function Projects() {
         if (!confirm("Are you sure you want to delete this project?")) return
 
         try {
-            let query = supabase
+            await supabase
                 .from("projects")
                 .delete()
                 .eq("id", projectId)
-
-            query = selectedWorkplaceId ? query : query.eq("user_id", user.id).is("workplace_id", null)
-
-            await query
+                .eq("user_id", user.id)
 
             setProjects(prev => prev.filter(p => p.id !== projectId))
             setMessage("Project deleted")

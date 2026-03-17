@@ -1,14 +1,12 @@
-import { useEffect, useState, useMemo } from "react"
+﻿import { useEffect, useState, useMemo } from "react"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { Link, useLocation } from "react-router-dom"
-import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder, FaUser } from "react-icons/fa"
+import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder } from "react-icons/fa"
 import { formatTimestamp } from "../lib/dateUtils"
-import { useWorkplace } from "../context/WorkplaceContext"
 
 export default function Tasks() {
     const { user } = useAuth()
-    const { selectedWorkplaceId } = useWorkplace()
 
     // Utility: get current local time in HH:MM format
     const getCurrentTime = () => {
@@ -21,14 +19,12 @@ export default function Tasks() {
     const [tasks, setTasks] = useState([])
     const [types, setTypes] = useState([])
     const [projects, setProjects] = useState([])
-    const [members, setMembers] = useState([])
     const [loading, setLoading] = useState(false)
     const [form, setForm] = useState({
         title: "",
         description: "",
         type_id: "",
         project_id: "",
-        assigned_to: "",
         due_date: "",
         due_time: getCurrentTime(),
         priority: "Medium",
@@ -124,29 +120,9 @@ export default function Tasks() {
         if (!user) return
         fetchTypes()
         fetchProjects()
-        fetchMembers()
         fetchTasks()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, selectedWorkplaceId])
-    const fetchMembers = async () => {
-        if (!selectedWorkplaceId) {
-            setMembers([])
-            return
-        }
-        try {
-            const { data, error } = await supabase
-                .from("workplace_members")
-                .select("id, user_id, role, status")
-                .eq("workplace_id", selectedWorkplaceId)
-                .eq("status", "accepted")
-                .order("created_at", { ascending: true })
-            if (error) setMembers([])
-            else setMembers(data || [])
-        } catch {
-            setMembers([])
-        }
-    }
-
+    }, [user])
 
     // Handle task selection from AI Assistant query parameter
     useEffect(() => {
@@ -166,7 +142,7 @@ export default function Tasks() {
             setSelectedTask(null)
             setActionMenu(null)
             setEditing(null)
-            setForm({ title: "", description: "", type_id: "", project_id: "", assigned_to: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
+            setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
             setShowTaskModal(true)
         }
     }, [location.search])
@@ -190,15 +166,12 @@ export default function Tasks() {
 
     const fetchProjects = async () => {
         try {
-            let query = supabase
+            const { data, error } = await supabase
                 .from("projects")
                 .select("*")
+                .eq("user_id", user.id)
                 .eq("status", "Active")
                 .order("created_at", { ascending: false })
-            query = selectedWorkplaceId
-                ? query.eq("workplace_id", selectedWorkplaceId)
-                : query.eq("user_id", user.id).is("workplace_id", null)
-            const { data, error } = await query
             if (error) setProjects([])
             else setProjects(data || [])
         } catch {
@@ -208,15 +181,12 @@ export default function Tasks() {
 
     const fetchTypes = async () => {
         try {
-            let query = supabase
+            const { data, error } = await supabase
                 .from("task_types")
                 .select("*, tasks(id)")
+                .eq("user_id", user.id)
                 .eq("status", "Active")
                 .order("created_at", { ascending: false })
-            query = selectedWorkplaceId
-                ? query.eq("workplace_id", selectedWorkplaceId)
-                : query.eq("user_id", user.id).is("workplace_id", null)
-            const { data, error } = await query
             if (error) setTypes([])
             else setTypes(data || [])
         } catch {
@@ -226,30 +196,26 @@ export default function Tasks() {
 
     const fetchTasks = async () => {
         setLoading(true)
-        const cacheKey = `tasks_${user.id}_${selectedWorkplaceId || "personal"}`
         try {
             // PRIMARY: Fetch from Supabase (source of truth for cross-device sync)
-            let query = supabase
+            const { data, error } = await supabase
                 .from("tasks")
                 .select("*")
+                .eq("user_id", user.id)
                 .order("created_at", { ascending: false })
-            query = selectedWorkplaceId
-                ? query.eq("workplace_id", selectedWorkplaceId)
-                : query.eq("user_id", user.id).is("workplace_id", null)
-            const { data, error } = await query
             if (error) {
                 // FALLBACK: Use local cache if Supabase unavailable
-                const cached = localStorage.getItem(cacheKey)
+                const cached = localStorage.getItem(`tasks_${user.id}`)
                 if (cached) setTasks(JSON.parse(cached))
                 else setTasks([])
             } else {
                 setTasks(data || [])
                 // Cache locally for offline fallback only
-                localStorage.setItem(cacheKey, JSON.stringify(data || []))
+                localStorage.setItem(`tasks_${user.id}`, JSON.stringify(data || []))
             }
         } catch {
             // Network error - use cached data
-            const cached = localStorage.getItem(cacheKey)
+            const cached = localStorage.getItem(`tasks_${user.id}`)
             setTasks(cached ? JSON.parse(cached) : [])
         } finally {
             setLoading(false)
@@ -267,12 +233,10 @@ export default function Tasks() {
 
         const payload = {
             user_id: user.id,
-            workplace_id: selectedWorkplaceId || null,
             title: form.title.trim(),
             description: (form.description || "").trim() || null,
             type_id: form.type_id,
             project_id: form.project_id || null,
-            assigned_to: selectedWorkplaceId ? (form.assigned_to || null) : null,
             status: form.status || "To Do",
             priority: form.priority || "Medium",
             due_at: due_at,
@@ -297,7 +261,7 @@ export default function Tasks() {
                 }
             }
 
-            setForm({ title: "", description: "", type_id: "", project_id: "", assigned_to: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
+            setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
             setEditing(null)
             setShowTaskModal(false)
             setTimeout(() => setMessage(""), 2000)
@@ -310,14 +274,11 @@ export default function Tasks() {
 
     const updateTask = async (taskId, updates) => {
         try {
-            let query = supabase
+            await supabase
                 .from("tasks")
                 .update({ ...updates, updated_at: new Date().toISOString() })
                 .eq("id", taskId)
-
-            query = selectedWorkplaceId ? query : query.eq("user_id", user.id).is("workplace_id", null)
-
-            await query
+                .eq("user_id", user.id)
 
             setTasks(prev => prev.map(t =>
                 t.id === taskId ? { ...t, ...updates, updated_at: new Date().toISOString() } : t
@@ -338,12 +299,10 @@ export default function Tasks() {
     const duplicateTask = async (task) => {
         const newTask = {
             user_id: user.id,
-            workplace_id: selectedWorkplaceId || null,
             title: `${task.title} (copy)`,
             description: task.description,
             type_id: task.type_id,
             project_id: task.project_id,
-            assigned_to: selectedWorkplaceId ? (task.assigned_to || null) : null,
             status: "To Do",
             priority: task.priority,
             due_at: task.due_at,
@@ -367,9 +326,7 @@ export default function Tasks() {
         setTasks(prev => prev.filter(t => t.id !== taskId))
         setActionMenu(null)
         try {
-            let query = supabase.from("tasks").delete().eq("id", taskId)
-            query = selectedWorkplaceId ? query : query.eq("user_id", user.id).is("workplace_id", null)
-            await query
+            await supabase.from("tasks").delete().eq("id", taskId).eq("user_id", user.id)
         } catch {
             setError("Failed to delete task.")
         }
@@ -431,13 +388,13 @@ export default function Tasks() {
 
     const openCreate = () => {
         setEditing(null)
-        setForm({ title: "", description: "", type_id: "", project_id: "", assigned_to: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
+        setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
         setShowTaskModal(true)
     }
 
     const openEdit = (task) => {
         const { date, time } = extractDateAndTime(task.due_at)
-        setForm({ title: task.title || "", description: task.description || "", type_id: task.type_id || "", project_id: task.project_id || "", assigned_to: task.assigned_to || "", due_date: date, due_time: time, priority: task.priority || "Medium", status: task.status || "To Do" })
+        setForm({ title: task.title || "", description: task.description || "", type_id: task.type_id || "", project_id: task.project_id || "", due_date: date, due_time: time, priority: task.priority || "Medium", status: task.status || "To Do" })
         setEditing(task.id)
         setSelectedTask(null)
         setActionMenu(null)
@@ -445,15 +402,9 @@ export default function Tasks() {
     }
 
     const resetForm = () => {
-        setForm({ title: "", description: "", type_id: "", project_id: "", assigned_to: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
+        setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
         setEditing(null)
         setShowTaskModal(false)
-    }
-
-    const formatAssignee = (userId) => {
-        if (!userId) return "Unassigned"
-        if (userId === user?.id) return "You"
-        return userId.slice(0, 8)
     }
 
     const TaskCard = ({ task }) => {
@@ -534,12 +485,6 @@ export default function Tasks() {
                             <span className="text-[10px] sm:text-[11px] font-medium flex items-center gap-1 text-[#86868b]">
                                 <FaFolder className="w-2.5 h-2.5" />
                                 {project.name}
-                            </span>
-                        )}
-                        {selectedWorkplaceId && task.assigned_to && (
-                            <span className="text-[10px] sm:text-[11px] font-medium flex items-center gap-1 text-[#86868b]">
-                                <FaUser className="w-2.5 h-2.5" />
-                                {formatAssignee(task.assigned_to)}
                             </span>
                         )}
                     </div>
@@ -731,24 +676,6 @@ export default function Tasks() {
                                         {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
                                 </div>
-                                {selectedWorkplaceId && (
-                                    <div>
-                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Assign To</label>
-                                        <select
-                                            value={form.assigned_to}
-                                            onChange={(e) => setForm(f => ({ ...f, assigned_to: e.target.value }))}
-                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all"
-                                        >
-                                            <option value="">Unassigned</option>
-                                            {members.map(m => (
-                                                <option key={m.user_id} value={m.user_id}>
-                                                    {m.user_id === user?.id ? "You" : m.user_id}
-                                                    {m.role === "owner" ? " (owner)" : ""}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Priority</label>
@@ -846,15 +773,6 @@ export default function Tasks() {
                                             <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1d1d1f]">
                                                 <FaFolder className="w-3.5 h-3.5 text-[#C6FF00]" />
                                                 {projects.find(p => p.id === selectedTask.project_id)?.name || "â€”"}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {selectedWorkplaceId && selectedTask.assigned_to && (
-                                        <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
-                                            <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Assigned To</span>
-                                            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1d1d1f]">
-                                                <FaUser className="w-3.5 h-3.5 text-[#86868b]" />
-                                                {formatAssignee(selectedTask.assigned_to)}
                                             </span>
                                         </div>
                                     )}

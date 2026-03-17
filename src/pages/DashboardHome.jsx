@@ -1,13 +1,11 @@
-import { useAuth } from "../context/AuthContext"
+﻿import { useAuth } from "../context/AuthContext"
 import { useEffect, useState, useMemo } from "react"
 import { supabase } from "../lib/supabase"
 import { Link } from "react-router-dom"
 import { FaFolder, FaChevronRight } from "react-icons/fa"
-import { useWorkplace } from "../context/WorkplaceContext"
 
 export default function DashboardHome() {
     const { user } = useAuth()
-    const { selectedWorkplaceId } = useWorkplace()
     const name = user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "there"
     const firstName = name.split(" ")[0]
 
@@ -46,17 +44,9 @@ export default function DashboardHome() {
         if (!user?.id) return
         const fetchData = async () => {
             try {
-                const tasksQuery = selectedWorkplaceId
-                    ? supabase.from("tasks").select("*").eq("workplace_id", selectedWorkplaceId)
-                    : supabase.from("tasks").select("*").eq("user_id", user.id).is("workplace_id", null)
-
-                const projectsQuery = selectedWorkplaceId
-                    ? supabase.from("projects").select("*").eq("workplace_id", selectedWorkplaceId)
-                    : supabase.from("projects").select("*").eq("user_id", user.id).is("workplace_id", null)
-
                 const [tasksRes, projectsRes] = await Promise.all([
-                    tasksQuery,
-                    projectsQuery,
+                    supabase.from("tasks").select("*").eq("user_id", user.id),
+                    supabase.from("projects").select("*").eq("user_id", user.id)
                 ])
                 setTasks(tasksRes.data || [])
                 setProjects(projectsRes.data || [])
@@ -67,7 +57,7 @@ export default function DashboardHome() {
             }
         }
         fetchData()
-    }, [user, selectedWorkplaceId])
+    }, [user])
 
     const stats = useMemo(() => {
         const now = new Date()

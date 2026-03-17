@@ -3,11 +3,9 @@ import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 import { Link } from "react-router-dom"
 import { FaEdit, FaToggleOn, FaToggleOff, FaEllipsisH, FaTimes, FaPlus } from "react-icons/fa"
-import { useWorkplace } from "../context/WorkplaceContext"
 
 export default function TaskTypes() {
     const { user } = useAuth()
-    const { selectedWorkplaceId } = useWorkplace()
     const [types, setTypes] = useState([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
@@ -34,22 +32,17 @@ export default function TaskTypes() {
         if (!user) return
         fetchTypes()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, selectedWorkplaceId])
+    }, [user])
 
     const fetchTypes = async () => {
         setLoading(true)
         setError("")
         try {
-            let query = supabase
+            const { data, error } = await supabase
                 .from("task_types")
                 .select("*")
+                .eq("user_id", user.id)
                 .order("created_at", { ascending: false })
-
-            query = selectedWorkplaceId
-                ? query.eq("workplace_id", selectedWorkplaceId)
-                : query.eq("user_id", user.id).is("workplace_id", null)
-
-            const { data, error } = await query
 
             if (error) {
                 setError("Unable to load task types.")
@@ -74,7 +67,7 @@ export default function TaskTypes() {
         try {
             if (editing) {
                 // Update existing type
-                let query = supabase
+                const { error } = await supabase
                     .from("task_types")
                     .update({
                         name: form.name.trim(),
@@ -82,10 +75,7 @@ export default function TaskTypes() {
                         color: form.color,
                     })
                     .eq("id", editing)
-
-                query = selectedWorkplaceId ? query : query.eq("user_id", user.id).is("workplace_id", null)
-
-                const { error } = await query
+                    .eq("user_id", user.id)
 
                 if (error) {
                     setError("Failed to update task type.")
@@ -103,7 +93,6 @@ export default function TaskTypes() {
                 // Create new type
                 const payload = {
                     user_id: user.id,
-                    workplace_id: selectedWorkplaceId || null,
                     name: form.name.trim(),
                     description: form.description.trim() || null,
                     color: form.color,
@@ -134,14 +123,11 @@ export default function TaskTypes() {
         const newStatus = item.status === "Active" ? "Inactive" : "Active"
         setTypes(prev => prev.map(t => (t.id === item.id ? { ...t, status: newStatus } : t)))
         try {
-            let query = supabase
+            const { error } = await supabase
                 .from("task_types")
                 .update({ status: newStatus })
                 .eq("id", item.id)
-
-            query = selectedWorkplaceId ? query : query.eq("user_id", user.id).is("workplace_id", null)
-
-            const { error } = await query
+                .eq("user_id", user.id)
             if (error) {
                 setError("Failed to update status.")
             } else {

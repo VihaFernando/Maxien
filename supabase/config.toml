@@ -15,9 +15,3 @@ entrypoint = "./functions/ai-assistant/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/github-token/*.html" ]
-
-[functions.workplace-invite]
-enabled = true
-verify_jwt = true
-import_map = "./functions/workplace-invite/deno.json"
-entrypoint = "./functions/workplace-invite/index.ts"
