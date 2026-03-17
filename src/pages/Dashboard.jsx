@@ -13,6 +13,10 @@ export default function Dashboard() {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [systemOpen, setSystemOpen] = useState(false)
 
+    // Extract workplace ID from URL if we're on a workplace detail page
+    const workplaceId = location.pathname.match(/\/workplaces\/([^/?]+)/)?.[1]
+    const currentTab = new URLSearchParams(location.search).get("tab") || "profile"
+
     useEffect(() => {
         if (!loading && !user) navigate("/login")
     }, [user, loading, navigate])
@@ -107,7 +111,7 @@ export default function Dashboard() {
 
                         <Link
                             to="/dashboard/workplaces"
-                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/workplaces")
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/workplaces") || workplaceId
                                 ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
                                 : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                                 }`}
@@ -115,6 +119,56 @@ export default function Dashboard() {
                             <FaUsers className="w-4 h-4" />
                             Workplaces
                         </Link>
+
+                        {workplaceId && (
+                            <div className="space-y-0.5 mt-0.5">
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=profile`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "profile" || currentTab === ""
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Profile
+                                </Link>
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=tasks`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "tasks"
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Tasks
+                                </Link>
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=projects`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "projects"
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Projects
+                                </Link>
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=types`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "types"
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Task Types
+                                </Link>
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=users`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "users"
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Members
+                                </Link>
+                            </div>
+                        )}
 
                         <Link
                             to="/dashboard/calendar"
@@ -274,7 +328,7 @@ export default function Dashboard() {
 
                         <Link
                             to="/dashboard/workplaces"
-                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/workplaces")
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/workplaces") || workplaceId
                                 ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
                                 : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
                                 }`}
@@ -282,6 +336,56 @@ export default function Dashboard() {
                             <FaUsers className="w-4 h-4" />
                             Workplaces
                         </Link>
+
+                        {workplaceId && (
+                            <div className="space-y-0.5 mt-0.5">
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=profile`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "profile" || currentTab === ""
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Profile
+                                </Link>
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=tasks`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "tasks"
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Tasks
+                                </Link>
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=projects`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "projects"
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Projects
+                                </Link>
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=types`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "types"
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Task Types
+                                </Link>
+                                <Link
+                                    to={`/dashboard/workplaces/${workplaceId}?tab=users`}
+                                    className={`flex items-center gap-2.5 px-3 py-2 ml-4 rounded-xl text-[12px] font-semibold transition-all duration-200 ${currentTab === "users"
+                                        ? "bg-[#f5f5f7] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    Members
+                                </Link>
+                            </div>
+                        )}
 
                         <Link
                             to="/dashboard/calendar"
