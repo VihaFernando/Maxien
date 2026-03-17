@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext"
 import { FaChevronLeft, FaChevronRight, FaTimes, FaClock, FaFlag, FaPlus, FaCalendarAlt, FaVideo, FaExternalLinkAlt, FaSync } from "react-icons/fa"
 import { fetchGoogleEvents, createGoogleEvent, updateGoogleEvent, deleteGoogleEvent } from "../lib/googleCalendar"
 import GoogleEventModal from "../components/GoogleEventModal"
+import { useWorkplace } from "../context/WorkplaceContext"
 
 const GOOGLE_TOKEN_CACHE_KEY = 'maxien_google_provider_token'
 const GOOGLE_CALENDAR_DISCONNECTED_KEY = 'maxien_google_calendar_disconnected'
@@ -80,6 +81,7 @@ const clearCachedGoogleProviderToken = () => {
 
 export default function Calendar() {
     const { user, connectGoogleCalendar } = useAuth()
+    const { selectedWorkplaceId } = useWorkplace()
     const location = useLocation()
     const [tasks, setTasks] = useState([])
     const [types, setTypes] = useState([])
@@ -179,15 +181,20 @@ export default function Calendar() {
         fetchTypes()
         fetchTasks()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user])
+    }, [user, selectedWorkplaceId])
 
     const fetchTypes = async () => {
         try {
-            const { data } = await supabase
+            let query = supabase
                 .from("task_types")
                 .select("*")
-                .eq("user_id", user.id)
                 .eq("status", "Active")
+
+            query = selectedWorkplaceId
+                ? query.eq("workplace_id", selectedWorkplaceId)
+                : query.eq("user_id", user.id).is("workplace_id", null)
+
+            const { data } = await query
             setTypes(data || [])
         } catch {
             setTypes([])
@@ -197,10 +204,14 @@ export default function Calendar() {
     const fetchTasks = async () => {
         setLoading(true)
         try {
-            const { data } = await supabase
+            let query = supabase
                 .from("tasks")
                 .select("*")
-                .eq("user_id", user.id)
+            query = selectedWorkplaceId
+                ? query.eq("workplace_id", selectedWorkplaceId)
+                : query.eq("user_id", user.id).is("workplace_id", null)
+
+            const { data } = await query
             setTasks(data || [])
         } catch {
             setTasks([])

@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react"
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { FaHome, FaUser, FaCheckSquare, FaCog, FaChevronDown, FaCalendarAlt, FaFolder, FaBrain } from "react-icons/fa"
+import { FaHome, FaUser, FaCheckSquare, FaCog, FaChevronDown, FaCalendarAlt, FaFolder, FaBrain, FaUsers } from "react-icons/fa"
 import AIShortcutHint from "../components/AIShortcutHint"
+import { useWorkplace } from "../context/WorkplaceContext"
 
 const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-chat"))
 
 export default function Dashboard() {
     const { user, loading, signOut } = useAuth()
+    const { workplaces, pendingInvites, selectedWorkplace, selectedWorkplaceId, selectWorkplace, shouldPromptCreateWorkplace } = useWorkplace()
     const navigate = useNavigate()
     const location = useLocation()
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [systemOpen, setSystemOpen] = useState(false)
+    const [workplaceOpen, setWorkplaceOpen] = useState(false)
 
     useEffect(() => {
         if (!loading && !user) navigate("/login")
@@ -48,7 +51,7 @@ export default function Dashboard() {
         : user?.email?.[0]?.toUpperCase() || "U"
 
     return (
-        <div className="min-h-screen bg-[#f5f5f7] flex font-sans">
+        <div className="min-h-screen bg-[#f5f5f7] flex font-sans" onClick={() => setWorkplaceOpen(false)}>
             {/* Sidebar - Desktop */}
             <aside className="w-[240px] hidden lg:flex flex-col bg-white border-r border-[#e5e5ea] sticky top-0 h-screen">
                 <div className="px-5 py-6">
@@ -57,6 +60,60 @@ export default function Dashboard() {
                             <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                         </div>
                         <span className="text-[#1d1d1f] font-bold text-[16px] tracking-tight">Maxien</span>
+                    </div>
+
+                    {/* Workplace selector */}
+                    <div className="relative mb-5" onClick={(e) => e.stopPropagation()}>
+                        <button
+                            onClick={() => setWorkplaceOpen(!workplaceOpen)}
+                            className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-[#f5f5f7] border border-[#d2d2d7]/70 hover:bg-white transition-colors"
+                        >
+                            <div className="min-w-0 text-left">
+                                <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest leading-none">Workspace</p>
+                                <p className="text-[13px] font-bold text-[#1d1d1f] truncate mt-1">
+                                    {selectedWorkplaceId ? (selectedWorkplace?.name || "Workplace") : "Personal"}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                                {pendingInvites.length > 0 && (
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                                        {pendingInvites.length}
+                                    </span>
+                                )}
+                                <FaChevronDown className={`w-3.5 h-3.5 text-[#86868b] transition-transform ${workplaceOpen ? "rotate-180" : ""}`} />
+                            </div>
+                        </button>
+
+                        {workplaceOpen && (
+                            <div className="absolute left-0 right-0 mt-2 bg-white rounded-[16px] border border-[#d2d2d7]/80 shadow-xl overflow-hidden z-50">
+                                <button
+                                    onClick={() => { selectWorkplace(null); setWorkplaceOpen(false) }}
+                                    className={`w-full text-left px-4 py-2.5 text-[12px] font-semibold transition-colors ${selectedWorkplaceId ? "hover:bg-[#f5f5f7] text-[#1d1d1f]" : "bg-[#C6FF00]/20 text-[#1d1d1f]"}`}
+                                >
+                                    Personal
+                                </button>
+                                {workplaces.length > 0 && (
+                                    <div className="border-t border-[#f0f0f0]" />
+                                )}
+                                {workplaces.map((m) => (
+                                    <button
+                                        key={m.workplace.id}
+                                        onClick={() => { selectWorkplace(m.workplace.id); setWorkplaceOpen(false) }}
+                                        className={`w-full text-left px-4 py-2.5 text-[12px] font-semibold hover:bg-[#f5f5f7] transition-colors ${selectedWorkplaceId === m.workplace.id ? "bg-[#C6FF00]/20 text-[#1d1d1f]" : "text-[#1d1d1f]"}`}
+                                    >
+                                        {m.workplace.name}
+                                    </button>
+                                ))}
+                                <div className="border-t border-[#f0f0f0]" />
+                                <Link
+                                    to="/dashboard/workplaces"
+                                    onClick={() => setWorkplaceOpen(false)}
+                                    className="block px-4 py-2.5 text-[12px] font-semibold text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
+                                >
+                                    Manage workplaces
+                                </Link>
+                            </div>
+                        )}
                     </div>
 
                     <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">Platform</p>
@@ -124,6 +181,22 @@ export default function Dashboard() {
                         >
                             <FaBrain className="w-4 h-4" />
                             AI Assistant
+                        </Link>
+
+                        <Link
+                            to="/dashboard/workplaces"
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/workplaces")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaUsers className="w-4 h-4" />
+                            Workplaces
+                            {pendingInvites.length > 0 && (
+                                <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                                    {pendingInvites.length}
+                                </span>
+                            )}
                         </Link>
 
                         <div>
@@ -347,11 +420,27 @@ export default function Dashboard() {
             {/* Main Content */}
             <main className="flex-1 flex flex-col h-screen overflow-y-auto">
                 <header className="lg:hidden bg-white/90 backdrop-blur-md border-b border-[#d2d2d7] px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                         <div className="w-8 h-8 flex-shrink-0">
                             <img src="/logo.svg" alt="Maxien" className="w-full h-full" />
                         </div>
-                        <span className="text-[#1d1d1f] font-bold text-[15px] tracking-tight">Maxien</span>
+                        <div className="min-w-0">
+                            <p className="text-[#1d1d1f] font-bold text-[15px] tracking-tight leading-none">Maxien</p>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setWorkplaceOpen(!workplaceOpen) }}
+                                className="flex items-center gap-1 text-[11px] font-semibold text-[#86868b] hover:text-[#1d1d1f] transition-colors mt-0.5"
+                            >
+                                <span className="truncate max-w-[150px]">
+                                    {selectedWorkplaceId ? (selectedWorkplace?.name || "Workplace") : "Personal"}
+                                </span>
+                                {pendingInvites.length > 0 && (
+                                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+                                        {pendingInvites.length}
+                                    </span>
+                                )}
+                                <FaChevronDown className={`w-3 h-3 transition-transform ${workplaceOpen ? "rotate-180" : ""}`} />
+                            </button>
+                        </div>
                     </div>
                     <button
                         onClick={() => setSidebarOpen(true)}
@@ -371,7 +460,53 @@ export default function Dashboard() {
                     </button>
                 </header>
 
+                {/* Mobile workplace dropdown */}
+                {workplaceOpen && (
+                    <div className="lg:hidden sticky top-[57px] z-20 px-4 sm:px-6" onClick={(e) => e.stopPropagation()}>
+                        <div className="mt-2 bg-white rounded-[18px] border border-[#d2d2d7]/80 shadow-xl overflow-hidden">
+                            <button
+                                onClick={() => { selectWorkplace(null); setWorkplaceOpen(false) }}
+                                className={`w-full text-left px-4 py-3 text-[13px] font-semibold transition-colors ${selectedWorkplaceId ? "hover:bg-[#f5f5f7] text-[#1d1d1f]" : "bg-[#C6FF00]/20 text-[#1d1d1f]"}`}
+                            >
+                                Personal
+                            </button>
+                            {workplaces.length > 0 && <div className="border-t border-[#f0f0f0]" />}
+                            {workplaces.map((m) => (
+                                <button
+                                    key={m.workplace.id}
+                                    onClick={() => { selectWorkplace(m.workplace.id); setWorkplaceOpen(false) }}
+                                    className={`w-full text-left px-4 py-3 text-[13px] font-semibold hover:bg-[#f5f5f7] transition-colors ${selectedWorkplaceId === m.workplace.id ? "bg-[#C6FF00]/20 text-[#1d1d1f]" : "text-[#1d1d1f]"}`}
+                                >
+                                    {m.workplace.name}
+                                </button>
+                            ))}
+                            <div className="border-t border-[#f0f0f0]" />
+                            <Link
+                                to="/dashboard/workplaces"
+                                onClick={() => setWorkplaceOpen(false)}
+                                className="block px-4 py-3 text-[13px] font-semibold text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors"
+                            >
+                                Manage workplaces
+                            </Link>
+                        </div>
+                    </div>
+                )}
+
                 <div className="w-full flex-1 px-4 sm:px-8 lg:px-10 py-6 sm:py-8">
+                    {shouldPromptCreateWorkplace && (
+                        <div className="mb-5 bg-white rounded-[18px] border border-[#d2d2d7]/60 shadow-sm p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-[13px] font-bold text-[#1d1d1f]">Create a workplace to collaborate</p>
+                                <p className="text-[12px] text-[#86868b] mt-0.5">You don’t have any workplaces yet. Personal mode is available, but teams require a workplace.</p>
+                            </div>
+                            <Link
+                                to="/dashboard/workplaces"
+                                className="px-4 py-2.5 rounded-[12px] bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold text-[13px] transition-colors w-fit"
+                            >
+                                Go to Workplaces
+                            </Link>
+                        </div>
+                    )}
                     <Outlet />
                 </div>
             </main>
