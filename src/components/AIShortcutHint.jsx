@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 
 const SparkleIcon = ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -9,11 +9,7 @@ const SparkleIcon = ({ className }) => (
 )
 
 export default function AIShortcutHint({ onOpen }) {
-    const [isMac, setIsMac] = useState(false)
-
-    useEffect(() => {
-        setIsMac(/Mac|iPhone|iPad|iPod/.test(navigator.platform))
-    }, [])
+    const [isMac] = useState(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform))
 
     const shortcutParts = isMac ? ["⌘", "/"] : ["Alt", "C"]
 

@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 import { useSearchParams } from "react-router-dom"
@@ -29,17 +29,6 @@ const LANG_COLORS = {
     Java: "#b07219", "C++": "#f34b7d", C: "#555555", Ruby: "#701516",
     PHP: "#4F5D95", Swift: "#ffac45", Kotlin: "#A97BFF", Dart: "#00B4AB",
     Shell: "#89e051", Vue: "#41b883", default: "#8b8b8b"
-}
-
-function timeAgo(dateStr) {
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const mins = Math.floor(diff / 60000)
-    if (mins < 60) return `${mins}m ago`
-    const hrs = Math.floor(mins / 60)
-    if (hrs < 24) return `${hrs}h ago`
-    const days = Math.floor(hrs / 24)
-    if (days < 30) return `${days}d ago`
-    return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 }
 
 export default function Profile() {

@@ -50,7 +50,7 @@ export default function TaskTypes() {
             } else {
                 setTypes(data || [])
             }
-        } catch (err) {
+        } catch {
             setError("Failed to load task types.")
             setTypes([])
         } finally {
@@ -112,7 +112,7 @@ export default function TaskTypes() {
                 setShowForm(false)
             }
             setTimeout(() => setMessage(""), 2500)
-        } catch (err) {
+        } catch {
             setError("Failed to save task type.")
         } finally {
             setLoading(false)
@@ -139,12 +139,6 @@ export default function TaskTypes() {
         }
     }
 
-    const deleteType = async (typeId) => {
-        // Delete is prevented - show message instead
-        setError("Task types cannot be deleted. Toggle to 'Inactive' to disable them instead.")
-        setTimeout(() => setError(""), 3000)
-    }
-
     const resetForm = () => {
         setForm({ name: "", description: "", color: "#C6FF00" })
         setEditing(null)
@@ -157,7 +151,7 @@ export default function TaskTypes() {
         setShowForm(true)
     }
 
-    const getTaskCount = (typeId) => {
+    const getTaskCount = () => {
         // This would require counting from tasks table
         // For now, we show a placeholder
         return "—"

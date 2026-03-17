@@ -8,6 +8,8 @@ import Profile from './pages/Profile'
 import Tasks from './pages/Tasks'
 import Projects from './pages/Projects'
 import TaskTypes from './pages/TaskTypes'
+import Workplaces from './pages/Workplaces'
+import WorkplaceDetail from './pages/WorkplaceDetail'
 import Calendar from './pages/Calendar'
 import AIAssistant from './pages/AIAssistant'
 import GithubCallback from './pages/GithubCallback'
@@ -29,6 +31,8 @@ function App() {
             <Route path="calendar" element={<Calendar />} />
             <Route path="ai-assistant" element={<AIAssistant />} />
             <Route path="task-types" element={<TaskTypes />} />
+            <Route path="workplaces" element={<Workplaces />} />
+            <Route path="workplaces/:id" element={<WorkplaceDetail />} />
             <Route path="profile" element={<Profile />} />
           </Route>
           <Route path="/auth/github/callback" element={<GithubCallback />} />

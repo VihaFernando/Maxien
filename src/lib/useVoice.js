@@ -23,9 +23,6 @@ export function formatForSpeech(text) {
         "low": "Low"
     }
 
-    // Better date formatting
-    const dateRegex = /(\w+ \d{1,2}(?:st|nd|rd|th)?)/gi
-
     let formatted = text
 
     // Replace status labels
@@ -58,7 +55,7 @@ export function stripForSpeech(text) {
         .replace(/`([^`]+)`/g, "$1")             // `code`
         .replace(/#{1,6}\s+/g, "")               // headings
         .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // [link](url)
-        .replace(/^[•\-\*]\s/gm, ". ")          // bullets → periods (pauses)
+        .replace(/^[•*-]\s/gm, ". ")            // bullets → periods (pauses)
         .replace(/^\d+\.\s/gm, "")              // numbered list
         .replace(/\n{2,}/g, ". ")               // paragraph breaks → pause
         .replace(/\n/g, ". ")                    // line breaks → pause for clarity
@@ -126,22 +123,22 @@ export function useVoice() {
 
     // Persist preferences
     useEffect(() => {
-        try { localStorage.setItem("maxien_voice_enabled", String(voiceEnabled)) } catch { }
+        try { localStorage.setItem("maxien_voice_enabled", String(voiceEnabled)) } catch { void 0 }
     }, [voiceEnabled])
     useEffect(() => {
-        try { localStorage.setItem("maxien_voice_index", String(selectedVoiceIndex)) } catch { }
+        try { localStorage.setItem("maxien_voice_index", String(selectedVoiceIndex)) } catch { void 0 }
     }, [selectedVoiceIndex])
     useEffect(() => {
-        try { localStorage.setItem("maxien_voice_name", String(selectedVoiceName)) } catch { }
+        try { localStorage.setItem("maxien_voice_name", String(selectedVoiceName)) } catch { void 0 }
     }, [selectedVoiceName])
     useEffect(() => {
-        try { localStorage.setItem("maxien_speech_rate", String(speechRate)) } catch { }
+        try { localStorage.setItem("maxien_speech_rate", String(speechRate)) } catch { void 0 }
     }, [speechRate])
     useEffect(() => {
-        try { localStorage.setItem("maxien_speech_pitch", String(speechPitch)) } catch { }
+        try { localStorage.setItem("maxien_speech_pitch", String(speechPitch)) } catch { void 0 }
     }, [speechPitch])
     useEffect(() => {
-        try { localStorage.setItem("maxien_speech_volume", String(speechVolume)) } catch { }
+        try { localStorage.setItem("maxien_speech_volume", String(speechVolume)) } catch { void 0 }
     }, [speechVolume])
 
     // Load TTS voices (Chrome requires waiting for voiceschanged event)
@@ -227,7 +224,7 @@ export function useVoice() {
         }
 
         recognition.onspeechend = () => {
-            try { recognition.stop() } catch { }
+            try { recognition.stop() } catch { void 0 }
         }
 
         recognition.onerror = (e) => {
@@ -243,7 +240,7 @@ export function useVoice() {
 
         recognitionRef.current = recognition
         return () => {
-            try { recognition.abort() } catch { }
+            try { recognition.abort() } catch { void 0 }
         }
     }, [])
 
@@ -263,7 +260,7 @@ export function useVoice() {
 
     // ── stopListening ─────────────────────────────────────────────────────────
     const stopListening = useCallback(() => {
-        try { recognitionRef.current?.stop() } catch { }
+        try { recognitionRef.current?.stop() } catch { void 0 }
         setIsListening(false)
         setInterimText("")
     }, [])

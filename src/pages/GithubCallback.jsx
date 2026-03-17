@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { supabase } from "../lib/supabase"
 
 export default function GithubCallback() {
     const navigate = useNavigate()
@@ -14,7 +13,7 @@ export default function GithubCallback() {
             return
         }
 
-        setStatus("Exchanging code for token...")
+        queueMicrotask(() => setStatus("Exchanging code for token..."))
 
         fetch(`${import.meta.env.VITE_GITHUB_TOKEN_ENDPOINT}?code=${code}`, {
             headers: {
@@ -37,7 +36,7 @@ export default function GithubCallback() {
                 setStatus("Something went wrong. Redirecting...")
                 setTimeout(() => navigate("/dashboard/profile"), 1500)
             })
-    }, [])
+    }, [navigate])
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-[#f5f5f7]">

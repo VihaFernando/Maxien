@@ -1,4 +1,4 @@
-﻿import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/AuthContext"
 import { useEffect, useState, useMemo } from "react"
 import { supabase } from "../lib/supabase"
 import { Link } from "react-router-dom"
@@ -90,13 +90,6 @@ export default function DashboardHome() {
         return { total, active, completed, onHold }
     }, [projects])
 
-    const activeProjects = useMemo(() => {
-        return projects
-            .filter(p => p.status === "Active")
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 3)
-    }, [projects])
-
     const activityGrid = useMemo(() => {
         const COLS = 40
         const DAYS = 7
@@ -153,9 +146,6 @@ export default function DashboardHome() {
         }
         return months
     }, [])
-
-    const priorityColor = (p) => p === "Urgent" ? "#ef4444" : p === "High" ? "#f97316" : p === "Medium" ? "#3b82f6" : "#86868b"
-    const priorityBg = (p) => p === "Urgent" ? "bg-red-50 text-red-600" : p === "High" ? "bg-orange-50 text-orange-600" : p === "Medium" ? "bg-blue-50 text-blue-600" : "bg-[#f5f5f7] text-[#86868b]"
 
     return (
         <div className="animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-10">
