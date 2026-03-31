@@ -198,10 +198,12 @@ export default function Tasks() {
         setLoading(true)
         try {
             // PRIMARY: Fetch from Supabase (source of truth for cross-device sync)
+            // Only fetch personal tasks (where workplace_id is null)
             const { data, error } = await supabase
                 .from("tasks")
                 .select("*")
                 .eq("user_id", user.id)
+                .is("workplace_id", null)
                 .order("created_at", { ascending: false })
             if (error) {
                 // FALLBACK: Use local cache if Supabase unavailable

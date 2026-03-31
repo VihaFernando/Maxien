@@ -45,6 +45,22 @@ export async function createWorkplace({ name, description, bannerUrl }) {
   return data
 }
 
+export async function updateWorkplace({ workplaceId, name, description, bannerUrl }) {
+  const { data, error } = await supabase
+    .from("workplaces")
+    .update({
+      name: name ?? undefined,
+      description: description ?? undefined,
+      banner_url: bannerUrl ?? undefined,
+    })
+    .eq("id", workplaceId)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data
+}
+
 export async function inviteToWorkplace({ workplaceId, email }) {
   const { data, error } = await supabase
     .rpc("create_workplace_invite", { p_workplace_id: workplaceId, p_email: email })
@@ -76,17 +92,28 @@ export async function listWorkplaceMembers(workplaceId) {
   return data || []
 }
 
-export async function listWorkplaceTasks({ workplaceId }) {
+export async function listWorkplaceTasks({ workplaceId, userId = null }) {
   const { data, error } = await supabase
     .from("tasks")
     .select(
       `*,
-      task_assignees!left(task_id) ( user_id )`
+      task_assignees!left ( user_id )`
     )
     .eq("workplace_id", workplaceId)
     .order("created_at", { ascending: false })
 
   if (error) throw error
+
+  // Filter on client-side if userId provided
+  if (userId && data) {
+    return data.filter((task) => {
+      // Show tasks created by user OR assigned to user
+      const isCreatedByUser = task.user_id === userId
+      const isAssignedToUser = task.task_assignees?.some((a) => a.user_id === userId)
+      return isCreatedByUser || isAssignedToUser
+    })
+  }
+
   return data || []
 }
 
@@ -102,6 +129,42 @@ export async function clearTaskAssignees({ taskId }) {
   const { data, error } = await supabase.from("task_assignees").delete().eq("task_id", taskId)
   if (error) throw error
   return data
+}
+
+export async function updateWorkplaceTask({ taskId, payload }) {
+  const { assigned_to, ...taskPayload } = payload
+
+  // Update the task
+  const { data: task, error: taskError } = await supabase
+    .from("tasks")
+    .update(taskPayload)
+    .eq("id", taskId)
+    .select()
+    .single()
+
+  if (taskError) throw taskError
+
+  // If assigned_to is provided, clear old assignees and add new ones
+  if (assigned_to !== undefined) {
+    await clearTaskAssignees({ taskId })
+
+    const userIds = Array.isArray(assigned_to)
+      ? assigned_to.filter(Boolean)
+      : assigned_to
+        ? [assigned_to]
+        : []
+
+    if (userIds.length) {
+      await assignTaskUsers({ taskId, userIds })
+    }
+  }
+
+  return task
+}
+
+export async function deleteWorkplaceTask({ taskId }) {
+  const { error } = await supabase.from("tasks").delete().eq("id", taskId)
+  if (error) throw error
 }
 
 export async function listWorkplaceProjects({ workplaceId }) {
@@ -127,9 +190,7 @@ export async function listWorkplaceTaskTypes({ workplaceId }) {
 }
 
 export async function createWorkplaceTask(payload) {
-  const taskPayload = {
-    ...payload,
-  }
+  const { assigned_to, ...taskPayload } = payload
 
   // Create the task first, then assign users via task_assignees join table
   const { data: task, error: taskError } = await supabase
@@ -140,10 +201,10 @@ export async function createWorkplaceTask(payload) {
 
   if (taskError) throw taskError
 
-  const userIds = Array.isArray(payload.assigned_to)
-    ? payload.assigned_to.filter(Boolean)
-    : payload.assigned_to
-      ? [payload.assigned_to]
+  const userIds = Array.isArray(assigned_to)
+    ? assigned_to.filter(Boolean)
+    : assigned_to
+      ? [assigned_to]
       : []
 
   if (userIds.length) {

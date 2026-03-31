@@ -48,7 +48,7 @@ export default function WorkplaceDetail() {
       const [my, mem, t, p, tt] = await Promise.all([
         listMyWorkplaces(user.id),
         listWorkplaceMembers(id),
-        listWorkplaceTasks({ workplaceId: id }),
+        listWorkplaceTasks({ workplaceId: id, userId: user.id }),
         listWorkplaceProjects({ workplaceId: id }),
         listWorkplaceTaskTypes({ workplaceId: id }),
       ])
@@ -109,27 +109,24 @@ export default function WorkplaceDetail() {
       )}
 
       {/* Workplace Profile Header */}
-      <WorkplaceProfile workplace={workplace} loading={loading} />
+      <WorkplaceProfile
+        workplace={workplace}
+        loading={loading}
+        isOwner={isOwner}
+        onRefresh={refresh}
+        setMessage={setMessage}
+        setError={setError}
+        members={members}
+        projects={projects}
+        tasks={tasks}
+        currentMembership={currentMembership}
+      />
 
       {/* Main Content Area */}
       <div className="animate-in fade-in duration-300">
         {loading && !tasks.length && !projects.length && !types.length && !members.length && (
           <div className="p-6 text-center text-[#86868b] text-[14px]">
             Loading workplace data…
-          </div>
-        )}
-
-        {/* Profile Tab */}
-        {activeTab === "profile" && (
-          <div className="bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-6">
-            <h2 className="text-[18px] font-bold text-[#1d1d1f] mb-4">About Workplace</h2>
-            {workplace?.description ? (
-              <p className="text-[14px] text-[#86868b] leading-relaxed whitespace-pre-wrap">
-                {workplace.description}
-              </p>
-            ) : (
-              <p className="text-[14px] text-[#86868b]">No description provided.</p>
-            )}
           </div>
         )}
 

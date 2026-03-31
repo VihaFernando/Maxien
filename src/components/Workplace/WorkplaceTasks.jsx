@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { FaPlus } from "react-icons/fa"
-import { createWorkplaceTask } from "../../lib/workplaces"
-import { getUsersByIds, getDisplayName } from "../../lib/users"
+import { FaPlus, FaEdit, FaTrash } from "react-icons/fa"
+import { createWorkplaceTask, updateWorkplaceTask, deleteWorkplaceTask } from "../../lib/workplaces"
+import { getUsersByIds, getDisplayName, getUsername } from "../../lib/users"
 
 export default function WorkplaceTasks({
     tasks,
@@ -19,7 +19,9 @@ export default function WorkplaceTasks({
 }) {
     const [showForm, setShowForm] = useState(false)
     const [formLoading, setFormLoading] = useState(false)
+    const [editingId, setEditingId] = useState(null)
     const [userMap, setUserMap] = useState({})
+    const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false)
     const [newTask, setNewTask] = useState({
         title: "",
         description: "",
@@ -48,6 +50,32 @@ export default function WorkplaceTasks({
         loadUsers()
     }, [memberIds])
 
+    // Also load user data for assigned users in tasks
+    useEffect(() => {
+        const loadAssignedUsers = async () => {
+            if (!tasks.length) return
+            const assignedUserIds = new Set()
+            tasks.forEach((task) => {
+                task.task_assignees?.forEach((a) => {
+                    if (a.user_id && !userMap[a.user_id]) {
+                        assignedUserIds.add(a.user_id)
+                    }
+                })
+            })
+            if (assignedUserIds.size === 0) return
+            try {
+                const users = await getUsersByIds(Array.from(assignedUserIds))
+                setUserMap((prev) => ({
+                    ...prev,
+                    ...users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {}),
+                }))
+            } catch (e) {
+                // ignore
+            }
+        }
+        loadAssignedUsers()
+    }, [tasks])
+
     const assignedUsers = useMemo(() => {
         return (newTask.assigned_to || []).map((id) => userMap[id]).filter(Boolean)
     }, [newTask.assigned_to, userMap])
@@ -68,20 +96,42 @@ export default function WorkplaceTasks({
 
         setFormLoading(true)
         try {
-            await createWorkplaceTask({
-                user_id: user.id,
-                workplace_id: workplace.id,
-                title: newTask.title.trim(),
-                description: (newTask.description || "").trim() || null,
-                type_id: newTask.type_id,
-                project_id: newTask.project_id || null,
-                status: newTask.status || "To Do",
-                priority: newTask.priority || "Medium",
-                due_at,
-                assigned_to: newTask.assigned_to || null,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            })
+            if (editingId) {
+                // Update existing task
+                await updateWorkplaceTask({
+                    taskId: editingId,
+                    payload: {
+                        title: newTask.title.trim(),
+                        description: (newTask.description || "").trim() || null,
+                        type_id: newTask.type_id,
+                        project_id: newTask.project_id || null,
+                        status: newTask.status || "To Do",
+                        priority: newTask.priority || "Medium",
+                        due_at,
+                        assigned_to: newTask.assigned_to || null,
+                        updated_at: new Date().toISOString(),
+                    },
+                })
+                setMessage("Task updated successfully.")
+                setEditingId(null)
+            } else {
+                // Create new task
+                await createWorkplaceTask({
+                    user_id: user.id,
+                    workplace_id: workplace.id,
+                    title: newTask.title.trim(),
+                    description: (newTask.description || "").trim() || null,
+                    type_id: newTask.type_id,
+                    project_id: newTask.project_id || null,
+                    status: newTask.status || "To Do",
+                    priority: newTask.priority || "Medium",
+                    due_at,
+                    assigned_to: newTask.assigned_to || null,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                })
+                setMessage("Workplace task created.")
+            }
 
             setNewTask({
                 title: "",
@@ -94,12 +144,11 @@ export default function WorkplaceTasks({
                 status: "To Do",
                 assigned_to: [],
             })
-            setMessage("Workplace task created.")
             setShowForm(false)
             await onRefresh()
             setTimeout(() => setMessage(""), 2000)
         } catch (e) {
-            setError(e?.message || "Failed to create task.")
+            setError(e?.message || "Failed to save task.")
         } finally {
             setFormLoading(false)
         }
@@ -112,9 +161,93 @@ export default function WorkplaceTasks({
         return ids
             .map((id) => {
                 const user = userMap[id]
-                return user ? getDisplayName(user) : id
+                return user ? getUsername(user) : id
             })
             .filter(Boolean)
+    }
+
+    const canEditTask = (task) => {
+        return task.user_id === user.id
+    }
+
+    const handleEditClick = async (task) => {
+        const assignedUserIds = task.task_assignees?.map((a) => a.user_id) || []
+        const dueDate = task.due_at ? new Date(task.due_at).toISOString().split("T")[0] : ""
+        const dueTime = task.due_at ? new Date(task.due_at).toTimeString().slice(0, 5) : ""
+
+        // Load user data for assigned users if not already loaded
+        const missingUserIds = assignedUserIds.filter((id) => !userMap[id])
+        if (missingUserIds.length > 0) {
+            try {
+                const users = await getUsersByIds(missingUserIds)
+                setUserMap((prev) => ({
+                    ...prev,
+                    ...users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {}),
+                }))
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        setNewTask({
+            title: task.title,
+            description: task.description || "",
+            type_id: task.type_id,
+            project_id: task.project_id || "",
+            due_date: dueDate,
+            due_time: dueTime,
+            priority: task.priority || "Medium",
+            status: task.status || "To Do",
+            assigned_to: assignedUserIds,
+        })
+        setEditingId(task.id)
+    }
+
+    const handleCancelEdit = () => {
+        setEditingId(null)
+        setNewTask({
+            title: "",
+            description: "",
+            type_id: "",
+            project_id: "",
+            due_date: "",
+            due_time: "",
+            priority: "Medium",
+            status: "To Do",
+            assigned_to: [],
+        })
+    }
+
+    const handleDeleteTask = async (taskId) => {
+        if (!confirm("Are you sure you want to delete this task?")) return
+        setFormLoading(true)
+        try {
+            await deleteWorkplaceTask({ taskId })
+            setMessage("Task deleted successfully.")
+            await onRefresh()
+            setTimeout(() => setMessage(""), 2000)
+        } catch (e) {
+            setError(e?.message || "Failed to delete task.")
+        } finally {
+            setFormLoading(false)
+        }
+    }
+
+    const buildDueAt = (date, time) => {
+        if (!date) return null
+        const timeValue = time || "09:00"
+        const localDate = new Date(`${date}T${timeValue}:00`)
+        return localDate.toISOString()
+    }
+
+    const toggleAssignee = (userId) => {
+        setNewTask((v) => {
+            const current = v.assigned_to || []
+            const updated = current.includes(userId)
+                ? current.filter((id) => id !== userId)
+                : [...current, userId]
+            return { ...v, assigned_to: updated }
+        })
     }
 
     return (
@@ -162,9 +295,29 @@ export default function WorkplaceTasks({
                                             <p className="text-[13px] text-[#86868b] mt-1 line-clamp-2">{t.description}</p>
                                         )}
                                     </div>
-                                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f] whitespace-nowrap">
-                                        {t.status}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f] whitespace-nowrap">
+                                            {t.status}
+                                        </span>
+                                        {canEditTask(t) && (
+                                            <>
+                                                <button
+                                                    onClick={() => handleEditClick(t)}
+                                                    className="p-2 hover:bg-[#f5f5f7] rounded-lg transition-colors text-[#1d1d1f]"
+                                                    title="Edit task"
+                                                >
+                                                    <FaEdit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteTask(t.id)}
+                                                    className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                                                    title="Delete task"
+                                                >
+                                                    <FaTrash className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="flex flex-wrap gap-3 text-[12px] text-[#86868b]">
                                     <span>Priority: {t.priority || "—"}</span>
@@ -183,7 +336,7 @@ export default function WorkplaceTasks({
                 )}
 
                 <div className="pt-6 border-t border-[#f0f0f0]">
-                    {!showForm ? (
+                    {!showForm && !editingId ? (
                         <button
                             onClick={() => setShowForm(true)}
                             className="flex items-center gap-2 px-4 py-3 text-[14px] font-bold text-[#1d1d1f] hover:bg-[#f5f5f7] rounded-[12px] transition-colors"
@@ -288,30 +441,63 @@ export default function WorkplaceTasks({
                                         ))}
                                     </select>
                                 </div>
-                                <div>
+                                <div className="relative">
                                     <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
                                         Assign To
                                     </label>
-                                    <select
-                                        multiple
-                                        value={newTask.assigned_to}
-                                        onChange={(e) =>
-                                            setNewTask((v) => ({
-                                                ...v,
-                                                assigned_to: Array.from(e.target.selectedOptions, (o) => o.value),
-                                            }))
-                                        }
-                                        className="h-32 w-full px-3 py-2 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssigneeDropdownOpen(!assigneeDropdownOpen)}
+                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent hover:border-[#d2d2d7] focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px] text-left text-[#1d1d1f] flex items-center justify-between"
                                     >
-                                        {acceptedMembers.map((m) => (
-                                            <option key={m.user_id} value={m.user_id}>
-                                                {getDisplayName(userMap[m.user_id] || { id: m.user_id })}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        <span>
+                                            {newTask.assigned_to.length === 0
+                                                ? "Select users"
+                                                : `${newTask.assigned_to.length} selected`}
+                                        </span>
+                                        <svg
+                                            className={`w-4 h-4 transition-transform ${assigneeDropdownOpen ? "rotate-180" : ""}`}
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth={2}
+                                                d="M19 14l-7 7m0 0l-7-7m7 7V3"
+                                            />
+                                        </svg>
+                                    </button>
+
+                                    {assigneeDropdownOpen && (
+                                        <div className="absolute top-full left-0 right-0 mt-1 border border-[#d2d2d7]/40 rounded-[12px] bg-white p-3 space-y-2 max-h-48 overflow-y-auto shadow-lg z-50">
+                                            {acceptedMembers.length === 0 ? (
+                                                <p className="text-[13px] text-[#86868b]">No members available</p>
+                                            ) : (
+                                                acceptedMembers.map((m) => (
+                                                    <label
+                                                        key={m.user_id}
+                                                        className="flex items-center gap-2 cursor-pointer hover:bg-[#f5f5f7] p-2 rounded-lg"
+                                                    >
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={newTask.assigned_to.includes(m.user_id)}
+                                                            onChange={() => toggleAssignee(m.user_id)}
+                                                            className="w-4 h-4 cursor-pointer"
+                                                        />
+                                                        <span className="text-[13px] text-[#1d1d1f]">
+                                                            {getUsername(userMap[m.user_id] || { id: m.user_id })}
+                                                        </span>
+                                                    </label>
+                                                ))
+                                            )}
+                                        </div>
+                                    )}
+
                                     {newTask.assigned_to.length > 0 && (
                                         <p className="text-[12px] text-[#86868b] mt-2">
-                                            Assigned to: {getAssignedNames(newTask.assigned_to).join(", ")}
+                                            Selected: {getAssignedNames(newTask.assigned_to).join(", ")}
                                         </p>
                                     )}
                                 </div>
@@ -345,7 +531,10 @@ export default function WorkplaceTasks({
                             <div className="flex gap-3 pt-2">
                                 <button
                                     type="button"
-                                    onClick={() => setShowForm(false)}
+                                    onClick={() => {
+                                        handleCancelEdit()
+                                        setShowForm(false)
+                                    }}
                                     className="flex-1 py-3 rounded-[12px] bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white transition-colors"
                                 >
                                     Cancel
@@ -355,7 +544,7 @@ export default function WorkplaceTasks({
                                     disabled={formLoading}
                                     className="flex-1 py-3 rounded-[12px] bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-60 text-[#1d1d1f] font-bold text-[14px] transition-colors"
                                 >
-                                    {formLoading ? "Creating…" : "Create task"}
+                                    {formLoading ? (editingId ? "Updating…" : "Creating…") : (editingId ? "Update task" : "Create task")}
                                 </button>
                             </div>
                         </form>

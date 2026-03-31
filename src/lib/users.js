@@ -20,3 +20,13 @@ export function getDisplayName(user) {
         user?.id
     )
 }
+
+export function getUsername(user) {
+    return (
+        user?.user_metadata?.username ||
+        user?.user_metadata?.display_name ||
+        user?.user_metadata?.email ||
+        user?.email ||
+        "Unknown"
+    )
+}
