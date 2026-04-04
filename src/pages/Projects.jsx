@@ -313,7 +313,7 @@ export default function Projects() {
     const filteredProjects = filterAndSearchProjects()
 
     return (
-        <div className="animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-10">
+        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-10 duration-500">
 
             {/* Top Header */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 px-0">
@@ -545,134 +545,118 @@ export default function Projects() {
 
             {/* Create/Edit Project Modal */}
             {showForm && (
-                <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-40 overflow-y-auto animate-in fade-in duration-200">
-                    <div className="flex min-h-full items-start sm:items-center justify-center pt-[80px] sm:pt-0 p-4 sm:p-6">
-                        <div className="bg-white rounded-[24px] shadow-xl max-w-[500px] w-full overflow-hidden animate-in zoom-in duration-200">
-
-                            {/* Modal Header */}
-                            <div className="bg-white border-b border-[#f0f0f0] px-4 sm:px-6 py-4 flex items-center justify-between">
-                                <h2 className="text-[16px] sm:text-[18px] font-bold text-[#1d1d1f]">
-                                    {editing ? "Edit Project" : "New Project"}
-                                </h2>
-                                <button
-                                    onClick={cancelEdit}
-                                    className="p-1 hover:bg-[#f5f5f7] rounded-lg text-[#86868b] transition-colors flex-shrink-0"
-                                >
-                                    <FaTimes className="w-4 h-4" />
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0f172a]/45 backdrop-blur-[3px]" onClick={cancelEdit}>
+                    <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
+                        <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
+                                <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Project editor</p>
+                                    <h3 className="mt-0.5 text-[15px] font-bold text-[#111827] sm:text-[17px]">{editing ? "Edit Project" : "New Project"}</h3>
+                                    <p className="mt-0.5 text-[11px] text-[#64748b]">{editing ? "Update project details" : "Create a new project in your workspace"}</p>
+                                </div>
+                                <button onClick={cancelEdit} className="rounded-full border border-[#e2e8f0] bg-white p-1.5 transition-colors hover:bg-[#f8fafc]">
+                                    <FaTimes className="h-4 w-4 text-[#64748b]" />
                                 </button>
                             </div>
 
-                            {/* Modal Form */}
-                            <form onSubmit={createProject} className="p-4 sm:p-6 space-y-4">
-                                {/* Project Name */}
-                                <div>
-                                    <label className="block text-[11px] sm:text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-2">
-                                        Project Name *
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={form.name}
-                                        onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                        placeholder="Enter project name"
-                                        className="w-full px-3 py-2.5 sm:py-2 border border-[#d2d2d7]/50 rounded-xl text-[13px] placeholder:text-[#86868b] focus:outline-none focus:border-[#86868b] focus:ring-1 focus:ring-[#C6FF00]/50"
-                                    />
-                                </div>
-
-                                {/* Type */}
-                                <div>
-                                    <label className="block text-[11px] sm:text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-2">
-                                        Type *
-                                    </label>
-                                    <select
-                                        value={form.type_id}
-                                        onChange={(e) => setForm({ ...form, type_id: e.target.value })}
-                                        className="w-full px-3 py-2.5 sm:py-2 border border-[#d2d2d7]/50 rounded-xl text-[13px] bg-white text-[#1d1d1f] focus:outline-none focus:border-[#86868b] focus:ring-1 focus:ring-[#C6FF00]/50"
-                                    >
-                                        <option value="">Select a type</option>
-                                        {types.map(t => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Description */}
-                                <div>
-                                    <label className="block text-[11px] sm:text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-2">
-                                        Description
-                                    </label>
-                                    <textarea
-                                        value={form.description}
-                                        onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                        placeholder="Add project description (optional)"
-                                        rows="3"
-                                        className="w-full px-3 py-2.5 sm:py-2 border border-[#d2d2d7]/50 rounded-xl text-[13px] placeholder:text-[#86868b] focus:outline-none focus:border-[#86868b] focus:ring-1 focus:ring-[#C6FF00]/50 resize-none"
-                                    />
-                                </div>
-
-                                {/* Status */}
-                                <div>
-                                    <label className="block text-[11px] sm:text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-2">
-                                        Status
-                                    </label>
-                                    <select
-                                        value={form.status}
-                                        onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                        className="w-full px-3 py-2.5 sm:py-2 border border-[#d2d2d7]/50 rounded-xl text-[13px] bg-white text-[#1d1d1f] focus:outline-none focus:border-[#86868b] focus:ring-1 focus:ring-[#C6FF00]/50"
-                                    >
-                                        {statusOptions.map(s => (
-                                            <option key={s} value={s}>{s}</option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Start Date */}
-                                <div>
-                                    <label className="block text-[11px] sm:text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-2">
-                                        Start Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={form.start_date}
-                                        onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                                        className="w-full px-3 py-2.5 sm:py-2 border border-[#d2d2d7]/50 rounded-xl text-[13px] focus:outline-none focus:border-[#86868b] focus:ring-1 focus:ring-[#C6FF00]/50"
-                                    />
-                                </div>
-
-                                {/* Target End Date */}
-                                <div>
-                                    <label className="block text-[11px] sm:text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-2">
-                                        Target End Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={form.target_end_date}
-                                        onChange={(e) => setForm({ ...form, target_end_date: e.target.value })}
-                                        className="w-full px-3 py-2.5 sm:py-2 border border-[#d2d2d7]/50 rounded-xl text-[13px] focus:outline-none focus:border-[#86868b] focus:ring-1 focus:ring-[#C6FF00]/50"
-                                    />
-                                </div>
-
-                                {/* Error Message */}
-                                {error && (
-                                    <div className="p-3 bg-red-50 border border-red-200 text-red-600 rounded-xl text-[12px]">
-                                        {error}
+                            <form onSubmit={createProject} className="max-h-[76vh] space-y-3.5 overflow-y-auto px-4.5 py-4 sm:max-h-[80vh] sm:px-5 sm:py-4.5">
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <div className="md:col-span-2">
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Project Name *</label>
+                                        <input
+                                            type="text"
+                                            value={form.name}
+                                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                            placeholder="Enter project name"
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        />
                                     </div>
+
+                                    <div>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Type *</label>
+                                        <select
+                                            value={form.type_id}
+                                            onChange={(e) => setForm({ ...form, type_id: e.target.value })}
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        >
+                                            <option value="">Select a type</option>
+                                            {types.map(t => (
+                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Status</label>
+                                        <select
+                                            value={form.status}
+                                            onChange={(e) => setForm({ ...form, status: e.target.value })}
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        >
+                                            {statusOptions.map(s => (
+                                                <option key={s} value={s}>{s}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Start Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.start_date}
+                                            onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Target End Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.target_end_date}
+                                            onChange={(e) => setForm({ ...form, target_end_date: e.target.value })}
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Description</label>
+                                        <textarea
+                                            value={form.description}
+                                            onChange={(e) => setForm({ ...form, description: e.target.value })}
+                                            placeholder="Add project description (optional)"
+                                            rows="3"
+                                            className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        />
+                                    </div>
+                                </div>
+
+                                {error && (
+                                    <p className="rounded-lg bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600">
+                                        {error}
+                                    </p>
                                 )}
 
-                                {/* Actions */}
-                                <div className="flex gap-2 pt-4">
-                                    <button
-                                        type="button"
-                                        onClick={cancelEdit}
-                                        className="flex-1 px-4 py-2.5 sm:py-2 border border-[#d2d2d7]/50 text-[#1d1d1f] rounded-xl font-semibold text-[13px] hover:bg-[#f5f5f7] transition-colors"
-                                    >
-                                        Cancel
-                                    </button>
+                                {message && (
+                                    <p className="rounded-lg bg-green-50 px-3 py-2 text-[12px] font-medium text-green-700">
+                                        {message}
+                                    </p>
+                                )}
+
+                                <div className="flex gap-2 border-t border-[#eef2f7] pt-3">
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="flex-1 px-4 py-2.5 sm:py-2 bg-[#C6FF00] text-[#1d1d1f] rounded-xl font-semibold text-[13px] hover:bg-[#b3e600] transition-colors disabled:opacity-50"
+                                        className="flex-1 rounded-lg bg-[#C6FF00] py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#b8f000] disabled:opacity-60"
                                     >
-                                        {loading ? "Saving..." : (editing ? "Update" : "Create")}
+                                        {loading ? (editing ? "Saving..." : "Creating...") : (editing ? "Update Project" : "Create Project")}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={cancelEdit}
+                                        className="rounded-lg border border-[#d2d2d7] bg-[#f5f7fa] px-4 py-2.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-white"
+                                    >
+                                        Cancel
                                     </button>
                                 </div>
                             </form>

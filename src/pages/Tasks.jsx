@@ -1,18 +1,17 @@
-﻿import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { Link, useLocation } from "react-router-dom"
-import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder } from "react-icons/fa"
+import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder, FaListUl, FaColumns, FaBorderAll } from "react-icons/fa"
 import { formatTimestamp } from "../lib/dateUtils"
 
 export default function Tasks() {
     const { user } = useAuth()
 
-    // Utility: get current local time in HH:MM format
     const getCurrentTime = () => {
         const now = new Date()
-        const hh = String(now.getHours()).padStart(2, '0')
-        const mm = String(now.getMinutes()).padStart(2, '0')
+        const hh = String(now.getHours()).padStart(2, "0")
+        const mm = String(now.getMinutes()).padStart(2, "0")
         return `${hh}:${mm}`
     }
 
@@ -28,7 +27,7 @@ export default function Tasks() {
         due_date: "",
         due_time: getCurrentTime(),
         priority: "Medium",
-        status: "To Do"
+        status: "To Do",
     })
     const [editing, setEditing] = useState(null)
     const [error, setError] = useState("")
@@ -37,22 +36,22 @@ export default function Tasks() {
     const [filterStatus, setFilterStatus] = useState("")
     const [filterType, setFilterType] = useState("")
     const [filterPriority, setFilterPriority] = useState("")
-    const [sortBy, setSortBy] = useState("due_at") // due_at, created_at, priority
-    const [selectedTask, setSelectedTask] = useState(null) // for details modal
-    const [actionMenu, setActionMenu] = useState(null) // for task actions menu
+    const [sortBy, setSortBy] = useState("due_at")
+    const [selectedTask, setSelectedTask] = useState(null)
+    const [actionMenu, setActionMenu] = useState(null)
     const [showFilters, setShowFilters] = useState(false)
     const [showTaskModal, setShowTaskModal] = useState(false)
+    const [viewMode, setViewMode] = useState("grid")
 
     const statusOptions = ["To Do", "In Progress", "Done", "Cancelled"]
     const priorityOptions = ["Low", "Medium", "High", "Urgent"]
     const priorityColors = {
-        "Low": "#86868b",
-        "Medium": "#3b82f6",
-        "High": "#f97316",
-        "Urgent": "#ef4444"
+        Low: "#86868b",
+        Medium: "#3b82f6",
+        High: "#f97316",
+        Urgent: "#ef4444",
     }
 
-    // Utility: Convert local date/time to ISO UTC timestamp
     const buildDueAt = (date, time) => {
         if (!date) return null
         const timeValue = time || getCurrentTime()
@@ -60,31 +59,31 @@ export default function Tasks() {
         return localDate.toISOString()
     }
 
-    // Utility: Extract local date and time from ISO UTC timestamp
     const extractDateAndTime = (dueAt) => {
         if (!dueAt) return { date: "", time: getCurrentTime() }
         const utcDate = new Date(dueAt)
         const year = utcDate.getFullYear()
-        const month = String(utcDate.getMonth() + 1).padStart(2, '0')
-        const day = String(utcDate.getDate()).padStart(2, '0')
+        const month = String(utcDate.getMonth() + 1).padStart(2, "0")
+        const day = String(utcDate.getDate()).padStart(2, "0")
         const date = `${year}-${month}-${day}`
-        const hours = String(utcDate.getHours()).padStart(2, '0')
-        const minutes = String(utcDate.getMinutes()).padStart(2, '0')
+        const hours = String(utcDate.getHours()).padStart(2, "0")
+        const minutes = String(utcDate.getMinutes()).padStart(2, "0")
         const time = `${hours}:${minutes}`
         return { date, time }
     }
 
-    // Utility: Format ISO timestamp to readable local date+time
     const formatDueDateTime = (dueAt) => {
         if (!dueAt) return "No due date"
         const date = new Date(dueAt)
-        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined })
-        const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+        const dateStr = date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
+        })
+        const timeStr = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
         return `${dateStr} at ${timeStr}`
     }
 
-    // Utility: Get default reminders based on due_at timestamp
-    // Utility: Check if task is overdue (local comparison)
     const isOverdueTask = (task) => {
         if (!task.due_at || task.status === "Done" || task.status === "Cancelled") return false
         const now = new Date()
@@ -256,7 +255,7 @@ export default function Tasks() {
                 const { data, error } = await supabase.from("tasks").insert([payload]).select().single()
                 if (error) {
                     setTasks(prev => [{ ...payload, id: Date.now() }, ...prev])
-                    setMessage("Saved locally â€” server insert failed.")
+                    setMessage("Saved locally — server insert failed.")
                 } else {
                     setTasks(prev => [data, ...prev])
                     setMessage("Task created.")
@@ -409,317 +408,427 @@ export default function Tasks() {
         setShowTaskModal(false)
     }
 
+    const filteredTasks = useMemo(() => filterAndSortTasks(), [tasks, searchTerm, filterStatus, filterType, filterPriority, sortBy])
+
+    const boardColumns = useMemo(() => {
+        return [
+            { key: "To Do", color: "#94a3b8" },
+            { key: "In Progress", color: "#3b82f6" },
+            { key: "Done", color: "#22c55e" },
+            { key: "Cancelled", color: "#ef4444" },
+        ].map((column) => ({
+            ...column,
+            items: filteredTasks.filter((task) => task.status === column.key),
+        }))
+    }, [filteredTasks])
+
+    const TaskActionsMenu = ({ task }) => (
+        <div className="relative shrink-0">
+            <button
+                onClick={(e) => {
+                    e.stopPropagation()
+                    setActionMenu(actionMenu === task.id ? null : task.id)
+                }}
+                className="rounded-md p-1.5 transition-colors hover:bg-[#f3f4f6]"
+            >
+                <FaEllipsisH className="h-3.5 w-3.5 text-[#6b7280]" />
+            </button>
+
+            {actionMenu === task.id && (
+                <div className="absolute right-0 top-8 z-50 min-w-[152px] overflow-hidden rounded-xl border border-[#d2d2d7]/80 bg-white shadow-xl" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => { setSelectedTask(task); setActionMenu(null) }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">View Details</button>
+                    <button onClick={() => openEdit(task)} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">Edit</button>
+                    <button onClick={() => { duplicateTask(task); setActionMenu(null) }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">Duplicate</button>
+                    <div className="border-t border-[#f0f0f0]" />
+                    <button onClick={() => deleteTask(task.id)} className="w-full px-3 py-2 text-left text-[12px] font-medium text-red-600 hover:bg-red-50">Delete</button>
+                </div>
+            )}
+        </div>
+    )
+
+    const StatusBadge = ({ task }) => (
+        <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-[10px]" style={{ backgroundColor: statusColors[task.status]?.bg, color: statusColors[task.status]?.text }}>
+            {task.status}
+        </span>
+    )
+
+    const PriorityBadge = ({ task }) => (
+        <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-[10px]" style={{ backgroundColor: priorityBgs[task.priority], color: priorityColors[task.priority] }}>
+            {task.priority}
+        </span>
+    )
+
     const TaskCard = ({ task }) => {
         const taskType = types.find(t => t.id === task.type_id)
         const overdue = isOverdueTask(task)
-        const isDone = task.status === "Done" || task.status === "Cancelled"
         const project = projects.find(p => p.id === task.project_id)
 
         return (
-            <div className={`group relative flex items-start gap-3 p-3.5 sm:p-4 rounded-[16px] sm:rounded-[18px] transition-all duration-200 ${isDone ? "bg-[#f9f9f9] opacity-70" :
-                overdue ? "bg-red-50 border border-red-200/60" :
-                    "bg-white border border-[#d2d2d7]/50 hover:border-[#d2d2d7] hover:shadow-sm"
-                }`}>
-                {/* Checkbox */}
-                <button
-                    onClick={() => toggleComplete(task)}
-                    className={`mt-0.5 w-5 h-5 sm:w-[22px] sm:h-[22px] rounded-full flex items-center justify-center flex-shrink-0 transition-all ${task.status === "Done" ? "bg-[#22c55e]" : "border-2 border-[#d2d2d7] hover:border-[#C6FF00] bg-white"
-                        }`}
-                >
-                    {task.status === "Done" && (
-                        <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+            <div className={`rounded-xl border p-2.5 transition-all sm:p-3 ${overdue ? "border-red-200/70 bg-red-50/40" : "border-[#e5e7eb] bg-white hover:border-[#d1d5db]"}`}>
+                <div className="mb-2 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                        <p className="truncate text-[12px] font-semibold text-[#111827] sm:text-[13px]">{task.title}</p>
+                        {task.description && (
+                            <p className="mt-0.5 line-clamp-1 text-[10px] text-[#6b7280] sm:text-[11px]">{task.description}</p>
+                        )}
+                    </div>
+                    <TaskActionsMenu task={task} />
+                </div>
+
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <StatusBadge task={task} />
+                    <PriorityBadge task={task} />
+                    {taskType && (
+                        <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-[10px]" style={{ backgroundColor: taskType.color || "#C6FF00", color: "#1d1d1f" }}>
+                            {taskType.name}
+                        </span>
+                    )}
+                    {overdue && (
+                        <span className="rounded-full bg-red-100 px-1.5 py-0.5 text-[9px] font-bold text-red-600">Overdue</span>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-between gap-2 border-t border-[#f1f5f9] pt-2">
+                    <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-1 text-[9px] text-[#6b7280] sm:text-[10px]">
+                            <FaCalendar className="h-2.5 w-2.5" />
+                            <span className="truncate">{formatDueDateTime(task.due_at)}</span>
+                        </div>
+                        {project && (
+                            <div className="flex items-center gap-1 text-[9px] text-[#6b7280] sm:text-[10px]">
+                                <FaFolder className="h-2.5 w-2.5" />
+                                <span className="truncate">{project.name}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <button
+                        onClick={() => toggleComplete(task)}
+                        className={`rounded-md border px-2 py-1 text-[9px] font-semibold transition-colors sm:text-[10px] ${task.status === "Done" ? "border-[#22c55e] bg-[#22c55e] text-white" : "border-[#d1d5db] bg-white text-[#374151] hover:border-[#C6FF00]"}`}
+                    >
+                        {task.status === "Done" ? "Completed" : "Mark done"}
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    const TaskListRow = ({ task }) => {
+        const taskType = types.find(t => t.id === task.type_id)
+        const project = projects.find(p => p.id === task.project_id)
+        const overdue = isOverdueTask(task)
+        const isDone = task.status === "Done"
+
+        return (
+            <tr className="border-b border-[#eef2f7] transition-colors hover:bg-[#f8fafc]">
+                <td className="px-2 py-2.5 sm:px-3">
+                    <button
+                        onClick={() => toggleComplete(task)}
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${isDone ? "border-[#22c55e] bg-[#22c55e] text-white" : "border-[#cbd5e1] bg-[#f8fafc] text-transparent hover:border-[#94a3b8]"}`}
+                        aria-label={isDone ? "Mark task as not done" : "Mark task as done"}
+                    >
+                        <svg className={`h-2.5 w-2.5 transition-opacity ${isDone ? "opacity-100" : "opacity-0"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M5 13l4 4L19 7" />
                         </svg>
-                    )}
-                </button>
-
-                {/* Content */}
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                            <p className={`text-[13px] sm:text-[14px] font-semibold leading-snug ${isDone ? "line-through text-[#86868b]" : "text-[#1d1d1f]"}`}>
-                                {task.title}
-                            </p>
-                            {task.description && (
-                                <p className="text-[11px] sm:text-[12px] text-[#86868b] mt-0.5 line-clamp-1">{task.description}</p>
-                            )}
-                        </div>
-                        {/* Three-dot menu */}
-                        <div className="relative flex-shrink-0">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); setActionMenu(actionMenu === task.id ? null : task.id) }}
-                                className="p-1.5 rounded-lg hover:bg-[#f5f5f7] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                            >
-                                <FaEllipsisH className="w-3.5 h-3.5 text-[#86868b]" />
-                            </button>
-                            {actionMenu === task.id && (
-                                <div className="absolute right-0 mt-1 bg-white rounded-[12px] border border-[#d2d2d7]/80 shadow-xl z-50 min-w-[150px] overflow-hidden" onClick={e => e.stopPropagation()}>
-                                    <button onClick={() => { setSelectedTask(task); setActionMenu(null) }} className="w-full text-left px-3.5 py-2.5 hover:bg-[#f5f5f7] text-[12px] font-medium text-[#1d1d1f]">View Details</button>
-                                    <button onClick={() => openEdit(task)} className="w-full text-left px-3.5 py-2.5 hover:bg-[#f5f5f7] text-[12px] font-medium text-[#1d1d1f]">Edit</button>
-                                    <button onClick={() => { duplicateTask(task); setActionMenu(null) }} className="w-full text-left px-3.5 py-2.5 hover:bg-[#f5f5f7] text-[12px] font-medium text-[#1d1d1f]">Duplicate</button>
-                                    <div className="border-t border-[#f0f0f0]" />
-                                    <button onClick={() => deleteTask(task.id)} className="w-full text-left px-3.5 py-2.5 hover:bg-red-50 text-[12px] font-medium text-red-600">Delete</button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    {/* Tags */}
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                        {overdue && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">OVERDUE</span>}
-                        {task.status && <span className="text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full" style={{ backgroundColor: statusColors[task.status]?.bg, color: statusColors[task.status]?.text }}>{task.status}</span>}
-                        {taskType && (
-                            <span className="text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-white"
-                                style={{ backgroundColor: taskType.color || "#C6FF00", color: "#1d1d1f" }}>
-                                {taskType.name}
-                            </span>
-                        )}
-                        <span className="text-[10px] sm:text-[11px] font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full"
-                            style={{ backgroundColor: priorityBgs[task.priority], color: priorityColors[task.priority] }}>
-                            {task.priority}
-                        </span>
-                        {task.due_at && (
-                            <span className={`text-[10px] sm:text-[11px] font-medium flex items-center gap-1 ${overdue ? "text-red-500" : "text-[#86868b]"}`}>
-                                <FaCalendar className="w-2.5 h-2.5" />
-                                {formatDueDateTime(task.due_at)}
-                            </span>
-                        )}
-                        {project && (
-                            <span className="text-[10px] sm:text-[11px] font-medium flex items-center gap-1 text-[#86868b]">
-                                <FaFolder className="w-2.5 h-2.5" />
-                                {project.name}
+                    </button>
+                </td>
+                <td className="px-2 py-2.5 text-[11px] font-semibold text-[#111827] sm:px-3 sm:text-[12px]">
+                    <div className="flex max-w-[260px] items-center gap-1.5">
+                        <div className="truncate">{task.title}</div>
+                        {overdue && (
+                            <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-medium text-red-600">
+                                Overdue
                             </span>
                         )}
                     </div>
-                </div>
-            </div>
+                </td>
+                <td className="px-2 py-2.5 text-[10px] text-[#6b7280] sm:px-3 sm:text-[11px]">{project?.name || "-"}</td>
+                <td className="px-2 py-2.5 sm:px-3"><StatusBadge task={task} /></td>
+                <td className="px-2 py-2.5 sm:px-3"><PriorityBadge task={task} /></td>
+                <td className="px-2 py-2.5 text-[10px] text-[#6b7280] sm:px-3 sm:text-[11px]">{formatDueDateTime(task.due_at)}</td>
+                <td className="px-2 py-2.5 text-[10px] text-[#6b7280] sm:px-3 sm:text-[11px]">{taskType?.name || "-"}</td>
+                <td className="px-2 py-2.5 sm:px-3">
+                    <div className="flex justify-end">
+                        <TaskActionsMenu task={task} />
+                    </div>
+                </td>
+            </tr>
         )
     }
 
-    const TaskSection = ({ title, tasks: taskList, accentColor, dotColor, sectionId }) => {
+    const TaskGridSection = ({ title, tasks: taskList, sectionId }) => {
         if (taskList.length === 0) return null
+
         return (
-            <div id={sectionId}>
-                <div className="flex items-center gap-2 mb-3 px-0.5">
-                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor || "#d2d2d7" }}></div>
-                    <h3 className="text-[11px] sm:text-[12px] font-bold uppercase tracking-widest" style={{ color: accentColor || "#86868b" }}>{title}</h3>
-                    <span className="text-[10px] font-semibold text-[#86868b] bg-[#f5f5f7] rounded-full px-2 py-0.5">{taskList.length}</span>
+            <section id={sectionId}>
+                <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#64748b]">{title}</h3>
+                    <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-semibold text-[#64748b]">{taskList.length}</span>
                 </div>
-                <div className="space-y-2 sm:space-y-2.5">
-                    {taskList.map(task => <TaskCard key={task.id} task={task} />)}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {taskList.map((task) => <TaskCard key={task.id} task={task} />)}
                 </div>
-            </div>
+            </section>
         )
     }
 
-    const totalVisible = filterAndSortTasks().length
+    const totalVisible = filteredTasks.length
 
     return (
-        <div className="animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-10" onClick={() => setActionMenu(null)}>
+        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
 
-            {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-6 sm:mb-8 px-0.5">
+            <div className="mb-4 flex flex-col gap-2.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest mb-1">Workspace</p>
-                    <h1 className="text-[20px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight">Tasks</h1>
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Workspace</p>
+                    <h1 className="text-[20px] font-bold tracking-tight text-[#111827] sm:text-[24px]">Tasks</h1>
                 </div>
                 <button
                     onClick={(e) => { e.stopPropagation(); openCreate() }}
-                    className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold rounded-[11px] sm:rounded-[12px] text-[13px] sm:text-[14px] transition-colors self-start sm:self-auto"
+                    className="inline-flex items-center gap-2 self-start rounded-[10px] bg-[#C6FF00] px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors hover:bg-[#b8f000] sm:self-auto sm:text-[13px]"
                 >
-                    <FaPlus className="w-3 h-3" />
+                    <FaPlus className="h-3 w-3" />
                     New Task
                 </button>
             </div>
 
-            {/* Stats Banner */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3 mb-5 sm:mb-6">
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-2.5">
                 {[
                     { label: "Total", value: taskStats.total, color: "#3b82f6" },
-                    { label: "To Do", value: taskStats.todo, color: "#86868b" },
+                    { label: "To Do", value: taskStats.todo, color: "#64748b" },
                     { label: "In Progress", value: taskStats.inProgress, color: "#f59e0b" },
                     { label: "Completed", value: taskStats.done, color: "#22c55e" },
                     { label: "Overdue", value: taskStats.overdue, color: "#ef4444" },
-                ].map(s => (
-                    <div key={s.label} className="bg-white rounded-[16px] sm:rounded-[18px] border border-[#d2d2d7]/50 px-3.5 sm:px-4 py-3 sm:py-3.5 shadow-sm">
-                        <p className="text-[10px] sm:text-[11px] font-semibold text-[#86868b] uppercase tracking-wide mb-1">{s.label}</p>
-                        <p className="text-[20px] sm:text-[22px] font-bold leading-tight" style={{ color: s.color }}>{s.value}</p>
+                ].map((s) => (
+                    <div key={s.label} className="rounded-xl border border-[#e2e8f0] bg-white px-3 py-2.5 shadow-sm">
+                        <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">{s.label}</p>
+                        <p className="text-[18px] font-bold leading-tight sm:text-[20px]" style={{ color: s.color }}>{s.value}</p>
                     </div>
                 ))}
             </div>
 
-            {/* Search + Filter Bar */}
-            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm p-4 sm:p-5 mb-5 sm:mb-6">
-                <div className="flex gap-2.5 sm:gap-3">
-                    <div className="flex-1 relative">
-                        <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#86868b] w-3.5 h-3.5" />
-                        <input
-                            type="text"
-                            placeholder="Search tasks..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white text-[13px] sm:text-[14px] transition-all outline-none"
-                            onClick={e => e.stopPropagation()}
-                        />
+            <div className="mb-4 rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm sm:p-4">
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex gap-2 sm:flex-1">
+                        <div className="relative flex-1">
+                            <FaSearch className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6b7280]" />
+                            <input
+                                type="text"
+                                placeholder="Search tasks..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full rounded-lg border border-transparent bg-[#f5f7fa] py-2 pl-8.5 pr-3 text-[12px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[13px]"
+                                onClick={e => e.stopPropagation()}
+                            />
+                        </div>
+                        <button
+                            onClick={(e) => { e.stopPropagation(); setShowFilters(!showFilters) }}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[11px] font-semibold transition-all sm:text-[12px] ${showFilters ? "border-[#C6FF00] bg-[#C6FF00] text-[#111827]" : "border-[#d2d2d7] bg-[#f5f7fa] text-[#111827] hover:bg-white"}`}
+                        >
+                            <FaFilter className="h-3 w-3" />
+                            Filters
+                        </button>
                     </div>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); setShowFilters(!showFilters) }}
-                        className={`flex items-center gap-2 px-3.5 sm:px-4 py-2.5 rounded-[11px] border text-[12px] sm:text-[13px] font-semibold transition-all ${showFilters ? "bg-[#C6FF00] border-[#C6FF00] text-[#1d1d1f]" : "bg-[#f5f5f7] border-[#d2d2d7] text-[#1d1d1f] hover:bg-white"}`}
-                    >
-                        <FaFilter className="w-3 h-3" />
-                        <span className="hidden sm:inline">Filters</span>
-                        {(filterStatus || filterType || filterPriority) && <span className="w-1.5 h-1.5 rounded-full bg-[#1d1d1f]"></span>}
-                    </button>
+
+                    <div className="inline-flex w-full rounded-lg border border-[#d2d2d7] bg-[#f8fafc] p-1 sm:w-auto">
+                        {[
+                            { key: "grid", label: "Grid", icon: FaBorderAll },
+                            { key: "list", label: "List", icon: FaListUl },
+                            { key: "board", label: "Board", icon: FaColumns },
+                        ].map((mode) => {
+                            const Icon = mode.icon
+                            return (
+                                <button
+                                    key={mode.key}
+                                    type="button"
+                                    onClick={() => setViewMode(mode.key)}
+                                    className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all sm:flex-none ${viewMode === mode.key ? "bg-white text-[#111827] shadow-sm" : "text-[#64748b]"}`}
+                                >
+                                    <Icon className="h-3 w-3" />
+                                    {mode.label}
+                                </button>
+                            )
+                        })}
+                    </div>
                 </div>
+
                 {showFilters && (
-                    <div className="mt-4 pt-4 border-t border-[#f0f0f0]">
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5" onClick={e => e.stopPropagation()}>
-                            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-                                className="px-3 py-2.5 bg-[#f5f5f7] rounded-[10px] text-[12px] sm:text-[13px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white outline-none transition-all">
+                    <div className="mt-3 border-t border-[#f1f5f9] pt-3">
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-lg border border-transparent bg-[#f5f7fa] px-3 py-2 text-[11px] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[12px]">
                                 <option value="">All Statuses</option>
                                 {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
-                            <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
-                                className="px-3 py-2.5 bg-[#f5f5f7] rounded-[10px] text-[12px] sm:text-[13px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white outline-none transition-all">
+                            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded-lg border border-transparent bg-[#f5f7fa] px-3 py-2 text-[11px] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[12px]">
                                 <option value="">All Types</option>
                                 {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
-                            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)}
-                                className="px-3 py-2.5 bg-[#f5f5f7] rounded-[10px] text-[12px] sm:text-[13px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white outline-none transition-all">
+                            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="rounded-lg border border-transparent bg-[#f5f7fa] px-3 py-2 text-[11px] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[12px]">
                                 <option value="">All Priorities</option>
                                 {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
-                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-                                className="px-3 py-2.5 bg-[#f5f5f7] rounded-[10px] text-[12px] sm:text-[13px] border border-transparent focus:border-[#C6FF00]/50 focus:bg-white outline-none transition-all">
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-transparent bg-[#f5f7fa] px-3 py-2 text-[11px] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[12px]">
                                 <option value="due_at">Sort: Due Date</option>
                                 <option value="priority">Sort: Priority</option>
                                 <option value="created_at">Sort: Created</option>
                             </select>
                         </div>
-                        {(filterStatus || filterType || filterPriority || searchTerm) && (
-                            <button onClick={() => { setFilterStatus(""); setFilterType(""); setFilterPriority(""); setSearchTerm("") }}
-                                className="mt-3 text-[11px] font-semibold text-[#86868b] hover:text-[#1d1d1f] transition-colors flex items-center gap-1">
-                                <FaTimes className="w-2.5 h-2.5" /> Clear all filters
-                            </button>
-                        )}
                     </div>
                 )}
             </div>
 
-            {/* Task List */}
-            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm p-4 sm:p-5 md:p-6">
+            <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm sm:p-4">
                 {loading ? (
                     <div className="flex items-center justify-center py-16">
-                        <div className="w-7 h-7 border-4 border-[#C6FF00] border-t-transparent rounded-full animate-spin"></div>
+                        <div className="h-7 w-7 animate-spin rounded-full border-4 border-[#C6FF00] border-t-transparent"></div>
                     </div>
                 ) : totalVisible === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                        <div className="w-14 h-14 rounded-full bg-[#f5f5f7] flex items-center justify-center">
-                            <svg className="w-7 h-7 text-[#d2d2d7]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                    <div className="flex flex-col items-center justify-center gap-3 py-14">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f5f7fa]">
+                            <svg className="h-6 w-6 text-[#cbd5e1]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                         </div>
                         <div className="text-center">
-                            <p className="text-[14px] font-semibold text-[#1d1d1f]">No tasks found</p>
-                            <p className="text-[12px] text-[#86868b] mt-0.5">{tasks.length === 0 ? "Create your first task to get started." : "Try adjusting your filters."}</p>
+                            <p className="text-[14px] font-semibold text-[#111827]">No tasks found</p>
+                            <p className="mt-0.5 text-[12px] text-[#6b7280]">{tasks.length === 0 ? "Create your first task to get started." : "Try adjusting your filters."}</p>
                         </div>
-                        {tasks.length === 0 && (
-                            <button onClick={openCreate} className="mt-1 px-4 py-2 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold rounded-[10px] text-[13px] transition-colors">
-                                Create a Task
-                            </button>
-                        )}
+                    </div>
+                ) : viewMode === "list" ? (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-[900px] w-full table-auto">
+                            <thead>
+                                <tr className="border-b border-[#e2e8f0] bg-[#f8fafc] text-left">
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Done</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Task name</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Project</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Status</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Priority</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Date time</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Type</th>
+                                    <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredTasks.map((task) => (
+                                    <TaskListRow key={task.id} task={task} />
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : viewMode === "board" ? (
+                    <div className="overflow-x-auto pb-1">
+                        <div className="flex min-w-[1040px] gap-3">
+                            {boardColumns.map((column) => (
+                                <div key={column.key} className="w-[250px] shrink-0 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-2.5 sm:w-[260px]">
+                                    <div className="mb-2 flex items-center justify-between px-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: column.color }}></span>
+                                            <h3 className="text-[11px] font-semibold text-[#334155]">{column.key}</h3>
+                                        </div>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#64748b]">{column.items.length}</span>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {column.items.length === 0 ? (
+                                            <div className="rounded-lg border border-dashed border-[#dbe1ea] bg-white px-3 py-4 text-center text-[10px] text-[#94a3b8]">No tasks</div>
+                                        ) : (
+                                            column.items.map((task) => <TaskCard key={task.id} task={task} />)
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 ) : (
-                    <div className="space-y-6 sm:space-y-8">
-                        <TaskSection title="Overdue" tasks={sections.overdue} accentColor="#ef4444" dotColor="#ef4444" sectionId="section-overdue" />
-                        <TaskSection title="Today" tasks={sections.today} accentColor="#f59e0b" dotColor="#f59e0b" sectionId="section-today" />
-                        <TaskSection title="Upcoming" tasks={sections.upcoming} accentColor="#3b82f6" dotColor="#3b82f6" sectionId="section-upcoming" />
-                        <TaskSection title="Other" tasks={sections.other} accentColor="#86868b" dotColor="#d2d2d7" sectionId="section-other" />
-                        <TaskSection title="Completed" tasks={sections.completed} accentColor="#22c55e" dotColor="#22c55e" sectionId="section-completed" />
+                    <div className="space-y-4">
+                        <TaskGridSection title="Overdue" tasks={sections.overdue} sectionId="section-overdue" />
+                        <TaskGridSection title="Today" tasks={sections.today} sectionId="section-today" />
+                        <TaskGridSection title="Upcoming" tasks={sections.upcoming} sectionId="section-upcoming" />
+                        <TaskGridSection title="Other" tasks={sections.other} sectionId="section-other" />
+                        <TaskGridSection title="Completed" tasks={sections.completed} sectionId="section-completed" />
                     </div>
                 )}
             </div>
-
-            {/* â”€â”€ Create / Edit Modal â”€â”€ */}
+            {/* ── Create / Edit Modal ── */}
             {showTaskModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] overflow-y-auto z-50" onClick={() => { setShowTaskModal(false); setEditing(null) }}>
-                    <div className="flex min-h-full items-start sm:items-center pt-[80px] sm:pt-0 justify-center p-0 sm:p-4">
-                        <div className="bg-white w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[24px] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-[#f0f0f0]">
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0f172a]/45 backdrop-blur-[3px]" onClick={() => { setShowTaskModal(false); setEditing(null) }}>
+                    <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
+                        <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
                                 <div>
-                                    <h3 className="text-[16px] sm:text-[18px] font-bold text-[#1d1d1f]">{editing ? "Edit Task" : "New Task"}</h3>
-                                    <p className="text-[12px] text-[#86868b] mt-0.5">{editing ? "Update task details" : "Add a new task to your workspace"}</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Task editor</p>
+                                    <h3 className="mt-0.5 text-[15px] font-bold text-[#111827] sm:text-[17px]">{editing ? "Edit Task" : "New Task"}</h3>
+                                    <p className="mt-0.5 text-[11px] text-[#64748b]">{editing ? "Update task details" : "Add a new task to your workspace"}</p>
                                 </div>
-                                <button onClick={() => { setShowTaskModal(false); setEditing(null) }} className="p-2 hover:bg-[#f5f5f7] rounded-full transition-colors">
-                                    <FaTimes className="w-4 h-4 text-[#86868b]" />
+                                <button onClick={() => { setShowTaskModal(false); setEditing(null) }} className="rounded-full border border-[#e2e8f0] bg-white p-1.5 transition-colors hover:bg-[#f8fafc]">
+                                    <FaTimes className="w-4 h-4 text-[#64748b]" />
                                 </button>
                             </div>
-                            <form onSubmit={createTask} className="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto max-h-[75vh] sm:max-h-[80vh]">
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Title *</label>
-                                    <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Finish report"
-                                        className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all" />
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Type *</label>
-                                    <select value={form.type_id} onChange={(e) => setForm(f => ({ ...f, type_id: e.target.value }))}
-                                        className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all">
-                                        <option value="">Select a type</option>
-                                        {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                    </select>
-                                    {types.length === 0 && (
-                                        <p className="text-[11px] text-[#86868b] mt-1.5">No active types. <Link to="/dashboard/task-types" className="text-[#86b300] font-semibold hover:underline">Create types</Link></p>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Project</label>
-                                    <select value={form.project_id} onChange={(e) => setForm(f => ({ ...f, project_id: e.target.value }))}
-                                        className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all">
-                                        <option value="">No Project</option>
-                                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
+                            <form onSubmit={createTask} className="max-h-[76vh] space-y-3.5 overflow-y-auto px-4.5 py-4 sm:max-h-[80vh] sm:px-5 sm:py-4.5">
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <div className="md:col-span-2">
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Title *</label>
+                                        <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Finish report"
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white" />
+                                    </div>
                                     <div>
-                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Priority</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Type *</label>
+                                        <select value={form.type_id} onChange={(e) => setForm(f => ({ ...f, type_id: e.target.value }))}
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white">
+                                            <option value="">Select a type</option>
+                                            {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Project</label>
+                                        <select value={form.project_id} onChange={(e) => setForm(f => ({ ...f, project_id: e.target.value }))}
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white">
+                                            <option value="">No Project</option>
+                                            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Priority</label>
                                         <select value={form.priority} onChange={(e) => setForm(f => ({ ...f, priority: e.target.value }))}
-                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all">
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white">
                                             {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Status</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Status</label>
                                         <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all">
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white">
                                             {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Due Date</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Due Date</label>
                                         <input type="date" value={form.due_date} onChange={(e) => setForm(f => ({ ...f, due_date: e.target.value }))}
-                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all" />
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white" />
                                     </div>
                                     <div>
-                                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Time</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Time</label>
                                         <input type="time" value={form.due_time} onChange={(e) => setForm(f => ({ ...f, due_time: e.target.value }))}
-                                            className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] outline-none transition-all" />
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white" />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Notes</label>
+                                        <textarea value={form.description || ""} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Add details or notes..."
+                                            className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white" />
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">Notes</label>
-                                    <textarea value={form.description || ""} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Add details or notes..."
-                                        className="w-full px-4 py-2.5 sm:py-3 bg-[#f5f5f7] rounded-[11px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white text-[14px] resize-none outline-none transition-all" />
-                                </div>
-                                {error && <p className="text-[12px] text-red-600 font-medium bg-red-50 px-3 py-2 rounded-[8px]">{error}</p>}
-                                {message && <p className="text-[12px] text-green-700 font-medium bg-green-50 px-3 py-2 rounded-[8px]">{message}</p>}
-                                <div className="flex gap-2.5 pt-1 pb-1 sm:pb-0">
+                                {types.length === 0 && (
+                                    <p className="rounded-lg bg-[#f8fafc] px-3 py-2 text-[11px] text-[#64748b]">No active types. <Link to="/dashboard/task-types" className="font-semibold text-[#86b300] hover:underline">Create types</Link></p>
+                                )}
+                                {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600">{error}</p>}
+                                {message && <p className="rounded-lg bg-green-50 px-3 py-2 text-[12px] font-medium text-green-700">{message}</p>}
+                                <div className="flex gap-2 border-t border-[#eef2f7] pt-3">
                                     <button type="submit" disabled={loading}
-                                        className="flex-1 bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-60 text-[#1d1d1f] font-bold py-2.5 sm:py-3 rounded-[11px] text-[14px] transition-colors">
+                                        className="flex-1 rounded-lg bg-[#C6FF00] py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#b8f000] disabled:opacity-60">
                                         {loading ? (editing ? "Saving..." : "Creating...") : (editing ? "Update Task" : "Create Task")}
                                     </button>
                                     <button type="button" onClick={resetForm}
-                                        className="px-5 py-2.5 sm:py-3 rounded-[11px] bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white transition-colors">
+                                        className="rounded-lg border border-[#d2d2d7] bg-[#f5f7fa] px-4 py-2.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-white">
                                         Cancel
                                     </button>
                                 </div>
@@ -729,78 +838,81 @@ export default function Tasks() {
                 </div>
             )}
 
-            {/* â”€â”€ Task Details Modal â”€â”€ */}
+            {/* ── Task Details Modal ── */}
             {selectedTask && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] overflow-y-auto z-50" onClick={() => setSelectedTask(null)}>
-                    <div className="flex min-h-full items-start sm:items-center pt-[80px] sm:pt-0 justify-center p-0 sm:p-4">
-                        <div className="bg-white w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[24px] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between px-5 sm:px-6 pt-5 sm:pt-6 pb-4 border-b border-[#f0f0f0]">
-                                <h3 className="text-[16px] sm:text-[18px] font-bold text-[#1d1d1f]">Task Details</h3>
-                                <button onClick={() => setSelectedTask(null)} className="p-2 hover:bg-[#f5f5f7] rounded-full transition-colors">
-                                    <FaTimes className="w-4 h-4 text-[#86868b]" />
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0f172a]/45 backdrop-blur-[3px]" onClick={() => setSelectedTask(null)}>
+                    <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
+                        <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
+                                <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Overview</p>
+                                    <h3 className="mt-0.5 text-[15px] font-bold text-[#111827] sm:text-[17px]">Task Details</h3>
+                                </div>
+                                <button onClick={() => setSelectedTask(null)} className="rounded-full border border-[#e2e8f0] bg-white p-1.5 transition-colors hover:bg-[#f8fafc]">
+                                    <FaTimes className="h-4 w-4 text-[#6b7280]" />
                                 </button>
                             </div>
-                            <div className="px-5 sm:px-6 py-4 sm:py-5 space-y-4 overflow-y-auto max-h-[70vh] sm:max-h-[75vh]">
+                            <div className="max-h-[72vh] space-y-3.5 overflow-y-auto px-4.5 py-4 sm:max-h-[75vh] sm:px-5">
                                 <div>
                                     <div className="flex items-start justify-between gap-3 mb-1">
-                                        <h4 className={`text-[16px] sm:text-[18px] font-bold leading-snug ${selectedTask.status === "Done" ? "line-through text-[#86868b]" : "text-[#1d1d1f]"}`}>
+                                        <h4 className={`text-[15px] sm:text-[17px] font-bold leading-snug ${selectedTask.status === "Done" ? "line-through text-[#94a3b8]" : "text-[#111827]"}`}>
                                             {selectedTask.title}
                                         </h4>
-                                        <span className="flex-shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-full"
+                                        <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
                                             style={{ backgroundColor: statusColors[selectedTask.status]?.bg, color: statusColors[selectedTask.status]?.text }}>
                                             {selectedTask.status}
                                         </span>
                                     </div>
                                     {selectedTask.description && (
-                                        <p className="text-[13px] text-[#86868b] mt-2 whitespace-pre-wrap leading-relaxed">{selectedTask.description}</p>
+                                        <p className="mt-1.5 whitespace-pre-wrap text-[12px] leading-relaxed text-[#64748b]">{selectedTask.description}</p>
                                     )}
                                 </div>
-                                <div className="space-y-0">
-                                    <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
-                                        <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Priority</span>
-                                        <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full"
+                                <div className="rounded-xl border border-[#eef2f7] bg-[#fcfdff]">
+                                    <div className="flex items-center justify-between border-b border-[#f1f5f9] px-3 py-2.5">
+                                        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Priority</span>
+                                        <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                                             style={{ backgroundColor: priorityBgs[selectedTask.priority], color: priorityColors[selectedTask.priority] }}>
                                             {selectedTask.priority}
                                         </span>
                                     </div>
                                     {selectedTask.type_id && (
-                                        <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
-                                            <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Type</span>
-                                            {(() => { const t = types.find(x => x.id === selectedTask.type_id); return t ? <span className="text-[12px] font-bold px-2.5 py-0.5 rounded-full" style={{ backgroundColor: t.color || "#C6FF00", color: "#1d1d1f" }}>{t.name}</span> : <span className="text-[13px] font-semibold text-[#1d1d1f]">â€”</span> })()}
+                                        <div className="flex items-center justify-between border-b border-[#f1f5f9] px-3 py-2.5">
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Type</span>
+                                            {(() => { const t = types.find(x => x.id === selectedTask.type_id); return t ? <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: t.color || "#C6FF00", color: "#1d1d1f" }}>{t.name}</span> : <span className="text-[12px] text-[#64748b]">—</span> })()}
                                         </div>
                                     )}
                                     {selectedTask.project_id && (
-                                        <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
-                                            <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Project</span>
-                                            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1d1d1f]">
-                                                <FaFolder className="w-3.5 h-3.5 text-[#C6FF00]" />
-                                                {projects.find(p => p.id === selectedTask.project_id)?.name || "â€”"}
+                                        <div className="flex items-center justify-between border-b border-[#f1f5f9] px-3 py-2.5">
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Project</span>
+                                            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#111827]">
+                                                <FaFolder className="h-3.5 w-3.5 text-[#C6FF00]" />
+                                                {projects.find(p => p.id === selectedTask.project_id)?.name || "—"}
                                             </span>
                                         </div>
                                     )}
                                     {selectedTask.due_at && (
-                                        <div className="flex items-center justify-between py-2.5 border-b border-[#f5f5f7]">
-                                            <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider">Due Date</span>
-                                            <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1d1d1f]">
-                                                <FaCalendar className="w-3.5 h-3.5 text-[#86868b]" />
+                                        <div className="flex items-center justify-between px-3 py-2.5">
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Due Date</span>
+                                            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#111827]">
+                                                <FaCalendar className="h-3.5 w-3.5 text-[#64748b]" />
                                                 {formatDueDateTime(selectedTask.due_at)}
                                             </span>
                                         </div>
                                     )}
                                 </div>
-                                <div className="bg-[#f9f9f9] rounded-[12px] p-3.5 space-y-2">
-                                    <div className="flex justify-between"><span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider">Created</span><span className="text-[11px] text-[#1d1d1f]">{formatTimestamp(selectedTask.created_at)}</span></div>
-                                    <div className="flex justify-between"><span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider">Updated</span><span className="text-[11px] text-[#1d1d1f]">{formatTimestamp(selectedTask.updated_at)}</span></div>
-                                    {selectedTask.completed_at && <div className="flex justify-between"><span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider">Completed</span><span className="text-[11px] text-[#1d1d1f]">{formatTimestamp(selectedTask.completed_at)}</span></div>}
+                                <div className="space-y-2 rounded-xl border border-[#eef2f7] bg-[#f8fafc] p-3">
+                                    <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Created</span><span className="text-[11px] text-[#334155]">{formatTimestamp(selectedTask.created_at)}</span></div>
+                                    <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Updated</span><span className="text-[11px] text-[#334155]">{formatTimestamp(selectedTask.updated_at)}</span></div>
+                                    {selectedTask.completed_at && <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Completed</span><span className="text-[11px] text-[#334155]">{formatTimestamp(selectedTask.completed_at)}</span></div>}
                                 </div>
                             </div>
-                            <div className="flex gap-2.5 px-5 sm:px-6 pb-5 sm:pb-6 pt-3 border-t border-[#f0f0f0]">
+                            <div className="flex gap-2 border-t border-[#eef2f7] px-4.5 pb-4.5 pt-3 sm:px-5 sm:pb-5">
                                 <button onClick={() => openEdit(selectedTask)}
-                                    className="flex-1 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold py-2.5 sm:py-3 rounded-[11px] text-[14px] transition-colors">
+                                    className="flex-1 rounded-lg bg-[#C6FF00] py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#b8f000]">
                                     Edit Task
                                 </button>
                                 <button onClick={() => setSelectedTask(null)}
-                                    className="px-5 py-2.5 sm:py-3 rounded-[11px] bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white transition-colors">
+                                    className="rounded-lg border border-[#d2d2d7] bg-[#f5f7fa] px-4 py-2.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-white">
                                     Close
                                 </button>
                             </div>

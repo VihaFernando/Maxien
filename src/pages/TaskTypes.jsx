@@ -158,209 +158,199 @@ export default function TaskTypes() {
     }
 
     return (
-        <div className="space-y-8 sm:space-y-10 lg:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <header className="space-y-2 px-1">
-                <h2 className="text-[28px] sm:text-[32px] lg:text-[36px] font-bold text-[#1d1d1f] tracking-tight leading-tight">Task Types</h2>
-                <p className="text-[#86868b] text-[15px] sm:text-[17px] lg:text-[19px] font-medium">Create and manage reusable task categories. Toggle status or edit details. Types cannot be deleted.</p>
-            </header>
-
-            <div className="bg-white rounded-[32px] sm:rounded-[36px] lg:rounded-[40px] p-6 sm:p-8 lg:p-10 shadow-sm border border-[#d2d2d7]/50 space-y-6">
-                {/* Action Buttons */}
-                <div className="flex items-center justify-between gap-4">
-                    <div>
-                        <h3 className="text-[18px] font-bold text-[#1d1d1f]">
-                            {editing ? "Edit Task Type" : "Create New Type"}
-                        </h3>
-                        <p className="text-[13px] text-[#86868b] mt-1">
-                            {types.length} {types.length === 1 ? "type" : "types"} total
-                        </p>
-                    </div>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={() => { resetForm(); setShowForm(!showForm); }}
-                            className="px-5 py-3 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-semibold rounded-xl transition-colors active:scale-[0.98] flex items-center gap-2"
-                        >
-                            <FaPlus className="w-4 h-4" />
-                            New Type
-                        </button>
-                        <Link to="/dashboard/tasks" className="px-5 py-3 rounded-xl bg-[#f5f5f7] text-[#1d1d1f] border border-[#d2d2d7] font-medium hover:bg-white transition-colors">
-                            View Tasks
-                        </Link>
-                    </div>
+        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
+            <div className="mb-4 flex flex-col gap-2.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Workspace</p>
+                    <h1 className="text-[20px] font-bold tracking-tight text-[#111827] sm:text-[24px]">Task Types</h1>
+                    <p className="mt-1 text-[12px] text-[#64748b]">Create and manage reusable task categories.</p>
                 </div>
-
-                {/* Form */}
-                {showForm && (
-                    <div className="border-t border-[#d2d2d7] pt-6">
-                        <form onSubmit={createOrUpdateType} className="space-y-4">
-                            <div>
-                                <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Type Name</label>
-                                <input
-                                    value={form.name}
-                                    onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                                    placeholder="e.g. Work, Personal, Client, Project"
-                                    className="w-full px-4 py-3 bg-[#f5f5f7] border-2 border-transparent focus:border-[#C6FF00]/50 focus:bg-white rounded-[16px] text-[14px]"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Description (Optional)</label>
-                                <textarea
-                                    value={form.description}
-                                    onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
-                                    placeholder="Add a description for this type..."
-                                    rows={2}
-                                    className="w-full px-4 py-3 bg-[#f5f5f7] border-2 border-transparent focus:border-[#C6FF00]/50 focus:bg-white rounded-[16px] text-[14px] resize-none"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-[12px] font-bold text-[#1d1d1f] ml-1 uppercase tracking-wider">Color</label>
-                                <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 mt-2">
-                                    {defaultColors.map(color => (
-                                        <button
-                                            key={color}
-                                            type="button"
-                                            onClick={() => setForm(f => ({ ...f, color }))}
-                                            className={`w-10 h-10 rounded-lg transition-all ${form.color === color ? "ring-2 ring-offset-2 ring-[#1d1d1f]" : "hover:scale-110"}`}
-                                            style={{ backgroundColor: color }}
-                                            title={color}
-                                        />
-                                    ))}
-                                </div>
-                                <div className="flex items-center gap-2 mt-3">
-                                    <div
-                                        className="w-10 h-10 rounded-lg border-2 border-[#d2d2d7]"
-                                        style={{ backgroundColor: form.color }}
-                                    />
-                                    <input
-                                        type="text"
-                                        value={form.color}
-                                        onChange={(e) => setForm(f => ({ ...f, color: e.target.value }))}
-                                        placeholder="#C6FF00"
-                                        className="flex-1 px-3 py-2 bg-[#f5f5f7] rounded-[10px] text-[13px] border border-[#d2d2d7]"
-                                    />
-                                </div>
-                            </div>
-
-                            {error && <div className="bg-red-50 text-red-600 text-[13px] font-medium px-4 py-3 rounded-xl border border-red-100/50">{error}</div>}
-                            {message && <div className="bg-green-50 text-green-700 text-[13px] font-medium px-4 py-3 rounded-xl border border-green-100/50">{message}</div>}
-
-                            <div className="flex gap-3 pt-4">
-                                <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="flex-1 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-semibold py-3 rounded-xl"
-                                >
-                                    {loading ? (editing ? "Updating..." : "Creating...") : (editing ? "Update Type" : "Create Type")}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => { resetForm(); setShowForm(false); }}
-                                    className="px-6 py-3 rounded-xl bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold hover:bg-white"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                )}
-
-                {/* Error/Message Display */}
-                {!showForm && error && (
-                    <div className="bg-red-50 text-red-600 text-[13px] font-medium px-4 py-3 rounded-xl border border-red-100/50">{error}</div>
-                )}
-                {!showForm && message && (
-                    <div className="bg-green-50 text-green-700 text-[13px] font-medium px-4 py-3 rounded-xl border border-green-100/50">{message}</div>
-                )}
-
-                {/* Types Grid */}
-                <div className="border-t border-[#d2d2d7] pt-6">
-                    {loading && !types.length ? (
-                        <div className="p-8 bg-[#f5f5f7] rounded-[20px] text-center text-[#86868b]">Loading…</div>
-                    ) : types.length === 0 ? (
-                        <div className="p-8 bg-[#f5f5f7] rounded-[20px] text-center">
-                            <p className="text-[#86868b]">No task types yet. Create one to get started.</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {types.map((t) => (
-                                <div key={t.id} className={`p-5 rounded-[20px] border transition-all ${t.status === "Active"
-                                        ? "bg-white border-[#d2d2d7]/50 shadow-sm"
-                                        : "bg-[#f5f5f7] border-[#d2d2d7]/30 opacity-60"
-                                    }`}>
-                                    <div className="flex items-start justify-between gap-3 mb-3">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <div
-                                                    className="w-4 h-4 rounded-full flex-shrink-0"
-                                                    style={{ backgroundColor: t.color || "#C6FF00" }}
-                                                />
-                                                <h4 className="text-[16px] font-bold text-[#1d1d1f] truncate">{t.name}</h4>
-                                            </div>
-                                            {t.description && (
-                                                <p className="text-[12px] text-[#86868b] truncate">{t.description}</p>
-                                            )}
-                                        </div>
-
-                                        <div className="relative">
-                                            <button
-                                                onClick={() => setActionMenu(actionMenu === t.id ? null : t.id)}
-                                                className="p-2 rounded-lg hover:bg-[#f5f5f7] transition-colors flex-shrink-0"
-                                            >
-                                                <FaEllipsisH className="w-4 h-4 text-[#86868b]" />
-                                            </button>
-
-                                            {actionMenu === t.id && (
-                                                <div className="absolute right-0 mt-2 bg-white rounded-[12px] border border-[#d2d2d7] shadow-lg z-50 min-w-[140px]">
-                                                    <button
-                                                        onClick={() => { startEdit(t); }}
-                                                        className="w-full text-left px-4 py-2 hover:bg-[#f5f5f7] rounded-t-[12px] text-[13px] font-medium text-[#1d1d1f] flex items-center gap-2"
-                                                    >
-                                                        <FaEdit className="w-3 h-3" />
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        onClick={() => { toggleStatus(t); setActionMenu(null); }}
-                                                        className="w-full text-left px-4 py-2 hover:bg-[#f5f5f7] rounded-b-[12px] text-[13px] font-medium text-[#1d1d1f] flex items-center gap-2"
-                                                    >
-                                                        {t.status === "Active" ? (
-                                                            <>
-                                                                <FaToggleOff className="w-3 h-3" />
-                                                                Deactivate
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <FaToggleOn className="w-3 h-3" />
-                                                                Activate
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className={`text-[12px] font-bold px-3 py-1 rounded-full ${t.status === "Active"
-                                                    ? "bg-[#22c55e]/10 text-[#22c55e]"
-                                                    : "bg-[#f5f5f7] text-[#86868b]"
-                                                }`}>
-                                                {t.status}
-                                            </span>
-                                            <span className="text-[12px] text-[#86868b]">
-                                                {getTaskCount(t.id)} tasks
-                                            </span>
-                                        </div>
-                                        <p className="text-[11px] text-[#86868b]">Created {new Date(t.created_at).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                <div className="flex gap-2 self-start sm:self-auto">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); resetForm(); setShowForm(true) }}
+                        className="inline-flex items-center gap-2 rounded-[10px] bg-[#C6FF00] px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors hover:bg-[#b8f000] sm:text-[13px]"
+                    >
+                        <FaPlus className="h-3 w-3" />
+                        New Type
+                    </button>
+                    <Link
+                        to="/dashboard/tasks"
+                        className="inline-flex items-center rounded-[10px] border border-[#d2d2d7] bg-[#f5f7fa] px-3.5 py-2 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-white sm:text-[13px]"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        View Tasks
+                    </Link>
                 </div>
             </div>
+
+            {error && !showForm && (
+                <div className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600">{error}</div>
+            )}
+            {message && !showForm && (
+                <div className="mb-4 rounded-lg bg-green-50 px-3 py-2 text-[12px] font-medium text-green-700">{message}</div>
+            )}
+
+            <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm sm:p-4">
+                {loading && !types.length ? (
+                    <div className="flex items-center justify-center py-16">
+                        <div className="h-7 w-7 animate-spin rounded-full border-4 border-[#C6FF00] border-t-transparent"></div>
+                    </div>
+                ) : types.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center gap-3 py-14">
+                        <p className="text-[14px] font-semibold text-[#111827]">No task types found</p>
+                        <p className="text-[12px] text-[#6b7280]">Create your first type to get started.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        {types.map((t) => (
+                            <div key={t.id} className={`rounded-xl border p-3 transition-all ${t.status === "Active" ? "border-[#e2e8f0] bg-white" : "border-[#e2e8f0] bg-[#f8fafc] opacity-70"}`}>
+                                <div className="mb-2.5 flex items-start justify-between gap-2">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="mb-1 flex items-center gap-2">
+                                            <div className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ backgroundColor: t.color || "#C6FF00" }} />
+                                            <h4 className="truncate text-[14px] font-bold text-[#111827]">{t.name}</h4>
+                                        </div>
+                                        {t.description && <p className="truncate text-[12px] text-[#64748b]">{t.description}</p>}
+                                    </div>
+
+                                    <div className="relative">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setActionMenu(actionMenu === t.id ? null : t.id) }}
+                                            className="rounded-lg p-1.5 text-[#64748b] transition-colors hover:bg-[#f5f7fa]"
+                                        >
+                                            <FaEllipsisH className="h-3.5 w-3.5" />
+                                        </button>
+
+                                        {actionMenu === t.id && (
+                                            <div className="absolute right-0 top-8 z-50 min-w-[152px] overflow-hidden rounded-xl border border-[#d2d2d7]/80 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    onClick={() => startEdit(t)}
+                                                    className="w-full border-b border-[#f0f0f0] px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                                                >
+                                                    <span className="inline-flex items-center gap-2"><FaEdit className="h-3 w-3" />Edit</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => { toggleStatus(t); setActionMenu(null) }}
+                                                    className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]"
+                                                >
+                                                    {t.status === "Active" ? (
+                                                        <span className="inline-flex items-center gap-2"><FaToggleOff className="h-3 w-3" />Deactivate</span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-2"><FaToggleOn className="h-3 w-3" />Activate</span>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${t.status === "Active" ? "bg-[#22c55e]/10 text-[#22c55e]" : "bg-[#f1f5f9] text-[#64748b]"}`}>
+                                        {t.status}
+                                    </span>
+                                    <span className="text-[11px] text-[#64748b]">{getTaskCount(t.id)} tasks</span>
+                                </div>
+                                <p className="mt-2 text-[10px] text-[#94a3b8]">Created {new Date(t.created_at).toLocaleDateString()}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            {showForm && (
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0f172a]/45 backdrop-blur-[3px]" onClick={() => { resetForm(); setShowForm(false) }}>
+                    <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
+                        <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
+                                <div>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Type editor</p>
+                                    <h3 className="mt-0.5 text-[15px] font-bold text-[#111827] sm:text-[17px]">{editing ? "Edit Task Type" : "New Task Type"}</h3>
+                                    <p className="mt-0.5 text-[11px] text-[#64748b]">{editing ? "Update task type details" : "Add a reusable type for task categorization"}</p>
+                                </div>
+                                <button onClick={() => { resetForm(); setShowForm(false) }} className="rounded-full border border-[#e2e8f0] bg-white p-1.5 transition-colors hover:bg-[#f8fafc]">
+                                    <FaTimes className="h-4 w-4 text-[#64748b]" />
+                                </button>
+                            </div>
+
+                            <form onSubmit={createOrUpdateType} className="max-h-[76vh] space-y-3.5 overflow-y-auto px-4.5 py-4 sm:max-h-[80vh] sm:px-5 sm:py-4.5">
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    <div>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Type Name *</label>
+                                        <input
+                                            value={form.name}
+                                            onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                                            placeholder="e.g. Work, Personal, Client"
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Color code</label>
+                                        <input
+                                            type="text"
+                                            value={form.color}
+                                            onChange={(e) => setForm(f => ({ ...f, color: e.target.value }))}
+                                            placeholder="#C6FF00"
+                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Description</label>
+                                        <textarea
+                                            value={form.description}
+                                            onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))}
+                                            placeholder="Add a description for this type..."
+                                            rows={3}
+                                            className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                        />
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Quick colors</label>
+                                        <div className="grid grid-cols-5 gap-2 sm:grid-cols-10">
+                                            {defaultColors.map(color => (
+                                                <button
+                                                    key={color}
+                                                    type="button"
+                                                    onClick={() => setForm(f => ({ ...f, color }))}
+                                                    className={`h-9 w-9 rounded-lg border transition-all ${form.color === color ? "border-[#111827] ring-2 ring-[#111827]/15" : "border-transparent hover:scale-105"}`}
+                                                    style={{ backgroundColor: color }}
+                                                    title={color}
+                                                />
+                                            ))}
+                                        </div>
+                                        <div className="mt-3 inline-flex items-center gap-2 rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-2.5 py-2">
+                                            <span className="inline-block h-5 w-5 rounded-md border border-[#d2d2d7]" style={{ backgroundColor: form.color }} />
+                                            <span className="text-[11px] font-medium text-[#64748b]">Selected: {form.color}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600">{error}</p>}
+                                {message && <p className="rounded-lg bg-green-50 px-3 py-2 text-[12px] font-medium text-green-700">{message}</p>}
+
+                                <div className="flex gap-2 border-t border-[#eef2f7] pt-3">
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="flex-1 rounded-lg bg-[#C6FF00] py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#b8f000] disabled:opacity-60"
+                                    >
+                                        {loading ? (editing ? "Updating..." : "Creating...") : (editing ? "Update Type" : "Create Type")}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { resetForm(); setShowForm(false) }}
+                                        className="rounded-lg border border-[#d2d2d7] bg-[#f5f7fa] px-4 py-2.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-white"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
