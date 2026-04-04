@@ -1,16 +1,13 @@
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-const configDir = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
-export default defineConfig(({ mode }) => {
-    const env = loadEnv(mode, configDir, '')
-    // Match `client/vite.config.js`: without a target, `/api` OAuth callbacks never reach the LifeSync server.
-    const proxyTarget = env.VITE_DEV_PROXY_TARGET || 'https://katpro-workspace.hf.space'
+export default defineConfig(() => {
+    // LifeSync API proxy: set VITE_DEV_PROXY_TARGET=http://localhost:5000 when running server/ locally (default PORT 5000).
+    // Without a target, `/api` defaults to a remote host and OAuth callbacks may not hit your local API.
+    const proxyTarget = 'https://katpro-workspace.hf.space' || 'http://localhost:5005'
 
     return {
         plugins: [react(), tailwindcss()],

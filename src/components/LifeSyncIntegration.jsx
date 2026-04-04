@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useLifeSync } from '../context/LifeSyncContext'
-import { isPluginEnabled, lifesyncFetch, lifesyncOAuthStartUrl } from '../lib/lifesyncApi'
+import { getAnimeStreamAudio, isPluginEnabled, lifesyncFetch, lifesyncOAuthStartUrl } from '../lib/lifesyncApi'
 
 const LifeSyncIcon = ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -10,7 +10,7 @@ const LifeSyncIcon = ({ className }) => (
     </svg>
 )
 
-function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, setMessage, togglePlugin, refreshLifeSyncMe }) {
+function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, message, setMessage, togglePlugin, refreshLifeSyncMe, updatePreferences }) {
     const [oauthMsg, setOauthMsg] = useState('')
     const [epicStatus, setEpicStatus] = useState(null)
     const [unlinkBusy, setUnlinkBusy] = useState('')
@@ -41,6 +41,21 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
             .catch(() => { if (!cancelled) setEpicStatus(null) })
         return () => { cancelled = true }
     }, [])
+
+    async function patchPreferences(partial) {
+        setError('')
+        setMessage('')
+        setBusy(true)
+        try {
+            await updatePreferences(partial)
+            setMessage('Preferences saved.')
+            setTimeout(() => setMessage(''), 2500)
+        } catch (e) {
+            setError(e.message || 'Failed to save preferences')
+        } finally {
+            setBusy(false)
+        }
+    }
 
     async function unlinkProvider(provider, apiPath) {
         setUnlinkBusy(provider)
@@ -178,48 +193,129 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                 </ul>
             </div>
 
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-stretch sm:gap-5">
+            {/* Viewing preferences */}
+            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
+                <div className="flex items-center gap-2.5 border-b border-[#f0f0f0] px-5 pb-4 pt-5 sm:px-6">
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-[#C6FF00]/25">
+                        <svg className="h-3.5 w-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <div className="min-w-0">
+                        <h3 className="text-[13px] font-bold text-[#1d1d1f]">Viewing preferences</h3>
+                        <p className="text-[10px] text-[#86868b]">NSFW access and default anime audio</p>
+                    </div>
+                </div>
+                <ul className="divide-y divide-[#f5f5f7]">
+                    <li>
+                        <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+                            <div className="min-w-0">
+                                <p className="text-[13px] font-semibold text-[#1d1d1f]">NSFW content</p>
+                                <p className="mt-0.5 text-[11px] leading-relaxed text-[#86868b]">
+                                    Allow mature catalog areas (e.g. Hentai Ocean, NSFW manga sources) when those plugins are enabled.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={busy}
+                                role="switch"
+                                aria-checked={Boolean(prefs?.nsfwContentEnabled)}
+                                onClick={() => void patchPreferences({ nsfwContentEnabled: !prefs?.nsfwContentEnabled })}
+                                className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${prefs?.nsfwContentEnabled ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
+                            >
+                                <span
+                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${prefs?.nsfwContentEnabled ? 'translate-x-5' : ''}`}
+                                />
+                            </button>
+                        </div>
+                    </li>
+                    <li>
+                        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                            <div className="min-w-0">
+                                <p className="text-[13px] font-semibold text-[#1d1d1f]">Anime default audio</p>
+                                <p className="mt-0.5 text-[11px] leading-relaxed text-[#86868b]">
+                                    Prefer subtitled (Japanese) or dubbed streams when the catalog offers both.
+                                </p>
+                            </div>
+                            <div
+                                className="inline-flex shrink-0 rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] p-0.5"
+                                role="group"
+                                aria-label="Default anime audio"
+                            >
+                                {(['sub', 'dub']).map((mode) => {
+                                    const active = getAnimeStreamAudio(prefs) === mode
+                                    return (
+                                        <button
+                                            key={mode}
+                                            type="button"
+                                            disabled={busy}
+                                            onClick={() => {
+                                                if (!active) void patchPreferences({ animeStreamAudio: mode })
+                                            }}
+                                            className={`rounded-lg px-3.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                                                active
+                                                    ? 'bg-white text-[#1d1d1f] shadow-sm'
+                                                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                                            } disabled:opacity-50`}
+                                        >
+                                            {mode === 'sub' ? 'Sub' : 'Dub'}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
             {/* Content plugins */}
-            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
-                <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-[#f0f0f0] flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-xl bg-[#C6FF00]/25 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-3.5 h-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
+                <div className="flex items-center gap-2.5 border-b border-[#f0f0f0] px-5 pb-4 pt-5 sm:px-6">
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-[#C6FF00]/25">
+                        <svg className="h-3.5 w-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                         </svg>
                     </div>
-                    <div>
+                    <div className="min-w-0">
                         <h3 className="text-[13px] font-bold text-[#1d1d1f]">Content plugins</h3>
-                        <p className="text-[10px] text-[#86868b]">Anime, Manga, Hentai Ocean visibility</p>
+                        <p className="text-[10px] text-[#86868b]">
+                            {prefs?.nsfwContentEnabled
+                                ? 'Anime, Manga, Hentai Ocean visibility'
+                                : 'Anime & Manga visibility'}
+                        </p>
                     </div>
                 </div>
                 <ul className="divide-y divide-[#f5f5f7]">
                     {[
                         { key: 'pluginAnimeEnabled', label: 'Anime' },
                         { key: 'pluginMangaEnabled', label: 'Manga' },
-                        { key: 'pluginHentaiEnabled', label: 'Hentai Ocean' },
+                        ...(prefs?.nsfwContentEnabled ? [{ key: 'pluginHentaiEnabled', label: 'Hentai Ocean' }] : []),
                     ].map(({ key, label }) => {
                         const on = isPluginEnabled(prefs, key)
                         return (
-                            <li
-                                key={key}
-                                className="px-5 sm:px-6 py-3.5 flex items-center justify-between gap-3 hover:bg-[#fafafa] transition-colors"
-                            >
-                                <span className="text-[13px] font-semibold text-[#1d1d1f]">{label}</span>
-                                <button
-                                    type="button"
-                                    disabled={busy}
-                                    role="switch"
-                                    aria-checked={on}
-                                    onClick={() => togglePlugin(key, !on)}
-                                    className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
-                                >
-                                    <span
-                                        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${on ? 'translate-x-5' : ''}`}
-                                    />
-                                </button>
+                            <li key={key} className="transition-colors hover:bg-[#fafafa]">
+                                <div className="flex items-center justify-between gap-3 px-5 py-3.5 sm:px-6">
+                                    <span className="text-[13px] font-semibold text-[#1d1d1f]">{label}</span>
+                                    <button
+                                        type="button"
+                                        disabled={busy}
+                                        role="switch"
+                                        aria-checked={on}
+                                        onClick={() => togglePlugin(key, !on)}
+                                        className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${on ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
+                                    >
+                                        <span
+                                            className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`}
+                                        />
+                                    </button>
+                                </div>
                             </li>
                         )
                     })}
                 </ul>
+            </div>
             </div>
         </div>
     )
@@ -233,6 +329,7 @@ export default function LifeSyncIntegration() {
         lifeSyncEnsureAccount,
         lifeSyncLogout,
         lifeSyncUpdatePlugins,
+        lifeSyncUpdatePreferences,
         refreshLifeSyncMe,
     } = useLifeSync()
 
@@ -423,6 +520,7 @@ export default function LifeSyncIntegration() {
                     setMessage={setMessage}
                     togglePlugin={togglePlugin}
                     refreshLifeSyncMe={refreshLifeSyncMe}
+                    updatePreferences={lifeSyncUpdatePreferences}
                 />
             )}
         </div>

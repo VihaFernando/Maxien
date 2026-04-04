@@ -14,7 +14,8 @@ export function getLifesyncApiBase() {
     if (import.meta.env.DEV) {
         return ''
     }
-    return 'http://localhost:5005'
+    // Production build without VITE_API_URL: match server default PORT (see server/src/config/env.js)
+    return 'http://localhost:5000'
 }
 
 export function getLifesyncToken() {
@@ -122,6 +123,11 @@ export function lifesyncPostPlugins(body) {
 
 export function lifesyncPatchPreferences(body) {
     return lifesyncFetch('/api/auth/preferences', { method: 'PATCH', json: body })
+}
+
+/** @param {Record<string, unknown>|null|undefined} prefs */
+export function getAnimeStreamAudio(prefs) {
+    return prefs?.animeStreamAudio === 'dub' ? 'dub' : 'sub'
 }
 
 /** API default: missing preference = enabled */

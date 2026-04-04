@@ -10,6 +10,7 @@ import {
     getLifesyncToken,
     lifesyncGetMe,
     lifesyncLogin as apiLogin,
+    lifesyncPatchPreferences,
     lifesyncPostPlugins,
     lifesyncRegister as apiRegister,
     setLifesyncToken,
@@ -146,6 +147,12 @@ export function LifeSyncProvider({ children }) {
         return data
     }, [refreshMe])
 
+    const updatePreferences = useCallback(async (partial) => {
+        const data = await lifesyncPatchPreferences(partial)
+        await refreshMe()
+        return data
+    }, [refreshMe])
+
     const value = useMemo(
         () => ({
             lifeSyncUser,
@@ -157,9 +164,10 @@ export function LifeSyncProvider({ children }) {
             lifeSyncEnsureAccount: ensureAccount,
             lifeSyncLogout: logout,
             lifeSyncUpdatePlugins: updatePlugins,
+            lifeSyncUpdatePreferences: updatePreferences,
             isLifeSyncConnected: Boolean(lifeSyncUser),
         }),
-        [lifeSyncUser, loading, lastError, refreshMe, login, register, ensureAccount, logout, updatePlugins]
+        [lifeSyncUser, loading, lastError, refreshMe, login, register, ensureAccount, logout, updatePlugins, updatePreferences]
     )
 
     return (

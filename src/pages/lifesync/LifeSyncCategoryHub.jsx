@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FaGamepad, FaFilm, FaArrowRight } from 'react-icons/fa'
+import { LifeSyncHubMangaReading } from '../../components/lifesync/MangaReadingRail'
 import { useLifeSync } from '../../context/LifeSyncContext'
+import { useMangaReadingList } from '../../hooks/useMangaReadingList'
 import {
     isLifeSyncAnimeNavVisible,
     isLifeSyncHentaiHubVisible,
@@ -250,6 +252,12 @@ function tileLayoutClass(tileId, total) {
 export function LifeSyncAnimeHub() {
     const { isLifeSyncConnected, lifeSyncUser } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
+    const mangaPluginOn = isPluginEnabled(prefs, 'pluginMangaEnabled')
+    const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
+    const { visibleEntries: mangaReadingVisible, loading: mangaReadingLoading } = useMangaReadingList({
+        enabled: isLifeSyncConnected && mangaPluginOn,
+        nsfwEnabled,
+    })
 
     if (!isLifeSyncConnected) {
         return (
@@ -300,6 +308,10 @@ export function LifeSyncAnimeHub() {
                         <h1 className="text-[22px] font-bold tracking-tight text-[#1d1d1f] leading-tight">Anime & Manga</h1>
                     </div>
                 </header>
+
+                {mangaPluginOn && (
+                    <LifeSyncHubMangaReading entries={mangaReadingVisible} loading={mangaReadingLoading} />
+                )}
 
                 <div className={gridClass}>
                     {tiles.map((t) => (
