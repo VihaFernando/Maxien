@@ -220,9 +220,41 @@ export async function createWorkplaceProject(payload) {
   return data
 }
 
+export async function updateWorkplaceProject({ projectId, payload }) {
+  const { data, error } = await supabase
+    .from("projects")
+    .update(payload)
+    .eq("id", projectId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteWorkplaceProject({ projectId }) {
+  const { error } = await supabase.from("projects").delete().eq("id", projectId)
+  if (error) throw error
+}
+
 export async function createWorkplaceTaskType(payload) {
   const { data, error } = await supabase.from("task_types").insert([payload]).select().single()
   if (error) throw error
   return data
+}
+
+export async function updateWorkplaceTaskType({ typeId, payload }) {
+  const { data, error } = await supabase
+    .from("task_types")
+    .update(payload)
+    .eq("id", typeId)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteWorkplaceTaskType({ typeId }) {
+  const { error } = await supabase.from("task_types").delete().eq("id", typeId)
+  if (error) throw error
 }
 

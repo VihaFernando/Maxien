@@ -18,13 +18,14 @@ import WorkplaceUsers from "../components/Workplace/WorkplaceUsers"
 export default function WorkplaceDetail() {
   const { id } = useParams()
   const { user } = useAuth()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const [searchParams] = useSearchParams()
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
   const activeTab = searchParams.get("tab") || "profile"
-  const setActiveTab = (tab) => setSearchParams({ tab })
+  const validTabs = ["profile", "tasks", "projects", "types", "users"]
+  const resolvedTab = validTabs.includes(activeTab) ? activeTab : "profile"
 
   const [myRows, setMyRows] = useState([])
   const [members, setMembers] = useState([])
@@ -83,7 +84,6 @@ export default function WorkplaceDetail() {
   if (!workplace && !loading && !error) {
     return (
       <div className="max-w-[1200px] mx-auto">
-        <WorkplaceProfile workplace={null} loading={false} />
         <div className="bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-6">
           <p className="text-[14px] font-bold text-[#1d1d1f]">Workplace not available</p>
           <p className="text-[12px] text-[#86868b] mt-1">
@@ -108,21 +108,6 @@ export default function WorkplaceDetail() {
         </div>
       )}
 
-      {/* Workplace Profile Header */}
-      <WorkplaceProfile
-        workplace={workplace}
-        loading={loading}
-        isOwner={isOwner}
-        onRefresh={refresh}
-        setMessage={setMessage}
-        setError={setError}
-        members={members}
-        projects={projects}
-        tasks={tasks}
-        currentMembership={currentMembership}
-      />
-
-      {/* Main Content Area */}
       <div className="animate-in fade-in duration-300">
         {loading && !tasks.length && !projects.length && !types.length && !members.length && (
           <div className="p-6 text-center text-[#86868b] text-[14px]">
@@ -130,8 +115,23 @@ export default function WorkplaceDetail() {
           </div>
         )}
 
+        {resolvedTab === "profile" && (
+          <WorkplaceProfile
+            workplace={workplace}
+            loading={loading}
+            isOwner={isOwner}
+            onRefresh={refresh}
+            setMessage={setMessage}
+            setError={setError}
+            members={members}
+            projects={projects}
+            tasks={tasks}
+            currentMembership={currentMembership}
+          />
+        )}
+
         {/* Tasks Tab */}
-        {activeTab === "tasks" && (
+        {resolvedTab === "tasks" && (
           <WorkplaceTasks
             tasks={tasks}
             types={types}
@@ -141,15 +141,13 @@ export default function WorkplaceDetail() {
             workplace={workplace}
             loading={loading}
             onRefresh={refresh}
-            error={error}
             setError={setError}
-            message={message}
             setMessage={setMessage}
           />
         )}
 
         {/* Projects Tab */}
-        {activeTab === "projects" && (
+        {resolvedTab === "projects" && (
           <WorkplaceProjects
             projects={projects}
             types={types}
@@ -157,30 +155,26 @@ export default function WorkplaceDetail() {
             workplace={workplace}
             loading={loading}
             onRefresh={refresh}
-            error={error}
             setError={setError}
-            message={message}
             setMessage={setMessage}
           />
         )}
 
         {/* Task Types Tab */}
-        {activeTab === "types" && (
+        {resolvedTab === "types" && (
           <WorkplaceTaskTypes
             types={types}
             user={user}
             workplace={workplace}
             loading={loading}
             onRefresh={refresh}
-            error={error}
             setError={setError}
-            message={message}
             setMessage={setMessage}
           />
         )}
 
         {/* Users Tab */}
-        {activeTab === "users" && (
+        {resolvedTab === "users" && (
           <WorkplaceUsers
             members={members}
             isOwner={isOwner}
@@ -188,9 +182,7 @@ export default function WorkplaceDetail() {
             user={user}
             loading={loading}
             onRefresh={refresh}
-            error={error}
             setError={setError}
-            message={message}
             setMessage={setMessage}
           />
         )}

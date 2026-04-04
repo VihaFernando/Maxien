@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { Link, useLocation } from "react-router-dom"
-import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder, FaListUl, FaColumns, FaBorderAll } from "react-icons/fa"
+import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder, FaListUl, FaColumns, FaBorderAll, FaTags } from "react-icons/fa"
 import { formatTimestamp } from "../lib/dateUtils"
 
 export default function Tasks() {
@@ -582,13 +582,22 @@ export default function Tasks() {
                     <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Workspace</p>
                     <h1 className="text-[20px] font-bold tracking-tight text-[#111827] sm:text-[24px]">Tasks</h1>
                 </div>
-                <button
-                    onClick={(e) => { e.stopPropagation(); openCreate() }}
-                    className="inline-flex items-center gap-2 self-start rounded-[10px] bg-[#C6FF00] px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors hover:bg-[#b8f000] sm:self-auto sm:text-[13px]"
-                >
-                    <FaPlus className="h-3 w-3" />
-                    New Task
-                </button>
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <Link
+                        to="/dashboard/task-types"
+                        className="inline-flex items-center gap-2 rounded-[10px] border border-[#d2d2d7] bg-white px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors hover:bg-[#f8fafc] sm:text-[13px]"
+                    >
+                        <FaTags className="h-3 w-3" />
+                        Task Types
+                    </Link>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); openCreate() }}
+                        className="inline-flex items-center gap-2 rounded-[10px] bg-[#C6FF00] px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors hover:bg-[#b8f000] sm:text-[13px]"
+                    >
+                        <FaPlus className="h-3 w-3" />
+                        New Task
+                    </button>
+                </div>
             </div>
 
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-2.5">

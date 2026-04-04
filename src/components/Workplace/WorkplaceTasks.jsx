@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { FaPlus, FaEdit, FaTrash } from "react-icons/fa"
+import { Link } from "react-router-dom"
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaBars, FaThLarge, FaEllipsisH, FaCalendarAlt, FaTags } from "react-icons/fa"
 import { createWorkplaceTask, updateWorkplaceTask, deleteWorkplaceTask } from "../../lib/workplaces"
 import { getUsersByIds, getDisplayName, getUsername } from "../../lib/users"
 
@@ -21,7 +22,12 @@ export default function WorkplaceTasks({
     const [formLoading, setFormLoading] = useState(false)
     const [editingId, setEditingId] = useState(null)
     const [userMap, setUserMap] = useState({})
+    const [searchTerm, setSearchTerm] = useState("")
+    const [filterStatus, setFilterStatus] = useState("")
+    const [filterPriority, setFilterPriority] = useState("")
     const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false)
+    const [viewMode, setViewMode] = useState("board")
+    const [actionMenu, setActionMenu] = useState(null)
     const [newTask, setNewTask] = useState({
         title: "",
         description: "",
@@ -79,6 +85,48 @@ export default function WorkplaceTasks({
     const assignedUsers = useMemo(() => {
         return (newTask.assigned_to || []).map((id) => userMap[id]).filter(Boolean)
     }, [newTask.assigned_to, userMap])
+
+    const filteredTasks = useMemo(() => {
+        return tasks.filter((task) => {
+            const query = searchTerm.toLowerCase()
+            const matchesSearch =
+                task.title?.toLowerCase().includes(query)
+                || task.description?.toLowerCase().includes(query)
+            const matchesStatus = filterStatus ? task.status === filterStatus : true
+            const matchesPriority = filterPriority ? task.priority === filterPriority : true
+            return matchesSearch && matchesStatus && matchesPriority
+        })
+    }, [tasks, searchTerm, filterStatus, filterPriority])
+
+    const boardColumns = useMemo(() => {
+        const statuses = [
+            { key: "To Do", color: "#64748b" },
+            { key: "In Progress", color: "#f59e0b" },
+            { key: "Done", color: "#22c55e" },
+            { key: "Cancelled", color: "#ef4444" }
+        ]
+        return statuses.map((status) => ({
+            ...status,
+            items: filteredTasks.filter((t) => t.status === status.key)
+        }))
+    }, [filteredTasks])
+
+    const taskStats = useMemo(
+        () => ({
+            total: tasks.length,
+            todo: tasks.filter((t) => t.status === "To Do").length,
+            inProgress: tasks.filter((t) => t.status === "In Progress").length,
+            done: tasks.filter((t) => t.status === "Done").length,
+            overdue: tasks.filter((t) => {
+                if (!t.due_at) return false
+                return new Date(t.due_at) < new Date() && t.status !== "Done"
+            }).length,
+        }),
+        [tasks]
+    )
+
+    const getTypeName = (typeId) => types.find((t) => t.id === typeId)?.name || "No type"
+    const getProjectName = (projectId) => projects.find((p) => p.id === projectId)?.name || "No project"
 
     const formatTaskAssignees = (task) => {
         const ids = task?.task_assignees?.map((a) => a.user_id) || []
@@ -201,6 +249,7 @@ export default function WorkplaceTasks({
             assigned_to: assignedUserIds,
         })
         setEditingId(task.id)
+        setShowForm(true)
     }
 
     const handleCancelEdit = () => {
@@ -250,6 +299,120 @@ export default function WorkplaceTasks({
         })
     }
 
+    // Task Card Component for detailed display
+    const TaskCard = ({ task }) => (
+        <div className="p-4 rounded-[14px] border border-[#d2d2d7]/40 hover:border-[#d2d2d7] bg-white hover:shadow-sm transition-all">
+            <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="min-w-0 flex-1">
+                    <p className="text-[14px] font-bold text-[#1d1d1f] truncate">{task.title}</p>
+                    {task.description && <p className="text-[12px] text-[#86868b] mt-1 line-clamp-1">{task.description}</p>}
+                </div>
+                <TaskActionsMenu task={task} />
+            </div>
+
+            <div className="flex flex-wrap gap-2 mb-3">
+                <PriorityBadge priority={task.priority} />
+                <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-[#f5f5f7] text-[#86868b]">{getTypeName(task.type_id)}</span>
+            </div>
+
+            <div className="flex items-center justify-between mb-3">
+                <span className="text-[12px] text-[#86868b] flex items-center gap-1.5">
+                    <FaCalendarAlt className="w-3 h-3" />
+                    {task.due_at ? new Date(task.due_at).toLocaleDateString() : "No due date"}
+                </span>
+                <StatusBadge status={task.status} />
+            </div>
+
+            {task.task_assignees?.length > 0 && (
+                <div className="pt-2 border-t border-[#f0f0f0]">
+                    <p className="text-[11px] text-[#86868b]">{formatTaskAssignees(task).join(", ")}</p>
+                </div>
+            )}
+        </div>
+    )
+
+    const TaskActionsMenu = ({ task }) => (
+        <div className="relative shrink-0">
+            <button
+                onClick={(e) => {
+                    e.stopPropagation()
+                    setActionMenu(actionMenu === task.id ? null : task.id)
+                }}
+                className="rounded-md p-1.5 transition-colors hover:bg-[#f3f4f6]"
+            >
+                <FaEllipsisH className="h-3.5 w-3.5 text-[#6b7280]" />
+            </button>
+
+            {actionMenu === task.id && (
+                <div className="absolute right-0 top-8 z-50 min-w-[152px] overflow-hidden rounded-xl border border-[#d2d2d7]/80 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => handleEditClick(task)} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">Edit</button>
+                    <button onClick={() => {
+                        handleDeleteTask(task.id)
+                        setActionMenu(null)
+                    }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-red-600 hover:bg-red-50">Delete</button>
+                </div>
+            )}
+        </div>
+    )
+
+    const StatusBadge = ({ status }) => {
+        const colors = {
+            "To Do": { bg: "#f5f5f7", text: "#86868b" },
+            "In Progress": { bg: "#eff6ff", text: "#3b82f6" },
+            "Done": { bg: "#f0fdf4", text: "#16a34a" },
+            "Cancelled": { bg: "#fef2f2", text: "#dc2626" }
+        }
+        const color = colors[status] || colors["To Do"]
+        return (
+            <span className="rounded-full px-2 py-1 text-[10px] font-semibold" style={{ backgroundColor: color.bg, color: color.text }}>
+                {status}
+            </span>
+        )
+    }
+
+    const PriorityBadge = ({ priority }) => {
+        const colors = {
+            "Low": "#f5f5f7",
+            "Medium": "#eff6ff",
+            "High": "#fff7ed",
+            "Urgent": "#fef2f2"
+        }
+        const textColors = {
+            "Low": "#86868b",
+            "Medium": "#3b82f6",
+            "High": "#f97316",
+            "Urgent": "#ef4444"
+        }
+        return (
+            <span className="rounded-full px-2 py-1 text-[10px] font-semibold" style={{ backgroundColor: colors[priority], color: textColors[priority] }}>
+                {priority}
+            </span>
+        )
+    }
+
+    const TaskGridSection = ({ title, taskList }) => (
+        <div className="mb-6">
+            <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-[14px] font-bold text-[#1d1d1f] uppercase tracking-wide">{title}</h3>
+                <span className="text-[12px] font-semibold text-[#86868b] bg-[#f5f5f7] px-2.5 py-1 rounded-full">{taskList.length}</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {taskList.length === 0 ? (
+                    <p className="text-[13px] text-[#86868b]">No tasks</p>
+                ) : (
+                    taskList.map((task) => <TaskCard key={task.id} task={task} />)
+                )}
+            </div>
+        </div>
+    )
+
+    const StatCard = ({ label, value, color = "#1d1d1f" }) => (
+        <div className="flex-1 min-w-[120px] bg-white rounded-[14px] border border-[#d2d2d7]/30 p-4">
+            <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-wider mb-2">{label}</p>
+            <p className="text-[28px] font-bold" style={{ color }}>{value}</p>
+        </div>
+    )
+
     return (
         <div className="animate-in fade-in duration-500">
             {error && (
@@ -263,293 +426,212 @@ export default function WorkplaceTasks({
                 </div>
             )}
 
-            <div className="bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-6">
-                <div className="flex items-center justify-between mb-6">
+            <div className="mb-6">
+                <p className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-3">WORKSPACE</p>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <div>
-                        <h2 className="text-[18px] font-bold text-[#1d1d1f]">Tasks</h2>
-                        <p className="text-[12px] text-[#86868b] mt-1">Manage and organize all workplace tasks</p>
+                        <h1 className="text-[32px] font-bold text-[#1d1d1f]">Tasks</h1>
                     </div>
-                    <span className="text-[14px] font-bold px-3 py-1.5 rounded-full bg-[#f5f5f7] text-[#1d1d1f]">
-                        {tasks.length}
-                    </span>
+                    <div className="flex items-center gap-2">
+                        <Link
+                            to={workplace?.id ? `/dashboard/workplaces/${workplace.id}?tab=types` : "/dashboard/workplaces"}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-[#d2d2d7]/50 bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] rounded-lg text-[13px] font-bold"
+                        >
+                            <FaTags className="w-3.5 h-3.5" />
+                            Task Types
+                        </Link>
+                        <button
+                            onClick={() => {
+                                setShowForm(true)
+                                setEditingId(null)
+                            }}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-lg text-[13px] font-bold"
+                        >
+                            <FaPlus className="w-3.5 h-3.5" />
+                            New Task
+                        </button>
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                    <StatCard label="TOTAL" value={taskStats.total} />
+                    <StatCard label="TO DO" value={taskStats.todo} />
+                    <StatCard label="IN PROGRESS" value={taskStats.inProgress} color="#3b82f6" />
+                    <StatCard label="COMPLETED" value={taskStats.done} color="#16a34a" />
+                    <StatCard label="OVERDUE" value={taskStats.overdue} color="#ef4444" />
+                </div>
+            </div>
+
+            <div className="bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-6">
+                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+                    <div className="relative flex-1">
+                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b] w-3.5 h-3.5" />
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Search tasks..."
+                            className="w-full pl-9 pr-4 py-2.5 border border-[#d2d2d7]/50 rounded-xl text-[13px] focus:outline-none focus:ring-1 focus:ring-[#C6FF00]/50"
+                        />
+                    </div>
+                    <button className="px-4 py-2.5 border border-[#d2d2d7]/50 rounded-xl text-[13px] bg-white hover:bg-[#f5f5f7]">
+                        Filters
+                    </button>
+                    <div className="flex items-center gap-1 bg-[#f5f5f7] rounded-lg p-1">
+                        <button onClick={() => setViewMode("list")} className={`px-3 py-2 rounded transition-colors text-[13px] font-medium ${viewMode === "list" ? "bg-white text-[#1d1d1f] shadow-sm" : "text-[#86868b] hover:text-[#1d1d1f]"}`} title="List view">
+                            List
+                        </button>
+                        <button onClick={() => setViewMode("board")} className={`px-3 py-2 rounded transition-colors text-[13px] font-medium ${viewMode === "board" ? "bg-white text-[#1d1d1f] shadow-sm" : "text-[#86868b] hover:text-[#1d1d1f]"}`} title="Board view">
+                            Board
+                        </button>
+                    </div>
                 </div>
 
                 {loading ? (
                     <div className="py-10 text-center text-[#86868b] text-[13px]">Loading…</div>
-                ) : tasks.length === 0 ? (
-                    <div className="py-12 text-center">
-                        <p className="text-[#86868b] text-[14px]">No tasks yet.</p>
-                        <p className="text-[#86868b] text-[13px] mt-1">Create one to get started!</p>
+                ) : viewMode === "board" ? (
+                    <div className="overflow-x-auto pb-1">
+                        <div className="flex min-w-[1040px] gap-3">
+                            {boardColumns.map((column) => (
+                                <div key={column.key} className="w-[250px] shrink-0 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-2.5 sm:w-[260px]">
+                                    <div className="mb-2 flex items-center justify-between px-0.5">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: column.color }}></span>
+                                            <h3 className="text-[11px] font-semibold text-[#334155]">{column.key}</h3>
+                                        </div>
+                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#64748b]">{column.items.length}</span>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {column.items.length === 0 ? (
+                                            <div className="rounded-lg border border-dashed border-[#dbe1ea] bg-white px-3 py-4 text-center text-[10px] text-[#94a3b8]">No tasks</div>
+                                        ) : (
+                                            column.items.map((task) => <TaskCard key={task.id} task={task} />)
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 ) : (
-                    <div className="space-y-3 mb-6">
-                        {tasks.map((t) => (
-                            <div
-                                key={t.id}
-                                className="p-4 rounded-[14px] border border-[#d2d2d7]/40 hover:border-[#d2d2d7] bg-white hover:shadow-sm transition-all"
-                            >
-                                <div className="flex items-start justify-between gap-2 mb-2">
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[14px] font-bold text-[#1d1d1f] truncate">{t.title}</p>
-                                        {t.description && (
-                                            <p className="text-[13px] text-[#86868b] mt-1 line-clamp-2">{t.description}</p>
-                                        )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f] whitespace-nowrap">
-                                            {t.status}
-                                        </span>
-                                        {canEditTask(t) && (
-                                            <>
-                                                <button
-                                                    onClick={() => handleEditClick(t)}
-                                                    className="p-2 hover:bg-[#f5f5f7] rounded-lg transition-colors text-[#1d1d1f]"
-                                                    title="Edit task"
-                                                >
-                                                    <FaEdit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteTask(t.id)}
-                                                    className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                                                    title="Delete task"
-                                                >
-                                                    <FaTrash className="w-4 h-4" />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex flex-wrap gap-3 text-[12px] text-[#86868b]">
-                                    <span>Priority: {t.priority || "—"}</span>
-                                    {t.task_assignees?.length > 0 && (
-                                        <span>
-                                            Assigned: {formatTaskAssignees(t).join(", ")}
-                                        </span>
-                                    )}
-                                    {t.due_at && (
-                                        <span>Due: {new Date(t.due_at).toLocaleDateString()}</span>
-                                    )}
-                                </div>
+                    <>
+                        {filteredTasks.length === 0 ? (
+                            <div className="py-12 text-center">
+                                <p className="text-[#86868b] text-[14px]">No tasks found.</p>
                             </div>
-                        ))}
-                    </div>
+                        ) : (
+                            <TaskGridSection title="ALL TASKS" taskList={filteredTasks} />
+                        )}
+                    </>
                 )}
 
-                <div className="pt-6 border-t border-[#f0f0f0]">
-                    {!showForm && !editingId ? (
-                        <button
-                            onClick={() => setShowForm(true)}
-                            className="flex items-center gap-2 px-4 py-3 text-[14px] font-bold text-[#1d1d1f] hover:bg-[#f5f5f7] rounded-[12px] transition-colors"
-                        >
-                            <FaPlus className="w-3.5 h-3.5" />
-                            Add new task
-                        </button>
-                    ) : (
-                        <form onSubmit={handleSubmit} className="space-y-4">
+                {!showForm && !editingId ? (
+                    <button onClick={() => setShowForm(true)} className="mt-6 flex items-center gap-2 px-4 py-3 text-[14px] font-bold text-[#1d1d1f] hover:bg-[#f5f5f7] rounded-lg transition-colors">
+                        <FaPlus className="w-3.5 h-3.5" />
+                        Add new task
+                    </button>
+                ) : (
+                    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                        <div>
+                            <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Task title *</label>
+                            <input value={newTask.title} onChange={(e) => setNewTask((v) => ({ ...v, title: e.target.value }))} placeholder="Enter task title" className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]" />
+                        </div>
+
+                        <div>
+                            <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Description</label>
+                            <textarea value={newTask.description} onChange={(e) => setNewTask((v) => ({ ...v, description: e.target.value }))} placeholder="Add details (optional)" rows={3} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px] resize-none" />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                    Task title *
-                                </label>
-                                <input
-                                    value={newTask.title}
-                                    onChange={(e) => setNewTask((v) => ({ ...v, title: e.target.value }))}
-                                    placeholder="Enter task title"
-                                    className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
-                                />
+                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Type *</label>
+                                <select value={newTask.type_id} onChange={(e) => setNewTask((v) => ({ ...v, type_id: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]">
+                                    <option value="">Select type</option>
+                                    {types.map((t) => (
+                                        <option key={t.id} value={t.id}>{t.name}</option>
+                                    ))}
+                                </select>
                             </div>
-
                             <div>
-                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                    Description
-                                </label>
-                                <textarea
-                                    value={newTask.description}
-                                    onChange={(e) => setNewTask((v) => ({ ...v, description: e.target.value }))}
-                                    placeholder="Add details (optional)"
-                                    rows={3}
-                                    className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px] resize-none"
-                                />
+                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Project</label>
+                                <select value={newTask.project_id} onChange={(e) => setNewTask((v) => ({ ...v, project_id: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]">
+                                    <option value="">Optional</option>
+                                    {projects.map((p) => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                        Type *
-                                    </label>
-                                    <select
-                                        value={newTask.type_id}
-                                        onChange={(e) => setNewTask((v) => ({ ...v, type_id: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
-                                    >
-                                        <option value="">Select type</option>
-                                        {types.map((t) => (
-                                            <option key={t.id} value={t.id}>
-                                                {t.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                        Project
-                                    </label>
-                                    <select
-                                        value={newTask.project_id}
-                                        onChange={(e) => setNewTask((v) => ({ ...v, project_id: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
-                                    >
-                                        <option value="">Optional</option>
-                                        {projects.map((p) => (
-                                            <option key={p.id} value={p.id}>
-                                                {p.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div>
+                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Priority</label>
+                                <select value={newTask.priority} onChange={(e) => setNewTask((v) => ({ ...v, priority: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]">
+                                    {["Low", "Medium", "High", "Urgent"].map((p) => (
+                                        <option key={p} value={p}>{p}</option>
+                                    ))}
+                                </select>
                             </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                        Priority
-                                    </label>
-                                    <select
-                                        value={newTask.priority}
-                                        onChange={(e) => setNewTask((v) => ({ ...v, priority: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
-                                    >
-                                        {["Low", "Medium", "High", "Urgent"].map((p) => (
-                                            <option key={p} value={p}>
-                                                {p}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                        Status
-                                    </label>
-                                    <select
-                                        value={newTask.status}
-                                        onChange={(e) => setNewTask((v) => ({ ...v, status: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
-                                    >
-                                        {["To Do", "In Progress", "Done", "Cancelled"].map((s) => (
-                                            <option key={s} value={s}>
-                                                {s}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="relative">
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                        Assign To
-                                    </label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setAssigneeDropdownOpen(!assigneeDropdownOpen)}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent hover:border-[#d2d2d7] focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px] text-left text-[#1d1d1f] flex items-center justify-between"
-                                    >
-                                        <span>
-                                            {newTask.assigned_to.length === 0
-                                                ? "Select users"
-                                                : `${newTask.assigned_to.length} selected`}
-                                        </span>
-                                        <svg
-                                            className={`w-4 h-4 transition-transform ${assigneeDropdownOpen ? "rotate-180" : ""}`}
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                                strokeWidth={2}
-                                                d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                                            />
-                                        </svg>
-                                    </button>
-
-                                    {assigneeDropdownOpen && (
-                                        <div className="absolute top-full left-0 right-0 mt-1 border border-[#d2d2d7]/40 rounded-[12px] bg-white p-3 space-y-2 max-h-48 overflow-y-auto shadow-lg z-50">
-                                            {acceptedMembers.length === 0 ? (
-                                                <p className="text-[13px] text-[#86868b]">No members available</p>
-                                            ) : (
-                                                acceptedMembers.map((m) => (
-                                                    <label
-                                                        key={m.user_id}
-                                                        className="flex items-center gap-2 cursor-pointer hover:bg-[#f5f5f7] p-2 rounded-lg"
-                                                    >
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={newTask.assigned_to.includes(m.user_id)}
-                                                            onChange={() => toggleAssignee(m.user_id)}
-                                                            className="w-4 h-4 cursor-pointer"
-                                                        />
-                                                        <span className="text-[13px] text-[#1d1d1f]">
-                                                            {getUsername(userMap[m.user_id] || { id: m.user_id })}
-                                                        </span>
-                                                    </label>
-                                                ))
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {newTask.assigned_to.length > 0 && (
-                                        <p className="text-[12px] text-[#86868b] mt-2">
-                                            Selected: {getAssignedNames(newTask.assigned_to).join(", ")}
-                                        </p>
-                                    )}
-                                </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Status</label>
+                                <select value={newTask.status} onChange={(e) => setNewTask((v) => ({ ...v, status: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]">
+                                    {["To Do", "In Progress", "Done", "Cancelled"].map((s) => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                        Due Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={newTask.due_date}
-                                        onChange={(e) => setNewTask((v) => ({ ...v, due_date: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">
-                                        Time
-                                    </label>
-                                    <input
-                                        type="time"
-                                        value={newTask.due_time}
-                                        onChange={(e) => setNewTask((v) => ({ ...v, due_time: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        handleCancelEdit()
-                                        setShowForm(false)
-                                    }}
-                                    className="flex-1 py-3 rounded-[12px] bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white transition-colors"
-                                >
-                                    Cancel
+                            <div className="relative">
+                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Assign To</label>
+                                <button type="button" onClick={() => setAssigneeDropdownOpen(!assigneeDropdownOpen)} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent hover:border-[#d2d2d7] focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px] text-left text-[#1d1d1f] flex items-center justify-between">
+                                    <span>{newTask.assigned_to.length === 0 ? "Select users" : `${newTask.assigned_to.length} selected`}</span>
+                                    <svg className={`w-4 h-4 transition-transform ${assigneeDropdownOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                    </svg>
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={formLoading}
-                                    className="flex-1 py-3 rounded-[12px] bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-60 text-[#1d1d1f] font-bold text-[14px] transition-colors"
-                                >
-                                    {formLoading ? (editingId ? "Updating…" : "Creating…") : (editingId ? "Update task" : "Create task")}
-                                </button>
+
+                                {assigneeDropdownOpen && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 border border-[#d2d2d7]/40 rounded-xl bg-white p-3 space-y-2 max-h-48 overflow-y-auto shadow-lg z-50">
+                                        {acceptedMembers.length === 0 ? (
+                                            <p className="text-[13px] text-[#86868b]">No members available</p>
+                                        ) : (
+                                            acceptedMembers.map((m) => (
+                                                <label key={m.user_id} className="flex items-center gap-2 cursor-pointer hover:bg-[#f5f5f7] p-2 rounded-lg">
+                                                    <input type="checkbox" checked={newTask.assigned_to.includes(m.user_id)} onChange={() => toggleAssignee(m.user_id)} className="w-4 h-4 cursor-pointer" />
+                                                    <span className="text-[13px] text-[#1d1d1f]">{getUsername(userMap[m.user_id] || { id: m.user_id })}</span>
+                                                </label>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {newTask.assigned_to.length > 0 && <p className="text-[12px] text-[#86868b] mt-2">Selected: {getAssignedNames(newTask.assigned_to).join(", ")}</p>}
                             </div>
-                        </form>
-                    )}
-                </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Due Date</label>
+                                <input type="date" value={newTask.due_date} onChange={(e) => setNewTask((v) => ({ ...v, due_date: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]" />
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Time</label>
+                                <input type="time" value={newTask.due_time} onChange={(e) => setNewTask((v) => ({ ...v, due_time: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]" />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button type="button" onClick={() => {
+                                handleCancelEdit()
+                                setShowForm(false)
+                            }} className="flex-1 py-3 rounded-xl bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white transition-colors">
+                                Cancel
+                            </button>
+                            <button type="submit" disabled={formLoading} className="flex-1 py-3 rounded-xl bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-60 text-[#1d1d1f] font-bold text-[14px] transition-colors">
+                                {formLoading ? (editingId ? "Updating…" : "Creating…") : (editingId ? "Update task" : "Create task")}
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
         </div>
     )

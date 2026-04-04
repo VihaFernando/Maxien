@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from "react"
 import { Link } from "react-router-dom"
-import { FaChevronLeft, FaEdit, FaTimes, FaArrowRight, FaUsers, FaFolderOpen, FaCheckCircle, FaClock, FaCrown } from "react-icons/fa"
+import { FaChevronLeft, FaEdit, FaTimes, FaUsers, FaFolderOpen, FaCheckCircle, FaClock, FaCrown } from "react-icons/fa"
 import { convertGoogleDriveLink } from "../../lib/imageUtils"
 import { updateWorkplace } from "../../lib/workplaces"
-import { getUsersByIds, getDisplayName, getUsername } from "../../lib/users"
+import { getUsersByIds, getDisplayName } from "../../lib/users"
 
 export default function WorkplaceProfile({ workplace, loading, isOwner, onRefresh, setMessage, setError, members = [], projects = [], tasks = [], currentMembership = null }) {
     const [isEditing, setIsEditing] = useState(false)
@@ -106,36 +106,36 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
     if (isEditing) {
         return (
             <div className="animate-in fade-in duration-300 mb-8">
-                <div className="bg-white rounded-2xl shadow-sm border border-[#e5e5ea] p-8">
-                    <div className="flex items-center justify-between mb-8">
+                <div className="bg-white rounded-[28px] shadow-sm border border-[#e5e5ea] p-6 sm:p-8 max-w-5xl mx-auto">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
                         <div>
-                            <h2 className="text-2xl font-bold text-[#1d1d1f]">Edit Workplace</h2>
-                            <p className="text-[13px] text-[#86868b] mt-1">Update your workspace information</p>
+                            <h2 className="text-2xl sm:text-3xl font-bold text-[#1d1d1f]">Edit Workplace</h2>
+                            <p className="text-sm text-[#6b7280] mt-1">Update your workspace information</p>
                         </div>
                         <button
                             onClick={handleCancel}
-                            className="p-2.5 hover:bg-[#f5f5f7] rounded-lg transition-all duration-200 text-[#86868b] hover:text-[#1d1d1f]"
+                            className="inline-flex items-center justify-center rounded-xl border border-[#e5e5e9] bg-[#f8fafc] p-2.5 text-[#475569] transition hover:bg-white hover:text-[#111827]"
                         >
-                            <FaTimes className="w-5 h-5" />
+                            <FaTimes className="w-4 h-4" />
                         </button>
                     </div>
 
-                    <form onSubmit={handleEdit} className="space-y-6">
+                    <form onSubmit={handleEdit} className="space-y-5">
                         <div>
-                            <label className="text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-3 block">
-                                Workspace Name
+                            <label className="text-[11px] font-semibold text-[#475569] uppercase tracking-[0.24em] mb-2 block">
+                                Workspace name
                             </label>
                             <input
                                 type="text"
                                 value={editForm.name}
                                 onChange={(e) => setEditForm((v) => ({ ...v, name: e.target.value }))}
                                 placeholder="Enter workspace name"
-                                className="w-full px-4 py-3.5 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00] focus:bg-white outline-none text-[14px] font-medium transition-all duration-200"
+                                className="w-full rounded-2xl border border-[#e5e5e9] bg-[#f8fafc] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#C6FF00] focus:bg-white"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-3 block">
+                            <label className="text-[11px] font-semibold text-[#475569] uppercase tracking-[0.24em] mb-2 block">
                                 Description
                             </label>
                             <textarea
@@ -143,40 +143,38 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                                 onChange={(e) => setEditForm((v) => ({ ...v, description: e.target.value }))}
                                 placeholder="Add a description for your workspace (optional)"
                                 rows={5}
-                                className="w-full px-4 py-3.5 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00] focus:bg-white outline-none text-[14px] font-medium resize-none transition-all duration-200"
+                                className="w-full rounded-2xl border border-[#e5e5e9] bg-[#f8fafc] px-4 py-3 text-sm text-[#111827] outline-none resize-none transition focus:border-[#C6FF00] focus:bg-white"
                             />
                         </div>
 
                         <div>
-                            <label className="text-[12px] font-semibold text-[#1d1d1f] uppercase tracking-wide mb-3 block">
-                                Banner Image (Google Drive Link)
+                            <label className="text-[11px] font-semibold text-[#475569] uppercase tracking-[0.24em] mb-2 block">
+                                Banner image link
                             </label>
                             <input
                                 type="text"
                                 value={editForm.bannerUrl}
                                 onChange={(e) => setEditForm((v) => ({ ...v, bannerUrl: e.target.value }))}
                                 placeholder="https://drive.google.com/file/d/..."
-                                className="w-full px-4 py-3.5 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00] focus:bg-white outline-none text-[14px] font-medium transition-all duration-200"
+                                className="w-full rounded-2xl border border-[#e5e5e9] bg-[#f8fafc] px-4 py-3 text-sm text-[#111827] outline-none transition focus:border-[#C6FF00] focus:bg-white"
                             />
-                            <div className="mt-3 p-3.5 bg-[#C6FF00]/5 border border-[#C6FF00]/20 rounded-lg">
-                                <p className="text-[12px] text-[#1d1d1f] font-medium leading-relaxed">
-                                    ✨ <strong>Tip:</strong> Open the Google Drive file → Click "Share" → Change to "Anyone with the link" → Copy the link
-                                </p>
+                            <div className="mt-3 rounded-2xl border border-[#C6FF00]/20 bg-[#f5ff9f]/10 p-3 text-[12px] text-[#1d1d1f] leading-relaxed">
+                                ✨ <strong>Tip:</strong> Share the Drive file as "Anyone with the link" and paste the link here.
                             </div>
                         </div>
 
-                        <div className="flex gap-3 pt-2">
+                        <div className="flex flex-col gap-3 pt-2 sm:flex-row">
                             <button
                                 type="button"
                                 onClick={handleCancel}
-                                className="flex-1 py-3.5 rounded-xl bg-[#f5f5f7] border border-[#e5e5ea] text-[#1d1d1f] font-semibold text-[14px] hover:bg-[#ebebf0] transition-all duration-200 hover:shadow-sm"
+                                className="w-full rounded-2xl border border-[#e5e5e9] bg-[#f8fafc] px-4 py-3 text-sm font-semibold text-[#1f2937] transition hover:bg-white"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={editLoading}
-                                className="flex-1 py-3.5 rounded-xl bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-50 disabled:hover:bg-[#C6FF00] text-[#1d1d1f] font-bold text-[14px] transition-all duration-200 hover:shadow-lg transform hover:scale-105 active:scale-95"
+                                className="w-full rounded-2xl bg-[#C6FF00] px-4 py-3 text-sm font-bold text-[#111827] transition hover:bg-[#b8f000] disabled:opacity-60"
                             >
                                 {editLoading ? (
                                     <span className="flex items-center justify-center gap-2">
@@ -195,22 +193,22 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
     }
 
     return (
-        <div className="animate-in fade-in duration-300 mb-8">
+        <div className="animate-in fade-in duration-300 mb-8 px-3 sm:px-6 lg:px-10">
             {/* Back Button */}
-            <div className="mb-6">
+            <div className="mb-5">
                 <Link
                     to="/dashboard/workplaces"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-white/50 backdrop-blur-sm border border-[#e5e5ea] text-[#1d1d1f] font-medium text-[13px] hover:bg-white hover:shadow-sm transition-all duration-200 group"
+                    className="inline-flex items-center gap-2 rounded-2xl border border-[#e5e5e9] bg-white/90 px-3 py-2 text-[13px] font-medium text-[#111827] shadow-sm transition hover:bg-white"
                 >
-                    <FaChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                    <FaChevronLeft className="w-3.5 h-3.5" />
                     Workplaces
                 </Link>
             </div>
 
             {/* Main Card */}
-            <div className="bg-white rounded-2xl shadow-sm border border-[#e5e5ea] overflow-hidden transition-all duration-300 hover:shadow-md">
+            <div className="mx-auto max-w-[1680px] overflow-hidden rounded-2xl border border-[#e5e5ea] bg-white shadow-sm transition duration-300 hover:shadow-md sm:rounded-[28px]">
                 {/* Banner Section */}
-                <div className="relative h-48 bg-gradient-to-br from-[#C6FF00] via-[#b8f000] to-[#a8e000] overflow-hidden group">
+                <div className="relative h-28 sm:h-40 md:h-44 lg:h-48 bg-gradient-to-br from-[#C6FF00] via-[#b8f000] to-[#a8e000] overflow-hidden">
                     {workplace?.banner_url && !imageLoadError ? (
                         <>
                             <img
@@ -227,9 +225,9 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                     ) : (
                         <div className="w-full h-full bg-gradient-to-br from-[#C6FF00] via-[#b8f000] to-[#a8e000] flex items-center justify-center relative overflow-hidden">
                             {/* Animated gradient background */}
-                            <div className="absolute inset-0 opacity-20">
-                                <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse" />
-                                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-black rounded-full blur-3xl animate-pulse" />
+                            <div className="absolute inset-0 opacity-15">
+                                <div className="absolute top-0 left-1/4 h-72 w-72 rounded-full bg-white blur-3xl" />
+                                <div className="absolute bottom-0 right-1/4 h-72 w-72 rounded-full bg-black blur-3xl" />
                             </div>
                             {workplace?.banner_url && imageLoadError && (
                                 <div className="text-center px-6 relative z-10">
@@ -246,43 +244,43 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                 </div>
 
                 {/* Content Section */}
-                <div className="px-8 py-8">
-                    <div className="flex items-start justify-between gap-8 mb-8">
+                <div className="px-3 py-4 sm:px-6 sm:py-8">
+                    <div className="mb-6 flex flex-col gap-4 sm:mb-8 sm:gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
                         <div className="flex-1 min-w-0">
                             {loading ? (
                                 <div className="space-y-3">
-                                    <div className="h-10 w-64 bg-[#f5f5f7] rounded-lg animate-pulse" />
-                                    <div className="h-6 w-full max-w-2xl bg-[#f5f5f7] rounded-lg animate-pulse" />
+                                    <div className="h-7 w-44 rounded-xl bg-[#f5f5f7] animate-pulse sm:h-10 sm:w-56 sm:rounded-2xl" />
+                                    <div className="h-4 w-full max-w-xl rounded-xl bg-[#f5f5f7] animate-pulse sm:h-5 sm:max-w-2xl sm:rounded-2xl" />
                                 </div>
                             ) : (
                                 <>
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <h1 className="text-4xl font-bold text-[#1d1d1f] leading-tight break-words">
+                                    <div className="mb-2.5 flex flex-col gap-2 sm:mb-3 sm:flex-row sm:items-center sm:gap-4">
+                                        <h1 className="max-w-full text-xl font-bold tracking-tight text-[#111827] sm:text-3xl lg:text-4xl">
                                             {workplace?.name || "Untitled Workspace"}
                                         </h1>
-                                        {currentMembership?.role === "owner" && (
-                                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#C6FF00]/10 border border-[#C6FF00]/30 rounded-lg">
-                                                <FaCrown className="w-3.5 h-3.5 text-[#C6FF00]" />
-                                                <span className="text-[11px] font-bold text-[#C6FF00] uppercase tracking-wide">Owner</span>
-                                            </div>
-                                        )}
-                                        {currentMembership?.role === "member" && (
-                                            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#86868b]/10 border border-[#86868b]/30 rounded-lg">
-                                                <FaUsers className="w-3.5 h-3.5 text-[#86868b]" />
-                                                <span className="text-[11px] font-bold text-[#86868b] uppercase tracking-wide">Member</span>
+                                        {(currentMembership?.role === "owner" || currentMembership?.role === "member") && (
+                                            <div className="inline-flex items-center gap-1.5 rounded-xl border px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] sm:gap-2 sm:rounded-2xl sm:px-3 sm:py-1.5 sm:text-[11px] sm:tracking-[0.24em]">
+                                                {currentMembership?.role === "owner" ? (
+                                                    <>
+                                                        <FaCrown className="h-3.5 w-3.5 text-[#C6FF00]" />
+                                                        <span className="text-[#2f855a] bg-[#ecfdf5] px-2 py-0.5 rounded-full">Owner</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <FaUsers className="h-3.5 w-3.5 text-[#64748b]" />
+                                                        <span className="text-[#475569] bg-[#f8fafc] px-2 py-0.5 rounded-full">Member</span>
+                                                    </>
+                                                )}
                                             </div>
                                         )}
                                     </div>
-                                    {workplace?.description && (
-                                        <p className="text-[15px] text-[#86868b] leading-relaxed mt-3">
+                                    {workplace?.description ? (
+                                        <p className="hidden max-w-3xl text-sm leading-7 text-[#52525b] sm:block">
                                             {workplace.description}
                                         </p>
-                                    )}
-                                    {!workplace?.description && isOwner && (
-                                        <p className="text-[14px] text-[#86868b]/60 italic mt-3">
-                                            No description yet. Click Edit to add one.
-                                        </p>
-                                    )}
+                                    ) : isOwner ? (
+                                        <p className="hidden text-sm italic text-[#6b7280] sm:block">No description yet. Click Edit to add one.</p>
+                                    ) : null}
                                 </>
                             )}
                         </div>
@@ -291,106 +289,99 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                         {isOwner && !loading && (
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold text-[14px] transition-all duration-200 hover:shadow-lg transform hover:scale-105 active:scale-95 whitespace-nowrap flex-shrink-0"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-[#C6FF00] px-3 py-2 text-[12px] font-bold text-[#111827] transition hover:bg-[#b8f000] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
                             >
                                 <FaEdit className="w-4 h-4" />
-                                <span>Edit</span>
-                                <FaArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                Edit
                             </button>
                         )}
                     </div>
 
                     {/* Dashboard Stats */}
                     {!loading && (
-                        <><div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-[#e5e5ea]">
-                            {/* Members Card */}
-                            <div className="bg-[#f5f5f7] rounded-xl p-5 hover:bg-[#ebebf0] transition-all duration-200">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="w-9 h-9 bg-[#C6FF00]/10 rounded-lg flex items-center justify-center">
-                                        <FaUsers className="w-4 h-4 text-[#C6FF00]" />
+                        <>
+                            <div className="grid grid-cols-2 gap-2.5 border-t border-[#e5e5ea] pt-4 sm:gap-3 sm:pt-5 xl:grid-cols-4">
+                                <div className="rounded-xl border border-[#e5e5ea] bg-[#f8fafc] p-3 sm:rounded-[24px] sm:p-4">
+                                    <div className="mb-2.5 flex items-center justify-between sm:mb-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#C6FF00]/10 text-[#C6FF00] sm:h-10 sm:w-10 sm:rounded-2xl">
+                                            <FaUsers className="h-4 w-4 sm:h-5 sm:w-5" />
+                                        </div>
                                     </div>
+                                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#64748b] sm:text-[11px] sm:tracking-[0.24em]">Members</p>
+                                    <p className="text-lg font-bold text-[#111827] sm:text-2xl">{acceptedMembers.length}</p>
                                 </div>
-                                <p className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-1">Members</p>
-                                <p className="text-3xl font-bold text-[#1d1d1f]">{acceptedMembers.length}</p>
+                                <div className="rounded-xl border border-[#e5e5ea] bg-[#f8fafc] p-3 sm:rounded-[24px] sm:p-4">
+                                    <div className="mb-2.5 flex items-center justify-between sm:mb-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#34C759]/10 text-[#34C759] sm:h-10 sm:w-10 sm:rounded-2xl">
+                                            <FaFolderOpen className="h-4 w-4 sm:h-5 sm:w-5" />
+                                        </div>
+                                    </div>
+                                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#64748b] sm:text-[11px] sm:tracking-[0.24em]">Projects</p>
+                                    <p className="text-lg font-bold text-[#111827] sm:text-2xl">{projects.length}</p>
+                                </div>
+                                <div className="rounded-xl border border-[#e5e5ea] bg-[#f8fafc] p-3 sm:rounded-[24px] sm:p-4">
+                                    <div className="mb-2.5 flex items-center justify-between sm:mb-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#FF9500]/10 text-[#FF9500] sm:h-10 sm:w-10 sm:rounded-2xl">
+                                            <FaCheckCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                                        </div>
+                                    </div>
+                                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#64748b] sm:text-[11px] sm:tracking-[0.24em]">Tasks</p>
+                                    <p className="text-lg font-bold text-[#111827] sm:text-2xl">{tasks.length}</p>
+                                </div>
+                                <div className="rounded-xl border border-[#e5e5ea] bg-[#f8fafc] p-3 sm:rounded-[24px] sm:p-4">
+                                    <div className="mb-2.5 flex items-center justify-between sm:mb-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0071E3]/10 text-[#0071E3] sm:h-10 sm:w-10 sm:rounded-2xl">
+                                            <FaClock className="h-4 w-4 sm:h-5 sm:w-5" />
+                                        </div>
+                                    </div>
+                                    <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#64748b] sm:text-[11px] sm:tracking-[0.24em]">Active since</p>
+                                    <p className="text-[11px] font-semibold text-[#111827] sm:text-sm">{getDaysActive()}</p>
+                                </div>
                             </div>
 
-                            {/* Projects Card */}
-                            <div className="bg-[#f5f5f7] rounded-xl p-5 hover:bg-[#ebebf0] transition-all duration-200">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="w-9 h-9 bg-[#34C759]/10 rounded-lg flex items-center justify-center">
-                                        <FaFolderOpen className="w-4 h-4 text-[#34C759]" />
-                                    </div>
+                            <div className="mt-6 sm:mt-8">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                    <h3 className="text-base font-bold text-[#111827] sm:text-lg">Team Members</h3>
+                                    <span className="text-[11px] text-[#64748b] sm:text-sm">{acceptedMembers.length} active</span>
                                 </div>
-                                <p className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-1">Projects</p>
-                                <p className="text-3xl font-bold text-[#1d1d1f]">{projects.length}</p>
-                            </div>
-
-                            {/* Tasks Card */}
-                            <div className="bg-[#f5f5f7] rounded-xl p-5 hover:bg-[#ebebf0] transition-all duration-200">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="w-9 h-9 bg-[#FF9500]/10 rounded-lg flex items-center justify-center">
-                                        <FaCheckCircle className="w-4 h-4 text-[#FF9500]" />
-                                    </div>
-                                </div>
-                                <p className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-1">Tasks</p>
-                                <p className="text-3xl font-bold text-[#1d1d1f]">{tasks.length}</p>
-                            </div>
-
-                            {/* Active Since Card */}
-                            <div className="bg-[#f5f5f7] rounded-xl p-5 hover:bg-[#ebebf0] transition-all duration-200">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="w-9 h-9 bg-[#0071E3]/10 rounded-lg flex items-center justify-center">
-                                        <FaClock className="w-4 h-4 text-[#0071E3]" />
-                                    </div>
-                                </div>
-                                <p className="text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-1">Active Since</p>
-                                <p className="text-[13px] font-bold text-[#1d1d1f] truncate max-w-full">
-                                    {getDaysActive()}
-                                </p>
-                            </div>
-                        </div><div className="mt-8">
-                                <h3 className="text-[16px] font-bold text-[#1d1d1f] mb-4 flex items-center gap-2">
-                                    <FaUsers className="w-4 h-4" />
-                                    Team Members <span className="text-[14px]">({acceptedMembers.length})</span>
-                                </h3>
-                                <div className="space-y-2">
+                                <div className="mt-3 grid gap-2.5 sm:mt-4 sm:gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                     {acceptedMembers.length > 0 ? (
                                         acceptedMembers.map(member => {
                                             const user = userMap[member.user_id]
                                             return (
-                                                <div key={member.user_id} className="bg-[#f5f5f7] rounded-lg p-4 hover:bg-[#ebebf0] transition-all duration-200">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="text-[14px] font-semibold text-[#1d1d1f]">
+                                                <div key={member.user_id} className="rounded-xl border border-[#e5e5ea] bg-[#f8fafc] p-3 sm:rounded-[24px] sm:p-4">
+                                                    <div className="flex items-start justify-between gap-4">
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-[13px] font-semibold text-[#111827] sm:text-base">
                                                                 {user ? getDisplayName(user) : member.user_id}
                                                             </p>
-                                                            <p className="text-[12px] text-[#86868b] truncate">
+                                                            <p className="mt-1 truncate text-[11px] text-[#64748b] sm:text-sm">
                                                                 {user?.email || "—"}
                                                             </p>
                                                         </div>
-                                                        {member.role === "owner" && (
-                                                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#C6FF00]/10 border border-[#C6FF00]/30 rounded-lg flex-shrink-0 ml-2">
-                                                                <FaCrown className="w-3 h-3 text-[#C6FF00]" />
-                                                                <span className="text-[10px] font-bold text-[#C6FF00] uppercase">Owner</span>
-                                                            </div>
-                                                        )}
-                                                        {member.role === "member" && (
-                                                            <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#86868b]/10 border border-[#86868b]/30 rounded-lg flex-shrink-0 ml-2">
-                                                                <FaUsers className="w-3 h-3 text-[#86868b]" />
-                                                                <span className="text-[10px] font-bold text-[#86868b] uppercase">Member</span>
-                                                            </div>
-                                                        )}
+                                                        <div className="shrink-0">
+                                                            {member.role === "owner" ? (
+                                                                <span className="inline-flex items-center rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[9px] font-semibold text-[#166534] sm:px-3 sm:text-[10px]">
+                                                                    <FaCrown className="mr-1 h-3 w-3" /> Owner
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center rounded-full bg-[#f8fafc] px-2.5 py-1 text-[9px] font-semibold text-[#475569] sm:px-3 sm:text-[10px]">
+                                                                    <FaUsers className="mr-1 h-3 w-3" /> Member
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )
                                         })
                                     ) : (
-                                        <p className="text-[13px] text-[#86868b] p-4 bg-[#f5f5f7] rounded-lg">
-                                            No members yet
-                                        </p>
+                                        <div className="rounded-xl border border-[#e5e5ea] bg-[#f8fafc] p-3 sm:rounded-[24px] sm:p-4">
+                                            <p className="text-[12px] text-[#64748b] sm:text-sm">No members yet.</p>
+                                        </div>
                                     )}
                                 </div>
-                            </div></>
+                            </div>
+                        </>
                     )}
                 </div>
             </div>

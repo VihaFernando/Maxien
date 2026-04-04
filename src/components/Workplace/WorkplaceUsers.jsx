@@ -1,6 +1,7 @@
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { FaPlus, FaCheckCircle, FaClock } from "react-icons/fa"
 import { inviteToWorkplace } from "../../lib/workplaces"
+import { getUsersByIds, getUsername } from "../../lib/users"
 
 export default function WorkplaceUsers({
     members,
@@ -17,6 +18,31 @@ export default function WorkplaceUsers({
     const [showForm, setShowForm] = useState(false)
     const [formLoading, setFormLoading] = useState(false)
     const [inviteEmail, setInviteEmail] = useState("")
+    const [userMap, setUserMap] = useState({})
+
+    const memberIds = useMemo(() => members.map((m) => m.user_id).filter(Boolean), [members])
+
+    useEffect(() => {
+        const loadUsers = async () => {
+            if (memberIds.length === 0) return
+            try {
+                const users = await getUsersByIds(memberIds)
+                setUserMap(users.reduce((acc, user) => ({ ...acc, [user.id]: user }), {}))
+            } catch (e) {
+                // ignore load errors
+            }
+        }
+
+        loadUsers()
+    }, [memberIds])
+
+    const getMemberLabel = (member) => {
+        const user = userMap[member.user_id]
+        if (user) {
+            return `${getUsername(user)} (${user.email || user.id})`
+        }
+        return member.user_id
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
@@ -86,7 +112,7 @@ export default function WorkplaceUsers({
                                             className="p-4 rounded-[14px] border border-[#d2d2d7]/40 hover:border-[#d2d2d7] bg-white hover:shadow-sm transition-all flex items-center justify-between gap-3"
                                         >
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-[14px] font-bold text-[#1d1d1f] truncate">{m.user_id}</p>
+                                                <p className="text-[14px] font-bold text-[#1d1d1f] truncate">{getMemberLabel(m)}</p>
                                                 <p className="text-[12px] text-[#86868b] mt-0.5">
                                                     {m.role} • Joined {new Date(m.created_at).toLocaleDateString()}
                                                 </p>
@@ -114,7 +140,7 @@ export default function WorkplaceUsers({
                                             className="p-3 rounded-[12px] bg-white border border-orange-200 flex items-center justify-between gap-3"
                                         >
                                             <div className="min-w-0 flex-1">
-                                                <p className="text-[13px] font-bold text-[#1d1d1f] truncate">{m.user_id}</p>
+                                                <p className="text-[13px] font-bold text-[#1d1d1f] truncate">{getMemberLabel(m)}</p>
                                                 <p className="text-[11px] text-[#86868b] mt-0.5">Waiting for acceptance</p>
                                             </div>
                                             <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-orange-100 text-orange-700 whitespace-nowrap">
