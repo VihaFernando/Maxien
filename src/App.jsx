@@ -9,6 +9,7 @@ import Subscriptions from './pages/Subscriptions'
 import Tasks from './pages/Tasks'
 import Projects from './pages/Projects'
 import TaskTypes from './pages/TaskTypes'
+import Notes from './pages/Notes'
 import Workplaces from './pages/Workplaces'
 import WorkplaceDetail from './pages/WorkplaceDetail'
 import Calendar from './pages/Calendar'
@@ -33,6 +34,7 @@ function App() {
             <Route path="calendar" element={<Calendar />} />
             <Route path="ai-assistant" element={<AIAssistant />} />
             <Route path="task-types" element={<TaskTypes />} />
+            <Route path="notes" element={<Notes />} />
             <Route path="workplaces" element={<Workplaces />} />
             <Route path="workplaces/:id" element={<WorkplaceDetail />} />
             <Route path="profile" element={<Profile />} />

@@ -105,6 +105,15 @@ const staticDefinitions = [
         run: buildNavigationAction('/dashboard/calendar'),
     },
     {
+        id: 'open-notes',
+        section: 'Pages',
+        label: 'Open Notes',
+        subtitle: 'Capture and organize quick notes',
+        keywords: ['notes writing memo rich text'],
+        badge: 'Page',
+        run: buildNavigationAction('/dashboard/notes'),
+    },
+    {
         id: 'open-profile',
         section: 'Pages',
         label: 'Open Profile',
@@ -177,13 +186,22 @@ const staticDefinitions = [
         run: buildNavigationAction('/dashboard/calendar?action=create-event'),
     },
     {
+        id: 'create-note',
+        section: 'Commands',
+        label: 'Create Note',
+        subtitle: 'Open the rich text note editor',
+        keywords: ['create note new note write memo'],
+        badge: 'Run',
+        run: buildNavigationAction('/dashboard/notes?action=create'),
+    },
+    {
         id: 'browse-notes',
         section: 'Notes',
         label: 'Browse Notes',
-        subtitle: 'Search notes saved inside task descriptions',
-        keywords: ['notes descriptions task notes'],
+        subtitle: 'Review your saved rich text notes',
+        keywords: ['notes memo writing rich text'],
         badge: 'Page',
-        run: buildNavigationAction('/dashboard/tasks'),
+        run: buildNavigationAction('/dashboard/notes'),
     },
 ]
 

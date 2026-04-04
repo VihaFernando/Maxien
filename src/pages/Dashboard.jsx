@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { FaHome, FaUser, FaWallet, FaCheckSquare, FaCog, FaChevronDown, FaCalendarAlt, FaFolder, FaBrain, FaUsers } from "react-icons/fa"
+import { FaHome, FaUser, FaWallet, FaCheckSquare, FaCog, FaChevronDown, FaCalendarAlt, FaFolder, FaBrain, FaUsers, FaStickyNote } from "react-icons/fa"
 import AIShortcutHint from "../components/AIShortcutHint"
 
 const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-chat"))
@@ -191,6 +191,17 @@ export default function Dashboard() {
                         >
                             <FaCalendarAlt className="w-4 h-4" />
                             Calendar
+                        </Link>
+
+                        <Link
+                            to="/dashboard/notes"
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/notes")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaStickyNote className="w-4 h-4" />
+                            Notes
                         </Link>
 
                         <Link
@@ -419,6 +430,17 @@ export default function Dashboard() {
                         >
                             <FaCalendarAlt className="w-4 h-4" />
                             Calendar
+                        </Link>
+
+                        <Link
+                            to="/dashboard/notes"
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/notes")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaStickyNote className="w-4 h-4" />
+                            Notes
                         </Link>
 
                         <Link
