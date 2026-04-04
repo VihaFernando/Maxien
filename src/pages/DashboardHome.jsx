@@ -38,18 +38,51 @@ export default function DashboardHome() {
 
     const [tasks, setTasks] = useState([])
     const [projects, setProjects] = useState([])
+    const [subscriptions, setSubscriptions] = useState([])
     const [loading, setLoading] = useState(true)
+
+    const getNextMonthlyRenewalDate = (dateString) => {
+        if (!dateString || typeof dateString !== "string") return null
+        const [yearRaw, monthRaw, dayRaw] = dateString.split("-")
+        const year = Number(yearRaw)
+        const month = Number(monthRaw)
+        const day = Number(dayRaw)
+        if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null
+
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const daysInCurrentMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+        let candidate = new Date(today.getFullYear(), today.getMonth(), Math.min(day, daysInCurrentMonth))
+
+        if (candidate < today) {
+            const daysInNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0).getDate()
+            candidate = new Date(today.getFullYear(), today.getMonth() + 1, Math.min(day, daysInNextMonth))
+        }
+
+        return candidate
+    }
+
+    const getDaysUntil = (dateValue) => {
+        if (!(dateValue instanceof Date) || Number.isNaN(dateValue.getTime())) return null
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const target = new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate())
+        const msPerDay = 1000 * 60 * 60 * 24
+        return Math.ceil((target - today) / msPerDay)
+    }
 
     useEffect(() => {
         if (!user?.id) return
         const fetchData = async () => {
             try {
-                const [tasksRes, projectsRes] = await Promise.all([
+                const [tasksRes, projectsRes, subscriptionsRes] = await Promise.all([
                     supabase.from("tasks").select("*").eq("user_id", user.id),
-                    supabase.from("projects").select("*").eq("user_id", user.id)
+                    supabase.from("projects").select("*").eq("user_id", user.id),
+                    supabase.from("subscriptions").select("id, name, renewal_date, amount, currency").eq("user_id", user.id)
                 ])
                 setTasks(tasksRes.data || [])
                 setProjects(projectsRes.data || [])
+                setSubscriptions(subscriptionsRes.data || [])
             } catch (err) {
                 console.error(err)
             } finally {
@@ -116,23 +149,46 @@ export default function DashboardHome() {
         return cols
     }, [tasks])
 
-    const upcomingTasks = useMemo(() => {
+    const upcomingItems = useMemo(() => {
         const now = new Date()
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-        return tasks
+
+        const mappedTasks = tasks
             .filter(t => {
                 if (t.status === "Done" || t.status === "Cancelled") return false
                 if (!t.due_at) return true // no due date — not past
                 return new Date(t.due_at) >= startOfToday // today or future only
             })
+            .map((task) => ({
+                type: "task",
+                id: task.id,
+                dueAt: task.due_at ? new Date(task.due_at) : null,
+                payload: task,
+            }))
+
+        const dueSoonSubscriptions = subscriptions
+            .map((subscription) => {
+                const nextRenewal = getNextMonthlyRenewalDate(subscription.renewal_date)
+                const daysUntil = getDaysUntil(nextRenewal)
+                return {
+                    type: "subscription",
+                    id: subscription.id,
+                    dueAt: nextRenewal,
+                    daysUntil,
+                    payload: subscription,
+                }
+            })
+            .filter((item) => item.daysUntil != null && item.daysUntil >= 0 && item.daysUntil <= 2)
+
+        return [...mappedTasks, ...dueSoonSubscriptions]
             .sort((a, b) => {
-                if (!a.due_at && !b.due_at) return 0
-                if (!a.due_at) return 1
-                if (!b.due_at) return -1
-                return new Date(a.due_at) - new Date(b.due_at)
+                if (!a.dueAt && !b.dueAt) return 0
+                if (!a.dueAt) return 1
+                if (!b.dueAt) return -1
+                return a.dueAt - b.dueAt
             })
             .slice(0, 6)
-    }, [tasks])
+    }, [tasks, subscriptions])
 
     const monthLabels = useMemo(() => {
         const today = new Date()
@@ -376,26 +432,29 @@ export default function DashboardHome() {
                             {/* Upcoming Tasks - Scrollable, fills all space */}
                             <div className="flex-1 flex flex-col min-h-0">
                                 <p className="text-[9px] sm:text-[11px] font-bold text-[#86868b] uppercase tracking-wide mb-1.5 sm:mb-2.5">Upcoming</p>
-                                {upcomingTasks.length === 0 ? (
+                                {upcomingItems.length === 0 ? (
                                     <div className="flex items-center justify-center flex-1 py-6">
                                         <div className="text-center">
                                             <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[#d2d2d7] mx-auto mb-2 sm:mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                             <p className="text-[11px] sm:text-[12px] font-semibold text-[#86868b] mb-0.5">All caught up!</p>
-                                            <p className="text-[9px] sm:text-[10px] text-[#d2d2d7]">No upcoming tasks</p>
+                                            <p className="text-[9px] sm:text-[10px] text-[#d2d2d7]">No upcoming items</p>
                                         </div>
                                     </div>
                                 ) : (
                                     <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-0.5 sm:space-y-1 scrollbar-thin scrollbar-thumb-[#d2d2d7] scrollbar-track-transparent hover:scrollbar-thumb-[#86868b]">
-                                        {upcomingTasks.slice(0, 3).map(task => {
-                                            const hasDueDate = !!task.due_at
-                                            const d = hasDueDate ? new Date(task.due_at) : null
+                                        {upcomingItems.slice(0, 3).map((item) => {
+                                            const isTask = item.type === "task"
+                                            const task = isTask ? item.payload : null
+                                            const subscription = !isTask ? item.payload : null
+                                            const hasDueDate = !!item.dueAt
+                                            const d = hasDueDate ? item.dueAt : null
                                             const mon = d ? d.toLocaleString("en-US", { month: "short" }).toUpperCase() : null
                                             const day = d ? d.getDate() : null
                                             const time = d ? d.toLocaleString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true }) : null
                                             return (
                                                 <Link
-                                                    key={task.id}
-                                                    to={`/dashboard/tasks?task=${task.id}`}
+                                                    key={`${item.type}-${item.id}`}
+                                                    to={isTask ? `/dashboard/tasks?task=${task.id}` : "/dashboard/subscriptions"}
                                                     className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2.5 rounded-lg hover:bg-[#f5f5f7] transition-colors duration-200 group border border-[#d2d2d7]/30"
                                                 >
                                                     <div className="bg-[#f5f5f7] group-hover:bg-white rounded-lg flex flex-col items-center justify-center w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 transition-colors border border-[#d2d2d7]/40 text-[8px] sm:text-[10px]">
@@ -410,15 +469,20 @@ export default function DashboardHome() {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                                                            <p className="text-[10px] sm:text-[12px] font-semibold text-[#1d1d1f] truncate leading-tight">{task.title}</p>
-                                                            {isOverdueTask(task) && <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 flex-shrink-0 whitespace-nowrap">OVERDUE</span>}
-                                                            {!isOverdueTask(task) && isOverdueSoon(task) && <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 flex-shrink-0 whitespace-nowrap">DUE SOON</span>}
+                                                            <p className="text-[10px] sm:text-[12px] font-semibold text-[#1d1d1f] truncate leading-tight">{isTask ? task.title : subscription.name}</p>
+                                                            {isTask && isOverdueTask(task) && <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 flex-shrink-0 whitespace-nowrap">OVERDUE</span>}
+                                                            {isTask && !isOverdueTask(task) && isOverdueSoon(task) && <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 flex-shrink-0 whitespace-nowrap">DUE SOON</span>}
+                                                            {!isTask && <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 flex-shrink-0 whitespace-nowrap">SUBSCRIPTION</span>}
                                                         </div>
-                                                        <span className={`inline-block text-[7px] sm:text-[9px] font-bold px-1 py-0.5 rounded ${task.priority === "Urgent" ? "bg-red-50 text-red-600" :
-                                                            task.priority === "High" ? "bg-orange-50 text-orange-600" :
-                                                                task.priority === "Medium" ? "bg-blue-50 text-blue-600" :
-                                                                    "bg-[#f5f5f7] text-[#86868b]"
-                                                            }`}>{task.priority || "—"}</span>
+                                                        {isTask ? (
+                                                            <span className={`inline-block text-[7px] sm:text-[9px] font-bold px-1 py-0.5 rounded ${task.priority === "Urgent" ? "bg-red-50 text-red-600" :
+                                                                task.priority === "High" ? "bg-orange-50 text-orange-600" :
+                                                                    task.priority === "Medium" ? "bg-blue-50 text-blue-600" :
+                                                                        "bg-[#f5f5f7] text-[#86868b]"
+                                                                }`}>{task.priority || "—"}</span>
+                                                        ) : (
+                                                            <span className="inline-block text-[7px] sm:text-[9px] font-bold px-1 py-0.5 rounded bg-[#fefce8] text-[#92400e]">Due in {item.daysUntil} day{item.daysUntil === 1 ? "" : "s"}</span>
+                                                        )}
                                                     </div>
                                                     {hasDueDate && time && (
                                                         <div className="flex-shrink-0 text-right">

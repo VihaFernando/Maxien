@@ -5,6 +5,7 @@ import { FaHome, FaUser, FaWallet, FaCheckSquare, FaCog, FaChevronDown, FaCalend
 import AIShortcutHint from "../components/AIShortcutHint"
 
 const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-chat"))
+const openSpotlight = () => window.dispatchEvent(new CustomEvent("maxien:open-command-palette"))
 
 export default function Dashboard() {
     const { user, loading, signOut } = useAuth()
@@ -232,7 +233,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="mt-auto px-5 pb-5">
-                    <AIShortcutHint onOpen={openAIChat} />
+                    <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} />
                     <div className="bg-[#f5f5f7] rounded-2xl p-4">
                         <div className="flex items-center gap-3 mb-3">
                             {user?.user_metadata?.picture ? (
@@ -459,7 +460,7 @@ export default function Dashboard() {
                     </nav>
 
                     <div className="mt-auto pt-5 border-t border-[#e5e5ea]">
-                        <AIShortcutHint onOpen={openAIChat} />
+                        <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} />
                         <div className="bg-[#f5f5f7] rounded-2xl p-4">
                             <div className="flex items-center gap-3 mb-3">
                                 {user?.user_metadata?.picture ? (

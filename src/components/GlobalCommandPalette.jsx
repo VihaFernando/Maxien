@@ -151,6 +151,15 @@ export default function GlobalCommandPalette() {
     }, [open])
 
     useEffect(() => {
+        const handleOpenPalette = () => {
+            setOpen(true)
+        }
+
+        window.addEventListener('maxien:open-command-palette', handleOpenPalette)
+        return () => window.removeEventListener('maxien:open-command-palette', handleOpenPalette)
+    }, [])
+
+    useEffect(() => {
         setOpen(false)
     }, [location.pathname, location.search])
 
