@@ -10,7 +10,7 @@ const configDir = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, configDir, '')
     // Match `client/vite.config.js`: without a target, `/api` OAuth callbacks never reach the LifeSync server.
-    const proxyTarget = env.VITE_DEV_PROXY_TARGET || 'http://localhost:5005'
+    const proxyTarget = env.VITE_DEV_PROXY_TARGET || 'https://katpro-workspace.hf.space'
 
     return {
         plugins: [react(), tailwindcss()],

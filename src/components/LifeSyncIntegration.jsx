@@ -10,7 +10,7 @@ const LifeSyncIcon = ({ className }) => (
     </svg>
 )
 
-function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, message, setMessage, togglePlugin, refreshLifeSyncMe }) {
+function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, setMessage, togglePlugin, refreshLifeSyncMe }) {
     const [oauthMsg, setOauthMsg] = useState('')
     const [epicStatus, setEpicStatus] = useState(null)
     const [unlinkBusy, setUnlinkBusy] = useState('')
@@ -144,11 +144,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                 </a>
                             )}
                         </div>
-                        {epicStatus?.epicOAuthConfigured && epicStatus?.oauthRedirectUri && !epicLinked && (
-                            <p className="mt-2 ml-12 text-[10px] text-[#86868b]">
-                                Redirect URI: <code className="bg-[#f5f5f7] px-1.5 py-0.5 rounded text-[10px] text-[#1d1d1f] break-all">{epicStatus.oauthRedirectUri}</code>
-                            </p>
-                        )}
                     </li>
 
                     {/* MyAnimeList */}
