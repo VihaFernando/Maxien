@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { FaHome, FaUser, FaWallet, FaCheckSquare, FaCog, FaChevronDown, FaCalendarAlt, FaFolder, FaBrain, FaUsers, FaStickyNote } from "react-icons/fa"
+import { useLifeSync } from "../context/LifeSyncContext"
+import { getLifesyncToken, isLifeSyncAnimeNavVisible } from "../lib/lifesyncApi"
+import { FaHome, FaUser, FaWallet, FaCheckSquare, FaCog, FaChevronDown, FaCalendarAlt, FaFolder, FaBrain, FaUsers, FaStickyNote, FaGithub, FaGamepad, FaFilm } from "react-icons/fa"
 import AIShortcutHint from "../components/AIShortcutHint"
 
 const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-chat"))
@@ -9,10 +11,21 @@ const openSpotlight = () => window.dispatchEvent(new CustomEvent("maxien:open-co
 
 export default function Dashboard() {
     const { user, loading, signOut } = useAuth()
+    const { lifeSyncLogout, isLifeSyncConnected, lifeSyncLoading, lifeSyncUser } = useLifeSync()
     const navigate = useNavigate()
     const location = useLocation()
+    const openLifeSyncSettings = useCallback(() => {
+        navigate("/dashboard/profile?tab=integrations")
+    }, [navigate])
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [systemOpen, setSystemOpen] = useState(false)
+    const [lifeSyncNotice, setLifeSyncNotice] = useState("")
+
+    const lifeSyncGamesActive = location.pathname.startsWith("/dashboard/lifesync/games")
+    const lifeSyncAnimeActive = location.pathname.startsWith("/dashboard/lifesync/anime")
+    const showLifeSyncSidebar =
+        isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
+    const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
 
     // Extract workplace ID from URL if we're on a workplace detail page
     const workplaceId = location.pathname.match(/\/workplaces\/([^/?]+)/)?.[1]
@@ -23,9 +36,22 @@ export default function Dashboard() {
     }, [user, loading, navigate])
 
     const handleSignOut = async () => {
+        lifeSyncLogout()
         await signOut()
         navigate("/login")
     }
+
+    useEffect(() => {
+        try {
+            const msg = sessionStorage.getItem("maxien_lifesync_link_notice")
+            if (msg) {
+                setLifeSyncNotice(msg)
+                sessionStorage.removeItem("maxien_lifesync_link_notice")
+            }
+        } catch {
+            // ignore
+        }
+    }, [])
 
     const isActive = (path) => location.pathname === path
 
@@ -86,6 +112,17 @@ export default function Dashboard() {
                         >
                             <FaUser className="w-4 h-4" />
                             Profile
+                        </Link>
+
+                        <Link
+                            to="/dashboard/github"
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/github")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaGithub className="w-4 h-4" />
+                            GitHub
                         </Link>
 
                         <Link
@@ -241,10 +278,44 @@ export default function Dashboard() {
                             )}
                         </div>
                     </nav>
+
+                    {showLifeSyncSidebar && (
+                        <div className="mt-3">
+                            <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">LifeSync</p>
+                            <nav className="space-y-0.5">
+                                <Link
+                                    to="/dashboard/lifesync/games"
+                                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${lifeSyncGamesActive
+                                        ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    <FaGamepad className="w-4 h-4" />
+                                    Games
+                                </Link>
+                                {showLifeSyncAnimeLink && (
+                                    <Link
+                                        to="/dashboard/lifesync/anime"
+                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${lifeSyncAnimeActive
+                                            ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                            : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                            }`}
+                                    >
+                                        <FaFilm className="w-4 h-4" />
+                                        Anime
+                                    </Link>
+                                )}
+                            </nav>
+                        </div>
+                    )}
                 </div>
 
                 <div className="mt-auto px-5 pb-5">
-                    <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} />
+                    <AIShortcutHint
+                        onOpen={openAIChat}
+                        onOpenSpotlight={openSpotlight}
+                        onOpenLifeSync={openLifeSyncSettings}
+                    />
                     <div className="bg-[#f5f5f7] rounded-2xl p-4">
                         <div className="flex items-center gap-3 mb-3">
                             {user?.user_metadata?.picture ? (
@@ -325,6 +396,17 @@ export default function Dashboard() {
                         >
                             <FaUser className="w-4 h-4" />
                             Profile
+                        </Link>
+
+                        <Link
+                            to="/dashboard/github"
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${isActive("/dashboard/github")
+                                ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                }`}
+                        >
+                            <FaGithub className="w-4 h-4" />
+                            GitHub
                         </Link>
 
                         <Link
@@ -481,8 +563,42 @@ export default function Dashboard() {
                         </div>
                     </nav>
 
+                    {showLifeSyncSidebar && (
+                        <div className="mt-3">
+                            <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">LifeSync</p>
+                            <nav className="space-y-0.5">
+                                <Link
+                                    to="/dashboard/lifesync/games"
+                                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${lifeSyncGamesActive
+                                        ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                        : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                        }`}
+                                >
+                                    <FaGamepad className="w-4 h-4" />
+                                    Games
+                                </Link>
+                                {showLifeSyncAnimeLink && (
+                                    <Link
+                                        to="/dashboard/lifesync/anime"
+                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${lifeSyncAnimeActive
+                                            ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
+                                            : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                            }`}
+                                    >
+                                        <FaFilm className="w-4 h-4" />
+                                        Anime
+                                    </Link>
+                                )}
+                            </nav>
+                        </div>
+                    )}
+
                     <div className="mt-auto pt-5 border-t border-[#e5e5ea]">
-                        <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} />
+                        <AIShortcutHint
+                            onOpen={openAIChat}
+                            onOpenSpotlight={openSpotlight}
+                            onOpenLifeSync={openLifeSyncSettings}
+                        />
                         <div className="bg-[#f5f5f7] rounded-2xl p-4">
                             <div className="flex items-center gap-3 mb-3">
                                 {user?.user_metadata?.picture ? (
@@ -544,6 +660,21 @@ export default function Dashboard() {
                 </header>
 
                 <div className="w-full flex-1 px-4 sm:px-8 lg:px-10 py-6 sm:py-8">
+                    {lifeSyncNotice && (
+                        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium text-amber-950 flex items-start gap-3">
+                            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 10-2 0v2a1 1 0 102 0v-2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            <span className="flex-1">{lifeSyncNotice}</span>
+                            <button
+                                type="button"
+                                onClick={() => setLifeSyncNotice("")}
+                                className="shrink-0 text-amber-800/80 hover:text-amber-950 font-semibold"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    )}
                     <Outlet />
                 </div>
             </main>

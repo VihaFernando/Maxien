@@ -304,7 +304,7 @@ export default function Profile() {
                                     <svg className="w-6 h-6 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
                                 </div>
                                 <p className="text-[13px] font-semibold text-[#1d1d1f]">Preferences coming soon</p>
-                                <p className="text-[12px] text-[#86868b]">Theme, notifications and app preferences will be here.</p>
+                                <p className="text-[12px] text-[#86868b]">Theme, notifications, and app preferences will be here.</p>
                             </div>
                         </div>
                     )}

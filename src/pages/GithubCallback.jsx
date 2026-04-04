@@ -26,7 +26,7 @@ export default function GithubCallback() {
                     setStatus("Saving GitHub connection...")
                     localStorage.setItem("github_token_pending", data.access_token)
                     setStatus("GitHub connected! Redirecting...")
-                    setTimeout(() => navigate("/dashboard/profile?tab=integrations"), 800)
+                    setTimeout(() => navigate("/dashboard/github"), 800)
                 } else {
                     setStatus("Failed to connect GitHub. Redirecting...")
                     setTimeout(() => navigate("/dashboard/profile"), 1500)

@@ -15,15 +15,32 @@ const SpotlightIcon = ({ className }) => (
     </svg>
 )
 
-export default function AIShortcutHint({ onOpen, onOpenSpotlight }) {
+const LifeSyncIcon = ({ className }) => (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 12a8 8 0 0113.657-5.657M20 12a8 8 0 01-13.657 5.657" />
+        <path d="M8 5H4V1M16 19h4v4" />
+    </svg>
+)
+
+export default function AIShortcutHint({ onOpen, onOpenSpotlight, onOpenLifeSync }) {
     const [isMac] = useState(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform))
     const [activeIndex, setActiveIndex] = useState(0)
 
     const hints = useMemo(() => {
         const aiShortcut = isMac ? ["⌘", "/"] : ["Alt", "C"]
         const spotlightShortcut = isMac ? ["⌘", "K"] : ["Ctrl", "K"]
+        const lifesyncShortcut = []
 
         return [
+            {
+                id: "lifesync",
+                title: "Introducing LifeSync",
+                description: "Manage plugins, OAuth links, and your backend session under Settings → Integrations.",
+                actionLabel: "Open Integrations",
+                icon: LifeSyncIcon,
+                shortcutParts: lifesyncShortcut,
+                onClick: onOpenLifeSync ?? (() => {}),
+            },
             {
                 id: "ai",
                 title: "Introducing AI Chat",
@@ -43,7 +60,7 @@ export default function AIShortcutHint({ onOpen, onOpenSpotlight }) {
                 onClick: onOpenSpotlight || onOpen,
             },
         ]
-    }, [isMac, onOpen, onOpenSpotlight])
+    }, [isMac, onOpen, onOpenSpotlight, onOpenLifeSync])
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -82,18 +99,20 @@ export default function AIShortcutHint({ onOpen, onOpenSpotlight }) {
                         </span>
                     </div>
 
-                    <div className="ml-2 flex shrink-0 items-center gap-0.5">
-                        {activeHint.shortcutParts.map((key, i) => (
-                            <span key={i} className="flex items-center">
-                                <kbd className="inline-flex items-center justify-center h-[17px] min-w-[17px] px-1 bg-[#eef1f8] border border-[#d2d8ea] rounded-[4px] text-[9px] font-bold text-[#4f5882] shadow-[0_1px_0_#c8cedf] leading-none">
-                                    {key}
-                                </kbd>
-                                {i < activeHint.shortcutParts.length - 1 && (
-                                    <span className="text-[9px] text-[#9ca3af] mx-0.5 font-medium">+</span>
-                                )}
-                            </span>
-                        ))}
-                    </div>
+                    {activeHint.shortcutParts.length > 0 && (
+                        <div className="ml-2 flex shrink-0 items-center gap-0.5">
+                            {activeHint.shortcutParts.map((key, i) => (
+                                <span key={i} className="flex items-center">
+                                    <kbd className="inline-flex items-center justify-center h-[17px] min-w-[17px] px-1 bg-[#eef1f8] border border-[#d2d8ea] rounded-[4px] text-[9px] font-bold text-[#4f5882] shadow-[0_1px_0_#c8cedf] leading-none">
+                                        {key}
+                                    </kbd>
+                                    {i < activeHint.shortcutParts.length - 1 && (
+                                        <span className="text-[9px] text-[#9ca3af] mx-0.5 font-medium">+</span>
+                                    )}
+                                </span>
+                            ))}
+                        </div>
+                    )}
                 </button>
             </div>
         </div>
