@@ -7,7 +7,7 @@ import { FaArrowRight, FaBolt, FaCalculator, FaCalendarAlt, FaCheckSquare, FaExc
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { fetchGoogleEvents } from '../lib/googleCalendar'
-import { buildCommandEntries, formatCommandNumber, getCommandModifierLabel, getGoogleCalendarPaletteToken, looksLikeCurrencyIntent, looksLikeMathExpression, parseCurrencyConversionQuery } from '../lib/commandPalette'
+import { buildCommandEntries, fetchCurrencyConversion, formatCommandNumber, getCommandModifierLabel, getGoogleCalendarPaletteToken, looksLikeCurrencyIntent, looksLikeMathExpression, parseCurrencyConversionQuery } from '../lib/commandPalette'
 
 const isMacPlatform = () => {
     if (typeof navigator === 'undefined') return false
@@ -225,19 +225,12 @@ export default function GlobalCommandPalette() {
             setCurrencyError('')
 
             try {
-                const url = new URL('https://api.exchangerate.host/convert')
-                url.searchParams.set('from', parsedQuery.fromCurrency)
-                url.searchParams.set('to', parsedQuery.toCurrency)
-                url.searchParams.set('amount', String(parsedQuery.amount))
-
-                const response = await fetch(url, { signal: controller.signal })
-                if (!response.ok) throw new Error('Failed to fetch currency conversion')
-
-                const data = await response.json()
-                const convertedAmount = Number(data?.result)
-                if (!Number.isFinite(convertedAmount)) {
-                    throw new Error(data?.error?.message || 'Invalid conversion result')
-                }
+                const convertedAmount = await fetchCurrencyConversion({
+                    amount: parsedQuery.amount,
+                    fromCurrency: parsedQuery.fromCurrency,
+                    toCurrency: parsedQuery.toCurrency,
+                    signal: controller.signal,
+                })
 
                 const sourceAmount = formatCommandNumber(parsedQuery.amount)
                 const targetAmount = formatCommandNumber(convertedAmount)

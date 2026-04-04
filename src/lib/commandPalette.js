@@ -114,6 +114,15 @@ const staticDefinitions = [
         run: buildNavigationAction('/dashboard/profile'),
     },
     {
+        id: 'open-subscriptions',
+        section: 'Pages',
+        label: 'Open Subscriptions',
+        subtitle: 'Manage recurring subscriptions and renewal dates',
+        keywords: ['subscriptions billing recurring payments subscription management'],
+        badge: 'Page',
+        run: buildNavigationAction('/dashboard/subscriptions'),
+    },
+    {
         id: 'open-integrations',
         section: 'Integrations',
         label: 'Open Integrations',
@@ -205,6 +214,63 @@ export const parseCurrencyConversionQuery = (query) => {
         fromCurrency: match[2].toUpperCase(),
         toCurrency: match[3].toUpperCase(),
     }
+}
+
+export const fetchCurrencyRate = async ({ fromCurrency, toCurrency, signal } = {}) => {
+    const base = String(fromCurrency || '').toUpperCase()
+    const target = String(toCurrency || '').toUpperCase()
+
+    if (!base || !target) {
+        throw new Error('Missing currency code')
+    }
+
+    if (base === target) return 1
+
+    const endpoints = [
+        `https://open.er-api.com/v6/latest/${base}`,
+        `https://api.exchangerate-api.com/v4/latest/${base}`,
+    ]
+
+    let lastError = null
+
+    for (const endpoint of endpoints) {
+        try {
+            const response = await fetch(endpoint, {
+                signal,
+                cache: 'no-store',
+            })
+
+            if (!response.ok) {
+                throw new Error('Currency rate fetch failed')
+            }
+
+            const data = await response.json()
+            if (data?.result && data.result !== 'success') {
+                throw new Error(data?.error || 'Currency provider unavailable')
+            }
+
+            const rate = Number(data?.rates?.[target])
+            if (!Number.isFinite(rate)) {
+                throw new Error('Invalid currency rate')
+            }
+
+            return rate
+        } catch (error) {
+            if (signal?.aborted) throw error
+            lastError = error
+        }
+    }
+
+    throw lastError || new Error('Currency provider unavailable')
+}
+
+export const fetchCurrencyConversion = async ({ amount, fromCurrency, toCurrency, signal } = {}) => {
+    const rate = await fetchCurrencyRate({ fromCurrency, toCurrency, signal })
+    const normalizedAmount = Number(amount)
+    if (!Number.isFinite(normalizedAmount)) {
+        throw new Error('Invalid amount for conversion')
+    }
+    return normalizedAmount * rate
 }
 
 export const looksLikeCurrencyIntent = (query) => {

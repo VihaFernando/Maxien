@@ -5,6 +5,7 @@ import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
 import DashboardHome from './pages/DashboardHome'
 import Profile from './pages/Profile'
+import Subscriptions from './pages/Subscriptions'
 import Tasks from './pages/Tasks'
 import Projects from './pages/Projects'
 import TaskTypes from './pages/TaskTypes'
@@ -28,6 +29,7 @@ function App() {
             <Route index element={<DashboardHome />} />
             <Route path="tasks" element={<Tasks />} />
             <Route path="projects" element={<Projects />} />
+            <Route path="subscriptions" element={<Subscriptions />} />
             <Route path="calendar" element={<Calendar />} />
             <Route path="ai-assistant" element={<AIAssistant />} />
             <Route path="task-types" element={<TaskTypes />} />
