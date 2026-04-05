@@ -47,6 +47,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
     const episodes = useMemo(() => series?.episodes || [], [series])
     const prevEp = episodeIndex > 0 ? episodes[episodeIndex - 1] : null
     const nextEp = episodeIndex >= 0 && episodeIndex < episodes.length - 1 ? episodes[episodeIndex + 1] : null
+    const activeEpisode = episodeIndex >= 0 ? episodes[episodeIndex] : null
     const playingRef = useRef(null)
 
     const shuffledPool = useMemo(() => {
@@ -74,7 +75,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
     useEffect(() => {
         const el = playingRef.current
         if (!el) return
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
     }, [episodeIndex])
 
     useEffect(() => {
@@ -89,45 +90,64 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
     }, [onClose])
 
     const hideScroll = '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+    const progressLabel = episodes.length > 0 ? `${Math.min(episodes.length, episodeIndex + 1)} / ${episodes.length}` : null
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden bg-[#0a0a0a] text-white"
+            className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden bg-[#020202] text-white"
             style={{ paddingLeft: 'max(0px, env(safe-area-inset-left))', paddingRight: 'max(0px, env(safe-area-inset-right))' }}
         >
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[#C6FF00]/12 blur-[120px]" />
+                <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[#37c9ff]/8 blur-[135px]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08)_0%,rgba(2,2,2,0)_48%)]" />
+            </div>
+
             <header
-                className="flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] bg-[#0a0a0a]/95 py-2.5 pl-3 pr-3 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-md sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-3"
+                className="relative flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/40 py-2.5 pl-3 pr-3 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-xl sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-3"
             >
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="inline-flex min-w-0 shrink items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/80 transition-colors hover:border-white/20 hover:bg-white/10 hover:text-white"
-                >
-                    <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-                    <span className="truncate">Back</span>
-                </button>
-                {stream.watchUrl ? (
-                    <a
-                        href={stream.watchUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="Open on source site"
-                        className="inline-flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 text-[10px] font-medium text-white/65 transition-colors hover:border-[#C6FF00]/35 hover:text-[#C6FF00] sm:max-w-none sm:px-3 sm:text-[11px]"
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="inline-flex min-w-0 shrink items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white"
                     >
-                        <span className="truncate sm:whitespace-nowrap">Open source</span>
-                        <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                    </a>
-                ) : <span className="w-px shrink-0" aria-hidden />}
+                        <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                        <span className="truncate">Back</span>
+                    </button>
+                    <div className="hidden min-w-0 sm:block">
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45">Now Streaming</p>
+                        <p className="truncate text-[12px] font-medium text-white/75">{series?.title || 'LifeSync Stream'}</p>
+                    </div>
+                </div>
+
+                <div className="flex min-w-0 items-center gap-2">
+                    {progressLabel && (
+                        <span className="hidden rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/75 sm:inline-flex">
+                            {progressLabel}
+                        </span>
+                    )}
+                    {stream.watchUrl ? (
+                        <a
+                            href={stream.watchUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            title="Open on source site"
+                            className="inline-flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1.5 text-[10px] font-medium text-white/70 transition-colors hover:border-[#C6FF00]/45 hover:text-[#C6FF00] sm:max-w-none sm:px-3 sm:text-[11px]"
+                        >
+                            <span className="truncate sm:whitespace-nowrap">Open source</span>
+                            <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                        </a>
+                    ) : null}
+                </div>
             </header>
 
             <div
-                className={`min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom,0px)] ${hideScroll}`}
+                className={`relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom,0px)] ${hideScroll}`}
             >
-                <div className="mx-auto flex w-full min-w-0 max-w-[1600px] flex-col gap-0 px-3 pb-8 pt-3 sm:px-4 lg:flex-row lg:items-start lg:gap-8 lg:px-6 lg:pt-4">
-                    {/* Primary column — inset from viewport so rounded player + controls are never clipped by overflow-x-hidden */}
-                    <div className="flex min-w-0 w-full max-w-full flex-1 flex-col">
-                        {/* Player: absolute fill fixes AdvancedVideoPlayer height inside aspect box */}
-                        <div className="relative w-full max-w-full overflow-hidden rounded-xl bg-black ring-1 ring-white/10 sm:rounded-2xl">
+                <div className="mx-auto grid w-full min-w-0 max-w-[1680px] gap-4 px-3 py-4 sm:px-4 lg:h-[calc(100dvh-6rem)] lg:grid-cols-[minmax(0,1.55fr)_minmax(310px,0.85fr)] lg:gap-5 lg:px-6">
+                    <section className="min-w-0 space-y-4 lg:flex lg:h-full lg:flex-col lg:gap-4 lg:space-y-0">
+                        <div className="relative w-full min-w-0 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black shadow-[0_28px_80px_rgba(0,0,0,0.5)]">
                             <div className="relative aspect-video w-full">
                                 <div className="absolute inset-0">
                                     {stream.resolving ? (
@@ -159,24 +179,36 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                             </div>
                         </div>
 
-                        {/* Title + actions (YouTube order) */}
-                        <div className="min-w-0 max-w-full border-b border-white/[0.06] py-4 lg:px-0">
-                            <h1 className="wrap-anywhere text-[17px] font-bold leading-snug tracking-tight text-white sm:text-[20px]">{stream.title}</h1>
-                            <div className="mt-3 flex min-w-0 max-w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-2">
-                                {series && (
-                                    <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full bg-white/[0.06] px-3 py-1.5 text-[12px] text-white/55">
-                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#C6FF00]" aria-hidden />
-                                        <span className="min-w-0 truncate">{series.title}</span>
-                                        <span className="shrink-0 text-white/25">·</span>
-                                        <span className="shrink-0 tabular-nums">{episodeIndex + 1} / {episodes.length}</span>
-                                    </span>
-                                )}
-                                <div className="flex min-w-0 w-full items-stretch gap-2 sm:ml-auto sm:w-auto sm:items-center">
+                        <div className="min-w-0 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+                            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0 flex-1">
+                                    <h1 className="wrap-anywhere text-[17px] font-bold leading-snug tracking-tight text-white sm:text-[21px]">{stream.title}</h1>
+                                    <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+                                        {series && (
+                                            <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] text-white/65">
+                                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#C6FF00]" aria-hidden />
+                                                <span className="min-w-0 truncate">{series.title}</span>
+                                            </span>
+                                        )}
+                                        {progressLabel && (
+                                            <span className="inline-flex rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/62">
+                                                Episode {progressLabel}
+                                            </span>
+                                        )}
+                                        {activeEpisode?.pubDate && (
+                                            <span className="inline-flex rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[10px] text-white/55">
+                                                {formatEpisodeDate(activeEpisode.pubDate) || activeEpisode.pubDate}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="flex min-w-0 w-full items-stretch gap-2 sm:w-auto sm:shrink-0">
                                     <button
                                         type="button"
                                         disabled={!prevEp}
                                         onClick={() => prevEp && onChangeEpisode(episodeIndex - 1)}
-                                        className="inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 text-[12px] font-medium text-white/75 transition-colors hover:bg-white/10 disabled:opacity-25 sm:flex-initial sm:px-4"
+                                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 text-[12px] font-medium text-white/80 transition-colors hover:bg-white/10 disabled:opacity-25 sm:min-w-[118px]"
                                     >
                                         <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                                         <span className="truncate">Previous</span>
@@ -185,95 +217,97 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                         type="button"
                                         disabled={!nextEp}
                                         onClick={() => nextEp && onChangeEpisode(episodeIndex + 1)}
-                                        className="inline-flex h-9 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#C6FF00]/40 bg-[#C6FF00]/15 px-3 text-[12px] font-semibold text-[#C6FF00] transition-colors hover:bg-[#C6FF00]/25 disabled:opacity-25 sm:flex-initial sm:px-4"
+                                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#C6FF00]/45 bg-[#C6FF00]/18 px-3 text-[12px] font-semibold text-[#C6FF00] transition-colors hover:bg-[#C6FF00]/28 disabled:opacity-25 sm:min-w-[118px]"
                                     >
                                         <span className="truncate">Next</span>
                                         <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                     </button>
                                 </div>
                             </div>
+
+                            {episodes.length > 1 && (
+                                <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-3.5 py-3">
+                                    <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/45">Up Next</p>
+                                    <p className="mt-1 line-clamp-2 text-[12px] font-medium leading-snug text-white/85">
+                                        {nextEp ? nextEp.title : 'You reached the final episode in this series.'}
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Episode rail */}
-                        {episodes.length > 0 && series && (
-                            <div className="min-w-0 max-w-full py-4 lg:px-0">
-                                <div className="mb-3 flex min-w-0 max-w-full items-start justify-between gap-2">
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Episodes</p>
-                                        <p className="mt-0.5 line-clamp-2 wrap-anywhere text-[13px] font-semibold leading-snug text-white/90">{series.title}</p>
+                        {episodes.length > 0 && (
+                            <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:p-4 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+                                <div className="mb-3 flex min-w-0 items-start justify-between gap-2">
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/42">Episode Queue</p>
+                                        <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-white/90">{series?.title}</p>
                                     </div>
-                                    <span className="shrink-0 rounded-md bg-white/[0.06] px-2 py-1 text-[10px] font-medium tabular-nums text-white/45">{episodes.length} videos</span>
+                                    <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-medium tabular-nums text-white/55">{episodes.length}</span>
                                 </div>
-                                <div className={`flex w-full min-w-0 gap-2.5 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 pt-0.5 ${hideScroll} snap-x snap-mandatory`}>
-                                    {episodes.map((ep, i) => {
-                                        const isCurrent = i === episodeIndex
-                                        const poster = ep.posterUrl || series.posterUrl
-                                        const dateLabel = formatEpisodeDate(ep.pubDate)
-                                        const epLabel = ep.episodeNum > 0 ? `Ep. ${ep.episodeNum}` : `Part ${i + 1}`
-                                        const detailTitle = [epLabel, dateLabel, ep.slug].filter(Boolean).join(' · ')
-                                        return (
-                                            <button
-                                                key={ep.slug || ep.watchUrl || i}
-                                                ref={isCurrent ? playingRef : undefined}
-                                                type="button"
-                                                onClick={() => onChangeEpisode(i)}
-                                                title={detailTitle || ep.title}
-                                                className={`w-[min(132px,calc(100%-0.5rem))] shrink-0 snap-start overflow-hidden rounded-xl text-left transition-all sm:w-[152px] ${
-                                                    isCurrent
-                                                        ? 'bg-[#C6FF00]/12 ring-1 ring-inset ring-[#C6FF00]/50'
-                                                        : 'bg-white/[0.04] ring-1 ring-inset ring-white/10 hover:bg-white/[0.08]'
-                                                }`}
-                                            >
-                                                <div className="relative aspect-video w-full bg-black/40">
-                                                    {poster ? (
-                                                        <img src={poster} alt="" className="h-full w-full object-cover" loading="lazy" />
-                                                    ) : (
-                                                        <div className="flex h-full w-full items-center justify-center text-white/15">
-                                                            <svg className="h-7 w-7" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+
+                                <div className={`max-h-[42dvh] overflow-y-auto pr-1 lg:min-h-0 lg:max-h-none lg:flex-1 ${hideScroll}`}>
+                                    <ul className="space-y-1.5">
+                                        {episodes.map((ep, i) => {
+                                            const isCurrent = i === episodeIndex
+                                            const epLabel = ep.episodeNum > 0 ? `Ep ${ep.episodeNum}` : `Part ${i + 1}`
+                                            const dateLabel = formatEpisodeDate(ep.pubDate)
+                                            return (
+                                                <li key={ep.slug || ep.watchUrl || i}>
+                                                    <button
+                                                        ref={isCurrent ? playingRef : undefined}
+                                                        type="button"
+                                                        onClick={() => onChangeEpisode(i)}
+                                                        className={`group flex w-full min-w-0 items-center gap-2.5 rounded-xl border px-2 py-2 text-left transition-all ${
+                                                            isCurrent
+                                                                ? 'border-[#C6FF00]/50 bg-[#C6FF00]/14'
+                                                                : 'border-white/10 bg-black/30 hover:border-white/20 hover:bg-white/[0.06]'
+                                                        }`}
+                                                    >
+                                                        <div className="relative h-12 w-[4.4rem] shrink-0 overflow-hidden rounded-lg bg-black/45">
+                                                            {ep.posterUrl || series?.posterUrl ? (
+                                                                <img src={ep.posterUrl || series?.posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                                            ) : (
+                                                                <div className="flex h-full w-full items-center justify-center text-white/20">
+                                                                    <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                                                </div>
+                                                            )}
+                                                            {isCurrent && (
+                                                                <span className="absolute left-1 top-1 rounded bg-[#C6FF00]/90 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
+                                                                    Live
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                    {isCurrent ? (
-                                                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-gradient-to-t from-black/95 via-black/50 to-transparent py-1.5 pt-5">
-                                                            <span className="flex h-2.5 items-end gap-0.5">
-                                                                {[0, 100, 50].map((d, bi) => (
-                                                                    <span key={bi} className="w-0.5 animate-pulse rounded-full bg-[#C6FF00]" style={{ height: `${5 + bi * 2}px`, animationDelay: `${d}ms` }} />
-                                                                ))}
-                                                            </span>
-                                                            <span className="text-[8px] font-bold uppercase tracking-wider text-[#C6FF00]">Live</span>
+
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className={`line-clamp-2 text-[11px] font-semibold leading-snug ${isCurrent ? 'text-[#C6FF00]' : 'text-white/88'}`}>
+                                                                {ep.title}
+                                                            </p>
+                                                            <p className="mt-1 text-[9px] text-white/42">
+                                                                {epLabel}{dateLabel ? ` · ${dateLabel}` : ''}
+                                                            </p>
                                                         </div>
-                                                    ) : (
-                                                        <span className="absolute left-1 top-1 rounded bg-black/70 px-1 py-0.5 text-[8px] font-bold tabular-nums text-white">
-                                                            {i + 1}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="min-w-0 p-2">
-                                                    <p className={`line-clamp-3 wrap-anywhere text-[10px] font-semibold leading-snug ${isCurrent ? 'text-[#C6FF00]' : 'text-white/88'}`}>
-                                                        {ep.title}
-                                                    </p>
-                                                    <p className="mt-1 wrap-anywhere text-[9px] leading-snug text-white/38">{epLabel}{dateLabel ? ` · ${dateLabel}` : ''}</p>
-                                                </div>
-                                            </button>
-                                        )
-                                    })}
+                                                    </button>
+                                                </li>
+                                            )
+                                        })}
+                                    </ul>
                                 </div>
                             </div>
                         )}
-                    </div>
+                    </section>
 
-                    {/* Sidebar */}
-                    <aside className="w-full min-w-0 max-w-full shrink-0 border-t border-white/[0.06] bg-[#0a0a0a] lg:w-[min(100%,340px)] lg:max-w-[340px] lg:border-l lg:border-t-0 lg:bg-transparent lg:pl-2 lg:pr-0 xl:max-w-[380px] xl:w-[min(100%,380px)]">
-                        <div className={`min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5.5rem)] lg:overflow-y-auto ${hideScroll}`}>
-                            <div className="min-w-0 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-3 lg:p-4">
-                                <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Suggested</p>
-                                {recommendations.length > 0 ? (
-                                    <ul className="mt-3 flex flex-col gap-1">
+                    <aside className="min-w-0 lg:h-full">
+                        <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col">
+                            <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Suggested</p>
+                            {recommendations.length > 0 ? (
+                                <div className={`mt-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 ${hideScroll}`}>
+                                    <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
                                         {recommendations.map(rec => (
                                             <li key={rec.seriesKey}>
                                                 <button
                                                     type="button"
                                                     onClick={() => onPlayFromSeries?.(rec, 0)}
-                                                    className="flex w-full gap-3 rounded-xl p-2 text-left transition-colors hover:bg-white/[0.06]"
+                                                    className="flex w-full gap-3 rounded-xl border border-transparent bg-black/25 p-2 text-left transition-colors hover:border-white/10 hover:bg-white/[0.06]"
                                                 >
                                                     <div className="relative h-[4.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-lg bg-black/30">
                                                         {(rec._firstEp?.posterUrl || rec.posterUrl) ? (
@@ -299,10 +333,10 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                             </li>
                                         ))}
                                     </ul>
-                                ) : (
-                                    <p className="mt-6 px-1 pb-4 text-center text-[12px] text-white/30">Nothing else to suggest right now.</p>
-                                )}
-                            </div>
+                                </div>
+                            ) : (
+                                <p className="mt-6 px-1 pb-4 text-center text-[12px] text-white/30">Nothing else to suggest right now.</p>
+                            )}
                         </div>
                     </aside>
                 </div>
@@ -318,6 +352,7 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
     const [detail, setDetail] = useState(null)
     const [detailBusy, setDetailBusy] = useState(false)
     const [descExpanded, setDescExpanded] = useState(false)
+    const [storyboardFailed, setStoryboardFailed] = useState(false)
 
     useEffect(() => {
         if (!series) return
@@ -349,12 +384,20 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
         }
     }, [onClose])
 
+    useEffect(() => {
+        setStoryboardFailed(false)
+    }, [series?.seriesKey])
+
     if (!series) return null
 
     const coverImg = detail?.coverUrl || series.posterUrl
     const description = detail?.description ? String(detail.description).replace(/<[^>]*>/g, '') : ''
     const genres = detail?.genres || []
     const episodes = series.episodes || []
+    const hentaiSlug = slugFromItem(detail) || slugFromItem(episodes[0] || series)
+    const storyboardBg = hentaiSlug ? `${HENTAI_OCEAN_SITE}/storyboard/${encodeURIComponent(hentaiSlug)}.webp` : ''
+    const usingStoryboardBg = Boolean(storyboardBg && !storyboardFailed)
+    const heroBackground = usingStoryboardBg ? storyboardBg : coverImg
 
     const node = (
         <div
@@ -368,17 +411,24 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                 className="relative flex max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] w-full min-w-0 max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl animate-[slideUp_0.3s_ease-out] sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:rounded-2xl"
                 onClick={e => e.stopPropagation()}
             >
-                {/* Hero with blurred poster background */}
+                {/* Hero with storyboard background */}
                 <div className="relative shrink-0">
-                    {coverImg && (
+                    {heroBackground && (
                         <>
                             <div className="absolute inset-0 overflow-hidden">
-                                <img src={coverImg} alt="" className="w-full h-full object-cover scale-110 blur-2xl opacity-60" />
+                                <img
+                                    src={heroBackground}
+                                    alt=""
+                                    onError={() => {
+                                        if (usingStoryboardBg) setStoryboardFailed(true)
+                                    }}
+                                    className="w-full h-full object-cover opacity-65"
+                                />
                             </div>
                             <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white" />
                         </>
                     )}
-                    {!coverImg && <div className="absolute inset-0 bg-gradient-to-b from-[#1d1d1f] to-white" />}
+                    {!heroBackground && <div className="absolute inset-0 bg-gradient-to-b from-[#1d1d1f] to-white" />}
 
                     <button
                         type="button"

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { MangaReadingShelf } from '../../components/lifesync/MangaReadingRail'
@@ -58,6 +58,78 @@ const ORIGINAL_LANG_OPTIONS = [
     { value: 'zh-hk', label: 'Chinese (HK)' },
     { value: 'en', label: 'English' },
 ]
+
+/** Manga District — `publication-genre/{slug}/` (type row). */
+const MD_TYPE_OPTIONS = [
+    { slug: 'webtoons', label: 'Webtoons' },
+    { slug: 'manhwa', label: 'Manhwa' },
+    { slug: 'manhua', label: 'Manhua' },
+    { slug: 'uncensored', label: 'Uncensored' },
+    { slug: 'doujinshi', label: 'Doujinshi' },
+    { slug: 'one-shot', label: 'One shot' },
+    { slug: 'full-color', label: 'Full color' },
+    { slug: 'based-on-another-work', label: 'Based on another work' },
+]
+
+/** Manga District browse / sort (maps to `m_orderby` on the server). */
+const MD_BROWSE_OPTIONS = [
+    { id: 'latest-updates', label: 'Latest updates' },
+    { id: 'hot', label: 'Hot' },
+    { id: 'new-releases', label: 'New releases' },
+    { id: 'all-time-views', label: 'All time views' },
+    { id: 'name', label: 'Name' },
+    { id: 'random', label: 'Random' },
+    { id: 'ongoing', label: 'Ongoing' },
+    { id: 'completed', label: 'Completed' },
+]
+
+const MD_TYPE_SLUG_SET = new Set(MD_TYPE_OPTIONS.map(t => t.slug))
+
+/** Extra genre slugs for `genre[]` (same paths as site; excludes type row to avoid duplicate chips). */
+const MD_FILTER_SLUG_LIST = [
+    '3d', 'japanese-webtoons', 'comics', 'animation', '3d-anime', 'uncensored-anime', 'adapted-to-anime', 'action', 'comedy', 'mystery',
+    'shoujo', 'school-life', 'seinen', 'aliens', 'crime', 'detectives', 'shounen', 'supernatural', 'thriller', 'crossdressing', 'ecchi',
+    'fantasy', 'josei', 'light-novels', 'mature-romance', 'monsters', 'music', 'sci-fi', 'zombies', 'gyaru', 'adventure', 'animal-characteristics',
+    'cohabitation', 'cooking', 'coworkers', 'delinquents', 'bl', 'bl-uncensored', 'borderline-h', 'fetish', 'ghosts', 'gender-bender', 'gl',
+    'explicit-sex', 'harem', 'historical', 'demons', 'horror', 'isekai', 'mafia', 'magic', 'magical-girl', 'ninja', 'nudity', 'martial-arts',
+    'reincarnation', 'medical', 'mecha', 'military', 'monster-girls', 'reverse-harem', 'salaryman', 'samurai', 'sexual-abuse', 'sexual-content',
+    'shoujo-ai', 'shounen-ai', 'smut', 'siblings', 'incest', 'transfer-students', 'vampires', 'violence', 'virtual-reality', 'web-novels',
+    'work-life', 'sports', 'summoned-into-another-world', 'superheroes', 'survival', 'time-travel', 'person-in-a-strange-world', 'police',
+    'yaoi', 'yuri', 'slice-of-life', 'psychological', 'drama', 'romance', 'ai-art', 'collection-of-stories', 'hentai-anime', 'parody-anime',
+    'western',
+].filter(s => !MD_TYPE_SLUG_SET.has(s))
+
+const MD_FILTER_LABEL_OVERRIDES = {
+    '3d': '3D',
+    'sci-fi': 'Sci Fi',
+    bl: 'BL',
+    gl: 'GL',
+    yaoi: 'Yaoi',
+    yuri: 'Yuri',
+    'shoujo-ai': 'Shoujo-ai',
+    'shounen-ai': 'Shounen-ai',
+}
+
+function mdFilterLabel(slug) {
+    if (MD_FILTER_LABEL_OVERRIDES[slug]) return MD_FILTER_LABEL_OVERRIDES[slug]
+    return slug
+        .split('-')
+        .map(w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : ''))
+        .join(' ')
+}
+
+const MD_FILTER_OPTIONS = [...MD_FILTER_SLUG_LIST]
+    .sort((a, b) => mdFilterLabel(a).localeCompare(mdFilterLabel(b)))
+    .map(slug => ({ slug, label: mdFilterLabel(slug) }))
+
+function buildMangaDistrictListQuery(section, genreType, genreFilter, browseId) {
+    const q = new URLSearchParams()
+    q.set('section', section || 'latest')
+    if (genreType) q.set('genre', genreType)
+    if (genreFilter) q.set('filterGenre', genreFilter)
+    if (browseId && browseId !== 'latest-updates') q.set('orderBy', browseId)
+    return q.toString()
+}
 
 /** MangaDex personal list — aligned with `client/src/pages/MangaPage.jsx` READING_STATUSES. */
 const MANGADEX_READING_STATUSES = [
@@ -379,7 +451,10 @@ function MangaReader({ manga, chapter, sortedChapters, chapterIndex, onClose, on
     const [pack, setPack] = useState(null)
     const [loadErr, setLoadErr] = useState('')
     const [loading, setLoading] = useState(true)
-    const [dataSaver, setDataSaver] = useState(false)
+    const [chapterReadProgress, setChapterReadProgress] = useState(0)
+    const scrollRef = useRef(null)
+    const pagesInnerRef = useRef(null)
+    const scrollRafRef = useRef(null)
 
     useEffect(() => {
         if (!onReportProgress || !manga?.id || !chapter?.id) return undefined
@@ -413,11 +488,51 @@ function MangaReader({ manga, chapter, sortedChapters, chapterIndex, onClose, on
         }
     }, [chapter.id, manga.id, manga.source])
 
-    const urls = useMemo(() => {
-        if (!pack) return []
-        if (dataSaver && pack.dataSaver?.length) return pack.dataSaver
-        return pack.pages || []
-    }, [pack, dataSaver])
+    useLayoutEffect(() => {
+        const el = scrollRef.current
+        if (el) el.scrollTop = 0
+        setChapterReadProgress(0)
+    }, [chapter.id])
+
+    const updateScrollProgress = useCallback(() => {
+        const el = scrollRef.current
+        if (!el) return
+        const { scrollTop, scrollHeight, clientHeight } = el
+        const max = scrollHeight - clientHeight
+        const p = max <= 0 ? 1 : Math.min(1, Math.max(0, scrollTop / max))
+        setChapterReadProgress(p)
+    }, [])
+
+    const onReaderScroll = useCallback(() => {
+        if (scrollRafRef.current != null) return
+        scrollRafRef.current = requestAnimationFrame(() => {
+            scrollRafRef.current = null
+            updateScrollProgress()
+        })
+    }, [updateScrollProgress])
+
+    useEffect(
+        () => () => {
+            if (scrollRafRef.current != null) cancelAnimationFrame(scrollRafRef.current)
+        },
+        []
+    )
+
+    const urls = useMemo(() => (pack?.pages?.length ? pack.pages : []), [pack])
+
+    useEffect(() => {
+        if (loading) return
+        const t = requestAnimationFrame(() => updateScrollProgress())
+        return () => cancelAnimationFrame(t)
+    }, [loading, urls.length, chapter.id, updateScrollProgress])
+
+    useEffect(() => {
+        const inner = pagesInnerRef.current
+        if (!inner || loading) return
+        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => updateScrollProgress()) : null
+        ro?.observe(inner)
+        return () => ro?.disconnect()
+    }, [loading, urls.length, chapter.id, updateScrollProgress])
 
     const idx =
         typeof chapterIndex === 'number' && chapterIndex >= 0
@@ -440,15 +555,6 @@ function MangaReader({ manga, chapter, sortedChapters, chapterIndex, onClose, on
                     <p className="truncate text-[10px] text-[#a1a1a6]">{formatChapterLabel(chapter)}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                    <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-[#a1a1a6]">
-                        <input
-                            type="checkbox"
-                            checked={dataSaver}
-                            onChange={e => setDataSaver(e.target.checked)}
-                            className="rounded border-[#3a3a3c] bg-[#1c1c1e]"
-                        />
-                        Smaller images
-                    </label>
                     <button
                         type="button"
                         disabled={!prevCh}
@@ -470,13 +576,17 @@ function MangaReader({ manga, chapter, sortedChapters, chapterIndex, onClose, on
                 </div>
             </header>
 
-            <div className="min-h-0 flex-1 overflow-y-auto">
+            <div
+                ref={scrollRef}
+                onScroll={onReaderScroll}
+                className="min-h-0 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
                 {loading && <p className="p-8 text-center text-[13px] text-[#86868b]">Loading pages…</p>}
                 {loadErr && !loading && <p className="p-8 text-center text-[13px] text-red-400">{loadErr}</p>}
                 {!loading && !loadErr && urls.length === 0 && (
                     <p className="p-8 text-center text-[13px] text-[#86868b]">No page images returned for this chapter.</p>
                 )}
-                <div className="mx-auto max-w-3xl pb-8 pt-2">
+                <div ref={pagesInnerRef} className="mx-auto max-w-3xl pb-8 pt-2">
                     {urls.map((src, i) => (
                         <img
                             key={`${chapter.id}-${i}`}
@@ -485,11 +595,38 @@ function MangaReader({ manga, chapter, sortedChapters, chapterIndex, onClose, on
                             className="w-full bg-black"
                             loading={i < 3 ? 'eager' : 'lazy'}
                             decoding="async"
+                            onLoad={() => {
+                                requestAnimationFrame(() => updateScrollProgress())
+                            }}
                             {...mangadexImageProps(src)}
                         />
                     ))}
                 </div>
             </div>
+
+            <footer className="shrink-0 border-t border-white/10 bg-black/85 px-3 py-2 backdrop-blur-xl">
+                <div className="mx-auto max-w-3xl">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                        <div
+                            className="h-full rounded-full bg-[#C6FF00] transition-[width] duration-100 ease-out"
+                            style={{ width: `${Math.round(chapterReadProgress * 1000) / 10}%` }}
+                            role="progressbar"
+                            aria-valuenow={Math.round(chapterReadProgress * 100)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label="Scroll position in this chapter"
+                        />
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-[#86868b]">
+                        <span>
+                            {urls.length > 0 ? `${urls.length} page${urls.length === 1 ? '' : 's'}` : loading ? '…' : '—'}
+                        </span>
+                        <span className="tabular-nums text-[#a1a1a6]">
+                            {Math.round(chapterReadProgress * 100)}% through chapter
+                        </span>
+                    </div>
+                </div>
+            </footer>
         </div>,
         document.body
     )
@@ -589,7 +726,11 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
     const src = manga.source || source
     const mergedManga = { ...d, id: d.id || manga.id, source: src }
     const tagList = d.tags?.length ? d.tags : manga.tags
-    const coverImg = d.coverUrl || d.backgroundImageUrl || manga.coverUrl
+    const coverImg = d.coverUrl || manga.coverUrl
+    const heroBannerUrl = d.backgroundImageUrl || manga.backgroundImageUrl || null
+    const heroBackdropUrl = heroBannerUrl || coverImg
+    const blurDetailHero =
+        src !== 'mangadistrict' && !heroBannerUrl && Boolean(coverImg)
     const rating = d.ratings?.average ?? dexStats?.rating?.average ?? d.ratingAverage
     const ratingNum = rating != null ? Number(rating) : null
     const showRating = ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0
@@ -607,15 +748,30 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
             >
                 {/* Hero section with blurred background + cover art */}
                 <div className="relative shrink-0">
-                    {coverImg && (
+                    {heroBackdropUrl && (
                         <>
                             <div className="absolute inset-0 overflow-hidden">
-                                <img src={coverImg} alt="" className="w-full h-full object-cover scale-110 blur-2xl opacity-60" {...mangadexImageProps(coverImg)} />
+                                <img
+                                    src={heroBackdropUrl}
+                                    alt=""
+                                    className={
+                                        blurDetailHero
+                                            ? 'h-full w-full scale-110 object-cover opacity-60 blur-2xl'
+                                            : 'h-full min-h-[11rem] w-full object-cover object-center sm:min-h-[13rem]'
+                                    }
+                                    {...mangadexImageProps(heroBackdropUrl)}
+                                />
                             </div>
-                            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white" />
+                            <div
+                                className={
+                                    blurDetailHero
+                                        ? 'absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white'
+                                        : 'absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-white'
+                                }
+                            />
                         </>
                     )}
-                    {!coverImg && <div className="absolute inset-0 bg-gradient-to-b from-[#1d1d1f] to-white" />}
+                    {!heroBackdropUrl && <div className="absolute inset-0 bg-gradient-to-b from-[#1d1d1f] to-white" />}
 
                     {/* Close button */}
                     <button
@@ -882,12 +1038,6 @@ const DEX_TABS = [
     { id: 'recent', label: 'Recent' },
 ]
 
-const NSFW_TABS = [
-    { id: 'latest', label: 'Latest' },
-    { id: 'directory', label: 'Directory' },
-    { id: 'search', label: 'Search' },
-]
-
 export default function LifeSyncManga() {
     const location = useLocation()
     const navigate = useNavigate()
@@ -997,7 +1147,6 @@ export default function LifeSyncManga() {
     const [hfStatus, setHfStatus] = useState(null)
     const [hfLatest, setHfLatest] = useState(null)
     const [hfPage, setHfPage] = useState(1)
-    const [hfAll, setHfAll] = useState([])
     const [hfFilter, setHfFilter] = useState('')
     const [hfSearchResults, setHfSearchResults] = useState([])
     const [hfSearchBusy, setHfSearchBusy] = useState(false)
@@ -1007,10 +1156,19 @@ export default function LifeSyncManga() {
     const [mdLatest, setMdLatest] = useState(null)
     const [mdPage, setMdPage] = useState(1)
     const [mdSection, setMdSection] = useState('latest')
-    const [mdAll, setMdAll] = useState([])
     const [mdFilter, setMdFilter] = useState('')
     const [mdSearchResults, setMdSearchResults] = useState([])
     const [mdSearchBusy, setMdSearchBusy] = useState(false)
+    const [mdFiltersOpen, setMdFiltersOpen] = useState(false)
+    const [mdTypeSlug, setMdTypeSlug] = useState('')
+    const [mdFilterGenre, setMdFilterGenre] = useState('')
+    const [mdBrowse, setMdBrowse] = useState('latest-updates')
+
+    const mdFilterBarCount =
+        (mdSection !== 'latest' ? 1 : 0) +
+        (mdTypeSlug ? 1 : 0) +
+        (mdFilterGenre ? 1 : 0) +
+        (mdBrowse !== 'latest-updates' ? 1 : 0)
 
     const loadReading = useCallback(async () => {
         setReadingLoadBusy(true)
@@ -1470,35 +1628,25 @@ export default function LifeSyncManga() {
         }
     }, [])
 
-    const loadHfAll = useCallback(async () => {
-        setBusy(true)
-        setError('')
-        try {
-            const d = await lifesyncFetch('/api/manga/hentaifox/all')
-            setHfAll(d?.data || d || [])
-        } catch (e) {
-            setError(e.message || 'Failed to load directory')
-        } finally {
-            setBusy(false)
-        }
-    }, [])
+    useEffect(() => {
+        if (source !== 'hentaifox') return
+        if (!hfLatest) loadHfLatest(1)
+    }, [source, hfLatest, loadHfLatest])
 
     useEffect(() => {
         if (source !== 'hentaifox') return
-        if (tab === 'latest' && !hfLatest) loadHfLatest(1)
-        if (tab === 'directory' && hfAll.length === 0) loadHfAll()
-    }, [source, tab, hfLatest, hfAll.length, loadHfLatest, loadHfAll])
-
-    useEffect(() => {
-        if (source !== 'hentaifox' || tab !== 'search') return
         const q = hfFilter.trim()
         if (!q) {
             setHfSearchResults([])
+            setHfSearchBusy(false)
             return
         }
+        setHfSearchBusy(true)
         let cancelled = false
+        let fetchStarted = false
         const t = setTimeout(async () => {
-            setHfSearchBusy(true)
+            if (cancelled) return
+            fetchStarted = true
             try {
                 const d = await lifesyncFetch(`/api/manga/hentaifox/search?q=${encodeURIComponent(q)}`)
                 if (!cancelled) setHfSearchResults(d?.data || d || [])
@@ -1511,15 +1659,17 @@ export default function LifeSyncManga() {
         return () => {
             cancelled = true
             clearTimeout(t)
+            if (!fetchStarted) setHfSearchBusy(false)
         }
-    }, [source, tab, hfFilter])
+    }, [source, hfFilter])
 
     // Manga District loaders
     const loadMdLatest = useCallback(async (page = 1) => {
         setBusy(true)
         setError('')
         try {
-            const d = await lifesyncFetch(`/api/manga/mangadistrict/latest/${page}?section=${mdSection}`)
+            const qs = buildMangaDistrictListQuery(mdSection, mdTypeSlug, mdFilterGenre, mdBrowse)
+            const d = await lifesyncFetch(`/api/manga/mangadistrict/latest/${page}?${qs}`)
             setMdLatest(d)
             setMdPage(page)
         } catch (e) {
@@ -1527,34 +1677,37 @@ export default function LifeSyncManga() {
         } finally {
             setBusy(false)
         }
-    }, [mdSection])
+    }, [mdSection, mdTypeSlug, mdFilterGenre, mdBrowse])
 
-    const loadMdAll = useCallback(async () => {
-        setBusy(true)
-        setError('')
-        try {
-            const d = await lifesyncFetch(`/api/manga/mangadistrict/all?section=${mdSection}`)
-            setMdAll(d?.data || d || [])
-        } catch (e) {
-            setError(e.message || 'Failed to load directory')
-        } finally {
-            setBusy(false)
+    const refreshMangaDistrict = useCallback(async () => {
+        const q = mdFilter.trim()
+        if (q) {
+            setMdSearchBusy(true)
+            try {
+                const d = await lifesyncFetch(`/api/manga/mangadistrict/search?q=${encodeURIComponent(q)}`)
+                setMdSearchResults(d?.data || d || [])
+            } catch {
+                setMdSearchResults([])
+            } finally {
+                setMdSearchBusy(false)
+            }
+        } else {
+            const p = Math.max(1, parseInt(String(mdLatest?.currentPage ?? mdPage), 10) || 1)
+            await loadMdLatest(p)
         }
-    }, [mdSection])
+    }, [mdFilter, mdLatest?.currentPage, mdPage, loadMdLatest])
 
     useEffect(() => {
         setMdLatest(null)
-        setMdAll([])
-    }, [mdSection])
+    }, [mdSection, mdTypeSlug, mdFilterGenre, mdBrowse])
 
     useEffect(() => {
         if (source !== 'mangadistrict') return
-        if (tab === 'latest' && !mdLatest) loadMdLatest(1)
-        if (tab === 'directory' && mdAll.length === 0) loadMdAll()
-    }, [source, tab, mdLatest, mdAll.length, loadMdLatest, loadMdAll])
+        if (!mdFilter.trim() && !mdLatest) loadMdLatest(1)
+    }, [source, mdFilter, mdLatest, loadMdLatest])
 
     useEffect(() => {
-        if (source !== 'mangadistrict' || tab !== 'search') return
+        if (source !== 'mangadistrict') return
         const q = mdFilter.trim()
         if (!q) {
             setMdSearchResults([])
@@ -1576,7 +1729,7 @@ export default function LifeSyncManga() {
             cancelled = true
             clearTimeout(t)
         }
-    }, [source, tab, mdFilter])
+    }, [source, mdFilter])
 
     function handleDexSearch(e) {
         e.preventDefault()
@@ -1633,6 +1786,8 @@ export default function LifeSyncManga() {
         setReader(null)
         setTab(s === 'mangadex' ? 'popular' : 'latest')
         setError('')
+        setDexFiltersOpen(false)
+        setMdFiltersOpen(false)
         if (s !== 'mangadex') {
             setCommittedSearchQuery('')
             setSearchResults([])
@@ -1721,17 +1876,15 @@ export default function LifeSyncManga() {
             if (tab === 'search') return searchResults
         }
         if (source === 'hentaifox') {
-            if (tab === 'latest') return hfLatest?.data || []
-            if (tab === 'directory') return hfAll
-            if (tab === 'search') return hfSearchResults
+            if (hfFilter.trim()) return hfSearchResults
+            return hfLatest?.data || []
         }
         if (source === 'mangadistrict') {
-            if (tab === 'latest') return mdLatest?.data || []
-            if (tab === 'directory') return mdAll
-            if (tab === 'search') return mdSearchResults
+            if (mdFilter.trim()) return mdSearchResults
+            return mdLatest?.data || []
         }
         return []
-    }, [source, tab, popular, recent, searchResults, dexFollows, dexLibraryList, hfLatest, hfAll, hfSearchResults, mdLatest, mdAll, mdSearchResults])
+    }, [source, tab, popular, recent, searchResults, dexFollows, dexLibraryList, hfLatest, hfFilter, hfSearchResults, mdLatest, mdFilter, mdSearchResults])
 
     const dexTabs = useMemo(() => {
         const t = [...DEX_TABS, { id: 'library', label: 'Library' }]
@@ -1740,7 +1893,7 @@ export default function LifeSyncManga() {
         return t
     }, [dexAuthStatus?.connected, committedSearchQuery])
 
-    const tabs = source === 'mangadex' ? dexTabs : NSFW_TABS
+    const tabs = source === 'mangadex' ? dexTabs : []
 
     if (!isLifeSyncConnected) {
         return (
@@ -1800,12 +1953,8 @@ export default function LifeSyncManga() {
                                   ? void loadDexLibrary(libraryListStatus)
                                   : loadDex()
                             : source === 'hentaifox'
-                              ? tab === 'latest'
-                                  ? loadHfLatest(hfCurPage)
-                                  : loadHfAll()
-                              : tab === 'latest'
-                                ? loadMdLatest(mdCurPage)
-                                : loadMdAll()
+                              ? loadHfLatest(hfCurPage)
+                              : void refreshMangaDistrict()
                     }
                     disabled={
                         busy ||
@@ -1862,19 +2011,7 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {/* Manga District section sub-filter */}
-            {source === 'mangadistrict' && tab !== 'search' && (
-                <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] font-semibold text-[#86868b] uppercase tracking-wider">Section</span>
-                    {['latest', 'censored', 'uncensored'].map(s => (
-                        <button key={s} type="button" onClick={() => setMdSection(s)} className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold capitalize transition-all ${mdSection === s ? 'bg-[#C6FF00] text-[#1d1d1f] shadow-sm' : 'bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f]'}`}>
-                            {s === 'latest' ? 'All Latest' : s}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* Search bar */}
+            {/* Search & filters toolbar (shared layout across sources) */}
             {source === 'mangadex' && (
                 <div className="space-y-3">
                     <form onSubmit={handleDexSearch} className="flex flex-wrap gap-2 items-stretch">
@@ -2006,22 +2143,167 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {source === 'hentaifox' && tab === 'search' && (
-                <input type="search" value={hfFilter} onChange={e => setHfFilter(e.target.value)} placeholder="Search HentaiFox..." className="w-full px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all" />
+            {source === 'hentaifox' && (
+                <div className="space-y-3">
+                    <form
+                        className="flex flex-wrap gap-2 items-stretch"
+                        onSubmit={e => {
+                            e.preventDefault()
+                        }}
+                    >
+                        <input
+                            type="search"
+                            value={hfFilter}
+                            onChange={e => setHfFilter(e.target.value)}
+                            placeholder="Search HentaiFox..."
+                            className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
+                        />
+                        <button
+                            type="submit"
+                            disabled={hfSearchBusy && Boolean(hfFilter.trim())}
+                            className="shrink-0 bg-[#1d1d1f] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-black transition-colors disabled:opacity-50"
+                        >
+                            {hfSearchBusy && hfFilter.trim() ? 'Searching...' : 'Search'}
+                        </button>
+                    </form>
+                </div>
             )}
 
-            {source === 'mangadistrict' && tab === 'search' && (
-                <input type="search" value={mdFilter} onChange={e => setMdFilter(e.target.value)} placeholder="Search Manga District..." className="w-full px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all" />
+            {source === 'mangadistrict' && (
+                <div className="space-y-3">
+                    <form
+                        className="flex flex-wrap gap-2 items-stretch"
+                        onSubmit={e => {
+                            e.preventDefault()
+                        }}
+                    >
+                        <input
+                            type="search"
+                            value={mdFilter}
+                            onChange={e => setMdFilter(e.target.value)}
+                            placeholder="Search Manga District..."
+                            className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setMdFiltersOpen(v => !v)}
+                            aria-expanded={mdFiltersOpen}
+                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#ebebed]"
+                        >
+                            Filters
+                            {mdFilterBarCount > 0 && (
+                                <span className="rounded-full bg-[#C6FF00]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">{mdFilterBarCount}</span>
+                            )}
+                            <svg className={`h-3.5 w-3.5 text-[#86868b] transition-transform ${mdFiltersOpen ? '-rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={mdSearchBusy && Boolean(mdFilter.trim())}
+                            className="shrink-0 bg-[#1d1d1f] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-black transition-colors disabled:opacity-50"
+                        >
+                            {mdSearchBusy && mdFilter.trim() ? 'Searching...' : 'Search'}
+                        </button>
+                    </form>
+                    {mdFiltersOpen && (
+                        <div className="space-y-4 border-t border-[#f0f0f0] pt-3">
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Section</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {['latest', 'censored', 'uncensored'].map(s => (
+                                        <button
+                                            key={s}
+                                            type="button"
+                                            onClick={() => setMdSection(s)}
+                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
+                                                mdSection === s
+                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                            }`}
+                                        >
+                                            {s === 'latest' ? 'All Latest' : s}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-[11px] text-[#86868b]">Section applies when no type is selected (latest releases feed). Censored still filters out uncensored rows from listings.</p>
+                            </div>
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Type of manga</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {MD_TYPE_OPTIONS.map(({ slug, label }) => (
+                                        <button
+                                            key={slug}
+                                            type="button"
+                                            onClick={() => setMdTypeSlug(prev => (prev === slug ? '' : slug))}
+                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                mdTypeSlug === slug
+                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Browse</p>
+                                <div className="flex flex-wrap gap-1">
+                                    {MD_BROWSE_OPTIONS.map(({ id, label }) => (
+                                        <button
+                                            key={id}
+                                            type="button"
+                                            onClick={() => setMdBrowse(id)}
+                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                mdBrowse === id
+                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                {mdBrowse === 'random' && (
+                                    <p className="text-[11px] text-[#86868b]">Random shuffles the current page (Latest) or merged batch (Directory). Refresh for a new mix.</p>
+                                )}
+                            </div>
+                            <div className="space-y-1.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Filters</p>
+                                <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                                    {MD_FILTER_OPTIONS.map(({ slug, label }) => (
+                                        <button
+                                            key={slug}
+                                            type="button"
+                                            onClick={() => setMdFilterGenre(prev => (prev === slug ? '' : slug))}
+                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                mdFilterGenre === slug
+                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-[11px] text-[#86868b]">{"With a type selected, the tag narrows via the site's genre filter. With no type, the tag becomes the main browse path."}</p>
+                            </div>
+                        </div>
+                    )}
+                </div>
             )}
 
-            {/* Content tabs */}
-            <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {tabs.map(t => (
-                    <button key={t.id} type="button" onClick={() => setTab(t.id)} className={`px-4 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap transition-all ${tab === t.id ? 'bg-[#C6FF00] text-[#1d1d1f] shadow-sm' : 'bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f]'}`}>
-                        {t.label}
-                    </button>
-                ))}
-            </div>
+            {/* Content tabs (MangaDex only; HentaiFox & Manga District use search + filters without tabs) */}
+            {tabs.length > 0 && (
+                <div className="flex gap-1.5 overflow-x-auto pb-1">
+                    {tabs.map(t => (
+                        <button key={t.id} type="button" onClick={() => setTab(t.id)} className={`px-4 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap transition-all ${tab === t.id ? 'bg-[#C6FF00] text-[#1d1d1f] shadow-sm' : 'bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f]'}`}>
+                            {t.label}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {source === 'mangadex' && tab === 'library' && (
                 <div className="space-y-1.5">
@@ -2100,7 +2382,7 @@ export default function LifeSyncManga() {
             )}
 
             {/* Pagination for HentaiFox/MangaDistrict latest */}
-            {source === 'hentaifox' && tab === 'latest' && hfLatest && (
+            {source === 'hentaifox' && !hfFilter.trim() && hfLatest && (
                 <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] text-[#86868b]">Page {hfCurPage} of {hfLastPage}</p>
                     <div className="flex gap-2">
@@ -2110,7 +2392,7 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {source === 'mangadistrict' && tab === 'latest' && mdLatest && (
+            {source === 'mangadistrict' && !mdFilter.trim() && mdLatest && (
                 <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] text-[#86868b]">Page {mdCurPage} of {mdLastPage}</p>
                     <div className="flex gap-2">
@@ -2179,8 +2461,12 @@ export default function LifeSyncManga() {
               !(source === 'mangadex' && tab === 'library' && dexLibraryBusy) ? (
                 <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm px-6 py-10 text-center">
                     <p className="text-[13px] text-[#86868b]">
-                        {(source === 'hentaifox' || source === 'mangadistrict') && tab === 'search' && !(source === 'hentaifox' ? hfFilter : mdFilter).trim() ? 'Type a query to search.'
-                            : (source === 'hentaifox' || source === 'mangadistrict') && tab === 'search' && (source === 'hentaifox' ? hfSearchBusy : mdSearchBusy) ? 'Searching...'
+                        {source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy ? 'Searching...'
+                            : source === 'mangadistrict' && mdFilter.trim() && !mdSearchBusy && mdSearchResults.length === 0
+                              ? 'No titles matched your search.'
+                            : source === 'hentaifox' && hfFilter.trim() && hfSearchBusy ? 'Searching...'
+                            : source === 'hentaifox' && hfFilter.trim() && !hfSearchBusy && hfSearchResults.length === 0
+                              ? 'No titles matched your search.'
                             : source === 'mangadex' && tab === 'search' && committedSearchQuery.trim() && searching ? 'Searching…'
                             : source === 'mangadex' && tab === 'search' && committedSearchQuery.trim() && !searching ? 'No titles matched your search.'
                             : source === 'mangadex' && tab === 'library' && dexAuthStatus?.connected
