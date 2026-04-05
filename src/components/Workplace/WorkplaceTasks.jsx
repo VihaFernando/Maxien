@@ -1,16 +1,18 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
-import { FaPlus, FaEdit, FaTrash, FaSearch, FaBars, FaThLarge, FaEllipsisH, FaCalendarAlt, FaTags } from "react-icons/fa"
+import { FaPlus, FaEdit, FaTrash, FaSearch, FaBars, FaThLarge, FaEllipsisH, FaCalendarAlt, FaTags, FaBuilding } from "react-icons/fa"
 import { createWorkplaceTask, updateWorkplaceTask, deleteWorkplaceTask } from "../../lib/workplaces"
-import { getUsersByIds, getDisplayName, getUsername } from "../../lib/users"
+import { getUsersByIds, getUsername } from "../../lib/users"
 
 export default function WorkplaceTasks({
     tasks,
     types,
     projects,
+    departments,
     members,
     user,
     workplace,
+    isAdmin = false,
     loading,
     onRefresh,
     error,
@@ -23,8 +25,9 @@ export default function WorkplaceTasks({
     const [editingId, setEditingId] = useState(null)
     const [userMap, setUserMap] = useState({})
     const [searchTerm, setSearchTerm] = useState("")
-    const [filterStatus, setFilterStatus] = useState("")
-    const [filterPriority, setFilterPriority] = useState("")
+    const [filterStatus] = useState("")
+    const [filterPriority] = useState("")
+    const [filterAssigned, setFilterAssigned] = useState("all")
     const [assigneeDropdownOpen, setAssigneeDropdownOpen] = useState(false)
     const [viewMode, setViewMode] = useState("board")
     const [actionMenu, setActionMenu] = useState(null)
@@ -33,6 +36,7 @@ export default function WorkplaceTasks({
         description: "",
         type_id: "",
         project_id: "",
+        department_id: "",
         due_date: "",
         due_time: "",
         priority: "Medium",
@@ -40,7 +44,33 @@ export default function WorkplaceTasks({
         assigned_to: [],
     })
 
+    const acceptedMembers = useMemo(() => members.filter((m) => m.status === "accepted"), [members])
     const memberIds = useMemo(() => members.map((m) => m.user_id), [members])
+    const departmentMap = useMemo(() => {
+        return (departments || []).reduce((acc, d) => {
+            acc[d.id] = d
+            return acc
+        }, {})
+    }, [departments])
+
+    const availableAssignees = useMemo(() => {
+        if (!newTask.department_id) return acceptedMembers
+        const department = departmentMap[newTask.department_id]
+        if (!department) return acceptedMembers
+
+        const allowed = new Set(department.member_user_ids || [])
+        return acceptedMembers.filter((m) => allowed.has(m.user_id))
+    }, [acceptedMembers, departmentMap, newTask.department_id])
+
+    useEffect(() => {
+        const allowedIds = new Set(availableAssignees.map((m) => m.user_id))
+        setNewTask((prev) => {
+            if (!prev.assigned_to?.length) return prev
+            const nextAssigned = prev.assigned_to.filter((id) => allowedIds.has(id))
+            if (nextAssigned.length === prev.assigned_to.length) return prev
+            return { ...prev, assigned_to: nextAssigned }
+        })
+    }, [availableAssignees])
 
     useEffect(() => {
         const loadUsers = async () => {
@@ -48,7 +78,7 @@ export default function WorkplaceTasks({
             try {
                 const users = await getUsersByIds(memberIds)
                 setUserMap(users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {}))
-            } catch (e) {
+            } catch {
                 // ignore
             }
         }
@@ -75,16 +105,12 @@ export default function WorkplaceTasks({
                     ...prev,
                     ...users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {}),
                 }))
-            } catch (e) {
+            } catch {
                 // ignore
             }
         }
         loadAssignedUsers()
     }, [tasks])
-
-    const assignedUsers = useMemo(() => {
-        return (newTask.assigned_to || []).map((id) => userMap[id]).filter(Boolean)
-    }, [newTask.assigned_to, userMap])
 
     const filteredTasks = useMemo(() => {
         return tasks.filter((task) => {
@@ -94,9 +120,12 @@ export default function WorkplaceTasks({
                 || task.description?.toLowerCase().includes(query)
             const matchesStatus = filterStatus ? task.status === filterStatus : true
             const matchesPriority = filterPriority ? task.priority === filterPriority : true
-            return matchesSearch && matchesStatus && matchesPriority
+            const isAssignedToMe = task.task_assignees?.some((a) => a.user_id === user?.id)
+            const matchesAssigned = filterAssigned === "assigned" ? isAssignedToMe : true
+
+            return matchesSearch && matchesStatus && matchesPriority && matchesAssigned
         })
-    }, [tasks, searchTerm, filterStatus, filterPriority])
+    }, [tasks, searchTerm, filterStatus, filterPriority, filterAssigned, user?.id])
 
     const boardColumns = useMemo(() => {
         const statuses = [
@@ -126,7 +155,7 @@ export default function WorkplaceTasks({
     )
 
     const getTypeName = (typeId) => types.find((t) => t.id === typeId)?.name || "No type"
-    const getProjectName = (projectId) => projects.find((p) => p.id === projectId)?.name || "No project"
+    const getDepartment = (departmentId) => departmentMap[departmentId] || null
 
     const formatTaskAssignees = (task) => {
         const ids = task?.task_assignees?.map((a) => a.user_id) || []
@@ -153,10 +182,13 @@ export default function WorkplaceTasks({
                         description: (newTask.description || "").trim() || null,
                         type_id: newTask.type_id,
                         project_id: newTask.project_id || null,
+                        department_id: newTask.department_id || null,
                         status: newTask.status || "To Do",
                         priority: newTask.priority || "Medium",
                         due_at,
                         assigned_to: newTask.assigned_to || null,
+                        workplace_id: workplace.id,
+                        linked_by: user.id,
                         updated_at: new Date().toISOString(),
                     },
                 })
@@ -171,10 +203,12 @@ export default function WorkplaceTasks({
                     description: (newTask.description || "").trim() || null,
                     type_id: newTask.type_id,
                     project_id: newTask.project_id || null,
+                    department_id: newTask.department_id || null,
                     status: newTask.status || "To Do",
                     priority: newTask.priority || "Medium",
                     due_at,
                     assigned_to: newTask.assigned_to || null,
+                    linked_by: user.id,
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString(),
                 })
@@ -186,6 +220,7 @@ export default function WorkplaceTasks({
                 description: "",
                 type_id: "",
                 project_id: "",
+                department_id: "",
                 due_date: "",
                 due_time: "",
                 priority: "Medium",
@@ -201,9 +236,6 @@ export default function WorkplaceTasks({
             setFormLoading(false)
         }
     }
-
-    const acceptedMembers = members.filter((m) => m.status === "accepted")
-
     const getAssignedNames = (ids) => {
         if (!ids || !Array.isArray(ids)) return []
         return ids
@@ -215,7 +247,34 @@ export default function WorkplaceTasks({
     }
 
     const canEditTask = (task) => {
-        return task.user_id === user.id
+        return task.user_id === user.id || isAdmin
+    }
+
+    const canUpdateTaskStatus = (task) => {
+        if (task.user_id === user.id) return true
+        return task.task_assignees?.some((a) => a.user_id === user.id)
+    }
+
+    const handleStatusChange = async (task, nextStatus) => {
+        if (!canUpdateTaskStatus(task) || !nextStatus || nextStatus === task.status) return
+
+        setError("")
+        setMessage("")
+        try {
+            await updateWorkplaceTask({
+                taskId: task.id,
+                payload: {
+                    status: nextStatus,
+                    workplace_id: workplace.id,
+                    updated_at: new Date().toISOString(),
+                },
+            })
+            setMessage("Task status updated.")
+            await onRefresh()
+            setTimeout(() => setMessage(""), 1500)
+        } catch (e) {
+            setError(e?.message || "Failed to update task status.")
+        }
     }
 
     const handleEditClick = async (task) => {
@@ -232,7 +291,7 @@ export default function WorkplaceTasks({
                     ...prev,
                     ...users.reduce((acc, u) => ({ ...acc, [u.id]: u }), {}),
                 }))
-            } catch (e) {
+            } catch {
                 // ignore
             }
         }
@@ -242,6 +301,7 @@ export default function WorkplaceTasks({
             description: task.description || "",
             type_id: task.type_id,
             project_id: task.project_id || "",
+            department_id: task.department_id || "",
             due_date: dueDate,
             due_time: dueTime,
             priority: task.priority || "Medium",
@@ -259,6 +319,7 @@ export default function WorkplaceTasks({
             description: "",
             type_id: "",
             project_id: "",
+            department_id: "",
             due_date: "",
             due_time: "",
             priority: "Medium",
@@ -313,6 +374,14 @@ export default function WorkplaceTasks({
             <div className="flex flex-wrap gap-2 mb-3">
                 <PriorityBadge priority={task.priority} />
                 <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-[#f5f5f7] text-[#86868b]">{getTypeName(task.type_id)}</span>
+                {task.department && (
+                    <span
+                        className="text-[10px] font-semibold px-2 py-1 rounded-full"
+                        style={{ backgroundColor: `${task.department.color || "#0ea5e9"}20`, color: task.department.color || "#0ea5e9" }}
+                    >
+                        {task.department.name}
+                    </span>
+                )}
             </div>
 
             <div className="flex items-center justify-between mb-3">
@@ -320,7 +389,19 @@ export default function WorkplaceTasks({
                     <FaCalendarAlt className="w-3 h-3" />
                     {task.due_at ? new Date(task.due_at).toLocaleDateString() : "No due date"}
                 </span>
-                <StatusBadge status={task.status} />
+                {canUpdateTaskStatus(task) ? (
+                    <select
+                        value={task.status || "To Do"}
+                        onChange={(e) => handleStatusChange(task, e.target.value)}
+                        className="rounded-full px-2 py-1 text-[10px] font-semibold border border-[#d2d2d7] bg-white"
+                    >
+                        {["To Do", "In Progress", "Done", "Cancelled"].map((status) => (
+                            <option key={status} value={status}>{status}</option>
+                        ))}
+                    </select>
+                ) : (
+                    <StatusBadge status={task.status} />
+                )}
             </div>
 
             {task.task_assignees?.length > 0 && (
@@ -345,11 +426,17 @@ export default function WorkplaceTasks({
 
             {actionMenu === task.id && (
                 <div className="absolute right-0 top-8 z-50 min-w-[152px] overflow-hidden rounded-xl border border-[#d2d2d7]/80 bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => handleEditClick(task)} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">Edit</button>
-                    <button onClick={() => {
-                        handleDeleteTask(task.id)
-                        setActionMenu(null)
-                    }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-red-600 hover:bg-red-50">Delete</button>
+                    {canEditTask(task) ? (
+                        <>
+                            <button onClick={() => handleEditClick(task)} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">Edit</button>
+                            <button onClick={() => {
+                                handleDeleteTask(task.id)
+                                setActionMenu(null)
+                            }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-red-600 hover:bg-red-50">Delete</button>
+                        </>
+                    ) : (
+                        <p className="px-3 py-2 text-[11px] text-[#86868b]">Status can be updated from the card.</p>
+                    )}
                 </div>
             )}
         </div>
@@ -474,9 +561,14 @@ export default function WorkplaceTasks({
                             className="w-full pl-9 pr-4 py-2.5 border border-[#d2d2d7]/50 rounded-xl text-[13px] focus:outline-none focus:ring-1 focus:ring-[#C6FF00]/50"
                         />
                     </div>
-                    <button className="px-4 py-2.5 border border-[#d2d2d7]/50 rounded-xl text-[13px] bg-white hover:bg-[#f5f5f7]">
-                        Filters
-                    </button>
+                    <select
+                        value={filterAssigned}
+                        onChange={(e) => setFilterAssigned(e.target.value)}
+                        className="px-4 py-2.5 border border-[#d2d2d7]/50 rounded-xl text-[13px] bg-white"
+                    >
+                        <option value="all">All visible tasks</option>
+                        <option value="assigned">Assigned to me</option>
+                    </select>
                     <div className="flex items-center gap-1 bg-[#f5f5f7] rounded-lg p-1">
                         <button onClick={() => setViewMode("list")} className={`px-3 py-2 rounded transition-colors text-[13px] font-medium ${viewMode === "list" ? "bg-white text-[#1d1d1f] shadow-sm" : "text-[#86868b] hover:text-[#1d1d1f]"}`} title="List view">
                             List
@@ -542,7 +634,7 @@ export default function WorkplaceTasks({
                             <textarea value={newTask.description} onChange={(e) => setNewTask((v) => ({ ...v, description: e.target.value }))} placeholder="Add details (optional)" rows={3} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px] resize-none" />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Type *</label>
                                 <select value={newTask.type_id} onChange={(e) => setNewTask((v) => ({ ...v, type_id: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]">
@@ -561,9 +653,18 @@ export default function WorkplaceTasks({
                                     ))}
                                 </select>
                             </div>
+                            <div>
+                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Department</label>
+                                <select value={newTask.department_id} onChange={(e) => setNewTask((v) => ({ ...v, department_id: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]">
+                                    <option value="">Optional</option>
+                                    {departments.map((d) => (
+                                        <option key={d.id} value={d.id}>{d.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
                                 <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Priority</label>
                                 <select value={newTask.priority} onChange={(e) => setNewTask((v) => ({ ...v, priority: e.target.value }))} className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]">
@@ -591,10 +692,10 @@ export default function WorkplaceTasks({
 
                                 {assigneeDropdownOpen && (
                                     <div className="absolute top-full left-0 right-0 mt-1 border border-[#d2d2d7]/40 rounded-xl bg-white p-3 space-y-2 max-h-48 overflow-y-auto shadow-lg z-50">
-                                        {acceptedMembers.length === 0 ? (
+                                        {availableAssignees.length === 0 ? (
                                             <p className="text-[13px] text-[#86868b]">No members available</p>
                                         ) : (
-                                            acceptedMembers.map((m) => (
+                                            availableAssignees.map((m) => (
                                                 <label key={m.user_id} className="flex items-center gap-2 cursor-pointer hover:bg-[#f5f5f7] p-2 rounded-lg">
                                                     <input type="checkbox" checked={newTask.assigned_to.includes(m.user_id)} onChange={() => toggleAssignee(m.user_id)} className="w-4 h-4 cursor-pointer" />
                                                     <span className="text-[13px] text-[#1d1d1f]">{getUsername(userMap[m.user_id] || { id: m.user_id })}</span>
@@ -605,6 +706,12 @@ export default function WorkplaceTasks({
                                 )}
 
                                 {newTask.assigned_to.length > 0 && <p className="text-[12px] text-[#86868b] mt-2">Selected: {getAssignedNames(newTask.assigned_to).join(", ")}</p>}
+                                {newTask.department_id && (
+                                    <p className="text-[11px] text-[#86868b] mt-1 inline-flex items-center gap-1.5">
+                                        <FaBuilding className="w-3 h-3" />
+                                        Showing users from {getDepartment(newTask.department_id)?.name || "selected department"}
+                                    </p>
+                                )}
                             </div>
                         </div>
 

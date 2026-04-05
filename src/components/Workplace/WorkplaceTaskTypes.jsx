@@ -75,7 +75,6 @@ export default function WorkplaceTaskTypes({
             description: newType.description.trim() || null,
             color: newType.color,
             status: newType.status || "Active",
-            updated_at: new Date().toISOString(),
         }
 
         setFormLoading(true)

@@ -8,12 +8,17 @@ import {
   listWorkplaceProjects,
   listWorkplaceTasks,
   listWorkplaceTaskTypes,
+  listWorkplaceDepartments,
+  listWorkplaceRoles,
 } from "../lib/workplaces"
 import WorkplaceProfile from "../components/Workplace/WorkplaceProfile"
 import WorkplaceTasks from "../components/Workplace/WorkplaceTasks"
 import WorkplaceProjects from "../components/Workplace/WorkplaceProjects"
 import WorkplaceTaskTypes from "../components/Workplace/WorkplaceTaskTypes"
 import WorkplaceUsers from "../components/Workplace/WorkplaceUsers"
+import WorkplaceDepartments from "../components/Workplace/WorkplaceDepartments"
+import WorkplaceRoles from "../components/Workplace/WorkplaceRoles"
+import WorkplaceAnalytics from "../components/Workplace/WorkplaceAnalytics"
 
 export default function WorkplaceDetail() {
   const { id } = useParams()
@@ -24,7 +29,7 @@ export default function WorkplaceDetail() {
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
   const activeTab = searchParams.get("tab") || "profile"
-  const validTabs = ["profile", "tasks", "projects", "types", "users"]
+  const validTabs = ["profile", "tasks", "projects", "analytics", "types", "departments", "roles", "users"]
   const resolvedTab = validTabs.includes(activeTab) ? activeTab : "profile"
 
   const [myRows, setMyRows] = useState([])
@@ -32,6 +37,8 @@ export default function WorkplaceDetail() {
   const [tasks, setTasks] = useState([])
   const [projects, setProjects] = useState([])
   const [types, setTypes] = useState([])
+  const [departments, setDepartments] = useState([])
+  const [roles, setRoles] = useState([])
 
   const [workplace, setWorkplace] = useState(null)
 
@@ -39,33 +46,52 @@ export default function WorkplaceDetail() {
     return myRows.find((r) => r.workplace_id === id && r.status === "accepted") || null
   }, [myRows, id])
 
+  const currentMember = useMemo(() => {
+    return members.find((m) => m.user_id === user?.id && m.status === "accepted") || null
+  }, [members, user?.id])
+
   const isOwner = currentMembership?.role === "owner" || workplace?.owner_id === user?.id
+  const isAdmin = useMemo(() => {
+    return (currentMember?.roles || []).some((role) => role?.name?.toLowerCase?.() === "admin")
+  }, [currentMember])
+  const canManageWorkplace = isOwner || isAdmin
 
   const refresh = async () => {
     if (!user?.id || !id) return
     setLoading(true)
     setError("")
     try {
-      const [my, mem, t, p, tt] = await Promise.all([
+      const [my, mem, p, tt, d, r] = await Promise.all([
         listMyWorkplaces(user.id),
         listWorkplaceMembers(id),
-        listWorkplaceTasks({ workplaceId: id, userId: user.id }),
         listWorkplaceProjects({ workplaceId: id }),
         listWorkplaceTaskTypes({ workplaceId: id }),
+        listWorkplaceDepartments({ workplaceId: id }),
+        listWorkplaceRoles({ workplaceId: id }),
       ])
+
+      const membership = my.find((row) => row.workplace_id === id && row.status === "accepted")
+      const memberRow = mem.find((row) => row.user_id === user.id && row.status === "accepted")
+      const isAdminUser = (memberRow?.roles || []).some((role) => role?.name?.toLowerCase?.() === "admin")
+      const canSeeAllTasks = membership?.role === "owner" || isAdminUser
+      const t = await listWorkplaceTasks({
+        workplaceId: id,
+        userId: canSeeAllTasks ? null : user.id,
+      })
 
       setMyRows(my)
       setMembers(mem)
       setTasks(t)
       setProjects(p)
       setTypes(tt)
+      setDepartments(d)
+      setRoles(r)
 
-      const membership = my.find((r) => r.workplace_id === id && r.status === "accepted")
       if (membership?.workplace_id) {
         try {
           const workplaceData = await getWorkplaceById(membership.workplace_id)
           setWorkplace(workplaceData)
-        } catch (ignored) {
+        } catch {
           // keep existing workplace state if fetch fails
         }
       }
@@ -109,7 +135,7 @@ export default function WorkplaceDetail() {
       )}
 
       <div className="animate-in fade-in duration-300">
-        {loading && !tasks.length && !projects.length && !types.length && !members.length && (
+        {loading && !tasks.length && !projects.length && !types.length && !members.length && !departments.length && !roles.length && (
           <div className="p-6 text-center text-[#86868b] text-[14px]">
             Loading workplace data…
           </div>
@@ -119,7 +145,7 @@ export default function WorkplaceDetail() {
           <WorkplaceProfile
             workplace={workplace}
             loading={loading}
-            isOwner={isOwner}
+            isOwner={canManageWorkplace}
             onRefresh={refresh}
             setMessage={setMessage}
             setError={setError}
@@ -136,9 +162,11 @@ export default function WorkplaceDetail() {
             tasks={tasks}
             types={types}
             projects={projects}
+            departments={departments}
             members={members}
             user={user}
             workplace={workplace}
+            isAdmin={isAdmin}
             loading={loading}
             onRefresh={refresh}
             setError={setError}
@@ -150,13 +178,25 @@ export default function WorkplaceDetail() {
         {resolvedTab === "projects" && (
           <WorkplaceProjects
             projects={projects}
-            types={types}
+            departments={departments}
             user={user}
             workplace={workplace}
             loading={loading}
             onRefresh={refresh}
             setError={setError}
             setMessage={setMessage}
+          />
+        )}
+
+        {resolvedTab === "analytics" && (
+          <WorkplaceAnalytics
+            tasks={tasks}
+            projects={projects}
+            departments={departments}
+            members={members}
+            user={user}
+            isAdmin={isAdmin || isOwner}
+            loading={loading}
           />
         )}
 
@@ -173,11 +213,37 @@ export default function WorkplaceDetail() {
           />
         )}
 
+        {resolvedTab === "departments" && (
+          <WorkplaceDepartments
+            departments={departments}
+            members={members}
+            workplace={workplace}
+            user={user}
+            loading={loading}
+            onRefresh={refresh}
+            setError={setError}
+            setMessage={setMessage}
+          />
+        )}
+
+        {resolvedTab === "roles" && (
+          <WorkplaceRoles
+            roles={roles}
+            workplace={workplace}
+            user={user}
+            loading={loading}
+            onRefresh={refresh}
+            setError={setError}
+            setMessage={setMessage}
+          />
+        )}
+
         {/* Users Tab */}
         {resolvedTab === "users" && (
           <WorkplaceUsers
             members={members}
-            isOwner={isOwner}
+            roles={roles}
+            isOwner={canManageWorkplace}
             workplace={workplace}
             user={user}
             loading={loading}

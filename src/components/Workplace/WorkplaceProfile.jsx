@@ -348,6 +348,8 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                                     {acceptedMembers.length > 0 ? (
                                         acceptedMembers.map(member => {
                                             const user = userMap[member.user_id]
+                                            const customRoles = member.roles || []
+                                            const fallbackRole = member.role === "owner" ? "Owner" : "Member"
                                             return (
                                                 <div key={member.user_id} className="rounded-xl border border-[#e5e5ea] bg-[#f8fafc] p-3 sm:rounded-[24px] sm:p-4">
                                                     <div className="flex items-start justify-between gap-4">
@@ -358,14 +360,29 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                                                             <p className="mt-1 truncate text-[11px] text-[#64748b] sm:text-sm">
                                                                 {user?.email || "—"}
                                                             </p>
+                                                            <p className="mt-1 text-[11px] text-[#64748b] sm:text-sm">
+                                                                {customRoles.length > 0
+                                                                    ? `${customRoles.map((role) => role.name).join(", ")} • Joined ${new Date(member.created_at).toLocaleDateString()}`
+                                                                    : `${fallbackRole} • Joined ${new Date(member.created_at).toLocaleDateString()}`}
+                                                            </p>
                                                         </div>
-                                                        <div className="shrink-0">
-                                                            {member.role === "owner" ? (
+                                                        <div className="shrink-0 flex flex-wrap justify-end gap-1.5 max-w-[45%]">
+                                                            {customRoles.length > 0 ? (
+                                                                customRoles.map((role) => (
+                                                                    <span
+                                                                        key={role.id}
+                                                                        className="inline-flex items-center rounded-full px-2.5 py-1 text-[9px] font-semibold sm:px-3 sm:text-[10px]"
+                                                                        style={{ backgroundColor: `${role.color || "#64748b"}20`, color: role.color || "#475569" }}
+                                                                    >
+                                                                        {role.name}
+                                                                    </span>
+                                                                ))
+                                                            ) : member.role === "owner" ? (
                                                                 <span className="inline-flex items-center rounded-full bg-[#ecfdf5] px-2.5 py-1 text-[9px] font-semibold text-[#166534] sm:px-3 sm:text-[10px]">
                                                                     <FaCrown className="mr-1 h-3 w-3" /> Owner
                                                                 </span>
                                                             ) : (
-                                                                <span className="inline-flex items-center rounded-full bg-[#f8fafc] px-2.5 py-1 text-[9px] font-semibold text-[#475569] sm:px-3 sm:text-[10px]">
+                                                                <span className="inline-flex items-center rounded-full bg-[#f1f5f9] px-2.5 py-1 text-[9px] font-semibold text-[#475569] sm:px-3 sm:text-[10px]">
                                                                     <FaUsers className="mr-1 h-3 w-3" /> Member
                                                                 </span>
                                                             )}

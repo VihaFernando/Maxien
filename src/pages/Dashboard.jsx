@@ -260,9 +260,15 @@ export default function Dashboard() {
                         onClick={onItemClick}
                     />
                     <WorkplaceTabLink
-                        to={id ? `/dashboard/workplaces/${id}?tab=tasks` : "/dashboard/workplaces"}
-                        label="Tasks"
-                        active={currentTab === "tasks"}
+                        to={id ? `/dashboard/workplaces/${id}?tab=analytics` : "/dashboard/workplaces"}
+                        label="Analytics"
+                        active={currentTab === "analytics"}
+                        onClick={onItemClick}
+                    />
+                    <WorkplaceTabLink
+                        to={id ? `/dashboard/workplaces/${id}?tab=departments` : "/dashboard/workplaces"}
+                        label="Departments"
+                        active={currentTab === "departments"}
                         onClick={onItemClick}
                     />
                     <WorkplaceTabLink
@@ -272,9 +278,21 @@ export default function Dashboard() {
                         onClick={onItemClick}
                     />
                     <WorkplaceTabLink
+                        to={id ? `/dashboard/workplaces/${id}?tab=tasks` : "/dashboard/workplaces"}
+                        label="Tasks"
+                        active={currentTab === "tasks"}
+                        onClick={onItemClick}
+                    />
+                    <WorkplaceTabLink
                         to={id ? `/dashboard/workplaces/${id}?tab=users` : "/dashboard/workplaces"}
                         label="Members"
                         active={currentTab === "users"}
+                        onClick={onItemClick}
+                    />
+                    <WorkplaceTabLink
+                        to={id ? `/dashboard/workplaces/${id}?tab=roles` : "/dashboard/workplaces"}
+                        label="Roles"
+                        active={currentTab === "roles"}
                         onClick={onItemClick}
                     />
                 </nav>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { FaPlus, FaCalendarAlt, FaEdit, FaTrash, FaSearch } from "react-icons/fa"
+import { FaPlus, FaCalendarAlt, FaEdit, FaTrash, FaSearch, FaBuilding } from "react-icons/fa"
 import {
     createWorkplaceProject,
     updateWorkplaceProject,
@@ -8,7 +8,7 @@ import {
 
 export default function WorkplaceProjects({
     projects,
-    types,
+    departments,
     user,
     workplace,
     loading,
@@ -26,7 +26,7 @@ export default function WorkplaceProjects({
     const [newProject, setNewProject] = useState({
         name: "",
         description: "",
-        type_id: "",
+        department_id: "",
         status: "Active",
         start_date: "",
         target_end_date: "",
@@ -42,13 +42,13 @@ export default function WorkplaceProjects({
         })
     }, [projects, searchTerm, filterStatus])
 
-    const getTypeName = (typeId) => types.find((t) => t.id === typeId)?.name || "Uncategorized"
+    const getDepartmentName = (department) => department?.name || "No department"
 
     const resetForm = () => {
         setNewProject({
             name: "",
             description: "",
-            type_id: "",
+            department_id: "",
             status: "Active",
             start_date: "",
             target_end_date: "",
@@ -61,7 +61,7 @@ export default function WorkplaceProjects({
         setNewProject({
             name: project.name || "",
             description: project.description || "",
-            type_id: project.type_id || "",
+            department_id: project.department_id || "",
             status: project.status || "Active",
             start_date: project.start_date || "",
             target_end_date: project.target_end_date || "",
@@ -94,17 +94,17 @@ export default function WorkplaceProjects({
         setMessage("")
 
         if (!newProject.name.trim()) return setError("Project name is required.")
-        if (!newProject.type_id) return setError("Project type is required.")
 
         const payload = {
             user_id: user.id,
             workplace_id: workplace.id,
             name: newProject.name.trim(),
             description: newProject.description.trim() || null,
-            type_id: newProject.type_id,
+            department_id: newProject.department_id || null,
             status: newProject.status || "Active",
             start_date: newProject.start_date || null,
             target_end_date: newProject.target_end_date || null,
+            linked_by: user.id,
             updated_at: new Date().toISOString(),
         }
 
@@ -200,9 +200,15 @@ export default function WorkplaceProjects({
                                             <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f]">
                                                 {p.status || "Active"}
                                             </span>
-                                            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[#eff6ff] text-[#3b82f6]">
-                                                {getTypeName(p.type_id)}
-                                            </span>
+                                            {p.department && (
+                                                <span
+                                                    className="text-[11px] font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
+                                                    style={{ backgroundColor: `${p.department.color || "#0ea5e9"}20`, color: p.department.color || "#0ea5e9" }}
+                                                >
+                                                    <FaBuilding className="w-3 h-3" />
+                                                    {getDepartmentName(p.department)}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-1">
@@ -270,15 +276,15 @@ export default function WorkplaceProjects({
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Type *</label>
+                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Department</label>
                                     <select
-                                        value={newProject.type_id}
-                                        onChange={(e) => setNewProject((v) => ({ ...v, type_id: e.target.value }))}
+                                        value={newProject.department_id}
+                                        onChange={(e) => setNewProject((v) => ({ ...v, department_id: e.target.value }))}
                                         className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
                                     >
-                                        <option value="">Select type</option>
-                                        {types.map((t) => (
-                                            <option key={t.id} value={t.id}>{t.name}</option>
+                                        <option value="">Optional</option>
+                                        {departments.map((d) => (
+                                            <option key={d.id} value={d.id}>{d.name}</option>
                                         ))}
                                     </select>
                                 </div>
@@ -293,6 +299,9 @@ export default function WorkplaceProjects({
                                             <option key={s} value={s}>{s}</option>
                                         ))}
                                     </select>
+                                </div>
+                                <div className="rounded-xl border border-[#d2d2d7]/50 bg-[#f8fafc] px-4 py-3 text-[12px] text-[#64748b] flex items-center">
+                                    Linked department tag appears on project cards and in task selectors.
                                 </div>
                             </div>
 
