@@ -1,7 +1,46 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLifeSync } from '../context/LifeSyncContext'
 import { getAnimeStreamAudio, isPluginEnabled, lifesyncFetch, lifesyncOAuthStartUrl } from '../lib/lifesyncApi'
+
+function extractOpenXblPeople(payload) {
+    if (!payload || typeof payload !== 'object') return []
+    const raw = payload.content?.people ?? payload.people
+    return Array.isArray(raw) ? raw : []
+}
+
+function pickPersonDisplayName(person) {
+    if (!person || typeof person !== 'object') return 'Player'
+    return (
+        person.uniqueModernGamertag ||
+        [person.modernGamertag, person.modernGamertagSuffix].filter(Boolean).join('') ||
+        person.gamertag ||
+        'Player'
+    )
+}
+
+function pickBestGamertagMatch(people, query) {
+    if (!Array.isArray(people) || people.length === 0) return null
+    const q = String(query || '').trim().toLowerCase()
+    if (!q) return people[0]
+    return (
+        people.find((p) => {
+            const values = [
+                p?.uniqueModernGamertag,
+                p?.gamertag,
+                p?.modernGamertag,
+                [p?.modernGamertag, p?.modernGamertagSuffix].filter(Boolean).join(''),
+            ].filter(Boolean)
+            return values.some((v) => String(v).trim().toLowerCase() === q)
+        }) || people[0]
+    )
+}
+
+function readXboxLinkError(e, fallback) {
+    if (e?.body && typeof e.body === 'object' && e.body.error) return String(e.body.error)
+    return e?.message || fallback
+}
 
 const LifeSyncIcon = ({ className }) => (
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -13,7 +52,14 @@ const LifeSyncIcon = ({ className }) => (
 function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, message, setMessage, togglePlugin, refreshLifeSyncMe, updatePreferences }) {
     const [oauthMsg, setOauthMsg] = useState('')
     const [epicStatus, setEpicStatus] = useState(null)
+    const [mangadexStatus, setMangadexStatus] = useState(null)
+    const [mangadexUser, setMangadexUser] = useState('')
+    const [mangadexPassword, setMangadexPassword] = useState('')
+    const [mangadexBusy, setMangadexBusy] = useState(false)
     const [unlinkBusy, setUnlinkBusy] = useState('')
+    const [xboxOpenXbl, setXboxOpenXbl] = useState(null)
+    const [xboxGamertagInput, setXboxGamertagInput] = useState('')
+    const [xboxBusy, setXboxBusy] = useState(false)
 
     const integrations = lifeSyncUser?.integrations || {}
     const steamLinked = Boolean(integrations.steam || integrations.steamId)
@@ -42,6 +88,68 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
         return () => { cancelled = true }
     }, [])
 
+    useEffect(() => {
+        let cancelled = false
+        lifesyncFetch('/api/manga/mangadex/auth/status')
+            .then(data => { if (!cancelled) setMangadexStatus(data) })
+            .catch(() => { if (!cancelled) setMangadexStatus(null) })
+        return () => { cancelled = true }
+    }, [])
+
+    useEffect(() => {
+        let cancelled = false
+        lifesyncFetch('/api/xbox/openxbl/status')
+            .then(data => { if (!cancelled) setXboxOpenXbl(data || null) })
+            .catch(() => { if (!cancelled) setXboxOpenXbl(null) })
+        return () => { cancelled = true }
+    }, [])
+
+    useEffect(() => {
+        setXboxGamertagInput(prefs?.xboxGamertag || '')
+    }, [prefs?.xboxGamertag])
+
+    async function linkMangaDex(e) {
+        e.preventDefault()
+        const u = mangadexUser.trim()
+        const p = mangadexPassword
+        if (!u || !p) {
+            setError('Enter your MangaDex username and password.')
+            return
+        }
+        setMangadexBusy(true)
+        setError('')
+        setMessage('')
+        try {
+            await lifesyncFetch('/api/manga/mangadex/auth', { method: 'POST', json: { username: u, password: p } })
+            setMangadexPassword('')
+            setMessage(
+                'MangaDex linked. Your MangaDex reading list is importing in the background — open Manga and refresh the reading shelf if titles do not appear right away.'
+            )
+            const st = await lifesyncFetch('/api/manga/mangadex/auth/status')
+            setMangadexStatus(st)
+        } catch (err) {
+            setError(err.message || 'MangaDex login failed')
+        } finally {
+            setMangadexBusy(false)
+        }
+    }
+
+    async function unlinkMangaDex() {
+        setUnlinkBusy('MangaDex')
+        setError('')
+        try {
+            await lifesyncFetch('/api/manga/mangadex/auth', { method: 'DELETE' })
+            setMessage('MangaDex disconnected.')
+            setMangadexStatus(s => (s ? { ...s, connected: false, username: null } : s))
+            const st = await lifesyncFetch('/api/manga/mangadex/auth/status').catch(() => null)
+            if (st) setMangadexStatus(st)
+        } catch (err) {
+            setError(err.message || 'Could not disconnect MangaDex')
+        } finally {
+            setUnlinkBusy('')
+        }
+    }
+
     async function patchPreferences(partial) {
         setError('')
         setMessage('')
@@ -68,6 +176,64 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
             setError(e.message || `Could not disconnect ${provider}`)
         } finally {
             setUnlinkBusy('')
+        }
+    }
+
+    const xboxLinked = Boolean(String(prefs?.xboxGamertag || '').trim())
+    const xboxOpenXblReady = Boolean(xboxOpenXbl?.configured)
+
+    async function linkXboxGamertag(e) {
+        e?.preventDefault?.()
+        const gt = xboxGamertagInput.trim()
+        if (!gt) {
+            setError('Enter a gamertag first.')
+            setMessage('')
+            return
+        }
+        if (!xboxOpenXblReady) {
+            setError('OpenXBL is not configured on the server (XBLIO_API_KEY).')
+            setMessage('')
+            return
+        }
+        setXboxBusy(true)
+        setError('')
+        setMessage('')
+        try {
+            const data = await lifesyncFetch(`/api/xbox/openxbl/proxy/search/${encodeURIComponent(gt)}`)
+            const people = extractOpenXblPeople(data)
+            const codeOk = data?.code === undefined || data?.code === 200
+            if (!codeOk) {
+                throw new Error(`OpenXBL returned code ${data.code}`)
+            }
+            const person = pickBestGamertagMatch(people, gt)
+            if (!person) {
+                throw new Error('No matching player profile was returned for that gamertag')
+            }
+            await lifesyncFetch('/api/xbox/openxbl/saved', {
+                method: 'POST',
+                json: { response: { code: 200, content: { people: [person] } } },
+            })
+            await updatePreferences({ xboxGamertag: gt })
+            setMessage(`Xbox linked as ${pickPersonDisplayName(person)}.`)
+        } catch (err) {
+            setError(readXboxLinkError(err, 'Could not link that gamertag'))
+        } finally {
+            setXboxBusy(false)
+        }
+    }
+
+    async function unlinkXboxGamertag() {
+        setXboxBusy(true)
+        setError('')
+        setMessage('')
+        try {
+            await updatePreferences({ xboxGamertag: '' })
+            setXboxGamertagInput('')
+            setMessage('Xbox gamertag removed.')
+        } catch (err) {
+            setError(readXboxLinkError(err, 'Could not remove Xbox gamertag'))
+        } finally {
+            setXboxBusy(false)
         }
     }
 
@@ -190,6 +356,128 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                             )}
                         </div>
                     </li>
+
+                    {/* MangaDex (password grant via server personal client) */}
+                    <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex items-start gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-xl bg-[#FF6740] flex items-center justify-center flex-shrink-0">
+                                    <span className="text-white text-[10px] font-black leading-none">MD</span>
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">MangaDex</p>
+                                    {mangadexStatus == null ? (
+                                        <p className="text-[11px] text-[#86868b]">Checking server…</p>
+                                    ) : mangadexStatus.oauthConfigured === false ? (
+                                        <p className="text-[11px] text-amber-600 font-medium">Personal client not configured on server</p>
+                                    ) : mangadexStatus?.connected ? (
+                                        <p className="text-[11px] text-emerald-600 font-medium">
+                                            Linked{mangadexStatus.username ? ` as ${mangadexStatus.username}` : ''}
+                                        </p>
+                                    ) : (
+                                        <p className="text-[11px] text-[#86868b]">
+                                            Optional: link to sync follows, follow/unfollow from the app, and push chapter read state to your MangaDex account.
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            {mangadexStatus == null ? null : mangadexStatus.oauthConfigured === false ? null : mangadexStatus.connected ? (
+                                <button
+                                    type="button"
+                                    onClick={() => void unlinkMangaDex()}
+                                    disabled={unlinkBusy === 'MangaDex'}
+                                    className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 self-start shrink-0"
+                                >
+                                    {unlinkBusy === 'MangaDex' ? 'Disconnecting…' : 'Disconnect'}
+                                </button>
+                            ) : (
+                                <form onSubmit={linkMangaDex} className="flex flex-col gap-2 w-full sm:w-auto sm:min-w-[220px] shrink-0">
+                                    <input
+                                        type="text"
+                                        autoComplete="username"
+                                        value={mangadexUser}
+                                        onChange={(e) => setMangadexUser(e.target.value)}
+                                        placeholder="MangaDex username"
+                                        className="w-full px-3 py-2 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#C6FF00]/60"
+                                    />
+                                    <input
+                                        type="password"
+                                        autoComplete="current-password"
+                                        value={mangadexPassword}
+                                        onChange={(e) => setMangadexPassword(e.target.value)}
+                                        placeholder="Password"
+                                        className="w-full px-3 py-2 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#C6FF00]/60"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={mangadexBusy}
+                                        className="text-[11px] font-semibold text-white bg-[#FF6740] hover:bg-[#e55a36] px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        {mangadexBusy ? 'Linking…' : 'Link MangaDex'}
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </li>
+
+                    {/* Xbox (gamertag via OpenXBL — same as main app Settings) */}
+                    <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex items-start gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-xl bg-[#107C10] flex items-center justify-center flex-shrink-0">
+                                    <span className="text-white text-[9px] font-black leading-tight text-center px-0.5">XBOX</span>
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">Xbox</p>
+                                    {xboxOpenXbl == null ? (
+                                        <p className="text-[11px] text-[#86868b]">Checking server…</p>
+                                    ) : !xboxOpenXblReady ? (
+                                        <p className="text-[11px] text-amber-600 font-medium">OpenXBL not configured (add XBLIO_API_KEY)</p>
+                                    ) : xboxLinked ? (
+                                        <p className="text-[11px] text-emerald-600 font-medium">
+                                            Linked as <span className="font-semibold">{String(prefs?.xboxGamertag || '').trim()}</span>
+                                        </p>
+                                    ) : (
+                                        <p className="text-[11px] text-[#86868b]">
+                                            Link your gamertag for the LifeSync Xbox hub (library, Game Pass, achievements).{' '}
+                                            <Link to="/dashboard/lifesync/games/xbox" className="text-[#107C10] font-semibold hover:underline">
+                                                Open Xbox hub
+                                            </Link>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            {xboxOpenXbl == null ? null : xboxLinked ? (
+                                <button
+                                    type="button"
+                                    onClick={() => void unlinkXboxGamertag()}
+                                    disabled={xboxBusy || busy}
+                                    className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 self-start shrink-0"
+                                >
+                                    {xboxBusy ? 'Removing…' : 'Disconnect'}
+                                </button>
+                            ) : (
+                                <form onSubmit={linkXboxGamertag} className="flex flex-col gap-2 w-full sm:w-auto sm:min-w-[240px] shrink-0">
+                                    <input
+                                        type="text"
+                                        autoComplete="off"
+                                        value={xboxGamertagInput}
+                                        onChange={(e) => setXboxGamertagInput(e.target.value)}
+                                        placeholder="Xbox gamertag"
+                                        disabled={!xboxOpenXblReady || xboxBusy || busy}
+                                        className="w-full px-3 py-2 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#107C10]/50 disabled:opacity-50"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={!xboxOpenXblReady || xboxBusy || busy || !xboxGamertagInput.trim()}
+                                        className="text-[11px] font-semibold text-white bg-[#107C10] hover:bg-[#0e6b0e] px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        {xboxBusy ? 'Linking…' : 'Link gamertag'}
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </li>
                 </ul>
             </div>
 
@@ -205,7 +493,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                     </div>
                     <div className="min-w-0">
                         <h3 className="text-[13px] font-bold text-[#1d1d1f]">Viewing preferences</h3>
-                        <p className="text-[10px] text-[#86868b]">NSFW access and default anime audio</p>
+                        <p className="text-[10px] text-[#86868b]">NSFW access, MangaDex language filter, and default anime audio</p>
                     </div>
                 </div>
                 <ul className="divide-y divide-[#f5f5f7]">
@@ -227,6 +515,32 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                             >
                                 <span
                                     className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${prefs?.nsfwContentEnabled ? 'translate-x-5' : ''}`}
+                                />
+                            </button>
+                        </div>
+                    </li>
+                    <li>
+                        <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+                            <div className="min-w-0">
+                                <p className="text-[13px] font-semibold text-[#1d1d1f]">English manga only</p>
+                                <p className="mt-0.5 text-[11px] leading-relaxed text-[#86868b]">
+                                    In LifeSync Manga, only list and search titles that have English chapter releases (MangaDex).
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={busy}
+                                role="switch"
+                                aria-checked={prefs?.mangaEnglishReleasesOnly !== false}
+                                onClick={() =>
+                                    void patchPreferences({
+                                        mangaEnglishReleasesOnly: !(prefs?.mangaEnglishReleasesOnly !== false),
+                                    })
+                                }
+                                className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${prefs?.mangaEnglishReleasesOnly !== false ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
+                            >
+                                <span
+                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${prefs?.mangaEnglishReleasesOnly !== false ? 'translate-x-5' : ''}`}
                                 />
                             </button>
                         </div>

@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { mangadexImageProps } from '../../lib/mangaChapterUtils'
 
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
@@ -18,56 +20,121 @@ export function MangaReadingShelf({
     onRemove,
     continueDisabled,
 }) {
+    const [expanded, setExpanded] = useState(false)
     const hasItems = entries.length > 0
+
+    const statusLine = hasItems
+        ? `${entries.length} title${entries.length === 1 ? '' : 's'} on your shelf`
+        : loading
+          ? 'Loading your shelf…'
+          : 'Pick a manga below — progress saves automatically'
+
+    const compactSubtitle = (() => {
+        let s = statusLine
+        if (nsfwHiddenCount > 0) {
+            s += ` · ${nsfwHiddenCount} hidden (NSFW off)`
+        }
+        return s
+    })()
 
     return (
         <section className="overflow-hidden rounded-[22px] border border-[#d2d2d7]/50 bg-white shadow-sm">
-            <div className="px-4 py-4 sm:px-6 sm:py-5">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#C6FF00]/25 text-[#1d1d1f]">
-                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                            </svg>
+            <div className={expanded ? 'px-4 py-4 sm:px-6 sm:py-5' : 'px-4 py-2.5 sm:px-5'}>
+                {!expanded ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#C6FF00]/25 text-[#1d1d1f]">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75" aria-hidden>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                                </svg>
+                            </div>
+                            <div className="min-w-0">
+                                <h2 className="text-[13px] font-bold tracking-tight text-[#1d1d1f]">Continue reading</h2>
+                                <p className="truncate text-[10px] text-[#86868b]">{compactSubtitle}</p>
+                            </div>
                         </div>
-                        <div className="min-w-0">
-                            <h2 className="text-[15px] font-bold tracking-tight text-[#1d1d1f] sm:text-[17px]">Continue reading</h2>
-                            <p className="text-[11px] text-[#86868b]">
-                                {hasItems
-                                    ? `${entries.length} title${entries.length === 1 ? '' : 's'} on your shelf`
-                                    : loading
-                                      ? 'Loading your shelf…'
-                                      : 'Pick a manga below — progress saves automatically'}
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                            <button
+                                type="button"
+                                onClick={onRefresh}
+                                disabled={loading || syncBusy}
+                                className="rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2.5 py-1.5 text-[10px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#ebebed] disabled:opacity-50"
+                            >
+                                {loading ? '…' : 'Refresh'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onSync}
+                                disabled={loading || syncBusy || !hasItems}
+                                className="rounded-lg bg-[#C6FF00] px-2.5 py-1.5 text-[10px] font-semibold text-[#1d1d1f] shadow-sm transition-colors hover:brightness-95 disabled:opacity-50"
+                            >
+                                {syncBusy ? '…' : 'Sync'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setExpanded(true)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-[#e5e5ea] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#fafafa]"
+                                aria-expanded={false}
+                            >
+                                Expand
+                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <>
+                        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#C6FF00]/25 text-[#1d1d1f]">
+                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75" aria-hidden>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                                    </svg>
+                                </div>
+                                <div className="min-w-0">
+                                    <h2 className="text-[15px] font-bold tracking-tight text-[#1d1d1f] sm:text-[17px]">Continue reading</h2>
+                                    <p className="text-[11px] text-[#86868b]">{statusLine}</p>
+                                </div>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={onRefresh}
+                                    disabled={loading || syncBusy}
+                                    className="rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2 text-[11px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#ebebed] disabled:opacity-50"
+                                >
+                                    {loading ? 'Refreshing…' : 'Refresh'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={onSync}
+                                    disabled={loading || syncBusy || !hasItems}
+                                    className="rounded-xl bg-[#C6FF00] px-3 py-2 text-[11px] font-semibold text-[#1d1d1f] shadow-sm transition-colors hover:brightness-95 disabled:opacity-50"
+                                >
+                                    {syncBusy ? 'Syncing…' : 'Sync updates'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setExpanded(false)}
+                                    className="inline-flex items-center gap-1 rounded-xl border border-[#e5e5ea] bg-white px-3 py-2 text-[11px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#fafafa]"
+                                    aria-expanded
+                                >
+                                    Compact
+                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        {nsfwHiddenCount > 0 && (
+                            <p className="mb-3 text-[10px] text-[#86868b]">
+                                NSFW off in preferences — {nsfwHiddenCount} saved title{nsfwHiddenCount === 1 ? '' : 's'} not shown.
                             </p>
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onClick={onRefresh}
-                            disabled={loading || syncBusy}
-                            className="rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2 text-[11px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#ebebed] disabled:opacity-50"
-                        >
-                            {loading ? 'Refreshing…' : 'Refresh'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onSync}
-                            disabled={loading || syncBusy || !hasItems}
-                            className="rounded-xl bg-[#C6FF00] px-3 py-2 text-[11px] font-semibold text-[#1d1d1f] shadow-sm transition-colors hover:brightness-95 disabled:opacity-50"
-                        >
-                            {syncBusy ? 'Syncing…' : 'Sync updates'}
-                        </button>
-                    </div>
-                </div>
+                        )}
 
-                {nsfwHiddenCount > 0 && (
-                    <p className="mb-3 text-[10px] text-[#86868b]">
-                        NSFW off in preferences — {nsfwHiddenCount} saved title{nsfwHiddenCount === 1 ? '' : 's'} not shown.
-                    </p>
-                )}
-
-                {loading && !hasItems ? (
+                        {loading && !hasItems ? (
                     <div className="flex gap-4 overflow-hidden pb-1">
                         {[1, 2, 3, 4].map(i => (
                             <div
@@ -96,6 +163,7 @@ export function MangaReadingShelf({
                                                 alt=""
                                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                                                 loading="lazy"
+                                                {...mangadexImageProps(entry.coverUrl)}
                                             />
                                         ) : (
                                             <div className="flex h-full items-center justify-center text-[#86868b]">
@@ -139,6 +207,8 @@ export function MangaReadingShelf({
                             </article>
                         ))}
                     </div>
+                )}
+                    </>
                 )}
             </div>
         </section>
@@ -187,7 +257,7 @@ export function LifeSyncHubMangaReading({ entries, loading }) {
                               <div className="overflow-hidden rounded-xl border border-[#d2d2d7]/50 bg-white shadow-sm ring-2 ring-transparent transition-all group-hover:ring-[#C6FF00]/60 group-hover:shadow-md">
                                   <div className="relative aspect-[2/3] bg-[#f5f5f7]">
                                       {entry.coverUrl ? (
-                                          <img src={entry.coverUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                          <img src={entry.coverUrl} alt="" className="h-full w-full object-cover" loading="lazy" {...mangadexImageProps(entry.coverUrl)} />
                                       ) : null}
                                       <div className="absolute inset-0 flex items-end justify-center bg-[#f5f5f7]/0 pb-2 opacity-0 transition-all group-hover:bg-[#f5f5f7]/85 group-hover:opacity-100">
                                           <span className="rounded-lg bg-[#1d1d1f] px-2 py-1 text-[8px] font-semibold text-white">
