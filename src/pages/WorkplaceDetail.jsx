@@ -243,7 +243,7 @@ export default function WorkplaceDetail() {
           <WorkplaceUsers
             members={members}
             roles={roles}
-            isOwner={canManageWorkplace}
+            canManageMembers={canManageWorkplace}
             workplace={workplace}
             user={user}
             loading={loading}

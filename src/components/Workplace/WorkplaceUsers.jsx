@@ -7,7 +7,7 @@ import { getUsersByIds, getUsername } from "../../lib/users"
 export default function WorkplaceUsers({
     members,
     roles,
-    isOwner,
+    canManageMembers,
     workplace,
     user,
     loading,
@@ -110,7 +110,7 @@ export default function WorkplaceUsers({
     }
 
     const handleRemoveMember = async (member) => {
-        if (!isOwner) return
+        if (!canManageMembers) return
         if (!workplaceId) {
             setError("Workplace is not loaded yet.")
             return
@@ -162,7 +162,7 @@ export default function WorkplaceUsers({
 
             {/* Main Container */}
             <div className="w-full bg-white rounded-2xl md:rounded-[1.5rem] border border-gray-200/60 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-                
+
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-6 border-b border-gray-100 bg-gray-50/30">
                     <div className="mb-3 sm:mb-0">
@@ -174,7 +174,7 @@ export default function WorkplaceUsers({
                         </h2>
                         <p className="text-[11px] md:text-[13px] text-gray-500 mt-1">Manage workspace access and assignments</p>
                     </div>
-                    {isOwner && workplaceId && (
+                    {canManageMembers && workplaceId && (
                         <Link
                             to={`/dashboard/workplaces/${workplaceId}?tab=roles`}
                             className="inline-flex items-center gap-1.5 px-3 md:px-4 py-1.5 md:py-2 rounded-lg bg-gray-900 text-white text-[11px] md:text-xs font-medium hover:bg-gray-800 transition-colors shadow-sm w-full sm:w-auto justify-center"
@@ -189,7 +189,7 @@ export default function WorkplaceUsers({
                     <div className="py-12 text-center text-gray-400 text-sm animate-pulse">Loading members...</div>
                 ) : (
                     <div className="flex flex-col">
-                        
+
                         {/* Active Members List */}
                         {acceptedMembers.length === 0 ? (
                             <p className="text-xs md:text-sm text-gray-400 py-8 text-center">No active members yet.</p>
@@ -198,10 +198,10 @@ export default function WorkplaceUsers({
                                 {acceptedMembers.map((m) => {
                                     const { name, email } = getMemberLabel(m)
                                     const initials = getInitials(name)
-                                    
+
                                     return (
                                         <div key={m.id} className="group flex flex-col md:flex-row md:items-center justify-between p-4 md:p-6 gap-4 hover:bg-gray-50/50 transition-colors">
-                                            
+
                                             {/* User Info */}
                                             <div className="flex items-center gap-3 md:gap-4 min-w-0">
                                                 <div className="flex-shrink-0 w-8 h-8 md:w-10 md:h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 border border-gray-300/50 flex items-center justify-center text-[10px] md:text-xs font-bold text-gray-600">
@@ -224,7 +224,7 @@ export default function WorkplaceUsers({
 
                                             {/* Roles & Actions */}
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 w-full md:w-auto pl-11 md:pl-0">
-                                                
+
                                                 {/* Role Tags */}
                                                 <div className="flex flex-wrap gap-1.5 flex-1 md:justify-end">
                                                     {(m.roles || []).filter((role) => role?.id).length === 0 ? (
@@ -243,7 +243,7 @@ export default function WorkplaceUsers({
                                                 </div>
 
                                                 {/* Actions */}
-                                                {isOwner && (
+                                                {canManageMembers && (
                                                     <div className="relative flex items-center gap-2 pt-2 sm:pt-0 border-t sm:border-0 border-gray-100">
                                                         <button
                                                             type="button"
@@ -353,9 +353,9 @@ export default function WorkplaceUsers({
 
             {/* Invite Section (Floating below the main list) */}
             <div className="w-full">
-                {!isOwner ? (
+                {!canManageMembers ? (
                     <div className="text-center p-3 rounded-xl bg-gray-50 border border-gray-200 border-dashed text-[11px] md:text-xs text-gray-500">
-                        Only the workspace owner can send invites.
+                        Only workplace admins can send invites or edit member roles.
                     </div>
                 ) : !showForm ? (
                     <button
