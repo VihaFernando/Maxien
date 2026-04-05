@@ -299,28 +299,14 @@ export async function deleteWorkplaceRole({ roleId }) {
 export async function setWorkplaceMemberRoles({ workplaceId, memberId, roleIds }) {
   const normalized = Array.isArray(roleIds) ? Array.from(new Set(roleIds.filter(Boolean))) : []
 
-  const { error: deleteError } = await supabase
-    .from("member_roles")
-    .delete()
-    .eq("workplace_id", workplaceId)
-    .eq("member_id", memberId)
-  if (deleteError) throw deleteError
-
-  if (!normalized.length) return []
-
-  const payload = normalized.map((role_id) => ({
-    workplace_id: workplaceId,
-    member_id: memberId,
-    role_id,
-  }))
-
-  const { data, error } = await supabase
-    .from("member_roles")
-    .insert(payload)
-    .select()
+  const { error } = await supabase.rpc("set_workplace_member_roles", {
+    p_workplace_id: workplaceId,
+    p_member_id: memberId,
+    p_role_ids: normalized,
+  })
 
   if (error) throw error
-  return data || []
+  return []
 }
 
 export async function listWorkplaceTasks({ workplaceId, userId = null }) {
