@@ -1,18 +1,86 @@
 {
+  "id": "/",
   "name": "Maxien",
   "short_name": "Maxien",
+  "description": "Maxien — life management",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
+  "orientation": "portrait-primary",
   "background_color": "#f5f5f7",
   "theme_color": "#C6FF00",
+  "categories": ["productivity", "entertainment"],
   "icons": [
     {
       "src": "/logo.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Tasks",
+      "short_name": "Tasks",
+      "url": "/dashboard/tasks"
+    },
+    {
+      "name": "Projects",
+      "short_name": "Projects",
+      "url": "/dashboard/projects"
+    },
+    {
+      "name": "Subscriptions",
+      "short_name": "Subscriptions",
+      "url": "/dashboard/subscriptions"
+    },
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "url": "/dashboard/calendar"
+    },
+    {
+      "name": "Notes",
+      "short_name": "Notes",
+      "url": "/dashboard/notes"
+    },
+    {
+      "name": "Workplaces",
+      "short_name": "Workplaces",
+      "url": "/dashboard/workplaces"
+    },
+    {
+      "name": "Profile",
+      "short_name": "Profile",
+      "url": "/dashboard/profile"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/logo.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "label": "Maxien app"
     }
   ]
 }
-

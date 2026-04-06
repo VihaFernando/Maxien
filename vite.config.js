@@ -17,6 +17,10 @@ export default defineConfig(() => {
             VitePWA({
                 registerType: 'autoUpdate',
                 includeAssets: ['logo.svg'],
+                workbox: {
+                    // Default is 2 MiB; this app’s main bundle can exceed that.
+                    maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+                },
                 manifest: {
                     name: 'Maxien',
                     short_name: 'Maxien',

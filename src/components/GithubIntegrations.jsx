@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
@@ -10,7 +10,7 @@ const GitHubIcon = ({ className }) => (
     </svg>
 )
 
-export default function GithubIntegrations() {
+export default function GithubIntegrations({ embedded = false }) {
     const { user } = useAuth()
     const [ghConnected, setGhConnected] = useState(false)
 
@@ -42,27 +42,34 @@ export default function GithubIntegrations() {
     }
 
     return (
-        <div className="animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-10">
-
-            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-1 mb-6 sm:mb-8 px-0.5">
-                <div>
-                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest mb-1">Workspace</p>
-                    <h1 className="text-[20px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight flex items-center gap-2.5">
-                        <span className="inline-flex w-7 h-7 rounded-lg bg-[#1d1d1f] items-center justify-center flex-shrink-0">
-                            <GitHubIcon className="w-4 h-4 text-white" />
-                        </span>
-                        Integrations
-                    </h1>
-                    <p className="text-[12px] text-[#86868b] mt-1 max-w-xl">
-                        LifeSync and GitHub connections. Use the sidebar <span className="font-semibold text-[#1d1d1f]">GitHub</span> page for repositories, commits, and issues.
-                    </p>
+        <div
+            className={
+                embedded
+                    ? "w-full min-w-0 space-y-5"
+                    : "mx-auto w-full min-w-0 max-w-[1600px] animate-in space-y-5 pb-10 duration-500 fade-in sm:space-y-6"
+            }
+        >
+            {!embedded && (
+                <div className="mb-6 flex flex-col justify-between gap-1 px-0.5 sm:mb-8 sm:flex-row sm:items-end">
+                    <div>
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-[#86868b]">Workspace</p>
+                        <h1 className="flex items-center gap-2.5 text-[20px] font-bold leading-tight tracking-tight text-[#1d1d1f] sm:text-[24px]">
+                            <span className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[#1d1d1f]">
+                                <GitHubIcon className="h-4 w-4 text-white" />
+                            </span>
+                            Integrations
+                        </h1>
+                        <p className="mt-1 max-w-xl text-[12px] text-[#86868b]">
+                            LifeSync and GitHub connections. Use the sidebar <span className="font-semibold text-[#1d1d1f]">GitHub</span> page for repositories, commits, and issues.
+                        </p>
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <LifeSyncIntegration />
+            <LifeSyncIntegration embedded={embedded} />
 
-            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="rounded-[20px] border border-[#d2d2d7]/50 bg-white p-4 shadow-sm sm:rounded-[24px] sm:p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
                         <div className="w-11 h-11 rounded-2xl bg-[#1d1d1f] flex items-center justify-center flex-shrink-0 shadow-sm">
                             <GitHubIcon className="w-[22px] h-[22px] text-white" />
@@ -82,7 +89,7 @@ export default function GithubIntegrations() {
                             </p>
                         </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+                    <div className="flex flex-shrink-0 flex-wrap items-center gap-2 lg:justify-end">
                         <Link
                             to="/dashboard/github"
                             className="flex items-center justify-center gap-2 bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98] whitespace-nowrap"

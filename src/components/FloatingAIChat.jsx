@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useLayoutEffect, useRef } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
@@ -108,6 +108,54 @@ const EXAMPLE_PROMPTS = [
     "Show my tasks this week",
     "Mark task as Done",
 ]
+
+/** Legacy free-position FAB (migrated to corner snap). */
+const FLOAT_POS_KEY_LEGACY = "maxien_ai_fab_pos_v1"
+/** Persisted corner: tl | tr | bl | br */
+const FLOAT_CORNER_KEY = "maxien_ai_fab_corner_v2"
+const FAB_VIEWPORT_PAD = 12
+
+function isValidCorner(c) {
+    return c === "tl" || c === "tr" || c === "bl" || c === "br"
+}
+
+function cornerToPixels(corner, vw, vh, bw, bh, pad = FAB_VIEWPORT_PAD) {
+    const maxL = Math.max(pad, vw - bw - pad)
+    const maxT = Math.max(pad, vh - bh - pad)
+    switch (corner) {
+        case "tl":
+            return { left: pad, top: pad }
+        case "tr":
+            return { left: maxL, top: pad }
+        case "bl":
+            return { left: pad, top: maxT }
+        case "br":
+        default:
+            return { left: maxL, top: maxT }
+    }
+}
+
+/** Pick the corner whose “rest” button center is closest to the dragged button center. */
+function nearestCornerFromRect(left, top, bw, bh, vw, vh, pad = FAB_VIEWPORT_PAD) {
+    const cx = left + bw / 2
+    const cy = top + bh / 2
+    const targets = [
+        { id: "tl", x: pad + bw / 2, y: pad + bh / 2 },
+        { id: "tr", x: vw - pad - bw / 2, y: pad + bh / 2 },
+        { id: "bl", x: pad + bw / 2, y: vh - pad - bh / 2 },
+        { id: "br", x: vw - pad - bw / 2, y: vh - pad - bh / 2 },
+    ]
+    let best = "br"
+    let bestD = Infinity
+    for (const t of targets) {
+        const d = (cx - t.x) ** 2 + (cy - t.y) ** 2
+        if (d < bestD) {
+            bestD = d
+            best = t.id
+        }
+    }
+    return best
+}
 
 // ─── Message Bubble (compact version for popup) ─────────────────────────────
 function ChatBubble({ msg, onSelectOption }) {
@@ -413,15 +461,92 @@ function FloatingAIChatInner({
     keyInput, setKeyInput, keyLoading, setKeyLoading, keyError, setKeyError,
     bottomRef, inputRef, navigate,
 }) {
+    const fabRef = useRef(null)
+    const dragRef = useRef({
+        dragging: false,
+        moved: false,
+        pointerId: null,
+        startX: 0,
+        startY: 0,
+        startLeft: 0,
+        startTop: 0,
+        lastLeft: 0,
+        lastTop: 0,
+    })
+    /** Resting corner after drag snap (persisted). */
+    const [fabCorner, setFabCorner] = useState("br")
+    /** While dragging: live pixel position; null = use corner-derived position. */
+    const [dragOverride, setDragOverride] = useState(null)
+    const [layout, setLayout] = useState(() => ({
+        vw: typeof window !== "undefined" ? window.innerWidth : 0,
+        vh: typeof window !== "undefined" ? window.innerHeight : 0,
+        bw: 56,
+        bh: 56,
+    }))
+
+    // ── Load saved corner (migrate legacy free-position key once) ─────────
+    useEffect(() => {
+        try {
+            const rawCorner = localStorage.getItem(FLOAT_CORNER_KEY)
+            if (rawCorner) {
+                const p = JSON.parse(rawCorner)
+                if (p?.corner && isValidCorner(p.corner)) {
+                    setFabCorner(p.corner)
+                    return
+                }
+            }
+            const legacy = localStorage.getItem(FLOAT_POS_KEY_LEGACY)
+            if (legacy) {
+                const parsed = JSON.parse(legacy)
+                if (parsed && Number.isFinite(parsed.left) && Number.isFinite(parsed.top)) {
+                    const vw = window.innerWidth
+                    const vh = window.innerHeight
+                    const bw = 56
+                    const bh = 56
+                    const corner = nearestCornerFromRect(parsed.left, parsed.top, bw, bh, vw, vh)
+                    setFabCorner(corner)
+                    localStorage.setItem(FLOAT_CORNER_KEY, JSON.stringify({ corner }))
+                }
+            }
+        } catch {
+            /* ignore */
+        }
+    }, [])
+
+    useLayoutEffect(() => {
+        const el = fabRef.current
+        const update = () => {
+            setLayout({
+                vw: window.innerWidth,
+                vh: window.innerHeight,
+                bw: el?.offsetWidth || 56,
+                bh: el?.offsetHeight || 56,
+            })
+        }
+        update()
+        window.addEventListener("resize", update)
+        let ro
+        if (typeof ResizeObserver !== "undefined" && el) {
+            ro = new ResizeObserver(update)
+            ro.observe(el)
+        }
+        return () => {
+            window.removeEventListener("resize", update)
+            ro?.disconnect()
+        }
+    }, [])
+
     // ── Load key status ──────────────────────────────────────────────────────
     useEffect(() => {
         if (!user || hasKey !== null) return
+        let cancelled = false
         supabase
             .from("user_ai_settings")
             .select("id")
             .eq("user_id", user.id)
             .maybeSingle()
             .then(({ data }) => {
+                if (cancelled) return
                 setHasKey(!!data)
                 if (data && messages.length === 0) {
                     setMessages([{
@@ -433,19 +558,46 @@ function FloatingAIChatInner({
                     }])
                 }
             })
+        return () => {
+            cancelled = true
+        }
     }, [user, hasKey])
 
     // ── Auto scroll ──────────────────────────────────────────────────────────
     useEffect(() => {
-        if (isOpen) {
-            setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }), 50)
+        if (!isOpen) return
+        if (scrollToBottomTimerRef.current != null) {
+            window.clearTimeout(scrollToBottomTimerRef.current)
+            scrollToBottomTimerRef.current = null
+        }
+        scrollToBottomTimerRef.current = window.setTimeout(() => {
+            scrollToBottomTimerRef.current = null
+            bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+        }, 50)
+        return () => {
+            if (scrollToBottomTimerRef.current != null) {
+                window.clearTimeout(scrollToBottomTimerRef.current)
+                scrollToBottomTimerRef.current = null
+            }
         }
     }, [messages, isOpen])
 
     // ── Focus input on open ──────────────────────────────────────────────────
     useEffect(() => {
-        if (isOpen && hasKey) {
-            setTimeout(() => inputRef.current?.focus(), 150)
+        if (!isOpen || !hasKey) return
+        if (focusInputTimerRef.current != null) {
+            window.clearTimeout(focusInputTimerRef.current)
+            focusInputTimerRef.current = null
+        }
+        focusInputTimerRef.current = window.setTimeout(() => {
+            focusInputTimerRef.current = null
+            inputRef.current?.focus()
+        }, 150)
+        return () => {
+            if (focusInputTimerRef.current != null) {
+                window.clearTimeout(focusInputTimerRef.current)
+                focusInputTimerRef.current = null
+            }
         }
     }, [isOpen, hasKey])
 
@@ -493,6 +645,27 @@ function FloatingAIChatInner({
 
     // track whether last message originated from voice input
     const lastWasVoiceRef = useRef(false)
+    const scrollToBottomTimerRef = useRef(null)
+    const focusInputTimerRef = useRef(null)
+    const sendFocusTimerRef = useRef(null)
+
+    useEffect(
+        () => () => {
+            if (scrollToBottomTimerRef.current != null) {
+                window.clearTimeout(scrollToBottomTimerRef.current)
+                scrollToBottomTimerRef.current = null
+            }
+            if (focusInputTimerRef.current != null) {
+                window.clearTimeout(focusInputTimerRef.current)
+                focusInputTimerRef.current = null
+            }
+            if (sendFocusTimerRef.current != null) {
+                window.clearTimeout(sendFocusTimerRef.current)
+                sendFocusTimerRef.current = null
+            }
+        },
+        [],
+    )
 
     // Auto-send when voice transcript arrives
     useEffect(() => {
@@ -664,7 +837,14 @@ function FloatingAIChatInner({
             }))
         } finally {
             setSending(false)
-            setTimeout(() => inputRef.current?.focus(), 50)
+            if (sendFocusTimerRef.current != null) {
+                window.clearTimeout(sendFocusTimerRef.current)
+                sendFocusTimerRef.current = null
+            }
+            sendFocusTimerRef.current = window.setTimeout(() => {
+                sendFocusTimerRef.current = null
+                inputRef.current?.focus()
+            }, 50)
         }
     }
 
@@ -682,6 +862,12 @@ function FloatingAIChatInner({
             action: null,
         }])
     }
+
+    const restingFabPos =
+        layout.vw > 0
+            ? cornerToPixels(fabCorner, layout.vw, layout.vh, layout.bw, layout.bh)
+            : null
+    const fabScreenPos = dragOverride ?? restingFabPos
 
     // ────────────────────────────────────────────────────────────────────────
     return (
@@ -1049,18 +1235,114 @@ function FloatingAIChatInner({
 
             {/* ── Floating trigger button ──────────────────────────────────── */}
             <button
-                onClick={handleOpen}
-                aria-label="Open AI Assistant"
-                title={/Mac|iPhone|iPad|iPod/.test(navigator.platform) ? "Cmd+/ to toggle" : "Alt+C to toggle"}
+                ref={fabRef}
+                onPointerDown={(e) => {
+                    // Only left click / primary touch
+                    if (e.button != null && e.button !== 0) return
+                    if (!fabRef.current) return
+                    const r = fabRef.current.getBoundingClientRect()
+                    dragRef.current.dragging = true
+                    dragRef.current.moved = false
+                    dragRef.current.pointerId = e.pointerId
+                    dragRef.current.startX = e.clientX
+                    dragRef.current.startY = e.clientY
+                    dragRef.current.startLeft = r.left
+                    dragRef.current.startTop = r.top
+                    dragRef.current.lastLeft = r.left
+                    dragRef.current.lastTop = r.top
+                    try {
+                        fabRef.current.setPointerCapture(e.pointerId)
+                    } catch {
+                        /* ignore */
+                    }
+                    e.preventDefault()
+                }}
+                onPointerMove={(e) => {
+                    if (!dragRef.current.dragging) return
+                    if (dragRef.current.pointerId != null && e.pointerId !== dragRef.current.pointerId) return
+                    const dx = e.clientX - dragRef.current.startX
+                    const dy = e.clientY - dragRef.current.startY
+                    if (!dragRef.current.moved && Math.hypot(dx, dy) >= 6) {
+                        dragRef.current.moved = true
+                    }
+                    const btnW = fabRef.current?.offsetWidth || 56
+                    const btnH = fabRef.current?.offsetHeight || 56
+                    const pad = FAB_VIEWPORT_PAD
+                    const vw = window.innerWidth
+                    const vh = window.innerHeight
+                    const maxLeft = Math.max(pad, vw - btnW - pad)
+                    const maxTop = Math.max(pad, vh - btnH - pad)
+                    const nextLeft = Math.min(maxLeft, Math.max(pad, dragRef.current.startLeft + dx))
+                    const nextTop = Math.min(maxTop, Math.max(pad, dragRef.current.startTop + dy))
+                    dragRef.current.lastLeft = nextLeft
+                    dragRef.current.lastTop = nextTop
+                    setDragOverride({ left: nextLeft, top: nextTop })
+                }}
+                onPointerUp={(e) => {
+                    if (!dragRef.current.dragging) return
+                    if (dragRef.current.pointerId != null && e.pointerId !== dragRef.current.pointerId) return
+                    dragRef.current.dragging = false
+                    dragRef.current.pointerId = null
+
+                    if (dragRef.current.moved) {
+                        const btnW = fabRef.current?.offsetWidth || 56
+                        const btnH = fabRef.current?.offsetHeight || 56
+                        const vw = window.innerWidth
+                        const vh = window.innerHeight
+                        const corner = nearestCornerFromRect(
+                            dragRef.current.lastLeft,
+                            dragRef.current.lastTop,
+                            btnW,
+                            btnH,
+                            vw,
+                            vh,
+                        )
+                        setFabCorner(corner)
+                        setDragOverride(null)
+                        try {
+                            localStorage.setItem(FLOAT_CORNER_KEY, JSON.stringify({ corner }))
+                        } catch {
+                            /* ignore */
+                        }
+                        return
+                    }
+                    setDragOverride(null)
+                    handleOpen()
+                }}
+                onPointerCancel={() => {
+                    if (dragRef.current.dragging && dragRef.current.moved) {
+                        const btnW = fabRef.current?.offsetWidth || 56
+                        const btnH = fabRef.current?.offsetHeight || 56
+                        const vw = window.innerWidth
+                        const vh = window.innerHeight
+                        const corner = nearestCornerFromRect(
+                            dragRef.current.lastLeft,
+                            dragRef.current.lastTop,
+                            btnW,
+                            btnH,
+                            vw,
+                            vh,
+                        )
+                        setFabCorner(corner)
+                        try {
+                            localStorage.setItem(FLOAT_CORNER_KEY, JSON.stringify({ corner }))
+                        } catch {
+                            /* ignore */
+                        }
+                    }
+                    dragRef.current.dragging = false
+                    dragRef.current.pointerId = null
+                    setDragOverride(null)
+                }}
+                aria-label="Open AI Assistant (drag to a screen corner to dock)"
+                title={
+                    (/Mac|iPhone|iPad|iPod/.test(navigator.platform) ? "Cmd+/ to toggle · " : "Alt+C to toggle · ") +
+                    "Drag to dock in a corner"
+                }
                 className={`
-                    fixed z-[9998]
-                    /* Position: bottom-right with safe area */
-                    bottom-6 right-5
-                    sm:bottom-8 sm:right-8
-                    /* Size */
+                    fixed z-[9998] touch-none select-none
                     w-14 h-14
                     sm:w-[58px] sm:h-[58px]
-                    /* Style */
                     rounded-full
                     bg-gradient-to-br from-[#1d1d1f] to-[#3a3a3c]
                     text-white
@@ -1068,11 +1350,27 @@ function FloatingAIChatInner({
                     hover:shadow-[0_12px_32px_-4px_rgba(0,0,0,0.45),0_4px_12px_-2px_rgba(0,0,0,0.25)]
                     hover:scale-105
                     active:scale-95
-                    transition-all duration-200 ease-out
                     flex items-center justify-center
+                    ${dragOverride ? "transition-[transform,box-shadow,opacity] duration-200 ease-out" : "transition-[left,top,transform,box-shadow,opacity] duration-300 ease-[cubic-bezier(0.34,1.25,0.64,1)]"}
                     ${isOpen ? "opacity-0 scale-75 pointer-events-none" : "opacity-100 scale-100"}
                 `}
-                style={{ WebkitTapHighlightColor: "transparent" }}
+                style={{
+                    WebkitTapHighlightColor: "transparent",
+                    touchAction: "none",
+                    ...(fabScreenPos
+                        ? {
+                              left: `${fabScreenPos.left}px`,
+                              top: `${fabScreenPos.top}px`,
+                              right: "auto",
+                              bottom: "auto",
+                          }
+                        : {
+                              right: "20px",
+                              bottom: "24px",
+                              left: "auto",
+                              top: "auto",
+                          }),
+                }}
             >
                 {/* Glow ring */}
                 <span className="absolute inset-0 rounded-full bg-[#C6FF00]/10 animate-ping pointer-events-none" style={{ animationDuration: "2.5s" }} />

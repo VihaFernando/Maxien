@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { createElement, useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useLifeSync } from "../context/LifeSyncContext"
@@ -26,10 +26,10 @@ const NAV_BASE = "flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] fon
 const NAV_ACTIVE = "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
 const NAV_IDLE = "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
 
-function SidebarLink({ to, icon: Icon, label, active, onClick }) {
+function SidebarLink({ to, icon, label, active, onClick }) {
     return (
         <Link to={to} onClick={onClick} className={`${NAV_BASE} ${active ? NAV_ACTIVE : NAV_IDLE}`}>
-            <Icon className="w-4 h-4" />
+            {createElement(icon, { className: "w-4 h-4" })}
             {label}
         </Link>
     )
@@ -62,16 +62,30 @@ export default function Dashboard() {
     const [workspaceMode, setWorkspaceMode] = useState("personal")
     const [workplaces, setWorkplaces] = useState([])
     const [selectedWorkplaceId, setSelectedWorkplaceId] = useState("")
-    const [lifeSyncNotice, setLifeSyncNotice] = useState("")
+    const [lifeSyncNotice, setLifeSyncNotice] = useState(() => {
+        try {
+            const msg = sessionStorage.getItem("maxien_lifesync_link_notice")
+            if (msg) {
+                sessionStorage.removeItem("maxien_lifesync_link_notice")
+                return msg
+            }
+        } catch {
+            /* ignore */
+        }
+        return ""
+    })
 
     const lifeSyncGamesActive = location.pathname.startsWith("/dashboard/lifesync/games")
     const lifeSyncAnimeActive = location.pathname.startsWith("/dashboard/lifesync/anime")
+    const isLifeSyncRoute = location.pathname.startsWith("/dashboard/lifesync")
     const showLifeSyncSidebar = isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
     const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
 
     const workplaceId = location.pathname.match(/\/workplaces\/([^/?]+)/)?.[1] || ""
     const currentTab = new URLSearchParams(location.search).get("tab") || "profile"
-    const isWorkplaceMode = workspaceMode === "workplace"
+    /** URL is source of truth on `/workplaces/:id`; avoid effect-driven setState sync. */
+    const activeWorkplaceId = workplaceId || selectedWorkplaceId
+    const isWorkplaceMode = Boolean(workplaceId) || workspaceMode === "workplace"
 
     useEffect(() => {
         if (!loading && !user) navigate("/login")
@@ -118,25 +132,6 @@ export default function Dashboard() {
     }, [user?.id])
 
     useEffect(() => {
-        if (workplaceId) {
-            setWorkspaceMode("workplace")
-            setSelectedWorkplaceId(workplaceId)
-        }
-    }, [workplaceId])
-
-    useEffect(() => {
-        try {
-            const msg = sessionStorage.getItem("maxien_lifesync_link_notice")
-            if (msg) {
-                setLifeSyncNotice(msg)
-                sessionStorage.removeItem("maxien_lifesync_link_notice")
-            }
-        } catch {
-            // ignore
-        }
-    }, [])
-
-    useEffect(() => {
         const t = setTimeout(() => setSidebarOpen(false), 0)
         return () => clearTimeout(t)
     }, [location])
@@ -162,7 +157,7 @@ export default function Dashboard() {
         { to: "/dashboard/ai-assistant", icon: FaBrain, label: "AI Assistant" },
     ]), [])
 
-    const selectedWorkplace = workplaces.find((item) => item.id === selectedWorkplaceId) || null
+    const selectedWorkplace = workplaces.find((item) => item.id === activeWorkplaceId) || null
 
     const handleWorkspaceModeChange = (mode) => {
         setWorkspaceMode(mode)
@@ -227,7 +222,7 @@ export default function Dashboard() {
             {isWorkplaceMode && (
                 <div className="mt-2.5 space-y-2">
                     <select
-                        value={selectedWorkplaceId}
+                        value={activeWorkplaceId}
                         onChange={(e) => handleWorkplaceSelection(e.target.value)}
                         className="w-full bg-white border border-[#e5e5ea] rounded-xl px-3 py-2 text-[12px] font-semibold text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50"
                     >
@@ -249,7 +244,7 @@ export default function Dashboard() {
 
     const renderPlatformNav = (onItemClick = undefined) => {
         if (isWorkplaceMode) {
-            const id = selectedWorkplaceId || workplaceId
+            const id = activeWorkplaceId
 
             return (
                 <nav className="space-y-0.5">
@@ -326,7 +321,7 @@ export default function Dashboard() {
     return (
         <div className="min-h-screen bg-[#f5f5f7] flex font-sans">
             <aside className="w-[240px] hidden lg:flex flex-col bg-white border-r border-[#e5e5ea] sticky top-0 h-screen">
-                <div className="px-5 py-6 overflow-y-auto">
+                <div className="px-5 py-6 overflow-y-auto hide-scrollbar">
                     <div className="flex items-center gap-2.5 mb-5">
                         <div className="w-8 h-8 flex-shrink-0">
                             <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
@@ -389,7 +384,7 @@ export default function Dashboard() {
             )}
 
             <aside className={`fixed left-0 top-0 h-full w-[240px] bg-white border-r border-[#e5e5ea] z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-                <div className="px-5 py-6 h-full flex flex-col overflow-y-auto">
+                <div className="px-5 py-6 h-full flex flex-col overflow-y-auto hide-scrollbar">
                     <div className="flex items-center justify-between mb-5">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8">
@@ -469,7 +464,7 @@ export default function Dashboard() {
                 </div>
             </aside>
 
-            <main className="flex-1 flex flex-col h-screen overflow-y-auto">
+            <main className="flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
                 <header className="lg:hidden bg-white/90 backdrop-blur-md border-b border-[#d2d2d7] px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 flex-shrink-0">
@@ -488,9 +483,15 @@ export default function Dashboard() {
                     </button>
                 </header>
 
-                <div className="w-full flex-1 px-4 sm:px-8 lg:px-10 py-6 sm:py-8">
+                <div
+                    className={
+                        isLifeSyncRoute
+                            ? "flex min-h-0 w-full flex-1 flex-col p-0"
+                            : "flex min-h-0 w-full flex-1 flex-col px-4 py-6 sm:px-8 sm:py-8 lg:px-10"
+                    }
+                >
                     {lifeSyncNotice && (
-                        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium text-amber-950 flex items-start gap-3">
+                        <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium text-amber-950 sm:px-6 lg:px-8">
                             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
                                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 10-2 0v2a1 1 0 102 0v-2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                             </svg>

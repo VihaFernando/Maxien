@@ -15,6 +15,10 @@ import {
     lifesyncRegister as apiRegister,
     setLifesyncToken,
 } from '../lib/lifesyncApi'
+import {
+    notifyReduceMotionPreferenceChanged,
+    writeStoredReduceAnimationsSetting,
+} from '../lib/lifeSyncReduceMotion'
 
 const LifeSyncContext = createContext(null)
 
@@ -28,18 +32,24 @@ export function LifeSyncProvider({ children }) {
         if (!token) {
             setLifeSyncUser(null)
             setLoading(false)
+            notifyReduceMotionPreferenceChanged()
             return null
         }
         try {
             setLastError(null)
             const me = await lifesyncGetMe()
+            if (me?.preferences && typeof me.preferences.reduceAnimations === 'boolean') {
+                writeStoredReduceAnimationsSetting(me.preferences.reduceAnimations)
+            }
             setLifeSyncUser(me)
+            notifyReduceMotionPreferenceChanged()
             return me
         } catch (e) {
             setLastError(e)
             if (e.status === 401 || e.status === 404) {
                 setLifesyncToken(null)
                 setLifeSyncUser(null)
+                notifyReduceMotionPreferenceChanged()
             }
             throw e
         } finally {
@@ -57,8 +67,12 @@ export function LifeSyncProvider({ children }) {
             try {
                 const me = await lifesyncGetMe()
                 if (!cancelled) {
+                    if (me?.preferences && typeof me.preferences.reduceAnimations === 'boolean') {
+                        writeStoredReduceAnimationsSetting(me.preferences.reduceAnimations)
+                    }
                     setLifeSyncUser(me)
                     setLastError(null)
+                    notifyReduceMotionPreferenceChanged()
                 }
             } catch (e) {
                 if (!cancelled) {
@@ -66,6 +80,7 @@ export function LifeSyncProvider({ children }) {
                     if (e.status === 401 || e.status === 404) {
                         setLifesyncToken(null)
                         setLifeSyncUser(null)
+                        notifyReduceMotionPreferenceChanged()
                     }
                 }
             } finally {
@@ -148,9 +163,22 @@ export function LifeSyncProvider({ children }) {
     }, [refreshMe])
 
     const updatePreferences = useCallback(async (partial) => {
-        const data = await lifesyncPatchPreferences(partial)
-        await refreshMe()
-        return data
+        setLifeSyncUser((u) => {
+            if (!u) return u
+            return { ...u, preferences: { ...(u.preferences || {}), ...partial } }
+        })
+        if (typeof partial.reduceAnimations === 'boolean') {
+            writeStoredReduceAnimationsSetting(partial.reduceAnimations)
+            notifyReduceMotionPreferenceChanged()
+        }
+        try {
+            const data = await lifesyncPatchPreferences(partial)
+            await refreshMe()
+            return data
+        } catch (e) {
+            await refreshMe().catch(() => {})
+            throw e
+        }
     }, [refreshMe])
 
     const value = useMemo(

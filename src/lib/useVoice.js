@@ -196,6 +196,16 @@ export function useVoice() {
         }
     }, [availableVoices, selectedVoiceName])
 
+    useEffect(() => {
+        return () => {
+            try {
+                window.speechSynthesis?.cancel()
+            } catch {
+                void 0
+            }
+        }
+    }, [])
+
     // Set up SpeechRecognition
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition

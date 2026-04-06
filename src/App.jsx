@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { Suspense, lazy } from 'react'
 import { AuthProvider } from './context/AuthContext'
 import { LifeSyncProvider } from './context/LifeSyncContext'
+import { LifeSyncMotionRoot } from './components/LifeSyncMotionRoot'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
@@ -24,16 +26,20 @@ import LifeSyncXbox from './pages/lifesync/LifeSyncXbox'
 import LifeSyncAnime from './pages/lifesync/LifeSyncAnime'
 import LifeSyncManga from './pages/lifesync/LifeSyncManga'
 import LifeSyncHentai from './pages/lifesync/LifeSyncHentai'
+import LifeSyncAnimeMediaLayout from './pages/lifesync/LifeSyncAnimeMediaLayout'
 import { LifeSyncGamesHub, LifeSyncAnimeHub } from './pages/lifesync/LifeSyncCategoryHub'
 import FloatingAIChat from './components/FloatingAIChat'
 import GlobalCommandPalette from './components/GlobalCommandPalette'
 import './App.css'
+
+const LifeSyncAnimeWatch = lazy(() => import('./pages/lifesync/LifeSyncAnimeWatch'))
 
 function App() {
   return (
     <Router>
       <AuthProvider>
         <LifeSyncProvider>
+        <LifeSyncMotionRoot>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -51,13 +57,23 @@ function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="github" element={<Github />} />
             <Route path="lifesync/games" element={<LifeSyncGamesHub />} />
-            <Route path="lifesync/games/steam" element={<LifeSyncSteam />} />
-            <Route path="lifesync/games/wishlist" element={<LifeSyncWishlist />} />
-            <Route path="lifesync/games/xbox" element={<LifeSyncXbox />} />
-            <Route path="lifesync/anime" element={<LifeSyncAnimeHub />} />
-            <Route path="lifesync/anime/anime" element={<LifeSyncAnime />} />
-            <Route path="lifesync/anime/manga" element={<LifeSyncManga />} />
-            <Route path="lifesync/anime/hentai" element={<LifeSyncHentai />} />
+            <Route path="lifesync/games/steam/*" element={<LifeSyncSteam />} />
+            <Route path="lifesync/games/wishlist/*" element={<LifeSyncWishlist />} />
+            <Route path="lifesync/games/xbox/*" element={<LifeSyncXbox />} />
+            <Route path="lifesync/anime" element={<LifeSyncAnimeMediaLayout />}>
+              <Route index element={<LifeSyncAnimeHub />} />
+              <Route
+                path="anime/watch/:malId/:ep"
+                element={
+                  <Suspense fallback={null}>
+                    <LifeSyncAnimeWatch />
+                  </Suspense>
+                }
+              />
+              <Route path="anime/*" element={<LifeSyncAnime />} />
+              <Route path="manga/*" element={<LifeSyncManga />} />
+              <Route path="hentai/*" element={<LifeSyncHentai />} />
+            </Route>
           </Route>
           <Route path="/auth/github/callback" element={<GithubCallback />} />
           <Route path="/auth/lifesync/callback" element={<LifeSyncOAuthCallback />} />
@@ -66,6 +82,7 @@ function App() {
         </Routes>
         <GlobalCommandPalette />
         <FloatingAIChat />
+        </LifeSyncMotionRoot>
         </LifeSyncProvider>
       </AuthProvider>
     </Router>

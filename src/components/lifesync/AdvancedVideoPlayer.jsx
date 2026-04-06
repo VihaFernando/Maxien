@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import Hls from 'hls.js'
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 const SKIP_SEC = 10
@@ -12,10 +13,26 @@ function fmtTime(sec) {
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
 }
 
+function isHlsUrl(u) {
+    return typeof u === 'string' && /\.m3u8(\?|#|$)/i.test(u.trim())
+}
+
+function videoSupportsNativeHls(video) {
+    if (!video?.canPlayType) return false
+    return video.canPlayType('application/vnd.apple.mpegurl') !== ''
+}
+
 /**
  * @param {{ src: string, label?: string, srclang?: string, default?: boolean }[]} [textTracks] - WebVTT URLs for <track kind="subtitles">
  */
-export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false, textTracks = [] }) {
+export default function AdvancedVideoPlayer({
+    src,
+    onEnded,
+    autoPlay = false,
+    textTracks = [],
+    /** @type {'none' | 'metadata' | 'auto'} */
+    preload = 'metadata',
+}) {
     const videoRef = useRef(null)
     const wrapRef = useRef(null)
     const idleTimer = useRef(null)
@@ -51,6 +68,63 @@ export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false, te
     useEffect(() => {
         playingRef.current = playing
     }, [playing])
+
+    useEffect(
+        () => () => {
+            clearTimeout(idleTimer.current)
+            idleTimer.current = null
+        },
+        [],
+    )
+
+    const trackKey = (textTracks || []).map(t => t.src).join('|')
+
+    useLayoutEffect(() => {
+        const v = videoRef.current
+        if (!v) return
+        const s = typeof src === 'string' && src.trim() ? src.trim() : ''
+        if (!s) {
+            v.removeAttribute('src')
+            v.load()
+            return undefined
+        }
+
+        let hls = null
+        const destroyHls = () => {
+            if (hls) {
+                try {
+                    hls.destroy()
+                } catch { /* ignore */ }
+                hls = null
+            }
+        }
+
+        if (isHlsUrl(s)) {
+            if (videoSupportsNativeHls(v)) {
+                v.src = s
+            } else if (Hls.isSupported()) {
+                hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: false,
+                })
+                hls.on(Hls.Events.ERROR, (_e, data) => {
+                    if (data?.fatal) destroyHls()
+                })
+                hls.loadSource(s)
+                hls.attachMedia(v)
+            } else {
+                v.src = s
+            }
+        } else {
+            v.src = s
+        }
+
+        return () => {
+            destroyHls()
+            v.removeAttribute('src')
+            v.load()
+        }
+    }, [src, trackKey])
 
     useEffect(() => {
         const v = videoRef.current
@@ -272,12 +346,11 @@ export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false, te
         >
             <video
                 ref={videoRef}
-                key={`${src}|${(textTracks || []).map((t) => t.src).join('|')}`}
-                src={src}
+                key={`${src}|${trackKey}`}
                 className="absolute inset-0 w-full h-full object-contain"
                 playsInline
                 autoPlay={autoPlay}
-                preload="metadata"
+                preload={preload}
             >
                 {(textTracks || []).map((t, i) => (
                     <track

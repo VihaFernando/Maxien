@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+    LifesyncAchievementRowsSkeleton,
+    LifesyncEpisodeThumbnail,
+    LifesyncXboxCatalogGridSkeleton,
+    LifesyncXboxLibraryGridSkeleton,
+    LifesyncXboxProfileSkeleton,
+} from '../../components/lifesync/EpisodeLoadingSkeletons'
 import { StoreGameDetailModal } from '../../components/lifesync/StoreGameDetailModal'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch } from '../../lib/lifesyncApi'
@@ -22,6 +29,7 @@ import {
     summarizeAchievementList,
     summarizeOpenXblPresence,
 } from '../../lib/openXblLifeSyncHelpers'
+import { LifeSyncHubPageShell } from '../../components/lifesync/LifeSyncHubPageShell'
 
 const GAMEPASS_FEEDS = [
     { id: 'all', label: 'All', segments: ['gamepass', 'all'] },
@@ -219,11 +227,10 @@ function DealTile({ title, imageUrl, subtitle, tagline, onOpen }) {
             className="group relative aspect-[2/3] w-full overflow-hidden rounded-[12px] sm:rounded-[14px] border border-[#d2d2d7]/50 bg-[#f5f5f7] text-left shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#107C10]/40 focus-visible:ring-offset-2"
         >
             {hasArt ? (
-                <img
+                <LifesyncEpisodeThumbnail
                     src={imageUrl}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
-                    loading="lazy"
+                    className="absolute inset-0 h-full w-full"
+                    imgClassName="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
                 />
             ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#f5f5f7] to-[#e8e8ed]">
@@ -386,11 +393,10 @@ function GamePassTile({ item, catalog, onOpenDetail }) {
             className="group relative aspect-[2/3] w-full overflow-hidden rounded-[12px] sm:rounded-[14px] border border-[#d2d2d7]/50 bg-[#f5f5f7] text-left shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#107C10]/40 focus-visible:ring-offset-2"
         >
             {hasArt ? (
-                <img
+                <LifesyncEpisodeThumbnail
                     src={img}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
-                    loading="lazy"
+                    className="absolute inset-0 h-full w-full"
+                    imgClassName="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
                 />
             ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#f5f5f7] to-[#e8e8ed]">
@@ -448,11 +454,10 @@ function LibraryGameTile({ row, selected, onSelect, disabled }) {
             } ${disabled ? 'cursor-not-allowed opacity-60 hover:shadow-sm' : ''} bg-[#f5f5f7]`}
         >
             {hasArt ? (
-                <img
+                <LifesyncEpisodeThumbnail
                     src={row.imageUrl}
-                    alt=""
-                    className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04] group-disabled:scale-100"
-                    loading="lazy"
+                    className="absolute inset-0 h-full w-full"
+                    imgClassName="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04] group-disabled:scale-100"
                 />
             ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#f5f5f7] to-[#e8e8ed]">
@@ -498,7 +503,11 @@ function AchievementDetailPanel({ gameTitle, busy, err, payload }) {
             <div className="border-b border-[#e5e5ea] px-4 py-3 bg-[#fafafa]">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-[#86868b]">Achievements</p>
                 <h3 className="text-[15px] font-bold text-[#1d1d1f] truncate">{gameTitle || 'Selected game'}</h3>
-                {busy ? <p className="text-[12px] text-[#86868b] mt-1">Loading…</p> : null}
+                {busy ? (
+                    <div className="mt-2 h-2 w-full max-w-xs rounded-full bg-[#e5e5ea] overflow-hidden">
+                        <div className="h-full w-[38%] rounded-full lifesync-skeleton-shimmer-light" />
+                    </div>
+                ) : null}
                 {err ? (
                     <p className="text-[12px] text-red-600 mt-1">We couldn&apos;t load achievements for this game. Try again in a moment.</p>
                 ) : null}
@@ -519,10 +528,11 @@ function AchievementDetailPanel({ gameTitle, busy, err, payload }) {
                     </div>
                 ) : null}
             </div>
+            {busy ? <LifesyncAchievementRowsSkeleton rows={8} /> : null}
             {!busy && !err && list.length === 0 ? (
                 <p className="text-[13px] text-[#86868b] px-4 py-6 text-center">No achievement list is available for this title.</p>
             ) : null}
-            {list.length > 0 ? (
+            {!busy && list.length > 0 ? (
                 <ul className="max-h-[22rem] overflow-y-auto divide-y divide-[#e5e5ea]">
                     {list.map((a, i) => {
                         const unlocked = isAchievementUnlocked(a)
@@ -1009,31 +1019,34 @@ export default function LifeSyncXbox() {
 
     function tabClass(active) {
         return `rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors ${
-            active ? 'bg-[#1d1d1f] text-white' : 'bg-[#f5f5f7] text-[#424245] border border-[#e5e5ea] hover:bg-[#ebebed]'
+            active ? 'bg-[#C6FF00] text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10' : 'bg-[#f5f5f7] text-[#424245] border border-[#e5e5ea] hover:bg-[#ebebed]'
         }`
     }
 
     if (!isLifeSyncConnected) {
         return (
-            <div className="max-w-4xl mx-auto">
-                <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight mb-2">Xbox</h1>
-                <div className="bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm px-8 py-16 text-center">
-                    <p className="text-[15px] font-bold text-[#1d1d1f] mb-2">LifeSync Not Connected</p>
-                    <p className="text-[13px] text-[#86868b] mb-4">Connect LifeSync, then link your Xbox gamertag under Profile → Integrations to use this hub.</p>
-                    <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 bg-[#1d1d1f] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors">
-                        Go to Integrations
-                    </Link>
+            <LifeSyncHubPageShell>
+                <div className="max-w-4xl mx-auto">
+                    <h1 className="text-[28px] font-bold text-[#1a1628] tracking-tight mb-2">Xbox</h1>
+                    <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
+                        <p className="text-[15px] font-bold text-[#1a1628] mb-2">LifeSync Not Connected</p>
+                        <p className="text-[13px] text-[#5b5670] mb-4">Connect LifeSync, then link your Xbox gamertag under Profile → Integrations to use this hub.</p>
+                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
+                            Go to Integrations
+                        </Link>
+                    </div>
                 </div>
-            </div>
+            </LifeSyncHubPageShell>
         )
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
+        <LifeSyncHubPageShell>
+        <div className="space-y-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">LifeSync / Games</p>
-                    <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight">Xbox</h1>
+                    <h1 className="text-[28px] font-bold text-[#1a1628] tracking-tight">Xbox</h1>
                     <p className="text-[13px] text-[#86868b] mt-1">
                         Your games, playtime, achievements, Game Pass picks, and current Store deals in one place.
                     </p>
@@ -1085,7 +1098,7 @@ export default function LifeSyncXbox() {
                     </p>
                 ) : null}
 
-                {profileBusy ? <p className="text-[13px] text-[#86868b]">Loading profile…</p> : null}
+                {profileBusy ? <LifesyncXboxProfileSkeleton /> : null}
                 {!profileBusy && profileErr ? <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{profileErr}</p> : null}
                 {!profileBusy && !profileErr && people.length > 0 ? (
                     <ul className="space-y-3">
@@ -1172,11 +1185,13 @@ export default function LifeSyncXbox() {
                                                 />
                                             ))}
                                         </div>
-                                    ) : !libraryBusy ? (
+                                    ) : libraryBusy ? (
+                                        <LifesyncXboxLibraryGridSkeleton count={9} />
+                                    ) : (
                                         <p className="text-[12px] text-[#86868b] rounded-xl border border-[#e5e5ea] bg-[#fafafa] px-3 py-2">
                                             No titles returned (history may be private or empty).
                                         </p>
-                                    ) : null}
+                                    )}
                                 </div>
                                 <div className="min-w-0">
                                     {selectedLibraryTitleId ? (
@@ -1223,7 +1238,9 @@ export default function LifeSyncXbox() {
                                 ))}
                             </div>
                             {gpErr ? <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{gpErr}</p> : null}
-                            {gpBusy ? <p className="text-[12px] text-[#86868b]">Loading catalog…</p> : null}
+                            {gpBusy && gpItems.length === 0 ? (
+                                <LifesyncXboxCatalogGridSkeleton gridClass={CATALOG_GRID_CLASS} count={12} />
+                            ) : null}
                             {gpItems.length > 0 ? (
                                 <>
                                     <PaginationBar
@@ -1275,6 +1292,10 @@ export default function LifeSyncXbox() {
                     {dealsError && (
                         <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{dealsError}</div>
                     )}
+
+                    {dealsBusy && deals.length === 0 && !dealsError ? (
+                        <LifesyncXboxCatalogGridSkeleton gridClass={CATALOG_GRID_CLASS} count={12} />
+                    ) : null}
 
                     {deals.length > 0 ? (
                         <>
@@ -1333,5 +1354,6 @@ export default function LifeSyncXbox() {
                 onClose={closeStoreDetail}
             />
         </div>
+        </LifeSyncHubPageShell>
     )
 }

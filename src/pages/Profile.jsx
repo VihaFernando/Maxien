@@ -1,8 +1,14 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "../context/AuthContext"
+import { useLifeSync } from "../context/LifeSyncContext"
 import { supabase } from "../lib/supabase"
 import { useSearchParams } from "react-router-dom"
 import GithubIntegrations from "../components/GithubIntegrations"
+import {
+    isLifeSyncReduceAnimationsEnabled,
+    notifyReduceMotionPreferenceChanged,
+    writeStoredReduceAnimationsSetting,
+} from "../lib/lifeSyncReduceMotion"
 
 const NAV = [
     {
@@ -19,7 +25,14 @@ const NAV = [
     },
     {
         id: "integrations", label: "Integrations",
-        icon: <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+        icon: (
+            <>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 13a5 5 0 00.7 2.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 11a5 5 0 01.7 2.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 12a3.5 3.5 0 016.6-1.4" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.5 12a3.5 3.5 0 01-6.6 1.4" />
+            </>
+        )
     },
 ]
 
@@ -33,12 +46,14 @@ const LANG_COLORS = {
 
 export default function Profile() {
     const { user } = useAuth()
+    const { lifeSyncUser, lifeSyncUpdatePreferences } = useLifeSync()
     const [searchParams] = useSearchParams()
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile")
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState("")
     const [error, setError] = useState("")
     const [imgError, setImgError] = useState(false)
+    const [prefMotionBusy, setPrefMotionBusy] = useState(false)
 
     const [fullName, setFullName] = useState("")
     const [username, setUsername] = useState("")
@@ -53,6 +68,11 @@ export default function Profile() {
             setBio(user.user_metadata?.bio || "")
         }
     }, [user])
+
+    useEffect(() => {
+        const nextTab = searchParams.get("tab") || "profile"
+        setActiveTab(nextTab)
+    }, [searchParams])
 
     const handleSave = async (e) => {
         e.preventDefault()
@@ -88,18 +108,47 @@ export default function Profile() {
         || null
 
     return (
-        <div className="animate-in fade-in duration-500 w-full">
+        <div className="animate-in fade-in duration-500 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
 
             {/* Page header */}
-            <div className="mb-4 px-0.5">
+            <div className="shrink-0 mb-4 px-0.5">
                 <h1 className="text-[18px] sm:text-[22px] font-bold text-[#1d1d1f] tracking-tight">Settings</h1>
                 <p className="text-[12px] text-[#86868b] mt-0.5">You can find all settings here</p>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-5 sm:gap-6 items-start">
+            {/* Mobile tab bar */}
+            <div className="shrink-0 md:hidden -mx-4 px-4 pb-3 mb-3 border-b border-[#e5e5ea] overflow-x-auto hide-scrollbar">
+                <div className="flex gap-2 min-w-max">
+                    {NAV.map((n) => (
+                        <button
+                            key={n.id}
+                            type="button"
+                            onClick={() => setActiveTab(n.id)}
+                            className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap border transition-colors ${
+                                activeTab === n.id
+                                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
+                                    : "bg-white text-[#86868b] border-[#e5e5ea] hover:text-[#1d1d1f]"
+                            }`}
+                        >
+                            <svg
+                                className={`w-4 h-4 ${activeTab === n.id ? "text-white" : "text-[#86868b]"}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                strokeWidth="1.8"
+                            >
+                                {n.icon}
+                            </svg>
+                            <span>{n.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden sm:gap-6 md:flex-row md:items-stretch">
 
                 {/* Left sidebar nav */}
-                <div className="w-full md:w-[200px] lg:w-[220px] flex-shrink-0 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm p-3">
+                <div className="hidden md:block w-full md:w-[200px] lg:w-[220px] flex-shrink-0 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm p-3">
                     <p className="text-[10px] font-bold text-[#86868b] uppercase tracking-widest px-3 pt-1 pb-2">Account</p>
                     <div className="space-y-0.5">
                         {NAV.map(n => (
@@ -121,7 +170,8 @@ export default function Profile() {
                 </div>
 
                 {/* Main content */}
-                <div className="flex-1 min-w-0 min-h-0 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 hide-scrollbar">
                     {activeTab === "profile" && (
                         <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
 
@@ -298,19 +348,66 @@ export default function Profile() {
                         <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
                             <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
                                 <h2 className="text-[16px] font-bold text-[#1d1d1f]">Preferences</h2>
+                                <p className="mt-0.5 text-[12px] text-[#86868b]">
+                                    These apply immediately. Connect LifeSync under Integrations to sync animation settings with your account.
+                                </p>
                             </div>
-                            <div className="px-6 sm:px-8 py-10 flex flex-col items-center justify-center gap-3 text-center">
-                                <div className="w-12 h-12 rounded-2xl bg-[#f5f5f7] flex items-center justify-center">
-                                    <svg className="w-6 h-6 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-                                </div>
-                                <p className="text-[13px] font-semibold text-[#1d1d1f]">Preferences coming soon</p>
-                                <p className="text-[12px] text-[#86868b]">Theme, notifications, and app preferences will be here.</p>
-                            </div>
+                            <ul className="divide-y divide-[#f5f5f7]">
+                                <li className="px-6 sm:px-8 py-5">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="min-w-0">
+                                            <p className="text-[13px] font-semibold text-[#1d1d1f]">Reduce animations</p>
+                                            <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                Turns off transitions and decorative motion app-wide for less CPU/GPU use and a calmer UI.
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={prefMotionBusy}
+                                            role="switch"
+                                            aria-checked={isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)}
+                                            onClick={async () => {
+                                                const next = !isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)
+                                                if (!lifeSyncUser) {
+                                                    writeStoredReduceAnimationsSetting(next)
+                                                    notifyReduceMotionPreferenceChanged()
+                                                    return
+                                                }
+                                                setPrefMotionBusy(true)
+                                                setError("")
+                                                try {
+                                                    await lifeSyncUpdatePreferences({ reduceAnimations: next })
+                                                } catch (e) {
+                                                    setError(e?.message || "Could not save preference")
+                                                } finally {
+                                                    setPrefMotionBusy(false)
+                                                }
+                                            }}
+                                            className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "bg-[#C6FF00]" : "bg-[#d2d2d7]"} disabled:opacity-50`}
+                                        >
+                                            <span
+                                                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
+                                            />
+                                        </button>
+                                    </div>
+                                </li>
+                            </ul>
                         </div>
                     )}
                     {activeTab === "integrations" && (
-                        <GithubIntegrations />
+                        <div className="min-w-0 overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
+                            <div className="border-b border-[#f0f0f0] px-5 pt-5 pb-4 sm:px-8 sm:pt-6">
+                                <h2 className="text-[16px] font-bold text-[#1d1d1f]">Integrations</h2>
+                                <p className="mt-0.5 text-[12px] text-[#86868b]">
+                                    Link LifeSync, GitHub, and external services.
+                                </p>
+                            </div>
+                            <div className="min-w-0 px-4 py-5 sm:px-8 sm:py-6">
+                                <GithubIntegrations embedded />
+                            </div>
+                        </div>
                     )}
+                    </div>
                 </div>
             </div>
         </div>

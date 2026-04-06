@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Link } from "react-router-dom";
-import AdvancedVideoPlayer from "../../components/lifesync/AdvancedVideoPlayer";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { DetailWatchGridSkeleton } from "../../components/lifesync/EpisodeLoadingSkeletons";
+import { LifeSyncSectionNav } from "../../components/lifesync/LifeSyncSectionNav";
 import { useLifeSync } from "../../context/LifeSyncContext";
 import {
   ANIPUB_API_REFERENCE_URL,
@@ -10,6 +11,51 @@ import {
   lifesyncFetch,
   lifesyncOAuthStartUrl,
 } from "../../lib/lifesyncApi";
+import {
+  fetchStreamInfoByMalWithCache,
+  writeLifesyncStreamCatalogByMal,
+} from "../../lib/lifesyncStreamCatalogCache";
+import { animePosterLayoutId } from "../../lib/lifesyncAnimeSharedLayout";
+import { stashAnimeWatchHandoff } from "../../lib/lifesyncWatchHandoff";
+import {
+  AnimatePresence,
+  lifeSyncDetailAnimeContentRevealTransition,
+  lifeSyncDetailBackdropFadeTransition,
+  lifeSyncDetailOverlayFadeTransition,
+  lifeSyncDetailSheetEnterAnimate,
+  lifeSyncDetailSheetEnterInitial,
+  lifeSyncDetailSheetExitVariant,
+  lifeSyncDetailSheetMainTransition,
+  lifeSyncDollyPageTransition,
+  lifeSyncDollyPageVariants,
+  lifeSyncEpisodeBlockPresenceTransition,
+  lifeSyncEpisodeGridStaggerMaxItems,
+  lifeSyncPageTransition,
+  lifeSyncSectionPresenceTransition,
+  lifeSyncSectionPresenceVariants,
+  lifeSyncSharedLayoutTransitionProps,
+  lifeSyncStaggerEpisodeGrid,
+  lifeSyncStaggerEpisodeGridItem,
+  MotionDiv,
+} from "../../lib/lifesyncMotion";
+
+/** Minimal MAL node fields for instant detail hero (navigate `state`, no extra fetch). */
+function animeDetailPreviewFromNode(node) {
+  if (!node || node.id == null) return null;
+  return {
+    id: String(node.id),
+    title: node.title,
+    main_picture: node.main_picture,
+    mean: node.mean,
+    num_episodes: node.num_episodes,
+    media_type: node.media_type,
+  };
+}
+
+function clampPage(n) {
+  const v = Number.parseInt(String(n || "1"), 10);
+  return Number.isFinite(v) && v > 0 ? v : 1;
+}
 
 /** MAL API v2 GET /anime/ranking — `ranking_type` values. */
 /** MAL API seasonal calendar (month 0–11 → season). */
@@ -50,22 +96,53 @@ function isIOSDevice() {
   return iOS || iPadOS;
 }
 
-function AnimeCard({ node, ranking, onSelect }) {
+const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
   const anime = node || {};
   const pic = anime.main_picture?.large || anime.main_picture?.medium;
   return (
     <button
       type="button"
-      onClick={() => anime.id != null && onSelect?.(anime.id)}
+      onClick={() => anime.id != null && onSelect?.(anime)}
       className="group w-full text-left"
     >
       <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden hover:shadow-md transition-all">
         <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#f5f5f7]">
-          {pic ? (
+          {anime.id != null ? (
+            <MotionDiv
+              layoutId={animePosterLayoutId(anime.id)}
+              transition={lifeSyncSharedLayoutTransitionProps}
+              className="absolute inset-0 bg-[#f5f5f7]"
+            >
+              {pic ? (
+                <img
+                  src={pic}
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                  <svg
+                    className="w-10 h-10"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75M3.375 19.5h17.25m0 0a1.125 1.125 0 001.125-1.125m0 0V5.625"
+                    />
+                  </svg>
+                </div>
+              )}
+            </MotionDiv>
+          ) : pic ? (
             <img
               src={pic}
               alt=""
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
               loading="lazy"
             />
           ) : (
@@ -85,7 +162,7 @@ function AnimeCard({ node, ranking, onSelect }) {
               </svg>
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           {ranking != null && (
             <span className="absolute left-2 top-2 bg-[#C6FF00] text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg">
               #{ranking}
@@ -102,30 +179,52 @@ function AnimeCard({ node, ranking, onSelect }) {
               {anime.mean}
             </span>
           )}
-          <div className="absolute bottom-0 inset-x-0 p-3">
-            <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
+            <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
               {anime.title}
             </p>
-            <div className="flex gap-1 mt-1">
+            <div className="mt-1 flex flex-wrap gap-1">
               {anime.media_type && (
-                <span className="bg-white/20 text-white text-[10px] font-medium px-1.5 py-0.5 rounded uppercase backdrop-blur-sm">
+                <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium uppercase text-white backdrop-blur-sm">
                   {anime.media_type}
                 </span>
               )}
               {anime.num_episodes != null && (
-                <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded backdrop-blur-sm">
+                <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
                   {anime.num_episodes} ep
                 </span>
               )}
             </div>
           </div>
         </div>
+        <div className="flex items-center justify-center gap-1.5 border-t border-[#f0f0f0] bg-[#fafafa] py-2.5 text-[11px] font-semibold text-[#1d1d1f]">
+          <svg
+            className="h-3.5 w-3.5 text-[#86868b]"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            strokeWidth="2"
+            aria-hidden
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
+            />
+          </svg>
+          View details
+        </div>
       </div>
     </button>
   );
-}
+});
 
-function MyListCard({ node, listStatus, onSelect }) {
+const MyListCard = memo(function MyListCard({ node, listStatus, onSelect }) {
   const anime = node || {};
   const pic = anime.main_picture?.large || anime.main_picture?.medium;
   const st = listStatus || {};
@@ -142,12 +241,27 @@ function MyListCard({ node, listStatus, onSelect }) {
   return (
     <button
       type="button"
-      onClick={() => anime.id != null && onSelect?.(anime.id)}
+      onClick={() => anime.id != null && onSelect?.(anime)}
       className="group w-full text-left"
     >
       <div className="bg-white rounded-[16px] border border-[#d2d2d7]/50 shadow-sm p-3 flex gap-3 hover:shadow-md transition-all">
-        <div className="w-16 h-24 shrink-0 rounded-xl overflow-hidden bg-[#f5f5f7]">
-          {pic ? (
+        <div className="h-24 w-16 shrink-0 overflow-hidden rounded-xl bg-[#f5f5f7]">
+          {anime.id != null ? (
+            <MotionDiv
+              layoutId={animePosterLayoutId(anime.id)}
+              transition={lifeSyncSharedLayoutTransitionProps}
+              className="h-full w-full"
+            >
+              {pic ? (
+                <img
+                  src={pic}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              ) : null}
+            </MotionDiv>
+          ) : pic ? (
             <img
               src={pic}
               alt=""
@@ -185,7 +299,7 @@ function MyListCard({ node, listStatus, onSelect }) {
       </div>
     </button>
   );
-}
+});
 
 function normalizeStreamEpisodesForPlayer(list, episodeThumbnails = {}) {
   const thumbs =
@@ -215,951 +329,7 @@ function normalizeStreamEpisodesForPlayer(list, episodeThumbnails = {}) {
     .filter(Boolean);
 }
 
-function formatMalStatusLabel(status) {
-  if (!status) return "—";
-  return String(status).replace(/_/g, " ");
-}
-
-function episodeNumberForMalProgress(ep, episodeIndex) {
-  if (ep?.number != null && Number.isFinite(Number(ep.number))) {
-    return Math.max(1, Math.floor(Number(ep.number)));
-  }
-  return Math.max(1, episodeIndex + 1);
-}
-
-async function putAnimeWatchProgress(malId, lastEpisodeNumber) {
-  if (!malId || !lastEpisodeNumber) return;
-  try {
-    await lifesyncFetch(
-      `/api/anime/watch-progress/${encodeURIComponent(malId)}`,
-      {
-        method: "PUT",
-        json: { lastEpisodeNumber },
-      },
-    );
-  } catch {
-    /* ignore */
-  }
-}
-
-function MalScoreStars({
-  malId,
-  malLinked,
-  malDetail,
-  onUpdated,
-  className = "",
-}) {
-  const ls = malDetail?.my_list_status || {};
-  const [score, setScore] = useState(() =>
-    ls.score != null ? Number(ls.score) : 0,
-  );
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
-
-  useEffect(() => {
-    const s = malDetail?.my_list_status || {};
-    setScore(s.score != null ? Number(s.score) : 0);
-  }, [malDetail]);
-
-  const saveScore = async (nextScore) => {
-    if (!malLinked || !malId) {
-      setMsg("Link MyAnimeList to rate.");
-      return;
-    }
-    setBusy(true);
-    setMsg("");
-    try {
-      const body = { score: nextScore > 0 ? nextScore : 0 };
-      const data = await lifesyncFetch(
-        `/api/anime/mylist/${encodeURIComponent(malId)}`,
-        {
-          method: "PATCH",
-          json: body,
-        },
-      );
-      onUpdated?.(data);
-      setMsg("Saved.");
-      setTimeout(() => setMsg(""), 2500);
-    } catch (err) {
-      setMsg(err.message || "Save failed.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const Star = ({ filled }) => (
-    <svg
-      className={`h-6 w-6 ${filled ? "text-amber-400 fill-amber-400" : "text-white/20 fill-white/10"}`}
-      viewBox="0 0 20 20"
-      aria-hidden="true"
-    >
-      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-    </svg>
-  );
-
-  return (
-    <div className={className}>
-      <div
-        className={`flex items-center justify-between gap-3 ${!malLinked || busy ? "opacity-60" : ""}`}
-      >
-        <div className="flex items-center gap-1">
-          {Array.from({ length: 10 }).map((_, i) => {
-            const v = i + 1;
-            const filled = score >= v;
-            const label =
-              v === score
-                ? `Score ${v} out of 10 (selected)`
-                : `Set score to ${v} out of 10`;
-            return (
-              <button
-                key={v}
-                type="button"
-                disabled={!malLinked || busy}
-                onClick={() => {
-                  setScore(v);
-                  void saveScore(v);
-                }}
-                className="rounded focus:outline-none focus:ring-2 focus:ring-cyan-400/60"
-                aria-label={label}
-              >
-                <Star filled={filled} />
-              </button>
-            );
-          })}
-        </div>
-        <div className="shrink-0 rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[12px] font-semibold text-white/80 tabular-nums">
-          {score > 0 ? `${score}/10` : "—"}
-        </div>
-      </div>
-      {msg ? (
-        <p className="mt-1.5 text-[11px] text-cyan-200/90">{msg}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function pickMalAltTitle(mal) {
-  if (!mal || typeof mal !== "object") return "";
-  const title = mal.title || "";
-  const syn = Array.isArray(mal.alternative_titles?.synonyms)
-    ? mal.alternative_titles.synonyms.filter(Boolean)
-    : [];
-  const ja = mal.alternative_titles?.ja;
-  const en = mal.alternative_titles?.en;
-  if (ja && String(ja).trim() && ja !== title) return String(ja).trim();
-  if (syn.length) return syn.join(" · ");
-  if (en && String(en).trim() && en !== title) return String(en).trim();
-  return "";
-}
-
-function StreamMetaStatCard({ label, value }) {
-  return (
-    <div className="flex min-w-0 flex-1 flex-col rounded-lg border border-white/[0.06] bg-[#0a0f16] py-2.5 pl-3 pr-2 sm:py-3">
-      <span className="border-l-2 border-cyan-400 pl-2.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-white/45">
-        {label}
-      </span>
-      <p className="mt-1.5 pl-2.5 text-[13px] font-semibold capitalize text-white sm:text-[14px]">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-/** Hero row below the stream player (poster + MAL-style metadata). */
-function AnimeStreamDetailBelowVideo({
-  series,
-  malLinked,
-  onScrollToPlayer,
-  onMalUpdated,
-  onPrev,
-  onNext,
-  prevDisabled,
-  nextDisabled,
-}) {
-  const mal = series?.malDetail;
-  const malId =
-    series?.malId ??
-    (typeof series?.seriesKey === "string" &&
-    series.seriesKey.startsWith("mal:")
-      ? series.seriesKey.slice(4)
-      : null);
-  const poster =
-    series?.poster || mal?.main_picture?.large || mal?.main_picture?.medium;
-  const displayTitle = mal?.title || series?.title || "Anime";
-  const altTitle = pickMalAltTitle(mal);
-  const epCount =
-    mal?.num_episodes != null
-      ? mal.num_episodes
-      : (series?.episodes?.length ?? "—");
-  const votes = mal?.num_list_users ?? mal?.statistics?.num_list_users;
-  const rank = mal?.rank;
-  const mean = mal?.mean;
-  const genres = Array.isArray(mal?.genres) ? mal.genres : [];
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-cyan-500/15 bg-[#0d1219] shadow-[0_0_40px_-8px_rgba(168,85,247,0.25)]">
-      <div className="flex flex-col gap-5 p-4 sm:flex-row sm:items-stretch sm:gap-6 sm:p-5">
-        <div className="mx-auto w-[8.5rem] shrink-0 sm:mx-0 sm:w-[min(11rem,28vw)]">
-          <div className="aspect-[2/3] overflow-hidden rounded-xl shadow-[0_12px_40px_-4px_rgba(168,85,247,0.35)] ring-1 ring-fuchsia-500/20">
-            {poster ? (
-              <img
-                src={poster}
-                alt=""
-                className="h-full w-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-white/5 text-white/25">
-                <svg
-                  className="h-12 w-12"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="min-w-0 flex-1 space-y-4">
-          <div>
-            <h2 className="font-serif text-[1.35rem] font-bold leading-tight tracking-tight text-white sm:text-[1.65rem]">
-              {displayTitle}
-            </h2>
-            {altTitle ? (
-              <p className="mt-1.5 text-[12px] italic text-white/50 sm:text-[13px]">
-                Also known as: {altTitle}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5">
-            <StreamMetaStatCard
-              label="Status:"
-              value={formatMalStatusLabel(mal?.status)}
-            />
-            <StreamMetaStatCard
-              label="Type:"
-              value={
-                mal?.media_type ? String(mal.media_type).toUpperCase() : "—"
-              }
-            />
-            <StreamMetaStatCard
-              label="Episodes:"
-              value={epCount === "—" ? "—" : String(epCount)}
-            />
-            <StreamMetaStatCard
-              label="Rating:"
-              value={mean != null ? `${mean} / 10` : "? / 10"}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            <div className="rounded-xl border border-fuchsia-500/25 bg-[#0a0f16] px-4 py-3">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                MyAnimeList votes
-              </p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-cyan-400 sm:text-[1.75rem]">
-                {votes != null ? Number(votes).toLocaleString() : "—"}
-              </p>
-            </div>
-            <div className="rounded-xl border border-fuchsia-500/25 bg-[#0a0f16] px-4 py-3">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                MyAnimeList rank
-              </p>
-              <p className="mt-1 text-2xl font-bold tabular-nums text-cyan-400 sm:text-[1.75rem]">
-                {rank != null ? `#${rank}` : "—"}
-              </p>
-            </div>
-          </div>
-
-          {genres.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {genres.slice(0, 8).map((g) => (
-                <span
-                  key={g.id || g.name}
-                  className="rounded-full border border-cyan-400/50 bg-transparent px-3 py-1 text-[11px] font-medium text-white"
-                >
-                  {g.name}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="flex-1 sm:flex-initial sm:min-w-[22rem]">
-              {malId ? (
-                <div className="rounded-xl border border-white/10 bg-[#0a0f16] px-4 py-3">
-                  <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/45">
-                    Your score
-                  </p>
-                  <MalScoreStars
-                    malId={malId}
-                    malLinked={malLinked}
-                    malDetail={mal}
-                    onUpdated={onMalUpdated}
-                    className="mt-2"
-                  />
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onScrollToPlayer}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-cyan-400 px-4 text-[12px] font-bold uppercase tracking-wide text-[#0a1628] shadow-[0_0_24px_-4px_rgba(34,211,238,0.45)] transition hover:bg-cyan-300"
-                >
-                  <svg
-                    className="h-4 w-4 shrink-0"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                  Watch now
-                </button>
-              )}
-            </div>
-            <div className="flex gap-2 sm:ml-auto">
-              <button
-                type="button"
-                disabled={prevDisabled}
-                onClick={onPrev}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border border-white/15 bg-white/5 px-3 text-[11px] font-semibold text-white/85 hover:bg-white/10 disabled:opacity-30 sm:flex-initial sm:min-w-[6.5rem]"
-              >
-                Prev
-              </button>
-              <button
-                type="button"
-                disabled={nextDisabled}
-                onClick={onNext}
-                className="inline-flex h-10 flex-1 items-center justify-center rounded-xl border border-cyan-400/40 bg-cyan-400/15 px-3 text-[11px] font-semibold text-cyan-300 hover:bg-cyan-400/25 disabled:opacity-30 sm:flex-initial sm:min-w-[6.5rem]"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Fullscreen watch UI — same flow as LifeSyncHentai (player + episode queue). */
-function AnimeStreamPlayerPopup({
-  playerState,
-  onClose,
-  onChangeEpisode,
-  malLinked,
-  streamAudioType,
-  onAudioModeChange,
-  onMirrorChange,
-  onMalListPatchResult,
-}) {
-  const { stream, series, episodeIndex } = playerState;
-  const episodes = useMemo(() => series?.episodes || [], [series]);
-  const prevEp = episodeIndex > 0 ? episodes[episodeIndex - 1] : null;
-  const nextEp =
-    episodeIndex >= 0 && episodeIndex < episodes.length - 1
-      ? episodes[episodeIndex + 1]
-      : null;
-  const playingRef = useRef(null);
-  const playerAnchorRef = useRef(null);
-  const malSyncTimerRef = useRef(null);
-  const [audioBusy, setAudioBusy] = useState(false);
-  const [episodesOpen, setEpisodesOpen] = useState(false);
-
-  const malId = series?.malId;
-  const displayTitle = series?.malDetail?.title || series?.title || "Anime";
-  const nowPlayingLabel = stream?.title ? String(stream.title) : "";
-
-  const queueMalSync = useCallback(
-    (mid, epNum, totalEpisodes) => {
-      if (!malLinked || !mid || !epNum) return;
-      if (malSyncTimerRef.current) clearTimeout(malSyncTimerRef.current);
-      malSyncTimerRef.current = setTimeout(async () => {
-        try {
-          const body = { num_watched_episodes: epNum };
-          const total = totalEpisodes != null ? Number(totalEpisodes) : NaN;
-          if (Number.isFinite(total) && total > 0 && epNum >= total) {
-            body.status = "completed";
-          }
-          await lifesyncFetch(`/api/anime/mylist/${encodeURIComponent(mid)}`, {
-            method: "PATCH",
-            json: body,
-          });
-        } catch {
-          /* not on list or offline */
-        }
-      }, 700);
-    },
-    [malLinked],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (malSyncTimerRef.current) clearTimeout(malSyncTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!malId || !episodes.length) return;
-    const ep = episodes[episodeIndex];
-    if (!ep) return;
-    const n = episodeNumberForMalProgress(ep, episodeIndex);
-    void putAnimeWatchProgress(malId, n);
-    queueMalSync(malId, n, series?.malDetail?.num_episodes);
-  }, [
-    episodeIndex,
-    episodes,
-    malId,
-    malLinked,
-    queueMalSync,
-    series?.malDetail?.num_episodes,
-  ]);
-
-  const scrollToPlayer = useCallback(() => {
-    playerAnchorRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }, []);
-
-  useEffect(() => {
-    const el = playingRef.current;
-    if (!el) return;
-    el.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "nearest",
-    });
-  }, [episodeIndex]);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [onClose]);
-
-  const hideScroll = "[scrollbar-width:none] [&::-webkit-scrollbar]:hidden";
-  const progressLabel =
-    episodes.length > 0
-      ? `${Math.min(episodes.length, episodeIndex + 1)} / ${episodes.length}`
-      : null;
-
-  const handleEnded = useCallback(() => {
-    if (!malId || !episodes[episodeIndex]) return;
-    const n = episodeNumberForMalProgress(episodes[episodeIndex], episodeIndex);
-    void putAnimeWatchProgress(malId, n);
-    queueMalSync(malId, n, series?.malDetail?.num_episodes);
-    if (nextEp) onChangeEpisode(episodeIndex + 1);
-  }, [
-    episodeIndex,
-    episodes,
-    malId,
-    nextEp,
-    onChangeEpisode,
-    queueMalSync,
-    series?.malDetail?.num_episodes,
-  ]);
-
-  const switchAudio = async (mode) => {
-    if (audioBusy || mode === streamAudioType) return;
-    setAudioBusy(true);
-    try {
-      await onAudioModeChange?.(mode);
-    } finally {
-      setAudioBusy(false);
-    }
-  };
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden bg-[#020202] text-white"
-      style={{
-        paddingLeft: "max(0px, env(safe-area-inset-left))",
-        paddingRight: "max(0px, env(safe-area-inset-right))",
-      }}
-    >
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[#C6FF00]/12 blur-[120px]" />
-        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[#37c9ff]/8 blur-[135px]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08)_0%,rgba(2,2,2,0)_48%)]" />
-      </div>
-
-      <header className="relative shrink-0 border-b border-white/10 bg-black/40 backdrop-blur-xl">
-        <div className="flex min-w-0 items-center justify-between gap-2 py-2.5 pl-3 pr-3 pt-[max(0.625rem,env(safe-area-inset-top))] sm:gap-3 sm:px-4 sm:py-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex min-w-0 shrink items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white"
-            >
-              <svg
-                className="h-4 w-4 shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              <span className="truncate">Back</span>
-            </button>
-            <div className="min-w-0">
-              <p className="truncate text-[12px] font-semibold text-white/90 sm:text-[13px]">
-                {displayTitle}
-              </p>
-              {nowPlayingLabel ? (
-                <p className="truncate text-[10px] font-medium text-white/45">
-                  {nowPlayingLabel}
-                </p>
-              ) : (
-                <p className="text-[10px] font-medium text-white/35">Ready</p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            {/* Mobile: Episodes drawer */}
-            {episodes.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setEpisodesOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[11px] font-semibold text-white/85 hover:bg-white/10 sm:hidden"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"
-                  />
-                </svg>
-                Episodes
-              </button>
-            )}
-
-            {/* Close (explicit X) */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white"
-              aria-label="Close player"
-              title="Close"
-            >
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth="2"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 px-3 py-2 sm:px-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex rounded-full border border-white/15 bg-black/30 p-0.5">
-              <button
-                type="button"
-                disabled={audioBusy}
-                onClick={() => void switchAudio("sub")}
-                className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition ${
-                  streamAudioType !== "dub"
-                    ? "bg-cyan-400 text-[#0a1628]"
-                    : "text-white/55 hover:text-white"
-                }`}
-              >
-                Sub
-              </button>
-              <button
-                type="button"
-                disabled={audioBusy}
-                onClick={() => void switchAudio("dub")}
-                className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide transition ${
-                  streamAudioType === "dub"
-                    ? "bg-cyan-400 text-[#0a1628]"
-                    : "text-white/55 hover:text-white"
-                }`}
-              >
-                Dub
-              </button>
-            </div>
-            {Array.isArray(stream?.mirrors) &&
-              stream.mirrors.length > 1 &&
-              String(stream?.provider || "").toLowerCase() !== "anitaku" && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-white/45">
-                    Mirror
-                  </span>
-                  <select
-                    value={stream.selectedMirrorId ?? "0"}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      onMirrorChange?.(val);
-                    }}
-                    className="h-7 rounded-md border border-white/15 bg-black/40 px-2 text-[11px] font-semibold text-white/80 outline-none hover:border-white/25 focus:border-cyan-400/60"
-                  >
-                    {stream.mirrors.map((m, i) => (
-                      <option
-                        key={m.id ?? String(i)}
-                        value={m.id ?? String(i)}
-                        className="bg-[#111]"
-                      >
-                        {m.label || `Mirror ${i + 1}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-          </div>
-          <div className="flex items-center gap-2">
-            {progressLabel ? (
-              <span className="rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/75">
-                {progressLabel}
-              </span>
-            ) : null}
-            <div className="hidden sm:flex items-center gap-2">
-              <button
-                type="button"
-                disabled={!prevEp}
-                onClick={() => prevEp && onChangeEpisode(episodeIndex - 1)}
-                className="inline-flex h-8 items-center justify-center rounded-full border border-white/15 bg-white/5 px-3 text-[11px] font-semibold text-white/80 hover:bg-white/10 disabled:opacity-30"
-              >
-                Prev
-              </button>
-              <button
-                type="button"
-                disabled={!nextEp}
-                onClick={() => nextEp && onChangeEpisode(episodeIndex + 1)}
-                className="inline-flex h-8 items-center justify-center rounded-full border border-cyan-400/40 bg-cyan-400/15 px-3 text-[11px] font-semibold text-cyan-200 hover:bg-cyan-400/25 disabled:opacity-30"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div
-        className={`relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom,0px)] ${hideScroll}`}
-      >
-        <div className="mx-auto grid w-full min-w-0 max-w-[1200px] gap-4 px-3 py-4 sm:px-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.4fr)] lg:gap-5 lg:px-6">
-          <section className="min-w-0 space-y-4">
-            <div
-              ref={playerAnchorRef}
-              id="lifesync-anime-player-anchor"
-              className="relative w-full min-w-0 overflow-hidden rounded-2xl border border-white/15 bg-black shadow-[0_28px_80px_rgba(0,0,0,0.5)]"
-            >
-              <div className="relative aspect-video w-full">
-                <div className="absolute inset-0">
-                  {stream.resolving ? (
-                    <div className="flex h-full w-full flex-col items-center justify-center bg-[#111]">
-                      <div className="flex gap-1.5">
-                        {[0, 150, 300].map((d) => (
-                          <span
-                            key={d}
-                            className="h-2.5 w-2.5 rounded-full bg-[#C6FF00] animate-bounce"
-                            style={{ animationDelay: `${d}ms` }}
-                          />
-                        ))}
-                      </div>
-                      <p className="mt-3 text-[13px] text-white/45">
-                        Resolving stream…
-                      </p>
-                    </div>
-                  ) : stream.iframeUrl ? (
-                    <iframe
-                      key={stream.iframeUrl}
-                      title={stream.title || "Episode"}
-                      src={stream.iframeUrl}
-                      className="h-full w-full border-0 bg-black"
-                      allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
-                      sandbox={
-                        ["streamhg", "earnvid"].includes(
-                          String(stream?.selectedMirrorLabel || "")
-                            .trim()
-                            .toLowerCase(),
-                        )
-                          ? undefined
-                          : "allow-same-origin allow-scripts allow-presentation allow-popups allow-popups-to-escape-sandbox allow-forms"
-                      }
-                      referrerPolicy="no-referrer-when-downgrade"
-                    />
-                  ) : stream.videoUrl ? (
-                    <AdvancedVideoPlayer
-                      key={stream.videoUrl}
-                      src={stream.videoUrl}
-                      textTracks={stream.textTracks || []}
-                      onEnded={handleEnded}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-[#111] px-4 text-center">
-                      <p className="text-[14px] text-white/35">
-                        No stream available for this episode.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <AnimeStreamDetailBelowVideo
-              series={series}
-              malLinked={malLinked}
-              onScrollToPlayer={scrollToPlayer}
-              onMalUpdated={(data) => onMalListPatchResult?.(data)}
-              onPrev={() => prevEp && onChangeEpisode(episodeIndex - 1)}
-              onNext={() => nextEp && onChangeEpisode(episodeIndex + 1)}
-              prevDisabled={!prevEp}
-              nextDisabled={!nextEp}
-            />
-
-            {stream.title &&
-            stream.title !== (series?.malDetail?.title || series?.title) ? (
-              <p className="text-center text-[11px] text-white/40 sm:text-left">
-                Now playing:{" "}
-                <span className="font-medium text-white/70">
-                  {stream.title}
-                </span>
-              </p>
-            ) : null}
-          </section>
-
-          {episodes.length > 0 && (
-            <aside className="min-w-0 lg:max-h-[calc(100dvh-7.25rem)] lg:overflow-hidden hidden lg:block">
-              <div
-                className={`rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:p-4 lg:flex lg:h-full lg:max-h-full lg:flex-col`}
-              >
-                <div className="mb-3 flex min-w-0 items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/42">
-                      Episodes
-                    </p>
-                    <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-white/90">
-                      {displayTitle}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-medium tabular-nums text-white/55">
-                    {episodes.length}
-                  </span>
-                </div>
-                <div
-                  className={`max-h-[42dvh] overflow-y-auto pr-1 lg:min-h-0 lg:max-h-none lg:flex-1 ${hideScroll}`}
-                >
-                  <ul className="space-y-1.5">
-                    {episodes.map((ep, i) => {
-                      const isCurrent = i === episodeIndex;
-                      const epLabel =
-                        ep.number != null ? `Ep ${ep.number}` : `Part ${i + 1}`;
-                      return (
-                        <li key={ep.episodeId || i}>
-                          <button
-                            ref={isCurrent ? playingRef : undefined}
-                            type="button"
-                            onClick={() => onChangeEpisode(i)}
-                            className={`group flex w-full min-w-0 items-center gap-2.5 rounded-xl border px-2 py-2 text-left transition-all ${
-                              isCurrent
-                                ? "border-[#C6FF00]/50 bg-[#C6FF00]/14"
-                                : "border-white/10 bg-black/30 hover:border-white/20 hover:bg-white/[0.06]"
-                            }`}
-                          >
-                            <div className="relative h-12 w-[4.4rem] shrink-0 overflow-hidden rounded-lg bg-black/45">
-                              {ep.thumbnailUrl || series?.poster ? (
-                                <img
-                                  src={ep.thumbnailUrl || series.poster}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center text-white/20">
-                                  <svg
-                                    className="h-5 w-5"
-                                    fill="currentColor"
-                                    viewBox="0 0 24 24"
-                                  >
-                                    <path d="M8 5v14l11-7z" />
-                                  </svg>
-                                </div>
-                              )}
-                              {isCurrent && (
-                                <span className="absolute left-1 top-1 rounded bg-[#C6FF00]/90 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
-                                  Live
-                                </span>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p
-                                className={`line-clamp-2 text-[11px] font-semibold leading-snug ${isCurrent ? "text-[#C6FF00]" : "text-white/88"}`}
-                              >
-                                {ep.title}
-                              </p>
-                              <p className="mt-1 text-[9px] text-white/42">
-                                {epLabel}
-                              </p>
-                            </div>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </div>
-            </aside>
-          )}
-        </div>
-      </div>
-
-      {/* Mobile episodes drawer */}
-      {episodes.length > 0 && episodesOpen && (
-        <div
-          className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm lg:hidden"
-          onClick={() => setEpisodesOpen(false)}
-        >
-          <div
-            className="absolute inset-x-0 bottom-0 max-h-[78dvh] rounded-t-3xl border-t border-white/10 bg-[#070a10] shadow-[0_-24px_60px_rgba(0,0,0,0.6)]"
-            style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-                  Episodes
-                </p>
-                <p className="truncate text-[13px] font-semibold text-white/90">
-                  {displayTitle}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEpisodesOpen(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 hover:bg-white/10"
-                aria-label="Close episodes"
-              >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  strokeWidth="2"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <div
-              className={`px-3 py-3 overflow-y-auto ${hideScroll}`}
-              style={{ maxHeight: "calc(78dvh - 3.25rem)" }}
-            >
-              <ul className="space-y-2">
-                {episodes.map((ep, i) => {
-                  const isCurrent = i === episodeIndex;
-                  const epLabel =
-                    ep.number != null ? `Ep ${ep.number}` : `Part ${i + 1}`;
-                  return (
-                    <li key={ep.episodeId || i}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onChangeEpisode(i);
-                          setEpisodesOpen(false);
-                        }}
-                        className={`group flex w-full min-w-0 items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-all ${
-                          isCurrent
-                            ? "border-[#C6FF00]/55 bg-[#C6FF00]/12"
-                            : "border-white/10 bg-black/30 hover:border-white/20 hover:bg-white/[0.06]"
-                        }`}
-                      >
-                        <div className="relative h-14 w-[5.4rem] shrink-0 overflow-hidden rounded-xl bg-black/45">
-                          {ep.thumbnailUrl || series?.poster ? (
-                            <img
-                              src={ep.thumbnailUrl || series.poster}
-                              alt=""
-                              className="h-full w-full object-cover"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-white/20">
-                              <svg
-                                className="h-5 w-5"
-                                fill="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </div>
-                          )}
-                          {isCurrent && (
-                            <span className="absolute left-1.5 top-1.5 rounded bg-[#C6FF00]/90 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
-                              Live
-                            </span>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p
-                            className={`line-clamp-2 text-[12px] font-semibold leading-snug ${isCurrent ? "text-[#C6FF00]" : "text-white/90"}`}
-                          >
-                            {ep.title}
-                          </p>
-                          <p className="mt-1 text-[10px] text-white/45">
-                            {epLabel}
-                          </p>
-                        </div>
-                        <svg
-                          className={`h-4 w-4 shrink-0 ${isCurrent ? "text-[#C6FF00]" : "text-white/25 group-hover:text-white/45"}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                          strokeWidth="2"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>,
-    document.body,
-  );
-}
-
-/** `key={animeId}` on parent resets loading state when the selected title changes (no sync setState in effects). */
+/** Parent key includes `animeStreamAudio` so sub/dub changes remount this block (no sync reset setState in the effect). */
 function DetailWatchSection({
   animeId,
   malTitle,
@@ -1174,63 +344,89 @@ function DetailWatchSection({
   const [resumeLastEp, setResumeLastEp] = useState(null);
 
   useEffect(() => {
+    const ac = new AbortController();
+    const { signal } = ac;
     let cancelled = false;
+    const isAbort = (err) => err?.name === "AbortError";
+
+    const audio = animeStreamAudio === "dub" ? "dub" : "sub";
+
     lifesyncFetch(
       `/api/anime/stream/info/by-mal/${encodeURIComponent(animeId)}`,
+      { signal },
     )
       .then((res) => {
         if (!cancelled) setStreamData(res?.data ?? null);
       })
-      .catch(() => {
-        if (!cancelled) setStreamData(null);
+      .catch((err) => {
+        if (isAbort(err) || cancelled) return;
+        setStreamData(null);
       })
       .finally(() => {
         if (!cancelled) setStreamBusy(false);
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [animeId]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const audio = animeStreamAudio === "dub" ? "dub" : "sub";
     lifesyncFetch(
       `/api/anime/mal-episode-thumbnails/${encodeURIComponent(animeId)}?audio=${audio}`,
+      { signal },
     )
       .then((res) => {
         if (
-          !cancelled &&
-          res?.thumbnails &&
-          typeof res.thumbnails === "object"
-        ) {
-          setThumbMap(res.thumbnails);
-        }
+          cancelled ||
+          !res?.thumbnails ||
+          typeof res.thumbnails !== "object"
+        )
+          return;
+        setThumbMap(res.thumbnails);
       })
-      .catch(() => {
-        if (!cancelled) setThumbMap({});
+      .catch((err) => {
+        if (isAbort(err) || cancelled) return;
+        setThumbMap({});
       });
-    return () => {
-      cancelled = true;
-    };
-  }, [animeId, animeStreamAudio]);
 
-  useEffect(() => {
-    let cancelled = false;
-    lifesyncFetch(`/api/anime/watch-progress/${encodeURIComponent(animeId)}`)
+    lifesyncFetch(`/api/anime/watch-progress/${encodeURIComponent(animeId)}`, {
+      signal,
+    })
       .then((p) => {
         if (cancelled) return;
         setResumeLastEp(
           p?.lastEpisodeNumber != null ? p.lastEpisodeNumber : null,
         );
       })
-      .catch(() => {
-        if (!cancelled) setResumeLastEp(null);
+      .catch((err) => {
+        if (isAbort(err) || cancelled) return;
+        setResumeLastEp(null);
       });
+
     return () => {
       cancelled = true;
+      ac.abort();
     };
+  }, [animeId, animeStreamAudio]);
+
+  const catalogWarmTimerRef = useRef(null);
+  const warmStreamCatalog = useCallback(() => {
+    if (!animeId) return;
+    if (catalogWarmTimerRef.current != null) return;
+    catalogWarmTimerRef.current = window.setTimeout(() => {
+      catalogWarmTimerRef.current = null;
+      void fetchStreamInfoByMalWithCache(animeId, lifesyncFetch)
+        .then((body) => {
+          if (body?.data != null) writeLifesyncStreamCatalogByMal(animeId, body);
+        })
+        .catch(() => {});
+    }, 200);
   }, [animeId]);
+
+  useEffect(
+    () => () => {
+      if (catalogWarmTimerRef.current != null) {
+        window.clearTimeout(catalogWarmTimerRef.current);
+        catalogWarmTimerRef.current = null;
+      }
+    },
+    [],
+  );
 
   const streamEps = useMemo(
     () => normalizeStreamEpisodesForPlayer(streamData?.episodes, thumbMap),
@@ -1260,122 +456,223 @@ function DetailWatchSection({
     [animeId, malDetail, malTitle, onPlayStream, pic, streamEps],
   );
 
+  const useStaggeredEpisodeCells =
+    streamEps.length > 0 &&
+    streamEps.length <= lifeSyncEpisodeGridStaggerMaxItems;
+
+  const episodeGridClass =
+    "grid grid-cols-2 gap-2 sm:grid-cols-3";
+
   return (
     <div className="border-t border-[#e5e5ea] pt-4 space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b]">
         Watch
       </p>
-      {!streamBusy &&
-        streamData?.matchedStreamTitle &&
-        streamData.matchedStreamTitle !== malTitle && (
-          <p className="text-[11px] text-[#86868b]">
-            Mirror match:{" "}
-            <span className="font-medium text-[#1d1d1f]">
-              {streamData.matchedStreamTitle}
-            </span>
-          </p>
-        )}
-      {streamBusy && (
-        <div className="flex gap-1.5 items-center text-[12px] text-[#86868b]">
-          {[0, 120, 240].map((d) => (
-            <span
-              key={d}
-              className="w-1.5 h-1.5 rounded-full bg-[#d2d2d7] animate-bounce"
-              style={{ animationDelay: `${d}ms` }}
-            />
-          ))}
-          <span>Loading episodes…</span>
-        </div>
-      )}
-      {!streamBusy &&
-        streamEps.length > 0 &&
-        resumeIndex >= 0 &&
-        streamEps[resumeIndex] && (
-          <button
-            type="button"
-            onClick={() => openSeries(streamEps[resumeIndex], resumeIndex)}
-            className="w-full rounded-[14px] border border-[#2E51A2]/30 bg-[#2E51A2]/8 px-4 py-3 text-left shadow-sm transition hover:border-[#2E51A2]/50 hover:bg-[#2E51A2]/12"
+      <AnimatePresence mode="sync" initial={false}>
+        {streamBusy ? (
+          <MotionDiv
+            key="watch-ep-skeleton"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={lifeSyncEpisodeBlockPresenceTransition}
           >
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#2E51A2]">
-              Continue
-            </p>
-            <p className="mt-1 text-[13px] font-semibold text-[#1d1d1f]">
-              Resume episode {resumeLastEp}
-              {streamEps[resumeIndex]?.title
-                ? ` · ${streamEps[resumeIndex].title}`
-                : ""}
-            </p>
-          </button>
-        )}
-      {!streamBusy && streamEps.length > 0 && (
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {streamEps.map((ep, i) => (
-            <button
-              key={ep.episodeId}
-              type="button"
-              onClick={() => openSeries(ep, i)}
-              className="group text-left overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-[#fafafa] shadow-sm hover:shadow-md hover:border-[#C6FF00]/40 transition-all"
-            >
-              <div className="relative aspect-video w-full overflow-hidden bg-[#f5f5f7]">
-                {ep.thumbnailUrl || pic ? (
-                  <img
-                    src={ep.thumbnailUrl || pic}
-                    alt=""
-                    className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-[1.03]"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[#86868b]">
-                    <svg
-                      className="w-8 h-8"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </div>
-                )}
-                {ep.number != null && (
-                  <span className="absolute left-1.5 top-1.5 rounded-md bg-[#1d1d1f]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
-                    E{ep.number}
+            <DetailWatchGridSkeleton count={6} />
+          </MotionDiv>
+        ) : (
+          <MotionDiv
+            key={`watch-ep-loaded-${animeId}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 6 }}
+            transition={lifeSyncEpisodeBlockPresenceTransition}
+            className="space-y-3"
+          >
+            {streamData?.matchedStreamTitle &&
+              streamData.matchedStreamTitle !== malTitle && (
+                <p className="text-[11px] text-[#86868b]">
+                  Mirror match:{" "}
+                  <span className="font-medium text-[#1d1d1f]">
+                    {streamData.matchedStreamTitle}
                   </span>
-                )}
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/25">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C6FF00] shadow-lg">
-                    <svg
-                      className="ml-0.5 h-4 w-4 text-[#1d1d1f]"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  </span>
-                </div>
-              </div>
-              <div className="px-2 py-2">
-                <p className="text-[10px] font-semibold text-[#1d1d1f] line-clamp-2 leading-snug">
-                  {ep.title}
                 </p>
-              </div>
-            </button>
-          ))}
-        </div>
-      )}
-      {!streamBusy && streamData && streamEps.length === 0 && (
-        <p className="text-[12px] text-[#86868b]">
-          No playable episodes were returned for this mirror.
-        </p>
-      )}
-      {!streamBusy && streamData === null && (
-        <p className="text-[12px] text-[#86868b]">
-          No streaming catalog matched this title on the mirror search.
-        </p>
-      )}
+              )}
+            {streamEps.length > 0 &&
+              resumeIndex >= 0 &&
+              streamEps[resumeIndex] && (
+                <MotionDiv
+                  variants={lifeSyncStaggerEpisodeGridItem}
+                  initial="hidden"
+                  animate="show"
+                >
+                  <button
+                    type="button"
+                    onMouseEnter={warmStreamCatalog}
+                    onFocus={warmStreamCatalog}
+                    onClick={() =>
+                      openSeries(streamEps[resumeIndex], resumeIndex)
+                    }
+                    className="w-full rounded-[14px] border border-[#C6FF00]/30 bg-[#C6FF00]/10 px-4 py-3 text-left shadow-sm transition hover:border-[#C6FF00]/50 hover:bg-[#C6FF00]/14"
+                  >
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#C6FF00]">
+                      Continue
+                    </p>
+                    <p className="mt-1 text-[13px] font-semibold text-[#1d1d1f]">
+                      Resume episode {resumeLastEp}
+                      {streamEps[resumeIndex]?.title
+                        ? ` · ${streamEps[resumeIndex].title}`
+                        : ""}
+                    </p>
+                  </button>
+                </MotionDiv>
+              )}
+            {streamEps.length > 0 ? (
+              useStaggeredEpisodeCells ? (
+                <MotionDiv
+                  variants={lifeSyncStaggerEpisodeGrid}
+                  initial="hidden"
+                  animate="show"
+                  className={episodeGridClass}
+                >
+                  {streamEps.map((ep, i) => (
+                    <MotionDiv
+                      key={ep.episodeId}
+                      variants={lifeSyncStaggerEpisodeGridItem}
+                    >
+                      <button
+                        type="button"
+                        onMouseEnter={warmStreamCatalog}
+                        onFocus={warmStreamCatalog}
+                        onClick={() => openSeries(ep, i)}
+                        className="group h-full w-full overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-[#fafafa] text-left shadow-sm transition-all hover:border-[#C6FF00]/40 hover:shadow-md"
+                      >
+                        <div className="relative aspect-video w-full overflow-hidden bg-[#f5f5f7]">
+                          {ep.thumbnailUrl || pic ? (
+                            <img
+                              src={ep.thumbnailUrl || pic}
+                              alt=""
+                              className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-[1.03]"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                              <svg
+                                className="h-8 w-8"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </div>
+                          )}
+                          {ep.number != null && (
+                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[#1d1d1f]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
+                              E{ep.number}
+                            </span>
+                          )}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C6FF00] shadow-lg">
+                              <svg
+                                className="ml-0.5 h-4 w-4 text-[#1d1d1f]"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="px-2 py-2">
+                          <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-[#1d1d1f]">
+                            {ep.title}
+                          </p>
+                        </div>
+                      </button>
+                    </MotionDiv>
+                  ))}
+                </MotionDiv>
+              ) : (
+                <MotionDiv
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={lifeSyncPageTransition}
+                  className={episodeGridClass}
+                >
+                  {streamEps.map((ep, i) => (
+                    <div key={ep.episodeId}>
+                      <button
+                        type="button"
+                        onMouseEnter={warmStreamCatalog}
+                        onFocus={warmStreamCatalog}
+                        onClick={() => openSeries(ep, i)}
+                        className="group h-full w-full overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-[#fafafa] text-left shadow-sm transition-all hover:border-[#C6FF00]/40 hover:shadow-md"
+                      >
+                        <div className="relative aspect-video w-full overflow-hidden bg-[#f5f5f7]">
+                          {ep.thumbnailUrl || pic ? (
+                            <img
+                              src={ep.thumbnailUrl || pic}
+                              alt=""
+                              className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-[1.03]"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                              <svg
+                                className="h-8 w-8"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </div>
+                          )}
+                          {ep.number != null && (
+                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[#1d1d1f]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
+                              E{ep.number}
+                            </span>
+                          )}
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C6FF00] shadow-lg">
+                              <svg
+                                className="ml-0.5 h-4 w-4 text-[#1d1d1f]"
+                                fill="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="px-2 py-2">
+                          <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-[#1d1d1f]">
+                            {ep.title}
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  ))}
+                </MotionDiv>
+              )
+            ) : null}
+            {streamData && streamEps.length === 0 ? (
+              <p className="text-[12px] text-[#86868b]">
+                No playable episodes were returned for this mirror.
+              </p>
+            ) : null}
+            {streamData === null ? (
+              <p className="text-[12px] text-[#86868b]">
+                No streaming catalog matched this title on the mirror search.
+              </p>
+            ) : null}
+          </MotionDiv>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream }) {
+/** Parent uses `key={detailId}` so each open starts with `busy === true` and `data === null` without effect setState. */
+function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview }) {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(true);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -1413,55 +710,56 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream }) {
     };
   }, [onClose]);
 
-  if (busy) {
-    return (
-      <div className="fixed inset-0 z-[9998] flex items-center justify-center">
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md" />
-        <div className="relative flex gap-1.5">
-          {[0, 150, 300].map((d) => (
-            <span
-              key={d}
-              className="h-2.5 w-2.5 animate-bounce rounded-full bg-[#C6FF00]"
-              style={{ animationDelay: `${d}ms` }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-  if (!data) return null;
+  const pic = data?.main_picture?.large || data?.main_picture?.medium;
+  const previewPic =
+    preview?.main_picture?.large || preview?.main_picture?.medium;
+  const heroPic = pic || previewPic;
+  const description = data?.synopsis ? String(data.synopsis).trim() : "";
+  const genres = Array.isArray(data?.genres) ? data.genres : [];
+  const showPreviewMeta = busy && preview && !data;
 
-  const pic = data.main_picture?.large || data.main_picture?.medium;
-  const description = data.synopsis ? String(data.synopsis).trim() : "";
-  const genres = Array.isArray(data.genres) ? data.genres : [];
-
-  return (
-    <div
+  const node = (
+    <MotionDiv
       className="fixed inset-0 z-[9998] flex h-dvh max-h-dvh w-full max-w-[100vw] min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
       onClick={onClose}
-      style={{
-        paddingLeft: "max(0px, env(safe-area-inset-left))",
-        paddingRight: "max(0px, env(safe-area-inset-right))",
-        paddingBottom: "max(0px, env(safe-area-inset-bottom))",
-      }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={lifeSyncDetailOverlayFadeTransition}
     >
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-md" />
+      <MotionDiv
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={lifeSyncDetailBackdropFadeTransition}
+      />
 
-      <div
-        className="relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl animate-[slideUp_0.3s_ease-out] sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+      <MotionDiv
+        layout="size"
+        layoutRoot
+        className="relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
+        initial={lifeSyncDetailSheetEnterInitial}
+        animate={lifeSyncDetailSheetEnterAnimate}
+        exit={lifeSyncDetailSheetExitVariant}
+        transition={lifeSyncDetailSheetMainTransition}
       >
         {/* Hero */}
         <div className="relative shrink-0">
-          {pic ? (
+          {heroPic ? (
             <>
               <div className="absolute inset-0 overflow-hidden">
-                <img src={pic} alt="" className="h-full w-full object-cover opacity-65" />
+                <img
+                  src={heroPic}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               </div>
               <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white" />
             </>
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-b from-[#1d1d1f] to-white" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#1d1d1f]/30 via-[#f5f5f7]/35 to-white" />
           )}
 
           <button
@@ -1469,8 +767,8 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream }) {
             onClick={onClose}
             className="absolute z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white/90 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white"
             style={{
-              top: "max(0.75rem, env(safe-area-inset-top))",
-              right: "max(0.75rem, env(safe-area-inset-right))",
+              top: "0.75rem",
+              right: "0.75rem",
             }}
             aria-label="Close"
           >
@@ -1489,16 +787,36 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream }) {
             </svg>
           </button>
 
-          <div className="relative flex flex-col items-center gap-4 px-4 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] text-center sm:flex-row sm:items-end sm:gap-5 sm:px-6 sm:pt-5 sm:text-left">
-            <div className="w-24 shrink-0 sm:w-36">
-              {pic ? (
+          <div className="relative flex flex-col items-center gap-4 px-4 pb-4 pt-5 text-center sm:flex-row sm:items-end sm:gap-5 sm:px-6 sm:pt-5 sm:text-left">
+            <MotionDiv
+              layoutId={animePosterLayoutId(animeId)}
+              transition={lifeSyncSharedLayoutTransitionProps}
+              className="w-24 shrink-0 overflow-hidden rounded-xl bg-[#f5f5f7] shadow-lg ring-1 ring-black/10 sm:w-36"
+              style={{ aspectRatio: "2/3" }}
+            >
+              {heroPic ? (
                 <img
-                  src={pic}
+                  src={heroPic}
                   alt=""
-                  className="aspect-[2/3] w-full rounded-xl object-cover shadow-lg ring-1 ring-black/10"
+                  className="h-full w-full object-cover"
                 />
+              ) : busy ? (
+                <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center gap-1.5">
+                  <span
+                    className="lifesync-dot-bounce h-2 w-2 rounded-full bg-[#C6FF00]"
+                    aria-hidden
+                  />
+                  <span
+                    className="lifesync-dot-bounce lifesync-dot-bounce-delay-1 h-2 w-2 rounded-full bg-[#C6FF00]"
+                    aria-hidden
+                  />
+                  <span
+                    className="lifesync-dot-bounce lifesync-dot-bounce-delay-2 h-2 w-2 rounded-full bg-[#C6FF00]"
+                    aria-hidden
+                  />
+                </div>
               ) : (
-                <div className="flex aspect-[2/3] w-full items-center justify-center rounded-xl bg-[#f5f5f7]">
+                <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center">
                   <svg
                     className="h-10 w-10 text-[#86868b]"
                     fill="none"
@@ -1514,134 +832,222 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream }) {
                   </svg>
                 </div>
               )}
-            </div>
+            </MotionDiv>
 
             <div className="flex w-full min-w-0 flex-1 flex-col justify-end pb-1">
               <h2 className="wrap-anywhere line-clamp-4 text-[17px] font-bold leading-tight text-[#1d1d1f] sm:line-clamp-3 sm:text-[22px]">
-                {data.title}
+                {busy && !preview?.title ? (
+                  <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[#ebebed]" />
+                ) : data?.title ? (
+                  data.title
+                ) : preview?.title ? (
+                  preview.title
+                ) : !busy ? (
+                  "Couldn\u2019t load anime"
+                ) : (
+                  <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[#ebebed]" />
+                )}
               </h2>
 
-              <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                {data.mean != null && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/20 px-2 py-0.5 text-[10px] font-semibold text-[#1d1d1f]">
-                    <svg
-                      className="h-3 w-3 text-amber-500 fill-amber-500"
-                      viewBox="0 0 20 20"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    {data.mean}
-                  </span>
-                )}
-                {data.status && (
-                  <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium capitalize text-[#86868b]">
-                    {String(data.status).replace(/_/g, " ")}
-                  </span>
-                )}
-                {data.num_episodes != null && (
-                  <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium text-[#86868b]">
-                    {data.num_episodes} ep
-                  </span>
-                )}
-                {data.media_type && (
-                  <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium uppercase text-[#86868b]">
-                    {data.media_type}
-                  </span>
-                )}
-              </div>
-
-              {genres.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap justify-center gap-1 sm:justify-start">
-                  {genres.map((g) => (
-                    <span
-                      key={g.id || g.name}
-                      className="rounded-full bg-[#C6FF00]/10 px-2 py-0.5 text-[10px] font-medium text-[#1d1d1f]"
-                    >
-                      {g.name}
+              {showPreviewMeta ? (
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                  {preview.mean != null && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/20 px-2 py-0.5 text-[10px] font-semibold text-[#1d1d1f]">
+                      <svg
+                        className="h-3 w-3 text-amber-500 fill-amber-500"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      {preview.mean}
                     </span>
-                  ))}
+                  )}
+                  {preview.num_episodes != null && (
+                    <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium text-[#86868b]">
+                      {preview.num_episodes} ep
+                    </span>
+                  )}
+                  {preview.media_type && (
+                    <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium uppercase text-[#86868b]">
+                      {preview.media_type}
+                    </span>
+                  )}
                 </div>
-              )}
+              ) : null}
+
+              {!busy && data ? (
+                <>
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                    {data.mean != null && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/20 px-2 py-0.5 text-[10px] font-semibold text-[#1d1d1f]">
+                        <svg
+                          className="h-3 w-3 text-amber-500 fill-amber-500"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        {data.mean}
+                      </span>
+                    )}
+                    {data.status && (
+                      <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium capitalize text-[#86868b]">
+                        {String(data.status).replace(/_/g, " ")}
+                      </span>
+                    )}
+                    {data.num_episodes != null && (
+                      <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium text-[#86868b]">
+                        {data.num_episodes} ep
+                      </span>
+                    )}
+                    {data.media_type && (
+                      <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium uppercase text-[#86868b]">
+                        {data.media_type}
+                      </span>
+                    )}
+                  </div>
+
+                  {genres.length > 0 && (
+                    <div className="mt-2.5 flex flex-wrap justify-center gap-1 sm:justify-start">
+                      {genres.map((g) => (
+                        <span
+                          key={g.id || g.name}
+                          className="rounded-full bg-[#C6FF00]/10 px-2 py-0.5 text-[10px] font-medium text-[#1d1d1f]"
+                        >
+                          {g.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : null}
             </div>
           </div>
         </div>
 
         {/* Body */}
-        <div className="min-h-0 flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom,0px)]">
-          {(description || data.my_list_status) && (
-            <div className="border-b border-[#f0f0f0] px-5 py-3 sm:px-6">
-              {description && (
-                <>
-                  <p
-                    className={`text-[12px] leading-relaxed text-[#424245] ${descExpanded ? "" : "line-clamp-3"}`}
-                  >
-                    {description}
-                  </p>
-                  {description.length > 200 && (
-                    <button
-                      type="button"
-                      onClick={() => setDescExpanded((v) => !v)}
-                      className="mt-1 text-[11px] font-semibold text-[#1d1d1f] hover:underline"
-                    >
-                      {descExpanded ? "Show less" : "Show more"}
-                    </button>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {data && !busy ? (
+            <MotionDiv
+              key={String(animeId)}
+              className="min-h-0"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={lifeSyncDetailAnimeContentRevealTransition}
+            >
+              {(description || data.my_list_status) && (
+                <div className="border-b border-[#f0f0f0] px-5 py-3 sm:px-6">
+                  {description && (
+                    <>
+                      <p
+                        className={`text-[12px] leading-relaxed text-[#424245] ${descExpanded ? "" : "line-clamp-3"}`}
+                      >
+                        {description}
+                      </p>
+                      {description.length > 200 && (
+                        <button
+                          type="button"
+                          onClick={() => setDescExpanded((v) => !v)}
+                          className="mt-1 text-[11px] font-semibold text-[#1d1d1f] hover:underline"
+                        >
+                          {descExpanded ? "Show less" : "Show more"}
+                        </button>
+                      )}
+                    </>
                   )}
-                </>
-              )}
 
-              {data.my_list_status && (
-                <div className={`${description ? "mt-3" : ""} rounded-2xl bg-[#f5f5f7] p-4`}>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b]">
-                    Your List Status
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                    <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-semibold capitalize text-[#1d1d1f]">
-                      {(data.my_list_status.status || "").replace(/_/g, " ")}
-                    </span>
-                    {data.my_list_status.score > 0 && (
-                      <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-semibold text-[#1d1d1f]">
-                        Score: {data.my_list_status.score}/10
-                      </span>
-                    )}
-                    {data.my_list_status.num_episodes_watched != null && (
-                      <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-medium text-[#86868b]">
-                        {data.my_list_status.num_episodes_watched} ep watched
-                      </span>
-                    )}
-                  </div>
+                  {data.my_list_status && (
+                    <div className={`${description ? "mt-3" : ""} rounded-2xl bg-[#f5f5f7] p-4`}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b]">
+                        Your List Status
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                        <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-semibold capitalize text-[#1d1d1f]">
+                          {(data.my_list_status.status || "").replace(/_/g, " ")}
+                        </span>
+                        {data.my_list_status.score > 0 && (
+                          <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-semibold text-[#1d1d1f]">
+                            Score: {data.my_list_status.score}/10
+                          </span>
+                        )}
+                        {data.my_list_status.num_episodes_watched != null && (
+                          <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-medium text-[#86868b]">
+                            {data.my_list_status.num_episodes_watched} ep watched
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          <div className="px-5 py-4 sm:px-6">
-            <DetailWatchSection
-              key={animeId}
-              animeId={animeId}
-              malTitle={data.title}
-              pic={pic}
-              malDetail={data}
-              animeStreamAudio={animeStreamAudio}
-              onPlayStream={onPlayStream}
-            />
-          </div>
+              <div className="px-5 py-4 sm:px-6">
+                <DetailWatchSection
+                  key={`${animeId}-${animeStreamAudio}`}
+                  animeId={animeId}
+                  malTitle={data.title}
+                  pic={pic}
+                  malDetail={data}
+                  animeStreamAudio={animeStreamAudio}
+                  onPlayStream={onPlayStream}
+                />
+              </div>
+            </MotionDiv>
+          ) : !busy && !data ? (
+            <div className="px-5 py-8 text-center text-[13px] text-[#86868b] sm:px-6">
+              This title could not be loaded. Try again later.
+            </div>
+          ) : null}
         </div>
-      </div>
-    </div>
+      </MotionDiv>
+    </MotionDiv>
   );
+
+  return createPortal(node, document.body);
 }
 
 export default function LifeSyncAnime() {
-  const {
-    isLifeSyncConnected,
-    lifeSyncUser,
-    refreshLifeSyncMe,
-    lifeSyncUpdatePreferences,
-  } = useLifeSync();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { isLifeSyncConnected, lifeSyncUser, refreshLifeSyncMe } = useLifeSync();
   /** Server applies MAL `nsfw` from this preference; listed in deps so lists refetch after toggling in Settings. */
   const nsfwContentEnabled = Boolean(
     lifeSyncUser?.preferences?.nsfwContentEnabled,
   );
+
+  const basePath = "/dashboard/lifesync/anime/anime";
+  const route = useMemo(() => {
+    const rel = location.pathname.startsWith(basePath)
+      ? location.pathname.slice(basePath.length)
+      : "";
+    const parts = rel.split("/").filter(Boolean);
+
+    const tabId = parts[0] || "seasonal";
+    const allowedTabs = new Set(["seasonal", "ranking", "mylist", "search"]);
+    const tab = allowedTabs.has(tabId) ? tabId : "seasonal";
+
+    let page = 1;
+    const pageIdx = parts.indexOf("page");
+    if (pageIdx >= 0 && parts[pageIdx + 1]) page = clampPage(parts[pageIdx + 1]);
+
+    const detailIdx = parts.indexOf("detail");
+    const detailAnimeId = detailIdx >= 0 ? parts[detailIdx + 1] || null : null;
+
+    const watchIdx = parts.indexOf("watch");
+    const watchAnimeId = watchIdx >= 0 ? parts[watchIdx + 1] || null : null;
+    const watchEpisodeIndexRaw =
+      watchIdx >= 0 ? parts[watchIdx + 2] || null : null;
+    const watchEpisodeIndex =
+      watchEpisodeIndexRaw != null ? clampPage(watchEpisodeIndexRaw) - 1 : null;
+
+    return {
+      tab,
+      page,
+      detailAnimeId,
+      watchAnimeId,
+      watchEpisodeIndex,
+      parts,
+    };
+  }, [location.pathname]);
   const [tab, setTab] = useState("seasonal");
   const [seasonalYear, setSeasonalYear] = useState(
     () => currentMalSeason().year,
@@ -1650,23 +1056,162 @@ export default function LifeSyncAnime() {
     () => currentMalSeason().season,
   );
   const [seasonal, setSeasonal] = useState([]);
+  const [seasonalPage, setSeasonalPage] = useState(1);
+  const [seasonalHasNext, setSeasonalHasNext] = useState(false);
   const [rankingType, setRankingType] = useState("all");
   const [ranking, setRanking] = useState([]);
+  const [rankingPage, setRankingPage] = useState(1);
+  const [rankingHasNext, setRankingHasNext] = useState(false);
   const [myList, setMyList] = useState([]);
   const [searchQ, setSearchQ] = useState("");
+  const [searchCommittedQ, setSearchCommittedQ] = useState("");
   const [searchResults, setSearchResults] = useState([]);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchHasNext, setSearchHasNext] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
   const [oauthMsg, setOauthMsg] = useState("");
+  const oauthMsgTimerRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [detailId, setDetailId] = useState(null);
-  const [playerState, setPlayerState] = useState(null);
-  const [anipubStreamStatus, setAnipubStreamStatus] = useState(null);
 
   const streamAudioType = getAnimeStreamAudio(lifeSyncUser?.preferences);
   const malLinked = Boolean(
     lifeSyncUser?.integrations?.mal || lifeSyncUser?.integrations?.malUsername,
   );
+
+  const scheduleClearOauthMsg = useCallback((ms) => {
+    if (oauthMsgTimerRef.current != null) {
+      window.clearTimeout(oauthMsgTimerRef.current);
+      oauthMsgTimerRef.current = null;
+    }
+    oauthMsgTimerRef.current = window.setTimeout(() => {
+      oauthMsgTimerRef.current = null;
+      setOauthMsg("");
+    }, ms);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (oauthMsgTimerRef.current != null) {
+        window.clearTimeout(oauthMsgTimerRef.current);
+        oauthMsgTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
+  const listFetchMountedRef = useRef(true);
+  useEffect(() => {
+    listFetchMountedRef.current = true;
+    return () => {
+      listFetchMountedRef.current = false;
+    };
+  }, []);
+
+  const listPath = useMemo(() => {
+    const t = route.tab === "mylist" && !malLinked ? "seasonal" : route.tab;
+    const p = route.page;
+    return `${basePath}/${t}/page/${p}${location.search || ""}`;
+  }, [basePath, location.search, malLinked, route.page, route.tab]);
+
+  const goToList = useCallback(
+    (opts = {}) => {
+      navigate(listPath, {
+        replace: Boolean(opts.replace),
+        state: null,
+      });
+    },
+    [navigate, listPath],
+  );
+
+  const goToTab = useCallback(
+    (t) => {
+      const nextTab = t === "mylist" && !malLinked ? "seasonal" : t;
+      navigate(`${basePath}/${nextTab}/page/1${location.search || ""}`);
+    },
+    [basePath, location.search, malLinked, navigate],
+  );
+
+  const goToPage = useCallback(
+    (p) => {
+      navigate(
+        `${basePath}/${route.tab}/page/${clampPage(p)}${location.search || ""}`,
+      );
+    },
+    [basePath, location.search, navigate, route.tab],
+  );
+
+  const goToDetail = useCallback(
+    (animeOrId) => {
+      const id =
+        animeOrId && typeof animeOrId === "object"
+          ? animeOrId.id
+          : animeOrId;
+      if (id == null) return;
+      const preview = animeDetailPreviewFromNode(
+        animeOrId && typeof animeOrId === "object" ? animeOrId : null,
+      );
+      navigate(
+        `${listPath.replace(location.search || "", "")}/detail/${encodeURIComponent(String(id))}${location.search || ""}`,
+        preview ? { state: { animeDetailPreview: preview } } : {},
+      );
+    },
+    [navigate, listPath, location.search],
+  );
+
+  useEffect(() => {
+    const desiredTab = route.tab === "mylist" && !malLinked ? "seasonal" : route.tab;
+    if (tab !== desiredTab) setTab(desiredTab);
+    // Keep per-tab pagination aligned with URL.
+    if (desiredTab === "seasonal" && seasonalPage !== route.page) setSeasonalPage(route.page);
+    if (desiredTab === "ranking" && rankingPage !== route.page) setRankingPage(route.page);
+    if (desiredTab === "search" && searchPage !== route.page) setSearchPage(route.page);
+    // mylist has no pagination currently.
+  }, [
+    malLinked,
+    rankingPage,
+    route.page,
+    route.tab,
+    searchPage,
+    seasonalPage,
+    tab,
+  ]);
+
+  useEffect(() => {
+    // Canonicalize base route to include tab + page.
+    if (location.pathname === basePath || location.pathname === `${basePath}/`) {
+      navigate(`${basePath}/seasonal/page/1${location.search || ""}`, {
+        replace: true,
+      });
+    }
+  }, [basePath, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    if (route.tab !== "search") return;
+    const q = new URLSearchParams(location.search || "").get("q") || "";
+    const next = q.trim();
+    if (next && next !== searchCommittedQ) {
+      setSearchCommittedQ(next);
+      setSearchQ(next);
+    }
+  }, [location.search, route.tab, searchCommittedQ]);
+
+  useEffect(() => {
+    // Route-controlled detail overlay.
+    if (route.detailAnimeId) {
+      if (detailId !== route.detailAnimeId) setDetailId(route.detailAnimeId);
+    } else if (detailId) {
+      setDetailId(null);
+    }
+  }, [detailId, route.detailAnimeId]);
+
+  const detailPreview = useMemo(() => {
+    const raw = location.state?.animeDetailPreview;
+    if (!raw || route.detailAnimeId == null) return null;
+    if (String(raw.id) !== String(route.detailAnimeId)) return null;
+    return raw;
+  }, [location.state?.animeDetailPreview, route.detailAnimeId]);
 
   const resolveAnimeStream = useCallback(
     async (ep, audioOverride, seriesMalId, mirrorId) => {
@@ -1784,146 +1329,73 @@ export default function LifeSyncAnime() {
     [streamAudioType],
   );
 
-  const mergePlayerMalList = useCallback((data) => {
-    if (!data || typeof data !== "object") return;
-    setPlayerState((prev) => {
-      if (!prev?.series?.malDetail) return prev;
-      const cur = prev.series.malDetail;
-      return {
-        ...prev,
-        series: {
-          ...prev.series,
-          malDetail: {
-            ...cur,
-            my_list_status: { ...(cur.my_list_status || {}), ...data },
-          },
-        },
-      };
-    });
-  }, []);
-
-  const handleAudioModeChange = useCallback(
-    async (mode) => {
-      const m = mode === "dub" ? "dub" : "sub";
-      await lifeSyncUpdatePreferences({ animeStreamAudio: m });
-      await refreshLifeSyncMe();
-      setPlayerState((prev) => {
-        if (!prev?.series?.episodes?.[prev.episodeIndex]) return prev;
-        const ep = prev.series.episodes[prev.episodeIndex];
-        const idx = prev.episodeIndex;
-        (async () => {
-          const resolved = await resolveAnimeStream(
-            ep,
-            m,
-            prev?.series?.malId,
-            prev?.stream?.selectedMirrorId,
-          );
-          setPlayerState((p) =>
-            p && p.episodeIndex === idx
-              ? { ...p, stream: { ...resolved, resolving: false } }
-              : p,
-          );
-        })();
-        return { ...prev, stream: { ...prev.stream, resolving: true } };
-      });
-    },
-    [lifeSyncUpdatePreferences, refreshLifeSyncMe, resolveAnimeStream],
-  );
-
-  const handleMirrorChange = useCallback(
-    async (mirrorId) => {
-      let ep = null;
-      let idx = -1;
-      let malId = null;
-      setPlayerState((prev) => {
-        if (!prev?.series?.episodes?.[prev.episodeIndex]) return prev;
-        ep = prev.series.episodes[prev.episodeIndex];
-        idx = prev.episodeIndex;
-        malId = prev.series.malId;
-        return {
-          ...prev,
-          stream: {
-            ...prev.stream,
-            resolving: true,
-            selectedMirrorId: mirrorId,
-          },
-        };
-      });
-      if (!ep || idx < 0) return;
-      const resolved = await resolveAnimeStream(ep, undefined, malId, mirrorId);
-      setPlayerState((prev) =>
-        prev && prev.episodeIndex === idx
-          ? { ...prev, stream: { ...resolved, resolving: false } }
-          : prev,
-      );
-    },
-    [resolveAnimeStream],
-  );
-
   const playEpisode = useCallback(
     async (series, ep, epIndex) => {
-      setDetailId(null);
-      const stream = {
-        title: ep.title,
-        embedUrl: "",
-        watchUrl: "",
-        videoUrl: null,
-        iframeUrl: null,
-        textTracks: [],
-        resolving: true,
-      };
-      setPlayerState({ stream, series, episodeIndex: epIndex });
+      if (!series?.malId || !ep?.episodeId) return;
       const resolved = await resolveAnimeStream(
         ep,
         undefined,
         series.malId,
         null,
       );
-      setPlayerState((prev) =>
-        prev ? { ...prev, stream: { ...resolved, resolving: false } } : null,
-      );
+      if (!listFetchMountedRef.current) return;
+      const handoffId = stashAnimeWatchHandoff({
+        malId: String(series.malId),
+        episodeIndex: epIndex,
+        anime: series.malDetail || null,
+        episodes: Array.isArray(series.episodes) ? series.episodes : [],
+        stream: { ...resolved, resolving: false },
+      });
+      void fetchStreamInfoByMalWithCache(String(series.malId), lifesyncFetch)
+        .then((body) => {
+          if (body?.data != null)
+            writeLifesyncStreamCatalogByMal(series.malId, body);
+        })
+        .catch(() => {});
+      const ep1 = clampPage(epIndex + 1);
+      const fromPath = `${listPath.replace(location.search || "", "")}${location.search || ""}`;
+      const target = `/dashboard/lifesync/anime/anime/watch/${encodeURIComponent(String(series.malId))}/${ep1}`;
+      const nextState = { from: fromPath, handoffId };
+      const go = () => navigate(target, { state: nextState });
+      if (typeof document !== "undefined" && document.startViewTransition) {
+        document.startViewTransition(() => {
+          go();
+        });
+      } else {
+        go();
+      }
     },
-    [resolveAnimeStream],
+    [listPath, location.search, navigate, resolveAnimeStream],
   );
 
-  const changePlayerEpisode = useCallback(
-    async (newIndex) => {
-      let ep = null;
-      let capturedIndex = newIndex;
-      let seriesMalId = null;
-      setPlayerState((prev) => {
-        if (!prev?.series?.episodes?.[newIndex]) return prev;
-        ep = prev.series.episodes[newIndex];
-        capturedIndex = newIndex;
-        seriesMalId = prev.series.malId;
-        return {
-          ...prev,
-          episodeIndex: newIndex,
-          stream: {
-            title: ep.title,
-            embedUrl: "",
-            watchUrl: "",
-            videoUrl: null,
-            iframeUrl: null,
-            textTracks: [],
-            resolving: true,
-          },
-        };
-      });
-      if (!ep) return;
-      const resolved = await resolveAnimeStream(
-        ep,
-        undefined,
-        seriesMalId,
-        null,
-      );
-      setPlayerState((prev) => {
-        if (!prev || prev.episodeIndex !== capturedIndex) return prev;
-        return { ...prev, stream: { ...resolved, resolving: false } };
-      });
-    },
-    [resolveAnimeStream],
-  );
+  /** Legacy list URLs `…/seasonal/page/1/watch/:malId/:ep` → dedicated watch route. */
+  useEffect(() => {
+    const malId = route.watchAnimeId;
+    if (!malId) return;
+    const rel = location.pathname.startsWith(basePath)
+      ? location.pathname.slice(basePath.length)
+      : "";
+    const parts = rel.split("/").filter(Boolean);
+    const watchIdx = parts.indexOf("watch");
+    if (watchIdx < 0) return;
+    const withoutWatch = parts.slice(0, watchIdx);
+    const fromPath = `${basePath}/${withoutWatch.join("/")}${location.search || ""}`;
+    const ep1 =
+      route.watchEpisodeIndex != null && route.watchEpisodeIndex >= 0
+        ? clampPage(route.watchEpisodeIndex + 1)
+        : 1;
+    navigate(
+      `/dashboard/lifesync/anime/anime/watch/${encodeURIComponent(malId)}/${ep1}`,
+      { replace: true, state: { from: fromPath } },
+    );
+  }, [
+    basePath,
+    location.pathname,
+    location.search,
+    navigate,
+    route.watchAnimeId,
+    route.watchEpisodeIndex,
+  ]);
 
   const seasonalYearOptions = useMemo(() => {
     const end = new Date().getFullYear() + 1;
@@ -1932,31 +1404,40 @@ export default function LifeSyncAnime() {
     return out;
   }, []);
 
+  const PAGE_SIZE = 24;
+
   const loadSeasonal = useCallback(async () => {
     try {
+      const offset = (Math.max(1, seasonalPage) - 1) * PAGE_SIZE;
       const data = await lifesyncFetch(
-        `/api/anime/seasonal?year=${seasonalYear}&season=${encodeURIComponent(seasonalSeason)}&limit=24&fields=mean,media_type,num_episodes`,
+        `/api/anime/seasonal?year=${seasonalYear}&season=${encodeURIComponent(seasonalSeason)}&limit=${PAGE_SIZE}&offset=${offset}&fields=mean,media_type,num_episodes`,
       );
+      if (!listFetchMountedRef.current) return;
       setSeasonal(data?.data || []);
+      setSeasonalHasNext(Boolean(data?.paging?.next));
     } catch {
       /* ignore */
     }
-  }, [seasonalYear, seasonalSeason, nsfwContentEnabled]);
+  }, [seasonalYear, seasonalSeason, seasonalPage, nsfwContentEnabled]);
 
   const loadRanking = useCallback(async () => {
     try {
+      const offset = (Math.max(1, rankingPage) - 1) * PAGE_SIZE;
       const data = await lifesyncFetch(
-        `/api/anime/ranking?ranking_type=${encodeURIComponent(rankingType)}&limit=24`,
+        `/api/anime/ranking?ranking_type=${encodeURIComponent(rankingType)}&limit=${PAGE_SIZE}&offset=${offset}`,
       );
+      if (!listFetchMountedRef.current) return;
       setRanking(data?.data || []);
+      setRankingHasNext(Boolean(data?.paging?.next));
     } catch {
       /* ignore */
     }
-  }, [rankingType, nsfwContentEnabled]);
+  }, [rankingType, rankingPage, nsfwContentEnabled]);
 
   const loadMyList = useCallback(async () => {
     try {
       const data = await lifesyncFetch("/api/anime/mylist?limit=50");
+      if (!listFetchMountedRef.current) return;
       setMyList(data?.data || []);
     } catch {
       /* ignore */
@@ -1964,8 +1445,10 @@ export default function LifeSyncAnime() {
   }, [nsfwContentEnabled]);
 
   const load = useCallback(async () => {
-    setBusy(true);
-    setError("");
+    if (listFetchMountedRef.current) {
+      setBusy(true);
+      setError("");
+    }
     try {
       await Promise.all([
         loadSeasonal(),
@@ -1973,9 +1456,13 @@ export default function LifeSyncAnime() {
         malLinked ? loadMyList() : Promise.resolve(),
       ]);
     } catch (e) {
-      setError(e.message || "Failed to load anime data");
+      if (listFetchMountedRef.current) {
+        setError(e.message || "Failed to load anime data");
+      }
     } finally {
-      setBusy(false);
+      if (listFetchMountedRef.current) {
+        setBusy(false);
+      }
     }
   }, [loadSeasonal, loadRanking, loadMyList, malLinked]);
 
@@ -1984,29 +1471,25 @@ export default function LifeSyncAnime() {
   }, [isLifeSyncConnected, load]);
 
   useEffect(() => {
-    if (!isLifeSyncConnected) {
-      setAnipubStreamStatus(null);
-      return;
-    }
-    let cancelled = false;
-    lifesyncFetch("/api/anime/stream/status")
-      .then((body) => {
-        if (!cancelled) setAnipubStreamStatus(body);
-      })
-      .catch(() => {
-        if (!cancelled) setAnipubStreamStatus(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isLifeSyncConnected]);
-
-  useEffect(() => {
     if (!isLifeSyncConnected || tab !== "ranking") return;
     void loadRanking();
   }, [isLifeSyncConnected, tab, loadRanking]);
 
   useEffect(() => {
+    if (!isLifeSyncConnected || tab !== "seasonal") return;
+    void loadSeasonal();
+  }, [isLifeSyncConnected, tab, loadSeasonal]);
+
+  useEffect(() => {
+    setSeasonalPage(1);
+  }, [seasonalYear, seasonalSeason]);
+
+  useEffect(() => {
+    setRankingPage(1);
+  }, [rankingType]);
+
+  useEffect(() => {
+    let cancelled = false;
     try {
       const raw = sessionStorage.getItem("maxien_lifesync_oauth");
       if (raw) {
@@ -2016,26 +1499,36 @@ export default function LifeSyncAnime() {
           setOauthMsg(text);
           if (type === "error") setError(text);
           refreshLifeSyncMe()
-            .then(() => load())
+            .then(() => {
+              if (!cancelled) void load();
+            })
             .catch(() => {});
-          setTimeout(() => setOauthMsg(""), 8000);
+          scheduleClearOauthMsg(8000);
         }
       }
     } catch {
       /* ignore */
     }
-  }, [refreshLifeSyncMe, load]);
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshLifeSyncMe, load, scheduleClearOauthMsg]);
 
   useEffect(() => {
+    let cancelled = false;
     const onVisible = () => {
-      if (document.visibilityState === "visible" && isLifeSyncConnected) {
-        refreshLifeSyncMe()
-          .then(() => load())
-          .catch(() => {});
-      }
+      if (document.visibilityState !== "visible" || !isLifeSyncConnected) return;
+      refreshLifeSyncMe()
+        .then(() => {
+          if (!cancelled) void load();
+        })
+        .catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => document.removeEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [isLifeSyncConnected, refreshLifeSyncMe, load]);
 
   async function handleSearch(e) {
@@ -2043,11 +1536,12 @@ export default function LifeSyncAnime() {
     if (!searchQ.trim()) return;
     setSearching(true);
     try {
-      const data = await lifesyncFetch(
-        `/api/anime/search?q=${encodeURIComponent(searchQ.trim())}&limit=24`,
-      );
-      setSearchResults(data?.data || []);
-      setTab("search");
+      const q = searchQ.trim();
+      setSearchCommittedQ(q);
+      setSearchPage(1);
+      const qs = new URLSearchParams(location.search || "");
+      qs.set("q", q);
+      navigate(`${basePath}/search/page/1?${qs.toString()}`);
     } catch (e) {
       setError(e.message || "Search failed");
     } finally {
@@ -2055,22 +1549,47 @@ export default function LifeSyncAnime() {
     }
   }
 
+  useEffect(() => {
+    if (!isLifeSyncConnected || tab !== "search" || !searchCommittedQ.trim()) return;
+    const offset = (Math.max(1, searchPage) - 1) * PAGE_SIZE;
+    let cancelled = false;
+    setSearching(true);
+    lifesyncFetch(
+      `/api/anime/search?q=${encodeURIComponent(searchCommittedQ.trim())}&limit=${PAGE_SIZE}&offset=${offset}`,
+    )
+      .then((data) => {
+        if (cancelled) return;
+        setSearchResults(data?.data || []);
+        setSearchHasNext(Boolean(data?.paging?.next));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setSearching(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isLifeSyncConnected, tab, searchCommittedQ, searchPage]);
+
   if (!isLifeSyncConnected) {
     return (
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight mb-2">
+      <div className="mx-auto max-w-4xl">
+        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[#1a1628]">
           Anime
         </h1>
-        <div className="bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm px-8 py-16 text-center">
-          <p className="text-[15px] font-bold text-[#1d1d1f] mb-2">
+        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[#5b5670]">
+          Track what you watch, browse seasonal charts, and open episodes—connect LifeSync to get started.
+        </p>
+        <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
+          <p className="mb-2 text-[15px] font-bold text-[#1a1628]">
             LifeSync Not Connected
           </p>
-          <p className="text-[13px] text-[#86868b] mb-4">
+          <p className="mb-4 text-[13px] text-[#5b5670]">
             Connect LifeSync in your profile to access anime tracking.
           </p>
           <Link
             to="/dashboard/profile?tab=integrations"
-            className="inline-flex items-center gap-2 bg-[#1d1d1f] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
           >
             Go to Integrations
           </Link>
@@ -2097,80 +1616,77 @@ export default function LifeSyncAnime() {
           ? myList
           : searchResults;
 
-  return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {playerState && (
-        <AnimeStreamPlayerPopup
-          malLinked={malLinked}
-          playerState={playerState}
-          streamAudioType={streamAudioType}
-          onAudioModeChange={handleAudioModeChange}
-          onMirrorChange={(mid) => void handleMirrorChange(mid)}
-          onMalListPatchResult={mergePlayerMalList}
-          onClose={() => setPlayerState(null)}
-          onChangeEpisode={(idx) => void changePlayerEpisode(idx)}
-        />
-      )}
-      {detailId && (
-        <DetailPanel
-          key={detailId}
-          animeId={detailId}
-          animeStreamAudio={streamAudioType}
-          onClose={() => setDetailId(null)}
-          onPlayStream={playEpisode}
-        />
-      )}
+  const pager = (() => {
+    if (tab === "seasonal") {
+      return {
+        page: seasonalPage,
+        onPage: setSeasonalPage,
+        canPrev: seasonalPage > 1,
+        canNext: seasonalHasNext,
+      };
+    }
+    if (tab === "ranking") {
+      return {
+        page: rankingPage,
+        onPage: setRankingPage,
+        canPrev: rankingPage > 1,
+        canNext: rankingHasNext,
+      };
+    }
+    if (tab === "search") {
+      return {
+        page: searchPage,
+        onPage: setSearchPage,
+        canPrev: searchPage > 1,
+        canNext: searchHasNext,
+      };
+    }
+    return null;
+  })();
 
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
+  return (
+    <MotionDiv
+      className="space-y-6 sm:space-y-8"
+      style={{ transformOrigin: "50% 0%" }}
+      initial="initial"
+      animate="animate"
+      variants={lifeSyncDollyPageVariants}
+      transition={lifeSyncDollyPageTransition}
+    >
+      <AnimatePresence mode="sync">
+        {detailId ? (
+          <DetailPanel
+            key={detailId}
+            animeId={detailId}
+            preview={detailPreview}
+            animeStreamAudio={streamAudioType}
+            onClose={() => goToList({ replace: true })}
+            onPlayStream={playEpisode}
+          />
+        ) : null}
+      </AnimatePresence>
+
+      <div
+        className="flex flex-col gap-5 sm:gap-6"
+        style={{ pointerEvents: detailId ? "none" : undefined }}
+      >
+      <div className="flex items-start justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
           <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">
             LifeSync / Anime
           </p>
-          <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight">
+          <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1a1628] tracking-tight">
             Anime
           </h1>
-          <p className="mt-1.5 max-w-xl text-[11px] leading-relaxed text-[#86868b]">
-            Browse and lists use{" "}
-            <a
-              href="https://myanimelist.net/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-[#2E51A2] hover:underline"
-            >
-              MyAnimeList
-            </a>
-            . Episode links and metadata use the{" "}
-            <a
-              href={anipubStreamStatus?.docsUrl || ANIPUB_API_REFERENCE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-semibold text-[#1d1d1f] hover:underline"
-            >
-              AniPub API
-            </a>
-            {anipubStreamStatus?.jsonBaseUrl ? (
-              <>
-                {" "}
-                <span className="text-[#b0b0b5]">
-                  (JSON from {anipubStreamStatus.jsonBaseUrl})
-                </span>
-              </>
-            ) : null}
-            .
+          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
+            Track seasonal lineups and rankings, open any title for details, and continue watching on the dedicated watch page.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={load}
-            disabled={busy}
-            className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50"
-          >
-            {busy ? "Loading..." : "Refresh"}
-          </button>
+        <div className="flex shrink-0 flex-col sm:flex-row sm:items-center gap-2 sm:pt-0.5">
           {!malLinked && lifesyncOAuthStartUrl("mal") && (
             <a
               href={lifesyncOAuthStartUrl("mal")}
-              className="text-[12px] font-semibold bg-[#2E51A2] text-white px-4 py-2 rounded-xl hover:bg-[#24408a] transition-colors"
+              className="whitespace-nowrap text-center text-[12px] font-semibold bg-[#2E51A2] text-white px-4 py-2 rounded-xl hover:bg-[#24408a] transition-colors"
             >
               Link MAL
             </a>
@@ -2183,12 +1699,12 @@ export default function LifeSyncAnime() {
                   await lifesyncFetch("/api/anime/link", { method: "DELETE" });
                   await refreshLifeSyncMe();
                   setOauthMsg("MyAnimeList disconnected.");
-                  setTimeout(() => setOauthMsg(""), 5000);
+                  scheduleClearOauthMsg(5000);
                 } catch (e) {
                   setError(e.message || "Failed to disconnect MAL");
                 }
               }}
-              className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors"
+              className="whitespace-nowrap text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-2 sm:py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors"
             >
               Disconnect MAL
             </button>
@@ -2208,34 +1724,33 @@ export default function LifeSyncAnime() {
         </div>
       )}
 
-      <form onSubmit={handleSearch} className="flex gap-2">
+      <form
+        onSubmit={handleSearch}
+        className="flex flex-col gap-2 items-stretch sm:flex-row sm:flex-wrap"
+      >
         <input
           type="search"
           value={searchQ}
           onChange={(e) => setSearchQ(e.target.value)}
           placeholder="Search anime..."
-          className="flex-1 px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
+          className="min-w-[min(100%,12rem)] flex-1 rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-4 py-2.5 text-[13px] text-[#1d1d1f] transition-all focus:border-[#C6FF00]/60 focus:bg-white focus:outline-none"
         />
         <button
           type="submit"
           disabled={searching}
-          className="bg-[#1d1d1f] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-black transition-colors disabled:opacity-50"
+          className="w-full shrink-0 rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50 sm:w-auto"
         >
           {searching ? "Searching..." : "Search"}
         </button>
       </form>
 
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap transition-all ${tab === t.id ? "bg-[#C6FF00] text-[#1d1d1f] shadow-sm" : "bg-[#f5f5f7] text-[#86868b] hover:text-[#1d1d1f]"}`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <LifeSyncSectionNav
+        ariaLabel="Anime lists"
+        layoutId="lifesync-anime-main-tab"
+        items={tabs.map((t) => ({ id: t.id, label: t.label }))}
+        activeId={tab}
+        onSelect={(id) => goToTab(id)}
+      />
 
       {tab === "seasonal" && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap -mt-2">
@@ -2270,7 +1785,7 @@ export default function LifeSyncAnime() {
               This season
             </button>
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
             {MAL_SEASON_OPTIONS.map((opt) => (
               <button
                 key={opt.id}
@@ -2290,7 +1805,7 @@ export default function LifeSyncAnime() {
       )}
 
       {tab === "ranking" && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mt-2">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mt-2 hide-scrollbar overscroll-x-contain">
           {MAL_RANKING_OPTIONS.map((opt) => (
             <button
               key={opt.id}
@@ -2308,6 +1823,17 @@ export default function LifeSyncAnime() {
         </div>
       )}
 
+      {/* List + pager only — tab filters above stay put */}
+      <AnimatePresence mode="wait">
+        <MotionDiv
+          key={tab}
+          className="space-y-4"
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          variants={lifeSyncSectionPresenceVariants}
+          transition={lifeSyncSectionPresenceTransition}
+        >
       {tab === "mylist" && currentItems.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {currentItems.map((item) => (
@@ -2315,7 +1841,7 @@ export default function LifeSyncAnime() {
               key={item.node?.id}
               node={item.node}
               listStatus={item.list_status}
-              onSelect={setDetailId}
+              onSelect={goToDetail}
             />
           ))}
         </div>
@@ -2326,7 +1852,7 @@ export default function LifeSyncAnime() {
               key={item.node?.id || i}
               node={item.node}
               ranking={tab === "ranking" ? item.ranking?.rank : undefined}
-              onSelect={setDetailId}
+              onSelect={goToDetail}
             />
           ))}
         </div>
@@ -2341,6 +1867,66 @@ export default function LifeSyncAnime() {
           </div>
         )
       )}
-    </div>
+
+      {pager && currentItems.length > 0 && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <p className="text-[11px] text-[#86868b]">Page {pager.page}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              disabled={!pager.canPrev}
+              onClick={() => goToPage(pager.page - 1)}
+              className="text-[11px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-1.5 rounded-lg border border-[#e5e5ea] disabled:opacity-40"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1.5">
+              {(() => {
+                const cur = pager.page;
+                const pages = [];
+                const start = Math.max(1, cur - 2);
+                const end = cur + 2;
+                if (start > 1) pages.push(1, "…");
+                for (let p = start; p <= end; p += 1) pages.push(p);
+                if (pager.canNext) pages.push("…");
+                return pages.map((p, idx) =>
+                  typeof p === "number" ? (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => goToPage(p)}
+                      className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
+                        p === cur
+                          ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
+                          : "bg-white text-[#1d1d1f] border-[#e5e5ea] hover:bg-[#fafafa]"
+                      }`}
+                      aria-current={p === cur ? "page" : undefined}
+                    >
+                      {p}
+                    </button>
+                  ) : (
+                    <span key={`dots-${idx}`} className="px-1 text-[11px] text-[#86868b]">
+                      …
+                    </span>
+                  ),
+                );
+              })()}
+            </div>
+            <button
+              type="button"
+              disabled={!pager.canNext}
+              onClick={() => goToPage(pager.page + 1)}
+              className="text-[11px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-1.5 rounded-lg border border-[#e5e5ea] disabled:opacity-40"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
+        </MotionDiv>
+      </AnimatePresence>
+
+      </div>
+    </MotionDiv>
   );
 }

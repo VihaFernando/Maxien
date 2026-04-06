@@ -53,28 +53,68 @@ iframe {
   }
 }
 
+/* Lightweight loading dots (compositor CSS vs Framer `repeat: Infinity` on every frame) */
+@keyframes lifesync-dot-bounce {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.lifesync-dot-bounce {
+  animation: lifesync-dot-bounce 0.55s ease-in-out infinite;
+}
+
+.lifesync-dot-bounce-delay-1 {
+  animation-delay: 0.12s;
+}
+
+.lifesync-dot-bounce-delay-2 {
+  animation-delay: 0.24s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .lifesync-dot-bounce,
+  .lifesync-dot-bounce-delay-1,
+  .lifesync-dot-bounce-delay-2 {
+    animation: none;
+  }
+}
+
+/* Profile / LifeSync "Reduce animations" — strip decorative CSS motion (Framer handled via MotionConfig). */
+html.maxien-reduce-motion .lifesync-dot-bounce,
+html.maxien-reduce-motion .lifesync-dot-bounce-delay-1,
+html.maxien-reduce-motion .lifesync-dot-bounce-delay-2 {
+  animation: none !important;
+}
+
+html.maxien-reduce-motion .animate-pulse,
+html.maxien-reduce-motion .animate-bounce,
+html.maxien-reduce-motion .animate-ping {
+  animation: none !important;
+}
+
 /* Utility used in LifeSync views */
 .wrap-anywhere {
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+/* Hide scrollbars globally; scrolling still works (wheel, trackpad, touch). */
+* {
+  scrollbar-width: none;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #d2d2d7;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #86868b;
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* Tailwind v4 animation-in (custom) */
@@ -119,6 +159,103 @@ iframe {
 
   to {
     opacity: 0;
+  }
+}
+
+/* LifeSync episode / thumbnail skeleton shimmer */
+@keyframes lifesync-shimmer-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes lifesync-ep-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lifesync-skeleton-shimmer-light {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, #e8e8ed 0%, #f0f0f4 50%, #e8e8ed 100%);
+  background-size: 200% 100%;
+  animation: lifesync-skeleton-shimmer-bg 1.6s ease-in-out infinite;
+}
+
+.lifesync-skeleton-shimmer-dark {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.06) 100%);
+  background-size: 200% 100%;
+  animation: lifesync-skeleton-shimmer-bg 1.6s ease-in-out infinite;
+}
+
+@keyframes lifesync-skeleton-shimmer-bg {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.lifesync-shimmer-gloss-light::after,
+.lifesync-shimmer-gloss-dark::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  width: 55%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: lifesync-shimmer-sweep 1.35s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.lifesync-shimmer-gloss-dark::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+}
+
+.lifesync-ep-grid-enter {
+  animation: lifesync-ep-enter 0.45s ease-out forwards;
+}
+
+/* Indeterminate bar inside LifeSync watch “Starting stream” overlay */
+@keyframes lifesyncbar {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(200%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Anime detail → watch: root cross-fade for `document.startViewTransition` (only SPA VT site in app) */
+@supports (view-transition-name: none) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0.42s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  ::view-transition-new(lifesync-anime-watch) {
+    animation-duration: 0.42s;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
 

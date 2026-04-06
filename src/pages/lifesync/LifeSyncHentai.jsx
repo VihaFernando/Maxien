@@ -1,21 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import AdvancedVideoPlayer from '../../components/lifesync/AdvancedVideoPlayer'
+import {
+    LifesyncEpisodeThumbnail,
+    LifesyncHentaiCatalogGridSkeleton,
+    LifesyncHentaiEpisodeGridSkeleton,
+    LifesyncStreamPlayerResolvingSkeleton,
+    LifesyncTextLinesSkeleton,
+} from '../../components/lifesync/EpisodeLoadingSkeletons'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
+import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lifeSyncDetailBodyRevealTransition, lifeSyncDetailOverlayFadeTransition, lifeSyncDetailSheetEnterAnimate, lifeSyncDetailSheetEnterInitial, lifeSyncDetailSheetExitVariant, lifeSyncDetailSheetMainTransition, lifeSyncDollyPageTransition, lifeSyncDollyPageVariants, lifeSyncSharedLayoutTransitionProps, MotionDiv } from '../../lib/lifesyncMotion'
 
 const HENTAI_OCEAN_SITE = 'https://hentaiocean.com'
-const SERIES_PER_PAGE = 24
 
-function isIOSDevice() {
-    if (typeof navigator === 'undefined') return false
-    const ua = navigator.userAgent || ''
-    const iOS = /iPad|iPhone|iPod/.test(ua)
-    // iPadOS reports as Mac; detect touch-capable Macs.
-    const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
-    return iOS || iPadOS
+function hentaiSeriesPosterLayoutId(seriesKey) {
+    const k = String(seriesKey ?? 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_')
+    return `lifesync-hentai-poster-${k}`
 }
+const SERIES_PER_PAGE = 24
 
 /** Stable pseudo-shuffle for recommendation order (pure, no Math.random in render). */
 function seriesMixOrderKey(seriesKey) {
@@ -49,6 +53,13 @@ function slugFromItem(it) {
     return ''
 }
 
+/** Per-episode still on HentaiOcean CDN (series cards keep using posterUrl). */
+function hentaiOceanEpisodeThumbnailUrl(ep) {
+    const slug = slugFromItem(ep)
+    if (!slug) return ''
+    return `${HENTAI_OCEAN_SITE}/thumbnail/${encodeURIComponent(slug)}.webp`
+}
+
 /* ─── Fullscreen Player Popup (watch layout) ───────────────────────────── */
 
 function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, onPlayFromSeries }) {
@@ -58,7 +69,6 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
     const nextEp = episodeIndex >= 0 && episodeIndex < episodes.length - 1 ? episodes[episodeIndex + 1] : null
     const activeEpisode = episodeIndex >= 0 ? episodes[episodeIndex] : null
     const playingRef = useRef(null)
-    const preferIframe = useMemo(() => isIOSDevice(), [])
 
     const shuffledPool = useMemo(() => {
         if (!allSeries?.length) return []
@@ -105,7 +115,6 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
     return createPortal(
         <div
             className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden bg-[#020202] text-white"
-            style={{ paddingLeft: 'max(0px, env(safe-area-inset-left))', paddingRight: 'max(0px, env(safe-area-inset-right))' }}
         >
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[#C6FF00]/12 blur-[120px]" />
@@ -114,7 +123,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
             </div>
 
             <header
-                className="relative flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/40 py-2.5 pl-3 pr-3 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-xl sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-3"
+                className="relative flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/40 py-2.5 pl-3 pr-3 backdrop-blur-xl sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-3"
             >
                 <div className="flex min-w-0 items-center gap-2.5">
                     <button
@@ -153,7 +162,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
             </header>
 
             <div
-                className={`relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden pb-[env(safe-area-inset-bottom,0px)] ${hideScroll}`}
+                className={`relative min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden ${hideScroll}`}
             >
                 <div className="mx-auto grid w-full min-w-0 max-w-[1680px] gap-4 px-3 py-4 sm:px-4 lg:h-[calc(100dvh-6rem)] lg:grid-cols-[minmax(0,1.55fr)_minmax(310px,0.85fr)] lg:gap-5 lg:px-6">
                     <section className="min-w-0 space-y-4 lg:flex lg:h-full lg:flex-col lg:gap-4 lg:space-y-0">
@@ -161,20 +170,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                             <div className="relative aspect-video w-full">
                                 <div className="absolute inset-0">
                                     {stream.resolving ? (
-                                        <div className="flex h-full w-full flex-col items-center justify-center bg-[#111]">
-                                            <div className="flex gap-1.5">{[0, 150, 300].map(d => <span key={d} className="h-2.5 w-2.5 rounded-full bg-[#C6FF00] animate-bounce" style={{ animationDelay: `${d}ms` }} />)}</div>
-                                            <p className="mt-3 text-[13px] text-white/45">Resolving stream…</p>
-                                        </div>
-                                    ) : (preferIframe && stream.embedUrl) ? (
-                                        <iframe
-                                            key={stream.embedUrl}
-                                            title={stream.title}
-                                            src={stream.embedUrl}
-                                            className="h-full w-full border-0 bg-black"
-                                            allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
-                                            allowFullScreen
-                                            referrerPolicy="no-referrer-when-downgrade"
-                                        />
+                                        <LifesyncStreamPlayerResolvingSkeleton />
                                     ) : stream.videoUrl ? (
                                         <AdvancedVideoPlayer
                                             key={stream.videoUrl}
@@ -271,6 +267,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                             const isCurrent = i === episodeIndex
                                             const epLabel = ep.episodeNum > 0 ? `Ep ${ep.episodeNum}` : `Part ${i + 1}`
                                             const dateLabel = formatEpisodeDate(ep.pubDate)
+                                            const queueThumb = hentaiOceanEpisodeThumbnailUrl(ep) || ep.posterUrl || series?.posterUrl
                                             return (
                                                 <li key={ep.slug || ep.watchUrl || i}>
                                                     <button
@@ -284,15 +281,20 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                                         }`}
                                                     >
                                                         <div className="relative h-12 w-[4.4rem] shrink-0 overflow-hidden rounded-lg bg-black/45">
-                                                            {ep.posterUrl || series?.posterUrl ? (
-                                                                <img src={ep.posterUrl || series?.posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                                            {queueThumb ? (
+                                                                <LifesyncEpisodeThumbnail
+                                                                    src={queueThumb}
+                                                                    dark
+                                                                    className="absolute inset-0 h-full w-full"
+                                                                    imgClassName="h-full w-full object-cover"
+                                                                />
                                                             ) : (
                                                                 <div className="flex h-full w-full items-center justify-center text-white/20">
                                                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                                                 </div>
                                                             )}
                                                             {isCurrent && (
-                                                                <span className="absolute left-1 top-1 rounded bg-[#C6FF00]/90 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
+                                                                <span className="absolute left-1 top-1 z-[2] rounded bg-[#C6FF00]/90 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
                                                                     Live
                                                                 </span>
                                                             )}
@@ -322,7 +324,9 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                             {recommendations.length > 0 ? (
                                 <div className={`mt-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 ${hideScroll}`}>
                                     <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
-                                        {recommendations.map(rec => (
+                                        {recommendations.map(rec => {
+                                            const sugThumb = hentaiOceanEpisodeThumbnailUrl(rec._firstEp) || rec._firstEp?.posterUrl || rec.posterUrl
+                                            return (
                                             <li key={rec.seriesKey}>
                                                 <button
                                                     type="button"
@@ -330,8 +334,13 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                                     className="flex w-full gap-3 rounded-xl border border-transparent bg-black/25 p-2 text-left transition-colors hover:border-white/10 hover:bg-white/[0.06]"
                                                 >
                                                     <div className="relative h-[4.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-lg bg-black/30">
-                                                        {(rec._firstEp?.posterUrl || rec.posterUrl) ? (
-                                                            <img src={rec._firstEp?.posterUrl || rec.posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                                        {sugThumb ? (
+                                                            <LifesyncEpisodeThumbnail
+                                                                src={sugThumb}
+                                                                dark
+                                                                className="absolute inset-0 h-full w-full"
+                                                                imgClassName="h-full w-full object-cover"
+                                                            />
                                                         ) : (
                                                             <div className="flex h-full w-full items-center justify-center text-white/12">
                                                                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
@@ -351,7 +360,8 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                                     </div>
                                                 </button>
                                             </li>
-                                        ))}
+                                            )
+                                        })}
                                     </ul>
                                 </div>
                             ) : (
@@ -406,26 +416,44 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
 
     if (!series) return null
 
+    const posterLayoutId = hentaiSeriesPosterLayoutId(series.seriesKey)
+
     const coverImg = detail?.coverUrl || series.posterUrl
     const description = detail?.description ? String(detail.description).replace(/<[^>]*>/g, '') : ''
     const genres = detail?.genres || []
     const episodes = series.episodes || []
+    const episodeSkeletonCount = Math.min(12, Math.max(3, episodes.length || 6))
     const hentaiSlug = slugFromItem(detail) || slugFromItem(episodes[0] || series)
     const storyboardBg = hentaiSlug ? `${HENTAI_OCEAN_SITE}/storyboard/${encodeURIComponent(hentaiSlug)}.webp` : ''
     const usingStoryboardBg = Boolean(storyboardBg && !storyboardFailed)
     const heroBackground = usingStoryboardBg ? storyboardBg : coverImg
 
     const node = (
-        <div
+        <MotionDiv
             className="fixed inset-0 z-[9998] flex h-dvh max-h-dvh w-full max-w-[100vw] min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
             onClick={onClose}
-            style={{ paddingLeft: 'max(0px, env(safe-area-inset-left))', paddingRight: 'max(0px, env(safe-area-inset-right))' }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={lifeSyncDetailOverlayFadeTransition}
         >
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+            <MotionDiv
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={lifeSyncDetailBackdropFadeTransition}
+            />
 
-            <div
-                className="relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl animate-[slideUp_0.3s_ease-out] sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+            <MotionDiv
+                layout="size"
+                layoutRoot
+                className="relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
                 onClick={e => e.stopPropagation()}
+                initial={lifeSyncDetailSheetEnterInitial}
+                animate={lifeSyncDetailSheetEnterAnimate}
+                exit={lifeSyncDetailSheetExitVariant}
+                transition={lifeSyncDetailSheetMainTransition}
             >
                 {/* Hero with storyboard background */}
                 <div className="relative shrink-0">
@@ -450,20 +478,27 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                         type="button"
                         onClick={onClose}
                         className="absolute z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white/90 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white"
-                        style={{ top: 'max(0.75rem, env(safe-area-inset-top))', right: 'max(0.75rem, env(safe-area-inset-right))' }}
+                        style={{ top: '0.75rem', right: '0.75rem' }}
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
 
-                    <div className="relative flex flex-col items-center gap-4 px-4 pb-4 pt-[max(1.25rem,env(safe-area-inset-top))] text-center sm:flex-row sm:items-end sm:gap-5 sm:px-6 sm:pt-5 sm:text-left">
+                    <div className="relative flex flex-col items-center gap-4 px-4 pb-4 pt-5 text-center sm:flex-row sm:items-end sm:gap-5 sm:px-6 sm:pt-5 sm:text-left">
                         <div className="w-24 shrink-0 sm:w-36">
-                            {coverImg ? (
-                                <img src={coverImg} alt="" className="w-full aspect-[2/3] object-cover rounded-xl shadow-lg ring-1 ring-black/10" />
-                            ) : (
-                                <div className="w-full aspect-[2/3] rounded-xl bg-[#f5f5f7] flex items-center justify-center">
-                                    <svg className="w-10 h-10 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" /></svg>
-                                </div>
-                            )}
+                            <MotionDiv
+                                layoutId={posterLayoutId}
+                                transition={lifeSyncSharedLayoutTransitionProps}
+                                className="w-full overflow-hidden rounded-xl bg-[#f5f5f7] shadow-lg ring-1 ring-black/10"
+                                style={{ aspectRatio: '2/3' }}
+                            >
+                                {coverImg ? (
+                                    <img src={coverImg} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                    <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center">
+                                        <svg className="w-10 h-10 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" /></svg>
+                                    </div>
+                                )}
+                            </MotionDiv>
                         </div>
                         <div className="flex min-w-0 w-full flex-1 flex-col justify-end pb-1">
                             <h2 className="wrap-anywhere text-[17px] font-bold leading-tight text-[#1d1d1f] line-clamp-4 sm:text-[22px] sm:line-clamp-3">
@@ -501,12 +536,18 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                 </div>
 
                 {/* Body: description + episode grid */}
-                <div className="min-h-0 flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom,0px)]">
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                    <MotionDiv
+                        key={String(series.seriesKey)}
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={lifeSyncDetailBodyRevealTransition}
+                    >
                     {/* Description */}
                     {(detailBusy || description) && (
                         <div className="px-5 sm:px-6 py-3 border-b border-[#f0f0f0]">
                             {detailBusy && !description ? (
-                                <div className="flex gap-1.5">{[0, 150, 300].map(d => <span key={d} className="w-2 h-2 rounded-full bg-[#e5e5ea] animate-bounce" style={{ animationDelay: `${d}ms` }} />)}</div>
+                                <LifesyncTextLinesSkeleton lines={4} />
                             ) : (
                                 <>
                                     <p className={`text-[12px] leading-relaxed text-[#424245] ${descExpanded ? '' : 'line-clamp-3'}`}>
@@ -522,50 +563,68 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                         </div>
                     )}
 
-                    {/* Episode grid */}
+                    {/* Episode grid — 16:9 thumbs (HentaiOcean episode stills) */}
                     <div className="px-5 sm:px-6 py-4">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b] mb-3">
-                            {episodes.length === 1 ? 'Episode' : `${episodes.length} Episodes`} — tap to watch
+                            {detailBusy
+                                ? 'Episodes'
+                                : episodes.length === 1
+                                  ? 'Episode'
+                                  : `${episodes.length} Episodes`}{' '}
+                            — tap to watch
                         </p>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                            {episodes.map((ep, i) => (
+                        {detailBusy ? (
+                            <LifesyncHentaiEpisodeGridSkeleton count={episodeSkeletonCount} />
+                        ) : (
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                            {episodes.map((ep, i) => {
+                                const oceanEpThumb = hentaiOceanEpisodeThumbnailUrl(ep)
+                                const epThumbSrc = oceanEpThumb || ep.posterUrl || coverImg
+                                const dimSeriesCover = !oceanEpThumb && !ep.posterUrl && coverImg
+                                return (
                                 <button
                                     key={ep.watchUrl || ep.slug || i}
                                     type="button"
                                     onClick={() => onPlayEpisode(ep, i)}
                                     className="group text-left overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-white shadow-sm hover:shadow-md hover:border-[#C6FF00]/40 transition-all"
                                 >
-                                    <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#f5f5f7]">
-                                        {ep.posterUrl ? (
-                                            <img src={ep.posterUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" loading="lazy" />
-                                        ) : coverImg ? (
-                                            <img src={coverImg} alt="" className="h-full w-full object-cover opacity-50" loading="lazy" />
+                                    <div className="relative aspect-video w-full overflow-hidden bg-[#1d1d1f]">
+                                        {epThumbSrc ? (
+                                            <LifesyncEpisodeThumbnail
+                                                src={epThumbSrc}
+                                                className="absolute inset-0 h-full w-full"
+                                                imgClassName={`h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]${dimSeriesCover ? ' opacity-50' : ''}`}
+                                            />
                                         ) : (
-                                            <div className="flex h-full w-full items-center justify-center text-[#86868b]">
-                                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
+                                            <div className="flex h-full w-full items-center justify-center text-white/25">
+                                                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
                                             </div>
                                         )}
+                                        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-1/2 bg-gradient-to-t from-black/75 via-black/25 to-transparent" aria-hidden />
                                         {ep.episodeNum > 0 && (
-                                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[#1d1d1f]/80 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm">
+                                            <span className="absolute left-2 top-2 z-[2] rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm ring-1 ring-white/10">
                                                 E{ep.episodeNum}
                                             </span>
                                         )}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
-                                            <span className="w-10 h-10 bg-[#C6FF00] rounded-full flex items-center justify-center shadow-lg">
-                                                <svg className="w-4 h-4 ml-0.5 text-[#1d1d1f]" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                        <div className="absolute inset-0 z-[2] flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/25">
+                                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#C6FF00] shadow-lg ring-2 ring-black/20">
+                                                <svg className="ml-0.5 h-4 w-4 text-[#1d1d1f]" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                             </span>
                                         </div>
-                                    </div>
-                                    <div className="p-2">
-                                        <p className="text-[10px] font-semibold text-[#1d1d1f] line-clamp-2 leading-snug">{ep.title}</p>
+                                        <div className="absolute inset-x-0 bottom-0 z-[2] px-2.5 pb-2 pt-6">
+                                            <p className="text-[11px] font-semibold leading-snug text-white line-clamp-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">{ep.title}</p>
+                                        </div>
                                     </div>
                                 </button>
-                            ))}
+                                )
+                            })}
                         </div>
+                        )}
                     </div>
+                    </MotionDiv>
                 </div>
-            </div>
-        </div>
+            </MotionDiv>
+        </MotionDiv>
     )
 
     return createPortal(node, document.body)
@@ -573,29 +632,51 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
 
 /* ─── Series Card ──────────────────────────────────────────────────────── */
 
-function SeriesCard({ series, onOpenDetail }) {
+const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
     return (
         <button type="button" onClick={() => onOpenDetail?.(series)} className="group w-full text-left">
             <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden hover:shadow-md transition-all">
                 <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#f5f5f7]">
-                    {series.posterUrl ? (
-                        <img src={series.posterUrl} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" loading="lazy" />
-                    ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[#86868b]">
-                            <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" />
-                            </svg>
-                        </div>
-                    )}
-                    {series.episodeCount != null && (
-                        <span className="absolute right-2 top-2 bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
-                            {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
-                        </span>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
-                    <div className="absolute bottom-0 inset-x-0 p-3 pointer-events-none">
-                        <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow">{series.title}</p>
-                    </div>
+                    <MotionDiv
+                        layoutId={hentaiSeriesPosterLayoutId(series.seriesKey)}
+                        transition={lifeSyncSharedLayoutTransitionProps}
+                        className="absolute inset-0"
+                    >
+                        {series.posterUrl ? (
+                            <LifesyncEpisodeThumbnail
+                                src={series.posterUrl}
+                                className="absolute inset-0 h-full w-full"
+                                imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                            >
+                                {series.episodeCount != null && (
+                                    <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
+                                        {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
+                                    </span>
+                                )}
+                                <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
+                                    <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow">{series.title}</p>
+                                </div>
+                            </LifesyncEpisodeThumbnail>
+                        ) : (
+                            <>
+                                <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" />
+                                    </svg>
+                                </div>
+                                {series.episodeCount != null && (
+                                    <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
+                                        {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
+                                    </span>
+                                )}
+                                <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
+                                    <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow">{series.title}</p>
+                                </div>
+                            </>
+                        )}
+                    </MotionDiv>
                 </div>
                 <div className="flex items-center justify-center gap-1.5 border-t border-[#f0f0f0] bg-[#fafafa] py-2.5 text-[11px] font-semibold text-[#1d1d1f]">
                     <svg className="w-3.5 h-3.5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
@@ -607,7 +688,7 @@ function SeriesCard({ series, onOpenDetail }) {
             </div>
         </button>
     )
-}
+})
 
 /* ─── Main Component ───────────────────────────────────────────────────── */
 
@@ -630,6 +711,13 @@ export default function LifeSyncHentai() {
     const [knownGenres, setKnownGenres] = useState([])
     const seriesGenresRef = useRef(new Map())
     const [activeGenre, setActiveGenre] = useState(null)
+    const pageMountedRef = useRef(true)
+    useEffect(() => {
+        pageMountedRef.current = true
+        return () => {
+            pageMountedRef.current = false
+        }
+    }, [])
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchQ.trim()), 320)
@@ -637,18 +725,25 @@ export default function LifeSyncHentai() {
     }, [searchQ])
 
     const load = useCallback(async (p = 1, q = '', refresh = false) => {
-        setBusy(true)
-        setError('')
+        if (pageMountedRef.current) {
+            setBusy(true)
+            setError('')
+        }
         try {
             const params = new URLSearchParams({ page: String(p), perPage: String(SERIES_PER_PAGE) })
             if (q.trim()) params.set('q', q.trim())
             if (refresh) params.set('refresh', '1')
             const data = await lifesyncFetch(`/api/anime/hentai-ocean/home?${params}`)
+            if (!pageMountedRef.current) return
             setCatalog(data)
         } catch (e) {
-            setError(e.message || 'Failed to load')
+            if (pageMountedRef.current) {
+                setError(e.message || 'Failed to load')
+            }
         } finally {
-            setBusy(false)
+            if (pageMountedRef.current) {
+                setBusy(false)
+            }
         }
     }, [])
 
@@ -677,10 +772,10 @@ export default function LifeSyncHentai() {
         const base = { title: ep.title, embedUrl, watchUrl, slug, videoUrl: null, resolving: false }
         try {
             const data = await lifesyncFetch(`/api/anime/hentai-ocean/stream?slug=${encodeURIComponent(slug)}`)
-            const videoUrl = typeof data.videoUrl === 'string' && data.videoUrl.startsWith('http') ? data.videoUrl : null
-            // iOS Safari/PWA often fails on cross-origin HLS/MP4; prefer iframe.
-            const prefersIframe = isIOSDevice()
-            return { ...base, embedUrl: data.embedUrl || embedUrl, videoUrl: prefersIframe ? null : videoUrl }
+            const mp4 = typeof data.videoUrl === 'string' && data.videoUrl.startsWith('http') ? data.videoUrl : null
+            const hls = typeof data.hlsUrl === 'string' && data.hlsUrl.startsWith('http') ? data.hlsUrl : null
+            const videoUrl = hls || mp4
+            return { ...base, embedUrl: data.embedUrl || embedUrl, videoUrl }
         } catch {
             return base
         }
@@ -691,6 +786,7 @@ export default function LifeSyncHentai() {
         const stream = { title: ep.title, embedUrl: ep.embedUrl || '', watchUrl: ep.watchUrl || '', slug: slugFromItem(ep), videoUrl: null, resolving: true }
         setPlayerState({ stream, series, episodeIndex: epIndex })
         const resolved = await resolveStream(ep)
+        if (!pageMountedRef.current) return
         if (resolved) {
             setPlayerState(prev => prev ? { ...prev, stream: resolved } : null)
         }
@@ -707,6 +803,7 @@ export default function LifeSyncHentai() {
         const ep = series?.episodes?.[newIndex]
         if (ep) {
             const resolved = await resolveStream(ep)
+            if (!pageMountedRef.current) return
             if (resolved) {
                 setPlayerState(prev => prev ? { ...prev, stream: resolved } : null)
             }
@@ -757,11 +854,14 @@ export default function LifeSyncHentai() {
     if (!isLifeSyncConnected) {
         return (
             <div className="max-w-4xl mx-auto">
-                <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight mb-2">Hentai</h1>
-                <div className="bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm px-8 py-16 text-center">
-                    <p className="text-[15px] font-bold text-[#1d1d1f] mb-2">LifeSync Not Connected</p>
-                    <p className="text-[13px] text-[#86868b] mb-4">Connect LifeSync in your profile first.</p>
-                    <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 bg-[#1d1d1f] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors">
+                <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[#1a1628]">Hentai</h1>
+                <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[#5b5670]">
+                    Adults-only catalog and in-app streaming—connect LifeSync first, then enable NSFW in preferences if you use this hub.
+                </p>
+                <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
+                    <p className="text-[15px] font-bold text-[#1a1628] mb-2">LifeSync Not Connected</p>
+                    <p className="text-[13px] text-[#5b5670] mb-4">Connect LifeSync in your profile first.</p>
+                    <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
                         Go to Integrations
                     </Link>
                 </div>
@@ -774,21 +874,24 @@ export default function LifeSyncHentai() {
             <div className="max-w-4xl mx-auto space-y-6">
                 <div>
                     <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">LifeSync / Anime</p>
-                    <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight">Hentai</h1>
+                    <h1 className="text-[28px] font-bold tracking-tight text-[#1a1628]">Hentai</h1>
+                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
+                        This area stays hidden until you allow mature content and turn on the Hentai plugin in integrations.
+                    </p>
                 </div>
-                <div className="bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm px-8 py-16 text-center">
-                    <p className="text-[15px] font-bold text-[#1d1d1f] mb-2">Restricted Content</p>
-                    <p className="text-[13px] text-[#86868b] mb-4">
+                <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#fce7f3]/80">
+                    <p className="text-[15px] font-bold text-[#1a1628] mb-2">Restricted Content</p>
+                    <p className="text-[13px] text-[#5b5670] mb-4">
                         {!nsfwEnabled
                             ? 'NSFW content is disabled. Enable it in your LifeSync preferences.'
                             : 'The Hentai plugin is disabled. Enable it in your profile integrations.'}
                     </p>
                     {!nsfwEnabled ? (
-                        <button onClick={enableNsfw} className="inline-flex items-center gap-2 bg-[#1d1d1f] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors">
+                        <button type="button" onClick={enableNsfw} className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
                             Enable NSFW Content
                         </button>
                     ) : (
-                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 bg-[#1d1d1f] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors">
+                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
                             Go to Integrations
                         </Link>
                     )}
@@ -798,21 +901,31 @@ export default function LifeSyncHentai() {
     }
 
     return (
-        <div className="mx-auto max-w-6xl space-y-6 px-4 sm:px-6">
+        <LayoutGroup id="lifesync-hentai">
+        <MotionDiv
+            className="space-y-6 sm:space-y-8"
+            style={{ transformOrigin: '50% 0%' }}
+            initial="initial"
+            animate="animate"
+            variants={lifeSyncDollyPageVariants}
+            transition={lifeSyncDollyPageTransition}
+        >
             {/* Popups */}
-            {selectedSeries && (
-                <SeriesDetailPopup
-                    key={selectedSeries.seriesKey}
-                    series={selectedSeries}
-                    onClose={() => setSelectedSeries(null)}
-                    onPlayEpisode={(ep, idx) => void playEpisode(selectedSeries, ep, idx)}
-                    onGenresLoaded={addGenresForSeries}
-                    genreTagClick={g => {
-                        addGenresForSeries(selectedSeries.seriesKey, [g])
-                        handleGenreClick(g)
-                    }}
-                />
-            )}
+            <AnimatePresence mode="sync">
+                {selectedSeries ? (
+                    <SeriesDetailPopup
+                        key={selectedSeries.seriesKey}
+                        series={selectedSeries}
+                        onClose={() => setSelectedSeries(null)}
+                        onPlayEpisode={(ep, idx) => void playEpisode(selectedSeries, ep, idx)}
+                        onGenresLoaded={addGenresForSeries}
+                        genreTagClick={g => {
+                            addGenresForSeries(selectedSeries.seriesKey, [g])
+                            handleGenreClick(g)
+                        }}
+                    />
+                ) : null}
+            </AnimatePresence>
             {playerState && (
                 <StreamPlayerPopup
                     playerState={playerState}
@@ -823,27 +936,26 @@ export default function LifeSyncHentai() {
                 />
             )}
 
+            <div
+                className="flex flex-col gap-5 sm:gap-6"
+                style={{ pointerEvents: selectedSeries ? 'none' : undefined }}
+            >
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0">
                     <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">LifeSync / Anime</p>
-                    <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight">Hentai</h1>
-                    <p className="text-[13px] text-[#86868b] mt-1">Browse series, view details and episodes, then stream.</p>
+                    <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight text-[#1a1628]">Hentai</h1>
+                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
+                        Browse adult series, open details and episode lists, and watch in the built-in player. Use filters and sync to refresh the catalog.
+                    </p>
                 </div>
-                <div className="flex flex-wrap gap-2 self-start">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 self-stretch sm:self-start">
                     <button
                         onClick={() => load(page, debouncedSearch, true)}
                         disabled={busy}
-                        className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50"
+                        className="w-full sm:w-auto text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50"
                     >
                         {busy ? 'Syncing…' : 'Sync catalog'}
-                    </button>
-                    <button
-                        onClick={() => load(page, debouncedSearch, false)}
-                        disabled={busy}
-                        className="text-[12px] font-semibold text-[#1d1d1f] bg-white hover:bg-[#fafafa] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50"
-                    >
-                        Refresh
                     </button>
                 </div>
             </div>
@@ -852,7 +964,7 @@ export default function LifeSyncHentai() {
             {error && <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{error}</div>}
 
             {/* Search */}
-            <form onSubmit={handleSearch} className="flex gap-2">
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
                 <input
                     type="search"
                     value={searchQ}
@@ -860,14 +972,14 @@ export default function LifeSyncHentai() {
                     placeholder="Search catalog…"
                     className="flex-1 px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
                 />
-                <button type="submit" disabled={busy} className="bg-[#1d1d1f] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-black transition-colors disabled:opacity-50">
+                <button type="submit" disabled={busy} className="w-full sm:w-auto rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50">
                     Search
                 </button>
             </form>
 
             {/* Genre filter pills */}
             {knownGenres.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar overscroll-x-contain sm:flex-wrap sm:overflow-visible">
                     <span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider self-center mr-1">Genres</span>
                     {knownGenres.map(g => (
                         <button
@@ -907,12 +1019,7 @@ export default function LifeSyncHentai() {
 
             {/* Content */}
             {busy && !seriesList.length && !flatItems.length ? (
-                <div className="flex flex-col items-center justify-center gap-3 rounded-[22px] border border-dashed border-[#e5e5ea] bg-white py-20">
-                    <div className="flex gap-1.5 justify-center">
-                        {[0, 150, 300].map(d => <span key={d} className="w-2.5 h-2.5 rounded-full bg-[#C6FF00] animate-bounce" style={{ animationDelay: `${d}ms` }} />)}
-                    </div>
-                    <p className="text-[13px] text-[#86868b]">Loading catalog…</p>
-                </div>
+                <LifesyncHentaiCatalogGridSkeleton count={12} />
             ) : useFlatOnly ? (
                 <>
                     <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -962,6 +1069,8 @@ export default function LifeSyncHentai() {
                     <p className="text-[13px] text-[#86868b]">No content to display.</p>
                 </div>
             ) : null}
-        </div>
+            </div>
+        </MotionDiv>
+        </LayoutGroup>
     )
 }

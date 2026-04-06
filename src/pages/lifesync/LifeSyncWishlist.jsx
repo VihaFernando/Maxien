@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { LifesyncEpisodeThumbnail, LifesyncWishlistListSkeleton } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch } from '../../lib/lifesyncApi'
+import { LifeSyncHubPageShell } from '../../components/lifesync/LifeSyncHubPageShell'
+import { lifeSyncStaggerContainer, lifeSyncStaggerItem, MotionDiv } from '../../lib/lifesyncMotion'
 
 function steamHeader(appId) {
     if (!appId) return null
@@ -26,12 +29,16 @@ function WishlistCard({ item, onRemove }) {
 
     return (
         <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden flex flex-col sm:flex-row">
-            <div className="relative aspect-video w-full sm:w-[200px] sm:aspect-auto sm:min-h-[120px] flex-shrink-0 bg-[#f5f5f7] overflow-hidden">
+            <div className="relative aspect-video w-full flex-shrink-0 overflow-hidden bg-[#f5f5f7] sm:aspect-auto sm:min-h-[120px] sm:w-[200px]">
                 {discount > 0 && (
-                    <span className="absolute right-2 top-2 z-10 bg-[#C6FF00] text-[#1d1d1f] text-[11px] font-bold px-2 py-0.5 rounded-lg">−{discount}%</span>
+                    <span className="absolute right-2 top-2 z-[3] bg-[#C6FF00] text-[#1d1d1f] text-[11px] font-bold px-2 py-0.5 rounded-lg">−{discount}%</span>
                 )}
                 {img ? (
-                    <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    <LifesyncEpisodeThumbnail
+                        src={img}
+                        className="absolute inset-0 h-full w-full"
+                        imgClassName="h-full w-full object-cover"
+                    />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center text-[#86868b]">
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" /></svg>
@@ -152,25 +159,28 @@ export default function LifeSyncWishlist() {
 
     if (!isLifeSyncConnected) {
         return (
-            <div className="max-w-4xl mx-auto">
-                <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight mb-2">Wishlist</h1>
-                <div className="bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm px-8 py-16 text-center">
-                    <p className="text-[15px] font-bold text-[#1d1d1f] mb-2">LifeSync Not Connected</p>
-                    <p className="text-[13px] text-[#86868b] mb-4">Connect LifeSync in your profile to access your wishlist.</p>
-                    <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 bg-[#1d1d1f] text-white text-[13px] font-semibold px-5 py-2.5 rounded-xl hover:bg-black transition-colors">
-                        Go to Integrations
-                    </Link>
+            <LifeSyncHubPageShell>
+                <div className="max-w-4xl mx-auto">
+                    <h1 className="text-[28px] font-bold text-[#1a1628] tracking-tight mb-2">Wishlist</h1>
+                    <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
+                        <p className="text-[15px] font-bold text-[#1a1628] mb-2">LifeSync Not Connected</p>
+                        <p className="text-[13px] text-[#5b5670] mb-4">Connect LifeSync in your profile to access your wishlist.</p>
+                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
+                            Go to Integrations
+                        </Link>
+                    </div>
                 </div>
-            </div>
+            </LifeSyncHubPageShell>
         )
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-6">
+        <LifeSyncHubPageShell>
+        <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">LifeSync / Games</p>
-                    <h1 className="text-[28px] font-bold text-[#1d1d1f] tracking-tight">Wishlist</h1>
+                    <h1 className="text-[28px] font-bold text-[#1a1628] tracking-tight">Wishlist</h1>
                     <p className="text-[13px] text-[#86868b] mt-1">Track game prices and get notified when they drop.</p>
                 </div>
                 <button onClick={load} disabled={busy} className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 self-start">
@@ -193,7 +203,7 @@ export default function LifeSyncWishlist() {
                     <input type="text" placeholder="Steam App ID (optional)" value={addForm.steamAppId} onChange={e => setAddForm(f => ({ ...f, steamAppId: e.target.value }))} className="px-3 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none focus:border-[#C6FF00]/60" />
                     <input type="text" placeholder="Store URL (optional)" value={addForm.storeUrl} onChange={e => setAddForm(f => ({ ...f, storeUrl: e.target.value }))} className="px-3 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none focus:border-[#C6FF00]/60" />
                     <input type="number" step="0.01" placeholder="Target price (optional)" value={addForm.targetPrice} onChange={e => setAddForm(f => ({ ...f, targetPrice: e.target.value }))} className="px-3 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none focus:border-[#C6FF00]/60" />
-                    <button type="submit" disabled={addBusy} className="bg-[#1d1d1f] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-black transition-colors disabled:opacity-50">
+                    <button type="submit" disabled={addBusy} className="rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50">
                         {addBusy ? 'Adding...' : 'Add'}
                     </button>
                 </form>
@@ -218,7 +228,7 @@ export default function LifeSyncWishlist() {
                                 type="button"
                                 onClick={importSteam}
                                 disabled={importBusy}
-                                className="bg-[#1d1d1f] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-black transition-colors disabled:opacity-50 whitespace-nowrap self-start"
+                                className="self-start whitespace-nowrap rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50"
                             >
                                 {importBusy ? 'Syncing...' : 'Sync Steam wishlist'}
                             </button>
@@ -246,9 +256,20 @@ export default function LifeSyncWishlist() {
                     <input type="search" value={filter} onChange={e => setFilter(e.target.value)} placeholder="Filter..." className="w-full sm:max-w-xs px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all" />
                 </div>
                 {filtered.length > 0 ? (
-                    <div className="space-y-3">
-                        {filtered.map(item => <WishlistCard key={item._id} item={item} onRemove={removeItem} />)}
-                    </div>
+                    <MotionDiv
+                        className="space-y-3"
+                        variants={lifeSyncStaggerContainer}
+                        initial="hidden"
+                        animate="show"
+                    >
+                        {filtered.map((item) => (
+                            <MotionDiv key={item._id} variants={lifeSyncStaggerItem}>
+                                <WishlistCard item={item} onRemove={removeItem} />
+                            </MotionDiv>
+                        ))}
+                    </MotionDiv>
+                ) : busy && items.length === 0 ? (
+                    <LifesyncWishlistListSkeleton />
                 ) : !busy && (
                     <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm px-6 py-10 text-center">
                         <p className="text-[13px] text-[#86868b]">{filter.trim() ? 'No items match your filter.' : 'Your wishlist is empty. Add games above.'}</p>
@@ -256,5 +277,6 @@ export default function LifeSyncWishlist() {
                 )}
             </div>
         </div>
+        </LifeSyncHubPageShell>
     )
 }

@@ -267,8 +267,8 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                 <ul className="divide-y divide-[#f5f5f7]">
                     {/* Steam */}
                     <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#171a21] flex items-center justify-center flex-shrink-0">
                                     <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 10.95l6.432 2.658a3.387 3.387 0 011.912-.588c.064 0 .126.002.189.005l2.861-4.142V8.83a4.524 4.524 0 014.519-4.519 4.524 4.524 0 014.519 4.519 4.524 4.524 0 01-4.519 4.519h-.105l-4.076 2.911c0 .052.004.105.004.159a3.393 3.393 0 01-3.39 3.39 3.403 3.403 0 01-3.35-2.858L.453 15.16A11.98 11.98 0 0011.979 24c6.627 0 12-5.373 12-12S18.605 0 11.979 0z" /></svg>
                                 </div>
@@ -282,11 +282,11 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                 </div>
                             </div>
                             {steamLinked ? (
-                                <button type="button" onClick={() => unlinkProvider('Steam', '/api/steam/link')} disabled={unlinkBusy === 'Steam'} className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50">
+                                <button type="button" onClick={() => unlinkProvider('Steam', '/api/steam/link')} disabled={unlinkBusy === 'Steam'} className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto">
                                     {unlinkBusy === 'Steam' ? 'Unlinking…' : 'Disconnect'}
                                 </button>
                             ) : (
-                                <a href={lifesyncOAuthStartUrl('steam') || '#'} className={`text-[11px] font-semibold text-white bg-[#1d1d1f] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors ${!lifesyncOAuthStartUrl('steam') ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <a href={lifesyncOAuthStartUrl('steam') || '#'} className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[#1d1d1f] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('steam') ? 'opacity-50 pointer-events-none' : ''}`}>
                                     Link Steam
                                 </a>
                             )}
@@ -295,8 +295,8 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
 
                     {/* MyAnimeList */}
                     <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#2E51A2] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-[11px] font-black leading-none">MAL</span>
                                 </div>
@@ -312,11 +312,11 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                 </div>
                             </div>
                             {malLinked ? (
-                                <button type="button" onClick={() => unlinkProvider('MAL', '/api/anime/link')} disabled={unlinkBusy === 'MAL'} className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50">
+                                <button type="button" onClick={() => unlinkProvider('MAL', '/api/anime/link')} disabled={unlinkBusy === 'MAL'} className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto">
                                     {unlinkBusy === 'MAL' ? 'Unlinking…' : 'Disconnect'}
                                 </button>
                             ) : (
-                                <a href={lifesyncOAuthStartUrl('mal') || '#'} className={`text-[11px] font-semibold text-white bg-[#2E51A2] hover:bg-[#24408a] px-3.5 py-1.5 rounded-lg transition-colors ${!lifesyncOAuthStartUrl('mal') ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <a href={lifesyncOAuthStartUrl('mal') || '#'} className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[#2E51A2] hover:bg-[#24408a] px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('mal') ? 'opacity-50 pointer-events-none' : ''}`}>
                                     Connect MAL
                                 </a>
                             )}
@@ -325,8 +325,8 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
 
                     {/* MangaDex (password grant via server personal client) */}
                     <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="flex items-start gap-3 min-w-0">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
+                            <div className="flex min-w-0 items-start gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#FF6740] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-[10px] font-black leading-none">MD</span>
                                 </div>
@@ -352,12 +352,12 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                     type="button"
                                     onClick={() => void unlinkMangaDex()}
                                     disabled={unlinkBusy === 'MangaDex'}
-                                    className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 self-start shrink-0"
+                                    className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
                                 >
                                     {unlinkBusy === 'MangaDex' ? 'Disconnecting…' : 'Disconnect'}
                                 </button>
                             ) : (
-                                <form onSubmit={linkMangaDex} className="flex flex-col gap-2 w-full sm:w-auto sm:min-w-[220px] shrink-0">
+                                <form onSubmit={linkMangaDex} className="flex w-full max-w-full shrink-0 flex-col gap-2 md:max-w-[260px]">
                                     <input
                                         type="text"
                                         autoComplete="username"
@@ -388,8 +388,8 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
 
                     {/* Xbox (gamertag via OpenXBL — same as main app Settings) */}
                     <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                            <div className="flex items-start gap-3 min-w-0">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
+                            <div className="flex min-w-0 items-start gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#107C10] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-[9px] font-black leading-tight text-center px-0.5">XBOX</span>
                                 </div>
@@ -418,12 +418,12 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                     type="button"
                                     onClick={() => void unlinkXboxGamertag()}
                                     disabled={xboxBusy || busy}
-                                    className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 self-start shrink-0"
+                                    className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
                                 >
                                     {xboxBusy ? 'Removing…' : 'Disconnect'}
                                 </button>
                             ) : (
-                                <form onSubmit={linkXboxGamertag} className="flex flex-col gap-2 w-full sm:w-auto sm:min-w-[240px] shrink-0">
+                                <form onSubmit={linkXboxGamertag} className="flex w-full max-w-full shrink-0 flex-col gap-2 md:max-w-[280px]">
                                     <input
                                         type="text"
                                         autoComplete="off"
@@ -447,9 +447,9 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                 </ul>
             </div>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-stretch sm:gap-5">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-stretch lg:gap-5">
             {/* Viewing preferences */}
-            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
+            <div className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
                 <div className="flex items-center gap-2.5 border-b border-[#f0f0f0] px-5 pb-4 pt-5 sm:px-6">
                     <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-[#C6FF00]/25">
                         <svg className="h-3.5 w-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -464,7 +464,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                 </div>
                 <ul className="divide-y divide-[#f5f5f7]">
                     <li>
-                        <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+                        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                             <div className="min-w-0">
                                 <p className="text-[13px] font-semibold text-[#1d1d1f]">NSFW content</p>
                                 <p className="mt-0.5 text-[11px] leading-relaxed text-[#86868b]">
@@ -477,7 +477,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                 role="switch"
                                 aria-checked={Boolean(prefs?.nsfwContentEnabled)}
                                 onClick={() => void patchPreferences({ nsfwContentEnabled: !prefs?.nsfwContentEnabled })}
-                                className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${prefs?.nsfwContentEnabled ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
+                                className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${prefs?.nsfwContentEnabled ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
                             >
                                 <span
                                     className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${prefs?.nsfwContentEnabled ? 'translate-x-5' : ''}`}
@@ -486,7 +486,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                         </div>
                     </li>
                     <li>
-                        <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+                        <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                             <div className="min-w-0">
                                 <p className="text-[13px] font-semibold text-[#1d1d1f]">English manga only</p>
                                 <p className="mt-0.5 text-[11px] leading-relaxed text-[#86868b]">
@@ -503,7 +503,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                         mangaEnglishReleasesOnly: !(prefs?.mangaEnglishReleasesOnly !== false),
                                     })
                                 }
-                                className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${prefs?.mangaEnglishReleasesOnly !== false ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
+                                className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${prefs?.mangaEnglishReleasesOnly !== false ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
                             >
                                 <span
                                     className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${prefs?.mangaEnglishReleasesOnly !== false ? 'translate-x-5' : ''}`}
@@ -520,7 +520,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                 </p>
                             </div>
                             <div
-                                className="inline-flex shrink-0 rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] p-0.5"
+                                className="inline-flex shrink-0 self-end rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] p-0.5 sm:self-auto"
                                 role="group"
                                 aria-label="Default anime audio"
                             >
@@ -551,7 +551,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
             </div>
 
             {/* Content plugins */}
-            <div className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
+            <div className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
                 <div className="flex items-center gap-2.5 border-b border-[#f0f0f0] px-5 pb-4 pt-5 sm:px-6">
                     <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-[#C6FF00]/25">
                         <svg className="h-3.5 w-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -584,7 +584,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                   : 'Adult catalog areas (requires NSFW content enabled).'
                         return (
                             <li key={key}>
-                                <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+                                <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                                     <div className="min-w-0">
                                         <p className="text-[13px] font-semibold text-[#1d1d1f]">{label}</p>
                                         <p className="mt-0.5 text-[11px] leading-relaxed text-[#86868b]">
@@ -597,7 +597,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                                         role="switch"
                                         aria-checked={on}
                                         onClick={() => togglePlugin(key, !on)}
-                                        className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${on ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
+                                        className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${on ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
                                     >
                                         <span
                                             className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`}
@@ -614,7 +614,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
     )
 }
 
-export default function LifeSyncIntegration() {
+export default function LifeSyncIntegration({ embedded = false }) {
     const { user: maxienUser } = useAuth()
     const {
         lifeSyncUser,
@@ -627,6 +627,7 @@ export default function LifeSyncIntegration() {
     } = useLifeSync()
 
     const [linkPassword, setLinkPassword] = useState('')
+    const [connectExpanded, setConnectExpanded] = useState(false)
     const [busy, setBusy] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
@@ -677,10 +678,10 @@ export default function LifeSyncIntegration() {
     }
 
     return (
-        <div className="mb-5 sm:mb-6">
+        <div className={embedded ? "" : "mb-5 sm:mb-6"}>
             {/* Connection card — matches GitHub integration row */}
-            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm p-4 sm:p-5 mb-5 sm:mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className={`rounded-[20px] border border-[#d2d2d7]/50 bg-white p-4 shadow-sm sm:rounded-[24px] sm:p-5 ${embedded ? "mb-5" : "mb-5 sm:mb-6"}`}>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
                         <div className="w-11 h-11 rounded-2xl bg-[#1d1d1f] flex items-center justify-center flex-shrink-0 shadow-sm">
                             <LifeSyncIcon className="w-[22px] h-[22px] text-white" />
@@ -707,17 +708,9 @@ export default function LifeSyncIntegration() {
                             )}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex flex-shrink-0 flex-wrap items-center gap-2 lg:justify-end">
                         {connected ? (
                             <>
-                                <button
-                                    type="button"
-                                    disabled={busy}
-                                    onClick={() => refreshLifeSyncMe().catch(() => {})}
-                                    className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 whitespace-nowrap"
-                                >
-                                    Refresh profile
-                                </button>
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -730,78 +723,127 @@ export default function LifeSyncIntegration() {
                                     Disconnect
                                 </button>
                             </>
-                        ) : null}
+                        ) : (
+                            <button
+                                type="button"
+                                disabled={lifeSyncLoading || busy || !maxienUser?.email}
+                                onClick={() => {
+                                    setError('')
+                                    setMessage('')
+                                    setConnectExpanded((v) => !v)
+                                }}
+                                className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] whitespace-nowrap disabled:opacity-50"
+                            >
+                                {connectExpanded ? 'Cancel' : 'Connect'}
+                            </button>
+                        )}
                     </div>
                 </div>
+
+                {/* Expandable connect panel (matches GitHub card layout) */}
+                {!connected && (
+                    <div
+                        className="grid overflow-hidden transition-[grid-template-rows,opacity,transform] duration-300 ease-out"
+                        style={{
+                            gridTemplateRows: connectExpanded ? '1fr' : '0fr',
+                            opacity: connectExpanded ? 1 : 0,
+                            transform: connectExpanded ? 'translateY(0px)' : 'translateY(-4px)',
+                        }}
+                        aria-hidden={!connectExpanded}
+                    >
+                        <div className="min-h-0">
+                            <div className="mt-4 rounded-2xl border border-[#f0f0f0] bg-[#fafafa] p-4 sm:p-5">
+                                <div className="flex items-start justify-between gap-3">
+                                    <div className="min-w-0">
+                                        <p className="text-[12px] font-semibold text-[#1d1d1f]">Connect LifeSync</p>
+                                        <p className="mt-1 text-[12px] text-[#86868b] leading-relaxed">
+                                            Use your Maxien email{' '}
+                                            <span className="font-mono text-[11px] text-[#1d1d1f]">
+                                                ({maxienUser?.email || '—'})
+                                            </span>
+                                            .
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setConnectExpanded(false)
+                                            setError('')
+                                            setMessage('')
+                                        }}
+                                        className="shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-[#1d1d1f] px-2 py-1 rounded-lg hover:bg-white/70 border border-transparent"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+
+                                {lifeSyncLoading ? (
+                                    <div className="mt-3 flex items-center gap-2 text-[12px] text-[#86868b]">
+                                        <span className="w-2 h-2 rounded-full bg-[#C6FF00] animate-pulse" />
+                                        Checking LifeSync session…
+                                    </div>
+                                ) : (
+                                    <>
+                                        {error && (
+                                            <div className="mt-3 bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">
+                                                {error}
+                                            </div>
+                                        )}
+                                        {message && (
+                                            <div className="mt-3 bg-green-50 text-green-700 text-[12px] font-medium px-4 py-3 rounded-xl border border-green-100">
+                                                {message}
+                                            </div>
+                                        )}
+
+                                        <form onSubmit={handleLinkWithPassword} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                                            <div className="min-w-0">
+                                                <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">
+                                                    Password
+                                                </label>
+                                                <input
+                                                    type="password"
+                                                    required
+                                                    value={linkPassword}
+                                                    onChange={(e) => setLinkPassword(e.target.value)}
+                                                    className="w-full px-4 py-3 bg-white border border-[#e5e5ea] focus:border-[#C6FF00]/60 rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
+                                                    autoComplete="current-password"
+                                                    placeholder="Your LifeSync password"
+                                                />
+                                                <p className="mt-1 text-[11px] text-[#86868b]">
+                                                    If you don’t have an account yet, one will be created automatically.
+                                                </p>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setConnectExpanded(false)
+                                                        setError('')
+                                                        setMessage('')
+                                                    }}
+                                                    className="flex-1 sm:flex-none text-[12px] font-semibold text-[#1d1d1f] bg-white hover:bg-[#f5f5f7] px-4 py-3 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 whitespace-nowrap"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="submit"
+                                                    disabled={busy || !maxienUser?.email}
+                                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold px-5 py-3 rounded-xl transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 whitespace-nowrap"
+                                                >
+                                                    <LifeSyncIcon className="w-4 h-4 text-white" />
+                                                    {busy ? 'Linking…' : 'Link LifeSync'}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {lifeSyncLoading && !connected ? (
-                <div className="bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm px-8 py-16 flex flex-col items-center gap-3 mb-5 sm:mb-6">
-                    <div className="flex gap-1.5">
-                        {[0, 150, 300].map((d) => (
-                            <span
-                                key={d}
-                                className="w-2.5 h-2.5 rounded-full bg-[#C6FF00] animate-bounce"
-                                style={{ animationDelay: `${d}ms` }}
-                            />
-                        ))}
-                    </div>
-                    <p className="text-[13px] font-medium text-[#86868b]">Checking LifeSync session…</p>
-                </div>
-            ) : !connected ? (
-                <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm px-6 py-16 flex flex-col items-center gap-4 text-center mb-5 sm:mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-[#f5f5f7] flex items-center justify-center">
-                        <LifeSyncIcon className="w-9 h-9 text-[#1d1d1f]" />
-                    </div>
-                    <div>
-                        <p className="text-[15px] font-bold text-[#1d1d1f]">Link LifeSync</p>
-                        <p className="text-[12px] text-[#86868b] mt-1 max-w-md mx-auto leading-relaxed">
-                            Use the same email as Maxien (
-                            <span className="font-mono text-[11px] text-[#1d1d1f]">{maxienUser?.email || '—'}</span>
-                            ). Email/password sign-in usually links automatically; otherwise enter your password here. A new LifeSync account is created if one does not exist.
-                        </p>
-                    </div>
-
-                    {error && (
-                        <div className="w-full max-w-md bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100 text-left">
-                            {error}
-                        </div>
-                    )}
-                    {message && (
-                        <div className="w-full max-w-md bg-green-50 text-green-700 text-[12px] font-medium px-4 py-3 rounded-xl border border-green-100 text-left">
-                            {message}
-                        </div>
-                    )}
-
-                    <form
-                        onSubmit={handleLinkWithPassword}
-                        className="w-full max-w-md flex flex-col sm:flex-row gap-3 items-stretch sm:items-end"
-                    >
-                        <div className="flex-1 min-w-0 text-left">
-                            <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                required
-                                value={linkPassword}
-                                onChange={(e) => setLinkPassword(e.target.value)}
-                                className="w-full px-4 py-3 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
-                                autoComplete="current-password"
-                                placeholder="Your LifeSync password"
-                            />
-                        </div>
-                        <button
-                            type="submit"
-                            disabled={busy || !maxienUser?.email}
-                            className="flex items-center justify-center gap-2 bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold px-5 py-3 rounded-xl transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 whitespace-nowrap sm:mb-0"
-                        >
-                            <LifeSyncIcon className="w-4 h-4 text-white" />
-                            {busy ? 'Linking…' : 'Link LifeSync'}
-                        </button>
-                    </form>
-                </div>
-            ) : (
+            {connected ? (
                 <ConnectedView
                     lifeSyncUser={lifeSyncUser}
                     prefs={prefs}
@@ -815,7 +857,7 @@ export default function LifeSyncIntegration() {
                     refreshLifeSyncMe={refreshLifeSyncMe}
                     updatePreferences={lifeSyncUpdatePreferences}
                 />
-            )}
+            ) : null}
         </div>
     )
 }

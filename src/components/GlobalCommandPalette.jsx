@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Command } from 'cmdk'
@@ -68,6 +68,7 @@ export default function GlobalCommandPalette() {
     const [currencyError, setCurrencyError] = useState('')
     const [currencyLoading, setCurrencyLoading] = useState(false)
     const modifierLabel = useMemo(() => getCommandModifierLabel(), [])
+    const paletteLoadTokenRef = useRef(0)
 
     const openAIChat = useCallback(() => {
         window.dispatchEvent(new CustomEvent('maxien:open-ai-chat'))
@@ -78,10 +79,15 @@ export default function GlobalCommandPalette() {
     }, [])
 
     const loadDynamicResults = useCallback(async () => {
+        const loadToken = ++paletteLoadTokenRef.current
+
         if (!user?.id) {
-            setTasks([])
-            setProjects([])
-            setCalendarEvents([])
+            if (paletteLoadTokenRef.current === loadToken) {
+                setTasks([])
+                setProjects([])
+                setCalendarEvents([])
+                setLoading(false)
+            }
             return
         }
 
@@ -104,6 +110,8 @@ export default function GlobalCommandPalette() {
                 getGoogleCalendarPaletteToken(supabase),
             ])
 
+            if (paletteLoadTokenRef.current !== loadToken) return
+
             setTasks(tasksResponse.data || [])
             setProjects(projectsResponse.data || [])
 
@@ -112,16 +120,20 @@ export default function GlobalCommandPalette() {
                 const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
                 const end = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59)
                 const events = await fetchGoogleEvents(providerToken, start, end)
+                if (paletteLoadTokenRef.current !== loadToken) return
                 setCalendarEvents((events || []).slice(0, 30))
             } else {
                 setCalendarEvents([])
             }
         } catch {
+            if (paletteLoadTokenRef.current !== loadToken) return
             setTasks([])
             setProjects([])
             setCalendarEvents([])
         } finally {
-            setLoading(false)
+            if (paletteLoadTokenRef.current === loadToken) {
+                setLoading(false)
+            }
         }
     }, [user])
 
@@ -169,12 +181,16 @@ export default function GlobalCommandPalette() {
             setCurrencyEntry(null)
             setCurrencyError('')
             setCurrencyLoading(false)
+            setLoading(false)
         }
     }, [open])
 
     useEffect(() => {
         if (!open) return
-        loadDynamicResults()
+        void loadDynamicResults()
+        return () => {
+            paletteLoadTokenRef.current += 1
+        }
     }, [open, loadDynamicResults])
 
     const copyToClipboard = useCallback(async (value) => {
