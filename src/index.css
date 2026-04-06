@@ -13,6 +13,13 @@
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  height: 100%;
 }
 
 body {
@@ -20,10 +27,36 @@ body {
   padding: 0;
   background-color: #f5f5f7;
   color: #1d1d1f;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 * {
   box-sizing: border-box;
+}
+
+img,
+video,
+canvas,
+svg,
+iframe {
+  max-width: 100%;
+}
+
+/* iOS Safari: prevent input focus zoom for <16px text */
+@media (max-width: 640px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Utility used in LifeSync views */
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 /* Custom Scrollbar */

@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLifeSync } from '../context/LifeSyncContext'
-import { getAnimeStreamAudio, isPluginEnabled, lifesyncFetch, lifesyncOAuthStartUrl } from '../lib/lifesyncApi'
+import {
+    ANIPUB_API_REFERENCE_URL,
+    getAnimeStreamAudio,
+    isPluginEnabled,
+    lifesyncFetch,
+    lifesyncOAuthStartUrl,
+} from '../lib/lifesyncApi'
 
 function extractOpenXblPeople(payload) {
     if (!payload || typeof payload !== 'object') return []
@@ -51,7 +57,6 @@ const LifeSyncIcon = ({ className }) => (
 
 function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, message, setMessage, togglePlugin, refreshLifeSyncMe, updatePreferences }) {
     const [oauthMsg, setOauthMsg] = useState('')
-    const [epicStatus, setEpicStatus] = useState(null)
     const [mangadexStatus, setMangadexStatus] = useState(null)
     const [mangadexUser, setMangadexUser] = useState('')
     const [mangadexPassword, setMangadexPassword] = useState('')
@@ -63,7 +68,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
 
     const integrations = lifeSyncUser?.integrations || {}
     const steamLinked = Boolean(integrations.steam || integrations.steamId)
-    const epicLinked = Boolean(integrations.epic)
     const malLinked = Boolean(integrations.mal || integrations.malUsername)
 
     useEffect(() => {
@@ -79,14 +83,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
             }
         } catch { /* ignore */ }
     }, [setMessage, setError, refreshLifeSyncMe])
-
-    useEffect(() => {
-        let cancelled = false
-        lifesyncFetch('/api/epic/status')
-            .then(data => { if (!cancelled) setEpicStatus(data) })
-            .catch(() => { if (!cancelled) setEpicStatus(null) })
-        return () => { cancelled = true }
-    }, [])
 
     useEffect(() => {
         let cancelled = false
@@ -292,36 +288,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                             ) : (
                                 <a href={lifesyncOAuthStartUrl('steam') || '#'} className={`text-[11px] font-semibold text-white bg-[#1d1d1f] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors ${!lifesyncOAuthStartUrl('steam') ? 'opacity-50 pointer-events-none' : ''}`}>
                                     Link Steam
-                                </a>
-                            )}
-                        </div>
-                    </li>
-
-                    {/* Epic Games */}
-                    <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
-                        <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-9 h-9 rounded-xl bg-[#2f2f2f] flex items-center justify-center flex-shrink-0">
-                                    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M3.537 0C2.165 0 1.66.506 1.66 1.879V18.44c0 .166.014.332.044.495l.038.16c.206.758.755 1.266 1.49 1.39l8.15 1.381a2.5 2.5 0 00.839 0l8.15-1.381c.735-.124 1.284-.632 1.49-1.39l.038-.16c.03-.163.044-.329.044-.495V1.879C21.943.506 21.438 0 20.066 0H3.537zM9.39 4.955c1.233 0 1.85.558 1.85 1.674v6.548c0 1.116-.617 1.674-1.85 1.674H7.136V4.955H9.39zm5.122 0c1.274 0 1.911.567 1.911 1.7v2.882h-1.75V6.804c0-.38-.19-.571-.57-.571h-.49v7.342h.49c.38 0 .57-.19.57-.571v-2.51h1.75v2.363c0 1.133-.637 1.7-1.912 1.7h-2.286V4.955h2.287zM8.885 6.233v6.34h.382c.38 0 .571-.19.571-.571V6.805c0-.38-.19-.571-.57-.571h-.383z" /></svg>
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">Epic Games</p>
-                                    {epicLinked ? (
-                                        <p className="text-[11px] text-emerald-600 font-medium">Connected</p>
-                                    ) : epicStatus?.epicOAuthConfigured === false ? (
-                                        <p className="text-[11px] text-amber-600 font-medium">OAuth not configured on server</p>
-                                    ) : (
-                                        <p className="text-[11px] text-[#86868b]">Link to access your library and profile</p>
-                                    )}
-                                </div>
-                            </div>
-                            {epicLinked ? (
-                                <button type="button" onClick={() => unlinkProvider('Epic', '/api/epic/link')} disabled={unlinkBusy === 'Epic'} className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50">
-                                    {unlinkBusy === 'Epic' ? 'Unlinking…' : 'Disconnect'}
-                                </button>
-                            ) : (
-                                <a href={lifesyncOAuthStartUrl('epic') || '#'} className={`text-[11px] font-semibold text-white bg-[#1d1d1f] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors ${!lifesyncOAuthStartUrl('epic') || epicStatus?.epicOAuthConfigured === false ? 'opacity-50 pointer-events-none' : ''}`}>
-                                    Connect Epic
                                 </a>
                             )}
                         </div>
@@ -603,15 +569,28 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
                 </div>
                 <ul className="divide-y divide-[#f5f5f7]">
                     {[
-                        { key: 'pluginAnimeEnabled', label: 'Anime' },
-                        { key: 'pluginMangaEnabled', label: 'Manga' },
-                        ...(prefs?.nsfwContentEnabled ? [{ key: 'pluginHentaiEnabled', label: 'Hentai Ocean' }] : []),
+                        { key: 'pluginAnimeEnabled', label: 'Anime', desc: 'LifeSync Anime hub, rankings, and in-app playback.' },
+                        { key: 'pluginMangaEnabled', label: 'Manga', desc: 'LifeSync Manga hub and reading list features.' },
+                        ...(prefs?.nsfwContentEnabled
+                            ? [{ key: 'pluginHentaiEnabled', label: 'Hentai Ocean', desc: 'Adult catalog areas (requires NSFW content enabled).' }]
+                            : []),
                     ].map(({ key, label }) => {
                         const on = isPluginEnabled(prefs, key)
+                        const desc =
+                            key === 'pluginAnimeEnabled'
+                                ? 'LifeSync Anime hub, rankings, and in-app playback.'
+                                : key === 'pluginMangaEnabled'
+                                  ? 'LifeSync Manga hub and reading list features.'
+                                  : 'Adult catalog areas (requires NSFW content enabled).'
                         return (
-                            <li key={key} className="transition-colors hover:bg-[#fafafa]">
-                                <div className="flex items-center justify-between gap-3 px-5 py-3.5 sm:px-6">
-                                    <span className="text-[13px] font-semibold text-[#1d1d1f]">{label}</span>
+                            <li key={key}>
+                                <div className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6">
+                                    <div className="min-w-0">
+                                        <p className="text-[13px] font-semibold text-[#1d1d1f]">{label}</p>
+                                        <p className="mt-0.5 text-[11px] leading-relaxed text-[#86868b]">
+                                            {desc}
+                                        </p>
+                                    </div>
                                     <button
                                         type="button"
                                         disabled={busy}

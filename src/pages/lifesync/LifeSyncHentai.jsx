@@ -8,6 +8,15 @@ import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
 const HENTAI_OCEAN_SITE = 'https://hentaiocean.com'
 const SERIES_PER_PAGE = 24
 
+function isIOSDevice() {
+    if (typeof navigator === 'undefined') return false
+    const ua = navigator.userAgent || ''
+    const iOS = /iPad|iPhone|iPod/.test(ua)
+    // iPadOS reports as Mac; detect touch-capable Macs.
+    const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+    return iOS || iPadOS
+}
+
 /** Stable pseudo-shuffle for recommendation order (pure, no Math.random in render). */
 function seriesMixOrderKey(seriesKey) {
     const s = String(seriesKey || '')
@@ -49,6 +58,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
     const nextEp = episodeIndex >= 0 && episodeIndex < episodes.length - 1 ? episodes[episodeIndex + 1] : null
     const activeEpisode = episodeIndex >= 0 ? episodes[episodeIndex] : null
     const playingRef = useRef(null)
+    const preferIframe = useMemo(() => isIOSDevice(), [])
 
     const shuffledPool = useMemo(() => {
         if (!allSeries?.length) return []
@@ -155,6 +165,16 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                             <div className="flex gap-1.5">{[0, 150, 300].map(d => <span key={d} className="h-2.5 w-2.5 rounded-full bg-[#C6FF00] animate-bounce" style={{ animationDelay: `${d}ms` }} />)}</div>
                                             <p className="mt-3 text-[13px] text-white/45">Resolving stream…</p>
                                         </div>
+                                    ) : (preferIframe && stream.embedUrl) ? (
+                                        <iframe
+                                            key={stream.embedUrl}
+                                            title={stream.title}
+                                            src={stream.embedUrl}
+                                            className="h-full w-full border-0 bg-black"
+                                            allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
+                                            allowFullScreen
+                                            referrerPolicy="no-referrer-when-downgrade"
+                                        />
                                     ) : stream.videoUrl ? (
                                         <AdvancedVideoPlayer
                                             key={stream.videoUrl}
@@ -349,18 +369,18 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
 /* ─── Cinematic Series Detail + Episode Picker ─────────────────────────── */
 
 function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGenresLoaded }) {
+    const firstEp = series?.episodes?.[0]
+    const initialSlug = series ? slugFromItem(firstEp || series) : ''
     const [detail, setDetail] = useState(null)
-    const [detailBusy, setDetailBusy] = useState(false)
+    const [detailBusy, setDetailBusy] = useState(() => Boolean(initialSlug))
     const [descExpanded, setDescExpanded] = useState(false)
     const [storyboardFailed, setStoryboardFailed] = useState(false)
 
     useEffect(() => {
         if (!series) return
-        const firstEp = series.episodes?.[0]
-        const slug = slugFromItem(firstEp || series)
+        const slug = slugFromItem(series.episodes?.[0] || series)
         if (!slug) return
         let cancelled = false
-        setDetailBusy(true)
         lifesyncFetch(`/api/anime/hentai-ocean/detail?slug=${encodeURIComponent(slug)}`)
             .then(d => {
                 if (!cancelled) {
@@ -384,10 +404,6 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
         }
     }, [onClose])
 
-    useEffect(() => {
-        setStoryboardFailed(false)
-    }, [series?.seriesKey])
-
     if (!series) return null
 
     const coverImg = detail?.coverUrl || series.posterUrl
@@ -401,14 +417,14 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
 
     const node = (
         <div
-            className="fixed inset-0 z-[9998] flex min-w-0 items-end justify-center p-0 sm:items-center sm:p-4"
+            className="fixed inset-0 z-[9998] flex h-dvh max-h-dvh w-full max-w-[100vw] min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
             onClick={onClose}
             style={{ paddingLeft: 'max(0px, env(safe-area-inset-left))', paddingRight: 'max(0px, env(safe-area-inset-right))' }}
         >
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
 
             <div
-                className="relative flex max-h-[min(92dvh,calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom)))] w-full min-w-0 max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl animate-[slideUp_0.3s_ease-out] sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:rounded-2xl"
+                className="relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl animate-[slideUp_0.3s_ease-out] sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Hero with storyboard background */}
@@ -662,7 +678,9 @@ export default function LifeSyncHentai() {
         try {
             const data = await lifesyncFetch(`/api/anime/hentai-ocean/stream?slug=${encodeURIComponent(slug)}`)
             const videoUrl = typeof data.videoUrl === 'string' && data.videoUrl.startsWith('http') ? data.videoUrl : null
-            return { ...base, embedUrl: data.embedUrl || embedUrl, videoUrl }
+            // iOS Safari/PWA often fails on cross-origin HLS/MP4; prefer iframe.
+            const prefersIframe = isIOSDevice()
+            return { ...base, embedUrl: data.embedUrl || embedUrl, videoUrl: prefersIframe ? null : videoUrl }
         } catch {
             return base
         }
@@ -784,6 +802,7 @@ export default function LifeSyncHentai() {
             {/* Popups */}
             {selectedSeries && (
                 <SeriesDetailPopup
+                    key={selectedSeries.seriesKey}
                     series={selectedSeries}
                     onClose={() => setSelectedSeries(null)}
                     onPlayEpisode={(ep, idx) => void playEpisode(selectedSeries, ep, idx)}

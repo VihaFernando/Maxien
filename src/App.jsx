@@ -19,7 +19,6 @@ import GithubCallback from './pages/GithubCallback'
 import Github from './pages/Github'
 import LifeSyncOAuthCallback from './pages/lifesync/LifeSyncOAuthCallback'
 import LifeSyncSteam from './pages/lifesync/LifeSyncSteam'
-import LifeSyncEpic from './pages/lifesync/LifeSyncEpic'
 import LifeSyncWishlist from './pages/lifesync/LifeSyncWishlist'
 import LifeSyncXbox from './pages/lifesync/LifeSyncXbox'
 import LifeSyncAnime from './pages/lifesync/LifeSyncAnime'
@@ -53,7 +52,6 @@ function App() {
             <Route path="github" element={<Github />} />
             <Route path="lifesync/games" element={<LifeSyncGamesHub />} />
             <Route path="lifesync/games/steam" element={<LifeSyncSteam />} />
-            <Route path="lifesync/games/epic" element={<LifeSyncEpic />} />
             <Route path="lifesync/games/wishlist" element={<LifeSyncWishlist />} />
             <Route path="lifesync/games/xbox" element={<LifeSyncXbox />} />
             <Route path="lifesync/anime" element={<LifeSyncAnimeHub />} />

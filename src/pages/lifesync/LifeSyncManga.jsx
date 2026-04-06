@@ -545,8 +545,14 @@ function MangaReader({ manga, chapter, sortedChapters, chapterIndex, onClose, on
         safeIdx >= 0 && safeIdx < sortedChapters.length - 1 ? sortedChapters[safeIdx + 1] : null
 
     return createPortal(
-        <div className="fixed inset-0 z-[9999] flex flex-col bg-[#0a0a0a]">
-            <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/70 px-3 py-2 backdrop-blur-xl">
+        <div
+            className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-hidden bg-[#0a0a0a]"
+            style={{
+                paddingLeft: 'max(0px, env(safe-area-inset-left))',
+                paddingRight: 'max(0px, env(safe-area-inset-right))',
+            }}
+        >
+            <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/70 px-3 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-xl">
                 <div className="min-w-0 flex-1">
                     <button type="button" onClick={onClose} className="text-left text-[12px] font-semibold text-[#C6FF00] hover:underline">
                         ← Back to list
@@ -604,7 +610,7 @@ function MangaReader({ manga, chapter, sortedChapters, chapterIndex, onClose, on
                 </div>
             </div>
 
-            <footer className="shrink-0 border-t border-white/10 bg-black/85 px-3 py-2 backdrop-blur-xl">
+            <footer className="shrink-0 border-t border-white/10 bg-black/85 px-3 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom,0px))] backdrop-blur-xl">
                 <div className="mx-auto max-w-3xl">
                     <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                         <div
@@ -737,13 +743,21 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
     const cleanDesc = d.description ? String(d.description).replace(/<[^>]*>/g, '') : ''
 
     return createPortal(
-        <div className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center" onClick={onClose}>
+        <div
+            className="fixed inset-0 z-[9998] flex h-dvh max-h-dvh w-full max-w-[100vw] items-end justify-center overflow-hidden sm:items-center"
+            onClick={onClose}
+            style={{
+                paddingLeft: 'max(0px, env(safe-area-inset-left))',
+                paddingRight: 'max(0px, env(safe-area-inset-right))',
+                paddingBottom: 'max(0px, env(safe-area-inset-bottom,0px))',
+            }}
+        >
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
 
             {/* Panel */}
             <div
-                className="relative w-full max-w-3xl max-h-[92vh] sm:max-h-[88vh] flex flex-col bg-white sm:rounded-2xl overflow-hidden shadow-2xl animate-[slideUp_0.3s_ease-out]"
+                className="relative flex h-dvh max-h-dvh w-full flex-col overflow-hidden bg-white shadow-2xl animate-[slideUp_0.3s_ease-out] sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Hero section with blurred background + cover art */}
@@ -777,7 +791,11 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                     <button
                         type="button"
                         onClick={onClose}
-                        className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white transition-all"
+                        className="absolute z-10 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white transition-all"
+                        style={{
+                            top: 'max(0.75rem, env(safe-area-inset-top))',
+                            right: 'max(0.75rem, env(safe-area-inset-right))',
+                        }}
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>

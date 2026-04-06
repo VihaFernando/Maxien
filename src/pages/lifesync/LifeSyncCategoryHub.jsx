@@ -23,7 +23,6 @@ function shuffle(arr) {
 
 const POOL = {
     steam: [1245620, 1091500, 1174180, 1086940, 271590, 730, 570, 292030, 440, 814380, 578080].map(id => `${SC}/${id}/header.jpg`),
-    epic: [1172470, 252950, 381210, 1551360, 526870, 812140, 1085660, 311210].map(id => `${SC}/${id}/header.jpg`),
     wishlist: [367520, 892970, 1145360, 601150, 105600, 413150].map(id => `${SC}/${id}/header.jpg`),
     xbox: [1240440, 1716740, 976730, 359550, 493520, 1238810].map(id => `${SC}/${id}/header.jpg`),
     anime: [
@@ -165,15 +164,6 @@ export function LifeSyncGamesHub() {
                         subtitle="Library, store deals & account linking"
                         gradient="bg-gradient-to-t from-[#1b2838] via-[#1b2838]/50 to-transparent"
                         className="col-span-2 row-span-3"
-                    />
-                    <BentoCard
-                        to="/dashboard/lifesync/games/epic"
-                        pool={POOL.epic}
-                        cols={2} rows={2}
-                        title="Epic Games"
-                        subtitle="Free weekly games & linked library"
-                        gradient="bg-gradient-to-t from-[#2a0845] via-[#2a0845]/50 to-transparent"
-                        className="col-span-2 row-span-2"
                     />
                     <BentoCard
                         to="/dashboard/lifesync/games/wishlist"

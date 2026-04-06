@@ -74,9 +74,9 @@ export default function LifeSyncWishlist() {
 
     const [addForm, setAddForm] = useState({ platform: 'steam', title: '', steamAppId: '', storeUrl: '', targetPrice: '' })
     const [addBusy, setAddBusy] = useState(false)
-    const [importUrl, setImportUrl] = useState('')
     const [importBusy, setImportBusy] = useState(false)
     const [importMsg, setImportMsg] = useState('')
+    const [steamStatus, setSteamStatus] = useState(null)
 
     const load = useCallback(async () => {
         setBusy(true)
@@ -94,6 +94,15 @@ export default function LifeSyncWishlist() {
     useEffect(() => {
         if (isLifeSyncConnected) load()
     }, [isLifeSyncConnected, load])
+
+    useEffect(() => {
+        if (!isLifeSyncConnected) return
+        let cancelled = false
+        lifesyncFetch('/api/steam/status')
+            .then((data) => { if (!cancelled) setSteamStatus(data || null) })
+            .catch(() => { if (!cancelled) setSteamStatus(null) })
+        return () => { cancelled = true }
+    }, [isLifeSyncConnected])
 
     async function removeItem(id) {
         try {
@@ -122,14 +131,12 @@ export default function LifeSyncWishlist() {
         }
     }
 
-    async function importSteam(e) {
-        e.preventDefault()
+    async function importSteam() {
         setImportBusy(true)
         setImportMsg('')
         try {
-            const data = await lifesyncFetch('/api/wishlist/import/steam-url', { method: 'POST', json: { url: importUrl } })
+            const data = await lifesyncFetch('/api/wishlist/import/steam', { method: 'POST' })
             setImportMsg(`Imported ${data.imported || 0}, skipped ${data.skipped || 0}`)
-            setImportUrl('')
             await load()
         } catch (e) {
             setImportMsg(e.message || 'Import failed')
@@ -193,12 +200,42 @@ export default function LifeSyncWishlist() {
 
                 <div className="border-t border-[#f0f0f0] pt-4">
                     <h3 className="text-[13px] font-bold text-[#1d1d1f] mb-2">Import from Steam</h3>
-                    <form onSubmit={importSteam} className="flex gap-2">
-                        <input type="url" required placeholder="Steam wishlist URL" value={importUrl} onChange={e => setImportUrl(e.target.value)} className="flex-1 px-3 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none focus:border-[#C6FF00]/60" />
-                        <button type="submit" disabled={importBusy} className="bg-[#1d1d1f] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-black transition-colors disabled:opacity-50 whitespace-nowrap">
-                            {importBusy ? 'Importing...' : 'Import'}
-                        </button>
-                    </form>
+                    {steamStatus?.steamLinked ? (
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-[12px] text-[#1d1d1f] font-semibold">
+                                    Connected{steamStatus?.profile?.personaName ? ` as ${steamStatus.profile.personaName}` : ''}
+                                </p>
+                                <p className="text-[11px] text-[#86868b]">
+                                    We'll fetch your wishlist from{' '}
+                                    <span className="font-mono">
+                                        {steamStatus?.profile?.steamId ? `profiles/${steamStatus.profile.steamId}` : 'your linked Steam profile'}
+                                    </span>
+                                    .
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={importSteam}
+                                disabled={importBusy}
+                                className="bg-[#1d1d1f] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-black transition-colors disabled:opacity-50 whitespace-nowrap self-start"
+                            >
+                                {importBusy ? 'Syncing...' : 'Sync Steam wishlist'}
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <p className="text-[12px] text-[#86868b]">
+                                Link your Steam account to auto-import your wishlist.
+                            </p>
+                            <Link
+                                to="/dashboard/profile?tab=integrations"
+                                className="inline-flex items-center justify-center bg-[#f5f5f7] hover:bg-[#ebebed] text-[#1d1d1f] text-[12px] font-semibold px-4 py-2.5 rounded-xl border border-[#e5e5ea] transition-colors self-start whitespace-nowrap"
+                            >
+                                Go to Integrations
+                            </Link>
+                        </div>
+                    )}
                     {importMsg && <p className="text-[12px] text-[#86868b] mt-2">{importMsg}</p>}
                 </div>
             </div>

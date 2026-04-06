@@ -5,10 +5,6 @@ import { useLifeSync } from '../../context/LifeSyncContext'
 const OAUTH_MESSAGES = {
     steam_ok: { type: 'success', text: 'Steam linked successfully!', redirect: '/dashboard/lifesync/games/steam' },
     steam_error: { type: 'error', text: 'Steam OAuth failed. Check server configuration and try again.', redirect: '/dashboard/lifesync/games/steam' },
-    epic_ok: { type: 'success', text: 'Epic Games linked successfully!', redirect: '/dashboard/lifesync/games/epic' },
-    epic_error: { type: 'error', text: 'Epic Games OAuth failed. Check server logs and Epic portal settings.', redirect: '/dashboard/lifesync/games/epic' },
-    epic_invalid_client: { type: 'error', text: 'Epic OAuth: token step failed. Confirm EPIC_CLIENT_ID and EPIC_CLIENT_SECRET match an active Epic Account Services client.', redirect: '/dashboard/lifesync/games/epic' },
-    epic_invalid_grant: { type: 'error', text: 'Epic OAuth: the sign-in code was not accepted (often a redirect URI mismatch).', redirect: '/dashboard/lifesync/games/epic' },
     mal_ok: { type: 'success', text: 'MyAnimeList linked successfully!', redirect: '/dashboard/lifesync/anime/anime' },
     mal_error: { type: 'error', text: 'MyAnimeList OAuth failed. Make sure MAL_CLIENT_ID is configured.', redirect: '/dashboard/lifesync/anime/anime' },
     invalid_state: { type: 'error', text: 'OAuth state was rejected (expired link or JWT_SECRET changed). Try connecting again.', redirect: '/dashboard/profile?tab=integrations' },

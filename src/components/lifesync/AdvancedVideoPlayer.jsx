@@ -12,11 +12,15 @@ function fmtTime(sec) {
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`
 }
 
-export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false }) {
+/**
+ * @param {{ src: string, label?: string, srclang?: string, default?: boolean }[]} [textTracks] - WebVTT URLs for <track kind="subtitles">
+ */
+export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false, textTracks = [] }) {
     const videoRef = useRef(null)
     const wrapRef = useRef(null)
     const idleTimer = useRef(null)
     const seekBarRef = useRef(null)
+    const playingRef = useRef(false)
 
     const [playing, setPlaying] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
@@ -35,33 +39,35 @@ export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false }) 
     const resetIdle = useCallback(() => {
         setShowControls(true)
         clearTimeout(idleTimer.current)
-        if (playing) {
+        if (playingRef.current) {
             idleTimer.current = setTimeout(() => {
                 setShowControls(false)
                 setShowSpeedMenu(false)
                 setShowVolumeSlider(false)
             }, 3000)
         }
-    }, [playing])
+    }, [setShowControls, setShowSpeedMenu, setShowVolumeSlider])
 
     useEffect(() => {
-        clearTimeout(idleTimer.current)
-        setShowControls(true)
-        if (playing) {
-            idleTimer.current = setTimeout(() => {
-                setShowControls(false)
-                setShowSpeedMenu(false)
-                setShowVolumeSlider(false)
-            }, 3000)
-        }
-        return () => clearTimeout(idleTimer.current)
+        playingRef.current = playing
     }, [playing])
 
     useEffect(() => {
         const v = videoRef.current
         if (!v) return
-        const onPlay = () => setPlaying(true)
-        const onPause = () => setPlaying(false)
+        const onPlay = () => {
+            playingRef.current = true
+            setPlaying(true)
+            resetIdle()
+        }
+        const onPause = () => {
+            playingRef.current = false
+            setPlaying(false)
+            clearTimeout(idleTimer.current)
+            setShowControls(true)
+            setShowSpeedMenu(false)
+            setShowVolumeSlider(false)
+        }
         const onTime = () => {
             if (!isSeeking) setCurrentTime(v.currentTime)
         }
@@ -91,7 +97,7 @@ export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false }) 
             v.removeEventListener('ended', onEnd)
             v.removeEventListener('volumechange', onVol)
         }
-    }, [src, isSeeking, onEnded])
+    }, [src, isSeeking, onEnded, resetIdle])
 
     useEffect(() => {
         const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
@@ -151,7 +157,7 @@ export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false }) 
         setSpeed(s)
         setShowSpeedMenu(false)
         resetIdle()
-    }, [resetIdle])
+    }, [resetIdle, setShowSpeedMenu])
 
     const toggleFullscreen = useCallback(() => {
         const el = wrapRef.current
@@ -266,13 +272,24 @@ export default function AdvancedVideoPlayer({ src, onEnded, autoPlay = false }) 
         >
             <video
                 ref={videoRef}
-                key={src}
+                key={`${src}|${(textTracks || []).map((t) => t.src).join('|')}`}
                 src={src}
                 className="absolute inset-0 w-full h-full object-contain"
                 playsInline
                 autoPlay={autoPlay}
                 preload="metadata"
-            />
+            >
+                {(textTracks || []).map((t, i) => (
+                    <track
+                        key={`${t.src}-${i}`}
+                        kind="subtitles"
+                        src={t.src}
+                        label={t.label || `CC ${i + 1}`}
+                        srcLang={t.srclang || 'und'}
+                        default={t.default ?? i === 0}
+                    />
+                ))}
+            </video>
 
             {/* Big center play/pause */}
             {!playing && !showControls && (
