@@ -112,7 +112,7 @@ export default function Profile() {
         || null
 
     return (
-        <div className={`animate-in fade-in duration-500 flex min-h-0 w-full flex-1 flex-col ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
+        <div className="animate-in fade-in duration-500 flex min-h-0 w-full flex-1 flex-col overflow-visible">
 
             {/* Page header */}
             <div className="shrink-0 mb-4 px-0.5">
@@ -129,8 +129,8 @@ export default function Profile() {
                             type="button"
                             onClick={() => setActiveTab(n.id)}
                             className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap border transition-colors ${activeTab === n.id
-                                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                                    : "bg-white text-[#86868b] border-[#e5e5ea] hover:text-[#1d1d1f]"
+                                ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
+                                : "bg-white text-[#86868b] border-[#e5e5ea] hover:text-[#1d1d1f]"
                                 }`}
                         >
                             <svg
@@ -148,7 +148,7 @@ export default function Profile() {
                 </div>
             </div>
 
-            <div className={`flex min-h-0 flex-1 flex-col gap-5 sm:gap-6 md:flex-row md:items-stretch ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
+            <div className="flex min-h-0 flex-1 flex-col gap-5 sm:gap-6 md:flex-row md:items-stretch overflow-visible">
 
                 {/* Left sidebar nav */}
                 <div className="hidden md:block w-full md:w-[200px] lg:w-[220px] flex-shrink-0 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm p-3">
@@ -173,8 +173,11 @@ export default function Profile() {
                 </div>
 
                 {/* Main content */}
-                <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
-                    <div className={`min-h-0 flex-1 pr-0.5 ${isAppleDevice ? "overflow-y-auto overscroll-contain hide-scrollbar" : "overflow-visible"}`}>
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
+                    <div
+                        className={`min-h-0 flex-1 pr-0.5 ${isAppleDevice ? "h-full overflow-y-auto overscroll-contain hide-scrollbar touch-pan-y" : "overflow-visible"}`}
+                        style={isAppleDevice ? { WebkitOverflowScrolling: "touch" } : undefined}
+                    >
                         {activeTab === "profile" && (
                             <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
 
