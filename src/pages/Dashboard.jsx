@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useLifeSync } from "../context/LifeSyncContext"
@@ -26,10 +26,10 @@ const NAV_BASE = "flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] fon
 const NAV_ACTIVE = "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
 const NAV_IDLE = "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
 
-function SidebarLink({ to, icon, label, active, onClick }) {
+function SidebarLink({ to, icon: Icon, label, active, onClick }) {
     return (
         <Link to={to} onClick={onClick} className={`${NAV_BASE} ${active ? NAV_ACTIVE : NAV_IDLE}`}>
-            {createElement(icon, { className: "w-4 h-4" })}
+            <Icon className="w-4 h-4" />
             {label}
         </Link>
     )
@@ -158,7 +158,7 @@ export default function Dashboard() {
         { to: "/dashboard/ai-assistant", icon: FaBrain, label: "AI Assistant" },
     ]), [])
 
-    const selectedWorkplace = workplaces.find((item) => item.id === activeWorkplaceId) || null
+    const selectedWorkplace = workplaces.find((item) => item.id === selectedWorkplaceId) || null
 
     const handleWorkspaceModeChange = (mode) => {
         setWorkspaceMode(mode)
@@ -223,7 +223,7 @@ export default function Dashboard() {
             {isWorkplaceMode && (
                 <div className="mt-2.5 space-y-2">
                     <select
-                        value={activeWorkplaceId}
+                        value={selectedWorkplaceId}
                         onChange={(e) => handleWorkplaceSelection(e.target.value)}
                         className="w-full bg-white border border-[#e5e5ea] rounded-xl px-3 py-2 text-[12px] font-semibold text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50"
                     >
@@ -245,7 +245,7 @@ export default function Dashboard() {
 
     const renderPlatformNav = (onItemClick = undefined) => {
         if (isWorkplaceMode) {
-            const id = activeWorkplaceId
+            const id = selectedWorkplaceId || workplaceId
 
             return (
                 <nav className="space-y-0.5">
@@ -486,15 +486,9 @@ export default function Dashboard() {
                     </header>
                 ) : null}
 
-                <div
-                    className={
-                        isLifeSyncRoute
-                            ? "flex min-h-0 w-full flex-1 flex-col p-0"
-                            : "flex min-h-0 w-full flex-1 flex-col px-4 py-6 sm:px-8 sm:py-8 lg:px-10"
-                    }
-                >
+                <div className="w-full flex-1 px-4 sm:px-8 lg:px-10 py-6 sm:py-8">
                     {lifeSyncNotice && (
-                        <div className="mb-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium text-amber-950 sm:px-6 lg:px-8">
+                        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium text-amber-950 flex items-start gap-3">
                             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
                                 <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 10-2 0v2a1 1 0 102 0v-2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                             </svg>
