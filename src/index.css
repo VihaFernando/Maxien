@@ -32,6 +32,13 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Installed PWA only: clear status bar / notch (no effect in the browser tab). */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  #root {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+}
+
 * {
   box-sizing: border-box;
 }

@@ -78,6 +78,7 @@ export default function Dashboard() {
     const lifeSyncGamesActive = location.pathname.startsWith("/dashboard/lifesync/games")
     const lifeSyncAnimeActive = location.pathname.startsWith("/dashboard/lifesync/anime")
     const isLifeSyncRoute = location.pathname.startsWith("/dashboard/lifesync")
+    const hideMobileMaxienBar = location.pathname.startsWith("/dashboard/lifesync/anime/anime/watch/")
     const showLifeSyncSidebar = isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
     const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
 
@@ -465,23 +466,25 @@ export default function Dashboard() {
             </aside>
 
             <main className="flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
-                <header className="lg:hidden bg-white/90 backdrop-blur-md border-b border-[#d2d2d7] px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 flex-shrink-0">
-                            <img src="/logo.svg" alt="Maxien" className="w-full h-full" />
-                        </div>
-                        <span className="text-[#1d1d1f] font-bold text-[15px] tracking-tight">Maxien</span>
-                    </div>
-                    <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-[#f5f5f7] rounded-xl transition-colors">
-                        {user?.user_metadata?.picture ? (
-                            <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
-                        ) : (
-                            <div className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1d1d1f] font-bold text-xs ring-1 ring-black/5">
-                                {initials}
+                {!hideMobileMaxienBar ? (
+                    <header className="lg:hidden bg-white/90 backdrop-blur-md border-b border-[#d2d2d7] px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 flex-shrink-0">
+                                <img src="/logo.svg" alt="Maxien" className="w-full h-full" />
                             </div>
-                        )}
-                    </button>
-                </header>
+                            <span className="text-[#1d1d1f] font-bold text-[15px] tracking-tight">Maxien</span>
+                        </div>
+                        <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-[#f5f5f7] rounded-xl transition-colors">
+                            {user?.user_metadata?.picture ? (
+                                <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1d1d1f] font-bold text-xs ring-1 ring-black/5">
+                                    {initials}
+                                </div>
+                            )}
+                        </button>
+                    </header>
+                ) : null}
 
                 <div
                     className={
