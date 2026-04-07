@@ -615,11 +615,12 @@ function ConnectedView({ lifeSyncUser, prefs, busy, setBusy, error, setError, me
 }
 
 export default function LifeSyncIntegration({ embedded = false }) {
-    const { user: maxienUser } = useAuth()
+    const { user: maxienUser, session } = useAuth()
     const {
         lifeSyncUser,
         lifeSyncLoading,
         lifeSyncEnsureAccount,
+        lifeSyncConnectWithSupabase,
         lifeSyncLogout,
         lifeSyncUpdatePlugins,
         lifeSyncUpdatePreferences,
@@ -634,6 +635,28 @@ export default function LifeSyncIntegration({ embedded = false }) {
 
     const prefs = lifeSyncUser?.preferences
     const connected = Boolean(lifeSyncUser)
+
+    const handleConnectAuto = async () => {
+        setError('')
+        setMessage('')
+        setBusy(true)
+        try {
+            await lifeSyncConnectWithSupabase()
+            setConnectExpanded(false)
+        } catch (err) {
+            if (err.status === 503) {
+                setConnectExpanded(true)
+                setError(
+                    err.message ||
+                        'Passwordless linking is not configured on the server. Set SUPABASE_JWT_SECRET on the API, or link with a password below.'
+                )
+            } else {
+                setError(err.message || 'Could not connect LifeSync')
+            }
+        } finally {
+            setBusy(false)
+        }
+    }
 
     const handleLinkWithPassword = async (e) => {
         e.preventDefault()
@@ -724,18 +747,33 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                 </button>
                             </>
                         ) : (
-                            <button
-                                type="button"
-                                disabled={lifeSyncLoading || busy || !maxienUser?.email}
-                                onClick={() => {
-                                    setError('')
-                                    setMessage('')
-                                    setConnectExpanded((v) => !v)
-                                }}
-                                className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] whitespace-nowrap disabled:opacity-50"
-                            >
-                                {connectExpanded ? 'Cancel' : 'Connect'}
-                            </button>
+                            <div className="flex flex-wrap items-center gap-2 justify-end">
+                                <button
+                                    type="button"
+                                    disabled={
+                                        lifeSyncLoading ||
+                                        busy ||
+                                        !maxienUser?.email ||
+                                        !session?.access_token
+                                    }
+                                    onClick={handleConnectAuto}
+                                    className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] whitespace-nowrap disabled:opacity-50"
+                                >
+                                    {busy ? 'Connecting…' : 'Connect'}
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={lifeSyncLoading || busy || !maxienUser?.email}
+                                    onClick={() => {
+                                        setError('')
+                                        setMessage('')
+                                        setConnectExpanded((v) => !v)
+                                    }}
+                                    className="text-[12px] font-semibold text-[#86868b] hover:text-[#1d1d1f] px-2 py-2 rounded-xl whitespace-nowrap disabled:opacity-50"
+                                >
+                                    {connectExpanded ? 'Hide password' : 'Use password'}
+                                </button>
+                            </div>
                         )}
                     </div>
                 </div>
@@ -757,11 +795,15 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                     <div className="min-w-0">
                                         <p className="text-[12px] font-semibold text-[#1d1d1f]">Connect LifeSync</p>
                                         <p className="mt-1 text-[12px] text-[#86868b] leading-relaxed">
-                                            Use your Maxien email{' '}
                                             <span className="font-mono text-[11px] text-[#1d1d1f]">
-                                                ({maxienUser?.email || '—'})
+                                                {maxienUser?.email || '—'}
                                             </span>
-                                            .
+                                            <span className="block mt-2 text-[11px] leading-relaxed">
+                                                Prefer <strong className="font-semibold">Connect</strong> — it signs
+                                                you in with your Maxien session (or creates a LifeSync user if needed).
+                                                Use a password here only if the server is not configured for
+                                                passwordless linking or you want a separate LifeSync password.
+                                            </span>
                                         </p>
                                     </div>
                                     <button
@@ -794,6 +836,22 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                                 {message}
                                             </div>
                                         )}
+
+                                        <div className="mt-4">
+                                            <button
+                                                type="button"
+                                                disabled={
+                                                    lifeSyncLoading ||
+                                                    busy ||
+                                                    !maxienUser?.email ||
+                                                    !session?.access_token
+                                                }
+                                                onClick={handleConnectAuto}
+                                                className="w-full sm:w-auto text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-4 py-2.5 rounded-xl border border-[#e5e5ea] disabled:opacity-50"
+                                            >
+                                                {busy ? 'Connecting…' : 'Try Connect (automatic)'}
+                                            </button>
+                                        </div>
 
                                         <form onSubmit={handleLinkWithPassword} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                                             <div className="min-w-0">

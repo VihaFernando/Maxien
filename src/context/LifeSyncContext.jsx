@@ -6,10 +6,12 @@ import {
     useMemo,
     useState,
 } from 'react'
+import { useAuth } from './AuthContext'
 import {
     getLifesyncToken,
     lifesyncGetMe,
     lifesyncLogin as apiLogin,
+    lifesyncLoginWithSupabase,
     lifesyncPatchPreferences,
     lifesyncPostPlugins,
     lifesyncRegister as apiRegister,
@@ -23,9 +25,12 @@ import {
 const LifeSyncContext = createContext(null)
 
 export function LifeSyncProvider({ children }) {
+    const { session, user: authUser, loading: authLoading } = useAuth()
     const [lifeSyncUser, setLifeSyncUser] = useState(null)
     const [loading, setLoading] = useState(true)
     const [lastError, setLastError] = useState(null)
+    /** Bumped when the LifeSync token is cleared so the no-token effect can re-run (e.g. invalid JWT on mount). */
+    const [lifeSyncTokenClears, setLifeSyncTokenClears] = useState(0)
 
     const refreshMe = useCallback(async () => {
         const token = getLifesyncToken()
@@ -49,6 +54,7 @@ export function LifeSyncProvider({ children }) {
             if (e.status === 401 || e.status === 404) {
                 setLifesyncToken(null)
                 setLifeSyncUser(null)
+                setLifeSyncTokenClears((n) => n + 1)
                 notifyReduceMotionPreferenceChanged()
             }
             throw e
@@ -57,13 +63,11 @@ export function LifeSyncProvider({ children }) {
         }
     }, [])
 
+    /** Hydrate from a LifeSync JWT already in storage (mount only). */
     useEffect(() => {
         let cancelled = false
         ;(async () => {
-            if (!getLifesyncToken()) {
-                if (!cancelled) setLoading(false)
-                return
-            }
+            if (!getLifesyncToken()) return
             try {
                 const me = await lifesyncGetMe()
                 if (!cancelled) {
@@ -80,6 +84,7 @@ export function LifeSyncProvider({ children }) {
                     if (e.status === 401 || e.status === 404) {
                         setLifesyncToken(null)
                         setLifeSyncUser(null)
+                        setLifeSyncTokenClears((n) => n + 1)
                         notifyReduceMotionPreferenceChanged()
                     }
                 }
@@ -92,10 +97,81 @@ export function LifeSyncProvider({ children }) {
         }
     }, [])
 
+    /**
+     * No stored LifeSync token: after Maxien auth is ready, exchange Supabase access token for LifeSync JWT
+     * (login or server-side account create). Fails quietly into lastError except caller can use Connect retry.
+     */
+    useEffect(() => {
+        if (authLoading) return
+        let cancelled = false
+        ;(async () => {
+            if (getLifesyncToken()) return
+
+            if (session?.access_token && authUser?.id && authUser?.email) {
+                try {
+                    setLastError(null)
+                    if (!cancelled) setLoading(true)
+                    const data = await lifesyncLoginWithSupabase(session.access_token)
+                    if (cancelled) return
+                    if (data?.token) {
+                        setLifesyncToken(data.token)
+                        const me = await lifesyncGetMe()
+                        if (!cancelled) {
+                            if (me?.preferences && typeof me.preferences.reduceAnimations === 'boolean') {
+                                writeStoredReduceAnimationsSetting(me.preferences.reduceAnimations)
+                            }
+                            setLifeSyncUser(me)
+                            notifyReduceMotionPreferenceChanged()
+                        }
+                    }
+                } catch (e) {
+                    if (!cancelled) setLastError(e)
+                } finally {
+                    if (!cancelled) setLoading(false)
+                }
+                return
+            }
+
+            if (!cancelled) setLoading(false)
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [
+        authLoading,
+        session?.access_token,
+        authUser?.id,
+        authUser?.email,
+        lifeSyncTokenClears,
+    ])
+
+    /** Connect / Integrations: passwordless link using current Supabase session (creates LifeSync user if needed). */
+    const connectWithSupabase = useCallback(async () => {
+        const t = session?.access_token
+        if (!t) {
+            const err = new Error('Sign in to Maxien first.')
+            err.status = 400
+            throw err
+        }
+        if (!authUser?.email) {
+            const err = new Error('Your Maxien account has no email.')
+            throw err
+        }
+        setLastError(null)
+        const data = await lifesyncLoginWithSupabase(t)
+        if (data?.token) {
+            setLifesyncToken(data.token)
+            await refreshMe()
+        }
+        return data
+    }, [session?.access_token, authUser?.email, refreshMe])
+
     const login = useCallback(async (email, password) => {
         setLastError(null)
         const data = await apiLogin(email, password)
-        if (data?.token) setLifesyncToken(data.token)
+        if (data?.token) {
+            setLifesyncToken(data.token)
+        }
         await refreshMe()
         return data
     }, [refreshMe])
@@ -103,7 +179,9 @@ export function LifeSyncProvider({ children }) {
     const register = useCallback(async ({ email, password, name }) => {
         setLastError(null)
         const data = await apiRegister({ email, password, name })
-        if (data?.token) setLifesyncToken(data.token)
+        if (data?.token) {
+            setLifesyncToken(data.token)
+        }
         await refreshMe()
         return data
     }, [refreshMe])
@@ -120,7 +198,9 @@ export function LifeSyncProvider({ children }) {
                 name != null && String(name).trim() !== '' ? String(name).trim() : undefined
             try {
                 const data = await apiLogin(trimmedEmail, password)
-                if (data?.token) setLifesyncToken(data.token)
+                if (data?.token) {
+                    setLifesyncToken(data.token)
+                }
                 await refreshMe()
                 return { created: false, data }
             } catch (e) {
@@ -131,7 +211,9 @@ export function LifeSyncProvider({ children }) {
                         password,
                         ...(trimmedName ? { name: trimmedName } : {}),
                     })
-                    if (data?.token) setLifesyncToken(data.token)
+                    if (data?.token) {
+                        setLifesyncToken(data.token)
+                    }
                     await refreshMe()
                     return { created: true, data }
                 } catch (regErr) {
@@ -154,6 +236,7 @@ export function LifeSyncProvider({ children }) {
         setLifesyncToken(null)
         setLifeSyncUser(null)
         setLastError(null)
+        setLifeSyncTokenClears((n) => n + 1)
     }, [])
 
     const updatePlugins = useCallback(async (partial) => {
@@ -190,12 +273,13 @@ export function LifeSyncProvider({ children }) {
             lifeSyncLogin: login,
             lifeSyncRegister: register,
             lifeSyncEnsureAccount: ensureAccount,
+            lifeSyncConnectWithSupabase: connectWithSupabase,
             lifeSyncLogout: logout,
             lifeSyncUpdatePlugins: updatePlugins,
             lifeSyncUpdatePreferences: updatePreferences,
             isLifeSyncConnected: Boolean(lifeSyncUser),
         }),
-        [lifeSyncUser, loading, lastError, refreshMe, login, register, ensureAccount, logout, updatePlugins, updatePreferences]
+        [lifeSyncUser, loading, lastError, refreshMe, login, register, ensureAccount, connectWithSupabase, logout, updatePlugins, updatePreferences]
     )
 
     return (

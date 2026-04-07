@@ -13,11 +13,12 @@ export function mangadexImageProps(src) {
         if (host === 'mangadex.org' || host.endsWith('.mangadex.org')) {
             return { referrerPolicy: 'no-referrer' }
         }
-        if (host.endsWith('.mangadex.network')) {
-            return { referrerPolicy: 'no-referrer' }
-        }
+        // MangaDex@Home nodes (`*.mangadex.network`) can be sensitive to referrer policy.
+        // We intentionally do NOT override it here so browsers send a normal cross-origin Referer.
+        // (Some nodes return 404s when Referer is omitted.)
+        if (host.endsWith('.mangadex.network')) return {}
     } catch {
-        if (/mangadex\.org/i.test(src) || /\.mangadex\.network/i.test(src)) {
+        if (/mangadex\.org/i.test(src)) {
             return { referrerPolicy: 'no-referrer' }
         }
     }

@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { lifesyncFetch } from '../lib/lifesyncApi'
 
+const MD_NSFW_RATINGS = new Set(['erotica', 'pornographic'])
+
 export function filterMangaReadingByNsfw(entries, nsfwEnabled) {
     if (nsfwEnabled) return entries
-    return entries.filter(e => e.source === 'mangadex')
+    return entries.filter((e) => {
+        if (e.source === 'hentaifox' || e.source === 'mangadistrict') return false
+        if (e.source === 'mangadex') {
+            const cr = e.contentRating
+            if (cr && MD_NSFW_RATINGS.has(String(cr))) return false
+            return true
+        }
+        return true
+    })
 }
 
 /**

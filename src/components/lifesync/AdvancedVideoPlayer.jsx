@@ -14,7 +14,8 @@ function fmtTime(sec) {
 }
 
 function isHlsUrl(u) {
-    return typeof u === 'string' && /\.m3u8(\?|#|$)/i.test(u.trim())
+    // Match any .m3u8 in the URL (query-only playlists, CDNs with unusual paths).
+    return typeof u === 'string' && /\.m3u8/i.test(u.trim())
 }
 
 function videoSupportsNativeHls(video) {
@@ -102,6 +103,7 @@ export default function AdvancedVideoPlayer({
         if (isHlsUrl(s)) {
             if (videoSupportsNativeHls(v)) {
                 v.src = s
+                v.load()
             } else if (Hls.isSupported()) {
                 hls = new Hls({
                     enableWorker: true,

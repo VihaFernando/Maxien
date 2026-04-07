@@ -89,7 +89,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
     return (
         <MotionLink
             to={to}
-            className={`group relative block overflow-hidden rounded-[22px] border border-[#e8e4ef]/80 bg-white/55 shadow-[0_8px_30px_-8px_rgba(90,80,120,0.1),0_2px_8px_-2px_rgba(0,0,0,0.04)] ring-1 ring-[#c8c2d8]/20 backdrop-blur-md transition-shadow duration-300 hover:shadow-[0_20px_40px_-12px_rgba(90,80,120,0.14)] sm:rounded-[26px] ${focusRing} ${className}`}
+            className={`group relative block overflow-hidden rounded-[22px] bg-white/55 shadow-[0_8px_30px_-8px_rgba(90,80,120,0.1),0_2px_8px_-2px_rgba(0,0,0,0.04)] backdrop-blur-md transition-shadow duration-300 hover:shadow-[0_20px_40px_-12px_rgba(90,80,120,0.14)] sm:rounded-[26px] ${focusRing} ${className}`}
             whileHover={{ y: -4 }}
             whileTap={{ scale: 0.99 }}
             transition={{ type: 'spring', stiffness: 420, damping: 28 }}
@@ -103,7 +103,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
                 }}
             >
                 {images.map((src, i) => (
-                    <div key={i} className="min-h-0 min-w-0 overflow-hidden rounded-lg ring-1 ring-white/90 shadow-sm">
+                    <div key={i} className="min-h-0 min-w-0 overflow-hidden rounded-lg shadow-sm">
                         <Thumb src={src} />
                     </div>
                 ))}
@@ -113,7 +113,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
             />
             <div className="relative z-10 flex h-full min-h-[inherit] flex-col justify-end p-4 sm:p-5">
                 <div className="flex items-end justify-between gap-3">
-                    <div className="min-w-0 rounded-2xl bg-white/85 px-3 py-2.5 shadow-sm ring-1 ring-[#e8e4ef]/80 backdrop-blur-md sm:px-3.5 sm:py-3">
+                    <div className="min-w-0 rounded-2xl bg-white/85 px-3 py-2.5 shadow-sm backdrop-blur-md sm:px-3.5 sm:py-3">
                         {badge && (
                             <span className={`mb-1 inline-block rounded-md px-2 py-[3px] text-[9px] font-bold uppercase tracking-widest ${badgeClass}`}>
                                 {badge}
@@ -124,7 +124,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
                         </h3>
                         <p className="mt-1 text-[11px] leading-snug text-[#5b5670] line-clamp-2 sm:text-[12px]">{subtitle}</p>
                     </div>
-                    <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-[#C6FF00] text-[#1a1628] shadow-md ring-2 ring-white transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg sm:h-11 sm:w-11">
+                    <div className="shrink-0 flex h-10 w-10 items-center justify-center rounded-full bg-[#C6FF00] text-[#1a1628] shadow-md transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg sm:h-11 sm:w-11">
                         <FaArrowRight className="h-3.5 w-3.5" />
                     </div>
                 </div>
@@ -140,12 +140,12 @@ function MobileExploreRow({ to, pool, title, subtitle, badge, badgeClass }) {
     return (
         <MotionLink
             to={to}
-            className={`flex min-h-[92px] items-center gap-4 rounded-[20px] border border-[#d2d2d7]/60 bg-white/60 p-3.5 shadow-sm backdrop-blur-md sm:min-h-[100px] sm:p-4 ${focusRing}`}
+            className={`flex min-h-[92px] items-center gap-4 rounded-[20px] bg-white/60 p-3.5 shadow-sm backdrop-blur-md sm:min-h-[100px] sm:p-4 ${focusRing}`}
             whileTap={{ scale: 0.98 }}
             whileHover={{ y: -2 }}
             transition={{ type: 'spring', stiffness: 480, damping: 32 }}
         >
-            <div className="grid h-[76px] w-[76px] shrink-0 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden rounded-2xl bg-gradient-to-br from-[#ede8f7] to-[#e4f5ec] p-0.5 ring-1 ring-[#d4cfe0]/60 sm:h-[84px] sm:w-[84px]">
+            <div className="grid h-[76px] w-[76px] shrink-0 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden rounded-2xl bg-gradient-to-br from-[#ede8f7] to-[#e4f5ec] p-0.5 sm:h-[84px] sm:w-[84px]">
                 {thumbs.map((src, i) => (
                     <div key={i} className="min-h-0 min-w-0 overflow-hidden">
                         <Thumb src={src} />
@@ -177,7 +177,7 @@ function HubConnectPrompt({ title, body, embedded = false }) {
     const inner = (
         <div className="flex min-h-[50vh] items-center justify-center px-2 py-10 sm:py-14">
             <MotionDiv
-                className="w-full max-w-md rounded-[22px] border border-[#d2d2d7]/50 bg-white px-6 py-9 text-center shadow-sm sm:px-8 sm:py-10"
+                className="w-full max-w-md rounded-[22px] bg-white px-6 py-9 text-center shadow-sm sm:px-8 sm:py-10"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
@@ -186,7 +186,7 @@ function HubConnectPrompt({ title, body, embedded = false }) {
                 <p className="mt-2 text-[13px] leading-relaxed text-[#86868b]">{body}</p>
                 <Link
                     to="/dashboard/profile?tab=integrations"
-                    className={`mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#C6FF00] px-5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 sm:w-auto sm:min-w-[200px] ${focusRing}`}
+                    className={`mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#C6FF00] px-5 text-[13px] font-semibold text-[#1a1628] shadow-sm transition-all hover:brightness-95 sm:w-auto sm:min-w-[200px] ${focusRing}`}
                 >
                     Open integrations
                 </Link>
@@ -229,7 +229,7 @@ export function LifeSyncGamesHub() {
                 <div className="absolute -left-2 top-0 hidden h-full w-1 rounded-full bg-gradient-to-b from-[#C6FF00] via-[#38bdf8] to-[#a78bfa] sm:block lg:-left-3" aria-hidden />
                 <div className="flex flex-col gap-1 pl-0 sm:pl-4 lg:pl-5">
                     <div className="flex items-start gap-3 sm:items-center">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#C6FF00] to-[#9fe870] text-[#1a1628] shadow-md ring-2 ring-white sm:h-12 sm:w-12">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#C6FF00] to-[#9fe870] text-[#1a1628] shadow-md sm:h-12 sm:w-12">
                             <FaGamepad className="h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
                         <div className="min-w-0">
@@ -326,7 +326,7 @@ function animeTilesForPrefs(prefs) {
             title: 'Hentai',
             subtitle: 'Adults only',
             badge: '18+',
-            badgeClass: 'bg-rose-100 text-rose-800 ring-1 ring-rose-200/80',
+            badgeClass: 'bg-rose-100 text-rose-800',
             gradient: 'bg-gradient-to-t from-[#fce7f3] via-white/75 to-transparent',
         })
     }
@@ -362,14 +362,14 @@ export function LifeSyncAnimeHub() {
     if (!isLifeSyncAnimeNavVisible(prefs)) {
         return (
             <div className="flex min-h-[50vh] items-center justify-center px-2 py-10 sm:py-14">
-                <div className="w-full max-w-md rounded-[22px] border border-[#d2d2d7]/50 bg-white px-6 py-9 text-center shadow-sm sm:px-8 sm:py-10">
+                <div className="w-full max-w-md rounded-[22px] bg-white px-6 py-9 text-center shadow-sm sm:px-8 sm:py-10">
                     <p className="text-[16px] font-bold text-[#1d1d1f] sm:text-[17px]">No anime features enabled</p>
                     <p className="mt-2 text-[13px] leading-relaxed text-[#86868b]">
                         Turn on Anime, Manga, or Hentai Ocean (with NSFW allowed) under Profile → Integrations.
                     </p>
                     <Link
                         to="/dashboard/profile?tab=integrations"
-                        className={`mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#C6FF00] px-5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 sm:w-auto sm:min-w-[220px] ${focusRing}`}
+                        className={`mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#C6FF00] px-5 text-[13px] font-semibold text-[#1a1628] shadow-sm transition-all hover:brightness-95 sm:w-auto sm:min-w-[220px] ${focusRing}`}
                     >
                         Content plugin settings
                     </Link>
@@ -395,8 +395,8 @@ export function LifeSyncAnimeHub() {
                 <div className="absolute -left-2 top-0 hidden h-full w-1 rounded-full bg-gradient-to-b from-[#C6FF00] via-[#a78bfa] to-[#5eead4] sm:block lg:-left-3" aria-hidden />
                 <div className="flex flex-col gap-1 pl-0 sm:pl-4 lg:pl-5">
                     <div className="flex items-start gap-3 sm:items-center">
-                        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fef3c7] via-white to-[#e0e7ff] text-[#1a1628] shadow-md ring-2 ring-white sm:h-12 sm:w-12">
-                            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#C6FF00] ring-2 ring-white" aria-hidden />
+                        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fef3c7] via-white to-[#e0e7ff] text-[#1a1628] shadow-md sm:h-12 sm:w-12">
+                            <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-[#C6FF00]" aria-hidden />
                             <FaFilm className="relative h-5 w-5 sm:h-6 sm:w-6" />
                         </div>
                         <div className="min-w-0">
@@ -448,7 +448,7 @@ export function LifeSyncAnimeHub() {
                             ) : null}
                         </div>
                         {!hasProgressRails && !animeWatchLoading && !mangaReadingLoading ? (
-                            <p className="mt-3 rounded-[20px] border border-dashed border-[#d4cfe0]/90 bg-white/80 px-4 py-4 text-center text-[12px] leading-relaxed text-[#5b5670] shadow-sm sm:mt-4 sm:px-5 sm:py-5 sm:text-[13px]">
+                            <p className="mt-3 rounded-[20px] bg-white/80 px-4 py-4 text-center text-[12px] leading-relaxed text-[#5b5670] shadow-sm sm:mt-4 sm:px-5 sm:py-5 sm:text-[13px]">
                                 Start watching or reading in Anime or Manga — we&apos;ll show your place here next time.
                             </p>
                         ) : null}
@@ -463,10 +463,7 @@ export function LifeSyncAnimeHub() {
                     aria-labelledby="lifesync-hub-explore-label"
                 >
                     <SectionLabel id="lifesync-hub-explore-label">Explore</SectionLabel>
-                    <p className="mt-1 mb-3 text-[12px] text-[#5b5670] lg:mb-4 lg:text-[13px]">
-                        <span className="lg:hidden">Tap a row to open that hub.</span>
-                        <span className="hidden lg:inline">Poster cards jump into each catalog.</span>
-                    </p>
+                    <p className="mt-1 mb-3 text-[12px] text-[#5b5670] lg:mb-4 lg:text-[13px]"></p>
 
                     {/* Mobile / tablet — list rows */}
                     <div className="flex flex-col gap-3 lg:hidden">

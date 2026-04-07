@@ -7,6 +7,7 @@ import {
     LifesyncXboxLibraryGridSkeleton,
     LifesyncXboxProfileSkeleton,
 } from '../../components/lifesync/EpisodeLoadingSkeletons'
+import { LifeSyncSectionNav } from '../../components/lifesync/LifeSyncSectionNav'
 import { StoreGameDetailModal } from '../../components/lifesync/StoreGameDetailModal'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch } from '../../lib/lifesyncApi'
@@ -30,12 +31,24 @@ import {
     summarizeOpenXblPresence,
 } from '../../lib/openXblLifeSyncHelpers'
 import { LifeSyncHubPageShell } from '../../components/lifesync/LifeSyncHubPageShell'
+import {
+    AnimatePresence,
+    lifeSyncSectionPresenceTransition,
+    lifeSyncSectionPresenceVariants,
+    MotionDiv,
+} from '../../lib/lifesyncMotion'
 
 const GAMEPASS_FEEDS = [
     { id: 'all', label: 'All', segments: ['gamepass', 'all'] },
     { id: 'pc', label: 'PC', segments: ['gamepass', 'pc'] },
     { id: 'ea-play', label: 'EA Play', segments: ['gamepass', 'ea-play'] },
     { id: 'no-controller', label: 'Cloud / touch', segments: ['gamepass', 'no-controller'] },
+]
+
+const XBOX_SECTION_NAV_ITEMS = [
+    { id: 'library', label: 'My games' },
+    { id: 'gamepass', label: 'Game Pass' },
+    { id: 'deals', label: 'Store deals' },
 ]
 
 const LIBRARY_MAX = 36
@@ -1017,17 +1030,11 @@ export default function LifeSyncXbox() {
         }
     }, [openXblReady, activeXuid, selectedLibraryTitleId])
 
-    function tabClass(active) {
-        return `rounded-xl px-3 py-2 text-[13px] font-semibold transition-colors ${
-            active ? 'bg-[#C6FF00] text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10' : 'bg-[#f5f5f7] text-[#424245] border border-[#e5e5ea] hover:bg-[#ebebed]'
-        }`
-    }
-
     if (!isLifeSyncConnected) {
         return (
             <LifeSyncHubPageShell>
                 <div className="max-w-4xl mx-auto">
-                    <h1 className="text-[28px] font-bold text-[#1a1628] tracking-tight mb-2">Xbox</h1>
+                    <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1a1628] tracking-tight mb-2">Xbox</h1>
                     <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
                         <p className="text-[15px] font-bold text-[#1a1628] mb-2">LifeSync Not Connected</p>
                         <p className="text-[13px] text-[#5b5670] mb-4">Connect LifeSync, then link your Xbox gamertag under Profile → Integrations to use this hub.</p>
@@ -1042,21 +1049,24 @@ export default function LifeSyncXbox() {
 
     return (
         <LifeSyncHubPageShell>
-        <div className="space-y-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">LifeSync / Games</p>
-                    <h1 className="text-[28px] font-bold text-[#1a1628] tracking-tight">Xbox</h1>
-                    <p className="text-[13px] text-[#86868b] mt-1">
+        <div className="min-w-0 w-full space-y-6 sm:space-y-8">
+            <div className="flex min-w-0 w-full flex-col gap-5 sm:gap-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="w-full min-w-0 sm:min-w-0 sm:flex-1">
+                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">
+                        LifeSync / Games
+                    </p>
+                    <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1a1628] tracking-tight">Xbox</h1>
+                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
                         Your games, playtime, achievements, Game Pass picks, and current Store deals in one place.
                     </p>
                 </div>
-                <div className="flex flex-wrap gap-2 self-start">
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:items-center sm:justify-end sm:pt-0.5">
                     <button
                         type="button"
                         onClick={() => void loadXboxDashboard()}
                         disabled={dashBusy}
-                        className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50"
+                        className="w-full text-center text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2.5 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 sm:w-auto sm:min-w-[9.5rem] sm:py-2"
                     >
                         {dashBusy ? 'Refreshing…' : 'Refresh profile'}
                     </button>
@@ -1064,14 +1074,14 @@ export default function LifeSyncXbox() {
                         type="button"
                         onClick={() => void loadDeals()}
                         disabled={dealsBusy}
-                        className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50"
+                        className="w-full text-center text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2.5 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 sm:w-auto sm:min-w-[9.5rem] sm:py-2"
                     >
                         {dealsBusy ? 'Loading…' : 'Refresh deals'}
                     </button>
                 </div>
             </div>
 
-            <section className="rounded-[20px] border border-[#d2d2d7]/50 bg-white p-5 shadow-sm space-y-4">
+            <section className="rounded-[20px] border border-[#d2d2d7]/50 bg-white p-4 shadow-sm space-y-4 sm:p-5">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                         <h2 className="text-[17px] font-bold text-[#1d1d1f]">Xbox profile</h2>
@@ -1133,18 +1143,24 @@ export default function LifeSyncXbox() {
                 ) : null}
             </section>
 
-            <div className="flex flex-wrap gap-2">
-                <button type="button" className={tabClass(mainTab === 'library')} onClick={() => setMainTab('library')}>
-                    My games
-                </button>
-                <button type="button" className={tabClass(mainTab === 'gamepass')} onClick={() => setMainTab('gamepass')}>
-                    Game Pass
-                </button>
-                <button type="button" className={tabClass(mainTab === 'deals')} onClick={() => setMainTab('deals')}>
-                    Store deals
-                </button>
-            </div>
+            <LifeSyncSectionNav
+                ariaLabel="Xbox sections"
+                layoutId="lifesync-xbox-main-tab"
+                items={XBOX_SECTION_NAV_ITEMS}
+                activeId={mainTab}
+                onSelect={setMainTab}
+            />
 
+            <AnimatePresence mode="wait">
+                <MotionDiv
+                    key={mainTab}
+                    className="space-y-4"
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    variants={lifeSyncSectionPresenceVariants}
+                    transition={lifeSyncSectionPresenceTransition}
+                >
             {mainTab === 'library' ? (
                 <section className="space-y-4">
                     {!openXblReady || !activeXuid ? (
@@ -1169,10 +1185,10 @@ export default function LifeSyncXbox() {
                             {libraryErr ? (
                                 <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{libraryErr}</p>
                             ) : null}
-                            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)]">
-                                <div>
+                            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)] lg:items-start">
+                                <div className="min-w-0">
                                     {libraryRows.length > 0 ? (
-                                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                        <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-3">
                                             {libraryRowsMerged.map((row) => (
                                                 <LibraryGameTile
                                                     key={row.key}
@@ -1193,7 +1209,7 @@ export default function LifeSyncXbox() {
                                         </p>
                                     )}
                                 </div>
-                                <div className="min-w-0">
+                                <div className="min-w-0 lg:sticky lg:top-4 lg:self-start">
                                     {selectedLibraryTitleId ? (
                                         <AchievementDetailPanel
                                             gameTitle={selectedLibraryRow?.name}
@@ -1202,7 +1218,7 @@ export default function LifeSyncXbox() {
                                             payload={achPayload}
                                         />
                                     ) : (
-                                        <div className="rounded-[18px] border border-dashed border-[#d2d2d7] bg-[#fafafa] px-4 py-8 text-center text-[13px] text-[#86868b]">
+                                        <div className="rounded-[18px] border border-dashed border-[#d2d2d7] bg-[#fafafa] px-4 py-6 text-center text-[12px] text-[#86868b] sm:py-8 sm:text-[13px]">
                                             Select a game to load achievement progress.
                                         </div>
                                     )}
@@ -1223,13 +1239,13 @@ export default function LifeSyncXbox() {
                                 <h2 className="text-[17px] font-bold text-[#1d1d1f]">Game Pass catalog</h2>
                                 <p className="text-[12px] text-[#86868b] mt-0.5">Browse what’s included by platform or plan. Titles show Store details when available.</p>
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="-mt-1 flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
                                 {GAMEPASS_FEEDS.map((f) => (
                                     <button
                                         key={f.id}
                                         type="button"
                                         onClick={() => setGpFeedId(f.id)}
-                                        className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                                        className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors sm:text-[12px] ${
                                             gpFeedId === f.id ? 'bg-[#107C10] text-white' : 'bg-[#f5f5f7] text-[#424245] border border-[#e5e5ea] hover:bg-[#ebebed]'
                                         }`}
                                     >
@@ -1346,6 +1362,10 @@ export default function LifeSyncXbox() {
                     )}
                 </section>
             ) : null}
+                </MotionDiv>
+            </AnimatePresence>
+
+            </div>
 
             <StoreGameDetailModal
                 open={storeModalOpen}

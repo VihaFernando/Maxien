@@ -108,6 +108,15 @@ export function lifesyncLogin(email, password) {
     })
 }
 
+/** Server verifies the Supabase access token and returns a LifeSync JWT (creates user if needed). */
+export function lifesyncLoginWithSupabase(accessToken) {
+    return lifesyncFetch('/api/auth/login-with-supabase', {
+        method: 'POST',
+        skipAuth: true,
+        json: { accessToken },
+    })
+}
+
 export function lifesyncRegister({ email, password, name }) {
     return lifesyncFetch('/api/auth/register', {
         method: 'POST',

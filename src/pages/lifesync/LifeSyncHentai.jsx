@@ -15,6 +15,14 @@ import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lif
 
 const HENTAI_OCEAN_SITE = 'https://hentaiocean.com'
 
+function isIOSDevice() {
+    if (typeof navigator === 'undefined') return false
+    const ua = navigator.userAgent || ''
+    const iOS = /iPad|iPhone|iPod/.test(ua)
+    const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
+    return iOS || iPadOS
+}
+
 function hentaiSeriesPosterLayoutId(seriesKey) {
     const k = String(seriesKey ?? 'unknown').replace(/[^a-zA-Z0-9_-]/g, '_')
     return `lifesync-hentai-poster-${k}`
@@ -182,7 +190,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                             title={stream.title}
                                             src={stream.embedUrl}
                                             className="h-full w-full border-0"
-                                            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                                             allowFullScreen
                                             referrerPolicy="no-referrer-when-downgrade"
                                         />
@@ -774,7 +782,13 @@ export default function LifeSyncHentai() {
             const data = await lifesyncFetch(`/api/anime/hentai-ocean/stream?slug=${encodeURIComponent(slug)}`)
             const mp4 = typeof data.videoUrl === 'string' && data.videoUrl.startsWith('http') ? data.videoUrl : null
             const hls = typeof data.hlsUrl === 'string' && data.hlsUrl.startsWith('http') ? data.hlsUrl : null
-            const videoUrl = hls || mp4
+            // iOS Safari: third-party HLS master playlists often fail (segments, codecs, TLS); match anime watch
+            // (preferIframe) by using the site embed when only HLS is available, and MP4 when both exist.
+            let videoUrl = hls || mp4
+            if (isIOSDevice()) {
+                if (mp4) videoUrl = mp4
+                else if (hls) videoUrl = null
+            }
             return { ...base, embedUrl: data.embedUrl || embedUrl, videoUrl }
         } catch {
             return base
