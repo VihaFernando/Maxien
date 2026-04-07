@@ -16,7 +16,7 @@ export default defineConfig(() => {
             tailwindcss(),
             VitePWA({
                 registerType: 'autoUpdate',
-                includeAssets: ['logo.svg'],
+                includeAssets: ['logopwa.svg'],
                 workbox: {
                     // Default is 2 MiB; this app’s main bundle can exceed that.
                     maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
@@ -32,7 +32,7 @@ export default defineConfig(() => {
                     theme_color: '#C6FF00',
                     icons: [
                         {
-                            src: '/logo.svg',
+                            src: '/logopwa.svg',
                             sizes: 'any',
                             type: 'image/svg+xml',
                             purpose: 'any maskable',
