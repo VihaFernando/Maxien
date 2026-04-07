@@ -60,6 +60,10 @@ export default function Profile() {
     const [phone, setPhone] = useState("")
     const [bio, setBio] = useState("")
 
+    const isAppleDevice = typeof navigator !== "undefined"
+        && (/Mac|iPhone|iPad|iPod/i.test(navigator.platform)
+            || (/Mac/i.test(navigator.userAgent) && "ontouchend" in document))
+
     useEffect(() => {
         if (user) {
             setFullName(user.user_metadata?.display_name || user.user_metadata?.full_name || "")
@@ -108,7 +112,7 @@ export default function Profile() {
         || null
 
     return (
-        <div className="animate-in fade-in duration-500 flex min-h-0 w-full flex-1 flex-col overflow-hidden">
+        <div className={`animate-in fade-in duration-500 flex min-h-0 w-full flex-1 flex-col ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
 
             {/* Page header */}
             <div className="shrink-0 mb-4 px-0.5">
@@ -124,11 +128,10 @@ export default function Profile() {
                             key={n.id}
                             type="button"
                             onClick={() => setActiveTab(n.id)}
-                            className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap border transition-colors ${
-                                activeTab === n.id
+                            className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap border transition-colors ${activeTab === n.id
                                     ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
                                     : "bg-white text-[#86868b] border-[#e5e5ea] hover:text-[#1d1d1f]"
-                            }`}
+                                }`}
                         >
                             <svg
                                 className={`w-4 h-4 ${activeTab === n.id ? "text-white" : "text-[#86868b]"}`}
@@ -145,7 +148,7 @@ export default function Profile() {
                 </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-hidden sm:gap-6 md:flex-row md:items-stretch">
+            <div className={`flex min-h-0 flex-1 flex-col gap-5 sm:gap-6 md:flex-row md:items-stretch ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
 
                 {/* Left sidebar nav */}
                 <div className="hidden md:block w-full md:w-[200px] lg:w-[220px] flex-shrink-0 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm p-3">
@@ -170,243 +173,243 @@ export default function Profile() {
                 </div>
 
                 {/* Main content */}
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-0.5 hide-scrollbar">
-                    {activeTab === "profile" && (
-                        <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
+                    <div className={`min-h-0 flex-1 pr-0.5 ${isAppleDevice ? "overflow-y-auto overscroll-contain hide-scrollbar" : "overflow-visible"}`}>
+                        {activeTab === "profile" && (
+                            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
 
-                            {/* Section header */}
-                            <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
-                                <h2 className="text-[16px] font-bold text-[#1d1d1f]">Profile Information</h2>
-                            </div>
-
-                            {/* Cover banner + avatar */}
-                            <div className="relative px-3 pt-3">
-                                {/* Cover */}
-                                <div className="h-[90px] sm:h-[110px] bg-gradient-to-br from-[#f0f9d4] via-[#e2f5a0] to-[#d4edff] relative overflow-hidden rounded-xl">
-                                    <div className="absolute inset-0 bg-gradient-to-r from-[#C6FF00]/20 via-transparent to-[#a8d8ff]/30"></div>
-                                    <div className="absolute -top-8 -right-8 w-48 h-48 rounded-full bg-[#C6FF00]/20 blur-3xl"></div>
-                                    <div className="absolute bottom-0 left-24 w-32 h-32 rounded-full bg-white/30 blur-2xl"></div>
-                                    <button className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-white/80 backdrop-blur-sm text-[#1d1d1f] text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-white/60 hover:bg-white transition-all shadow-sm">
-                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                        Edit Cover
-                                    </button>
+                                {/* Section header */}
+                                <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
+                                    <h2 className="text-[16px] font-bold text-[#1d1d1f]">Profile Information</h2>
                                 </div>
 
-                                {/* Avatar circle */}
-                                <div className="absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2">
-                                    <div className="relative">
-                                        {avatarUrl && !imgError ? (
-                                            <img
-                                                src={avatarUrl}
-                                                alt="Avatar"
-                                                referrerPolicy="no-referrer"
-                                                className="w-[80px] h-[80px] sm:w-[92px] sm:h-[92px] rounded-full object-cover border-4 border-white shadow-lg"
-                                                onError={() => setImgError(true)}
-                                            />
-                                        ) : (
-                                            <div className="w-[80px] h-[80px] sm:w-[92px] sm:h-[92px] rounded-full bg-gradient-to-br from-[#C6FF00] to-[#a8db00] border-4 border-white shadow-lg flex items-center justify-center text-[#1d1d1f] text-[22px] font-black">
-                                                {initials}
-                                            </div>
-                                        )}
-                                        <button className="absolute bottom-0.5 right-0.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md border border-[#d2d2d7]/60 hover:scale-110 transition-transform">
-                                            <svg className="w-3 h-3 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                {/* Cover banner + avatar */}
+                                <div className="relative px-3 pt-3">
+                                    {/* Cover */}
+                                    <div className="h-[90px] sm:h-[110px] bg-gradient-to-br from-[#f0f9d4] via-[#e2f5a0] to-[#d4edff] relative overflow-hidden rounded-xl">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-[#C6FF00]/20 via-transparent to-[#a8d8ff]/30"></div>
+                                        <div className="absolute -top-8 -right-8 w-48 h-48 rounded-full bg-[#C6FF00]/20 blur-3xl"></div>
+                                        <div className="absolute bottom-0 left-24 w-32 h-32 rounded-full bg-white/30 blur-2xl"></div>
+                                        <button className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-white/80 backdrop-blur-sm text-[#1d1d1f] text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-white/60 hover:bg-white transition-all shadow-sm">
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                            Edit Cover
                                         </button>
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* Spacer for avatar overflow */}
-                            <div className="h-10"></div>
-
-                            {/* Profile details form */}
-                            <div className="px-4 sm:px-6 pb-5">
-                                <div className="border border-[#e5e5ea] rounded-2xl px-5 py-4">
-                                    <div className="mb-3">
-                                        <h3 className="text-[15px] font-bold text-[#1d1d1f]">Profile Details</h3>
-                                        <p className="text-[12px] text-[#86868b] mt-0.5">Enter your basic personal information for identification and contact purposes</p>
-                                    </div>
-
-                                    {error && (
-                                        <div className="mb-4 bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100 flex items-center gap-2">
-                                            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                                            {error}
-                                        </div>
-                                    )}
-                                    {message && (
-                                        <div className="mb-4 bg-green-50 text-green-700 text-[12px] font-medium px-4 py-3 rounded-xl border border-green-100 flex items-center gap-2">
-                                            <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
-                                            {message}
-                                        </div>
-                                    )}
-
-                                    <form onSubmit={handleSave} className="space-y-3">
-                                        {/* Row 1: First Name + Last Name */}
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">First Name</label>
-                                                <input
-                                                    type="text"
-                                                    value={firstName}
-                                                    onChange={(e) => setFullName(e.target.value + (lastName ? " " + lastName : ""))}
-                                                    placeholder="First name"
-                                                    className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                    {/* Avatar circle */}
+                                    <div className="absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2">
+                                        <div className="relative">
+                                            {avatarUrl && !imgError ? (
+                                                <img
+                                                    src={avatarUrl}
+                                                    alt="Avatar"
+                                                    referrerPolicy="no-referrer"
+                                                    className="w-[80px] h-[80px] sm:w-[92px] sm:h-[92px] rounded-full object-cover border-4 border-white shadow-lg"
+                                                    onError={() => setImgError(true)}
                                                 />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Last Name</label>
-                                                <input
-                                                    type="text"
-                                                    value={lastName}
-                                                    onChange={(e) => setFullName((firstName ? firstName + " " : "") + e.target.value)}
-                                                    placeholder="Last name"
-                                                    className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Row 2: Username */}
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Username</label>
-                                            <input
-                                                type="text"
-                                                value={username}
-                                                onChange={(e) => setUsername(e.target.value)}
-                                                placeholder="username"
-                                                className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
-                                            />
-                                        </div>
-
-                                        {/* Row 3: Email Address */}
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Email Address</label>
-                                            <input
-                                                type="email"
-                                                value={user?.email || ""}
-                                                disabled
-                                                className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent rounded-xl text-[13px] text-[#86868b] cursor-not-allowed"
-                                            />
-                                            <p className="text-[11px] text-[#86868b] mt-1">Email cannot be changed for security reasons.</p>
-                                        </div>
-
-                                        {/* Row 4: Phone */}
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Phone</label>
-                                            <input
-                                                type="tel"
-                                                value={phone}
-                                                onChange={(e) => setPhone(e.target.value)}
-                                                placeholder="+1 000 000 0000"
-                                                className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
-                                            />
-                                        </div>
-
-                                        {/* Row 5: Bio */}
-                                        <div>
-                                            <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Bio</label>
-                                            <textarea
-                                                value={bio}
-                                                onChange={(e) => setBio(e.target.value)}
-                                                rows={2}
-                                                placeholder="Tell us about yourself"
-                                                className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200 resize-none"
-                                            />
-                                        </div>
-
-                                        {/* Save button */}
-                                        <div className="flex justify-end pt-1">
-                                            <button
-                                                type="submit"
-                                                disabled={loading}
-                                                className="bg-[#1d1d1f] hover:bg-black text-white font-semibold py-2.5 px-7 rounded-xl text-[13px] transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50"
-                                            >
-                                                {loading ? "Saving..." : "Save Changes"}
+                                            ) : (
+                                                <div className="w-[80px] h-[80px] sm:w-[92px] sm:h-[92px] rounded-full bg-gradient-to-br from-[#C6FF00] to-[#a8db00] border-4 border-white shadow-lg flex items-center justify-center text-[#1d1d1f] text-[22px] font-black">
+                                                    {initials}
+                                                </div>
+                                            )}
+                                            <button className="absolute bottom-0.5 right-0.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md border border-[#d2d2d7]/60 hover:scale-110 transition-transform">
+                                                <svg className="w-3 h-3 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                             </button>
                                         </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === "security" && (
-                        <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
-                            <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
-                                <h2 className="text-[16px] font-bold text-[#1d1d1f]">Security</h2>
-                            </div>
-                            <div className="px-6 sm:px-8 py-10 flex flex-col items-center justify-center gap-3 text-center">
-                                <div className="w-12 h-12 rounded-2xl bg-[#f5f5f7] flex items-center justify-center">
-                                    <svg className="w-6 h-6 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
-                                </div>
-                                <p className="text-[13px] font-semibold text-[#1d1d1f]">Security settings coming soon</p>
-                                <p className="text-[12px] text-[#86868b]">Password and 2FA management will be available here.</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {activeTab === "preferences" && (
-                        <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
-                            <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
-                                <h2 className="text-[16px] font-bold text-[#1d1d1f]">Preferences</h2>
-                                <p className="mt-0.5 text-[12px] text-[#86868b]">
-                                    These apply immediately. Connect LifeSync under Integrations to sync animation settings with your account.
-                                </p>
-                            </div>
-                            <ul className="divide-y divide-[#f5f5f7]">
-                                <li className="px-6 sm:px-8 py-5">
-                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                        <div className="min-w-0">
-                                            <p className="text-[13px] font-semibold text-[#1d1d1f]">Reduce animations</p>
-                                            <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
-                                                Turns off transitions and decorative motion app-wide for less CPU/GPU use and a calmer UI.
-                                            </p>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            disabled={prefMotionBusy}
-                                            role="switch"
-                                            aria-checked={isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)}
-                                            onClick={async () => {
-                                                const next = !isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)
-                                                if (!lifeSyncUser) {
-                                                    writeStoredReduceAnimationsSetting(next)
-                                                    notifyReduceMotionPreferenceChanged()
-                                                    return
-                                                }
-                                                setPrefMotionBusy(true)
-                                                setError("")
-                                                try {
-                                                    await lifeSyncUpdatePreferences({ reduceAnimations: next })
-                                                } catch (e) {
-                                                    setError(e?.message || "Could not save preference")
-                                                } finally {
-                                                    setPrefMotionBusy(false)
-                                                }
-                                            }}
-                                            className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "bg-[#C6FF00]" : "bg-[#d2d2d7]"} disabled:opacity-50`}
-                                        >
-                                            <span
-                                                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
-                                            />
-                                        </button>
                                     </div>
-                                </li>
-                            </ul>
-                        </div>
-                    )}
-                    {activeTab === "integrations" && (
-                        <div className="min-w-0 overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
-                            <div className="border-b border-[#f0f0f0] px-5 pt-5 pb-4 sm:px-8 sm:pt-6">
-                                <h2 className="text-[16px] font-bold text-[#1d1d1f]">Integrations</h2>
-                                <p className="mt-0.5 text-[12px] text-[#86868b]">
-                                    Link LifeSync, GitHub, and external services.
-                                </p>
+                                </div>
+
+                                {/* Spacer for avatar overflow */}
+                                <div className="h-10"></div>
+
+                                {/* Profile details form */}
+                                <div className="px-4 sm:px-6 pb-5">
+                                    <div className="border border-[#e5e5ea] rounded-2xl px-5 py-4">
+                                        <div className="mb-3">
+                                            <h3 className="text-[15px] font-bold text-[#1d1d1f]">Profile Details</h3>
+                                            <p className="text-[12px] text-[#86868b] mt-0.5">Enter your basic personal information for identification and contact purposes</p>
+                                        </div>
+
+                                        {error && (
+                                            <div className="mb-4 bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100 flex items-center gap-2">
+                                                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                                {error}
+                                            </div>
+                                        )}
+                                        {message && (
+                                            <div className="mb-4 bg-green-50 text-green-700 text-[12px] font-medium px-4 py-3 rounded-xl border border-green-100 flex items-center gap-2">
+                                                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                                                {message}
+                                            </div>
+                                        )}
+
+                                        <form onSubmit={handleSave} className="space-y-3">
+                                            {/* Row 1: First Name + Last Name */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">First Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={firstName}
+                                                        onChange={(e) => setFullName(e.target.value + (lastName ? " " + lastName : ""))}
+                                                        placeholder="First name"
+                                                        className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Last Name</label>
+                                                    <input
+                                                        type="text"
+                                                        value={lastName}
+                                                        onChange={(e) => setFullName((firstName ? firstName + " " : "") + e.target.value)}
+                                                        placeholder="Last name"
+                                                        className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Row 2: Username */}
+                                            <div>
+                                                <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Username</label>
+                                                <input
+                                                    type="text"
+                                                    value={username}
+                                                    onChange={(e) => setUsername(e.target.value)}
+                                                    placeholder="username"
+                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                                />
+                                            </div>
+
+                                            {/* Row 3: Email Address */}
+                                            <div>
+                                                <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Email Address</label>
+                                                <input
+                                                    type="email"
+                                                    value={user?.email || ""}
+                                                    disabled
+                                                    className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent rounded-xl text-[13px] text-[#86868b] cursor-not-allowed"
+                                                />
+                                                <p className="text-[11px] text-[#86868b] mt-1">Email cannot be changed for security reasons.</p>
+                                            </div>
+
+                                            {/* Row 4: Phone */}
+                                            <div>
+                                                <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Phone</label>
+                                                <input
+                                                    type="tel"
+                                                    value={phone}
+                                                    onChange={(e) => setPhone(e.target.value)}
+                                                    placeholder="+1 000 000 0000"
+                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                                />
+                                            </div>
+
+                                            {/* Row 5: Bio */}
+                                            <div>
+                                                <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">Bio</label>
+                                                <textarea
+                                                    value={bio}
+                                                    onChange={(e) => setBio(e.target.value)}
+                                                    rows={2}
+                                                    placeholder="Tell us about yourself"
+                                                    className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200 resize-none"
+                                                />
+                                            </div>
+
+                                            {/* Save button */}
+                                            <div className="flex justify-end pt-1">
+                                                <button
+                                                    type="submit"
+                                                    disabled={loading}
+                                                    className="bg-[#1d1d1f] hover:bg-black text-white font-semibold py-2.5 px-7 rounded-xl text-[13px] transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50"
+                                                >
+                                                    {loading ? "Saving..." : "Save Changes"}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="min-w-0 px-4 py-5 sm:px-8 sm:py-6">
-                                <GithubIntegrations embedded />
+                        )}
+
+                        {activeTab === "security" && (
+                            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                                <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
+                                    <h2 className="text-[16px] font-bold text-[#1d1d1f]">Security</h2>
+                                </div>
+                                <div className="px-6 sm:px-8 py-10 flex flex-col items-center justify-center gap-3 text-center">
+                                    <div className="w-12 h-12 rounded-2xl bg-[#f5f5f7] flex items-center justify-center">
+                                        <svg className="w-6 h-6 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                    </div>
+                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">Security settings coming soon</p>
+                                    <p className="text-[12px] text-[#86868b]">Password and 2FA management will be available here.</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {activeTab === "preferences" && (
+                            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                                <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
+                                    <h2 className="text-[16px] font-bold text-[#1d1d1f]">Preferences</h2>
+                                    <p className="mt-0.5 text-[12px] text-[#86868b]">
+                                        These apply immediately. Connect LifeSync under Integrations to sync animation settings with your account.
+                                    </p>
+                                </div>
+                                <ul className="divide-y divide-[#f5f5f7]">
+                                    <li className="px-6 sm:px-8 py-5">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div className="min-w-0">
+                                                <p className="text-[13px] font-semibold text-[#1d1d1f]">Reduce animations</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                    Turns off transitions and decorative motion app-wide for less CPU/GPU use and a calmer UI.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                disabled={prefMotionBusy}
+                                                role="switch"
+                                                aria-checked={isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)}
+                                                onClick={async () => {
+                                                    const next = !isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)
+                                                    if (!lifeSyncUser) {
+                                                        writeStoredReduceAnimationsSetting(next)
+                                                        notifyReduceMotionPreferenceChanged()
+                                                        return
+                                                    }
+                                                    setPrefMotionBusy(true)
+                                                    setError("")
+                                                    try {
+                                                        await lifeSyncUpdatePreferences({ reduceAnimations: next })
+                                                    } catch (e) {
+                                                        setError(e?.message || "Could not save preference")
+                                                    } finally {
+                                                        setPrefMotionBusy(false)
+                                                    }
+                                                }}
+                                                className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "bg-[#C6FF00]" : "bg-[#d2d2d7]"} disabled:opacity-50`}
+                                            >
+                                                <span
+                                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
+                                                />
+                                            </button>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        )}
+                        {activeTab === "integrations" && (
+                            <div className="min-w-0 overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
+                                <div className="border-b border-[#f0f0f0] px-5 pt-5 pb-4 sm:px-8 sm:pt-6">
+                                    <h2 className="text-[16px] font-bold text-[#1d1d1f]">Integrations</h2>
+                                    <p className="mt-0.5 text-[12px] text-[#86868b]">
+                                        Link LifeSync, GitHub, and external services.
+                                    </p>
+                                </div>
+                                <div className="min-w-0 px-4 py-5 sm:px-8 sm:py-6">
+                                    <GithubIntegrations embedded />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
