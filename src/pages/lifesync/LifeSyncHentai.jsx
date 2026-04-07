@@ -70,7 +70,7 @@ function hentaiOceanEpisodeThumbnailUrl(ep) {
 
 /* ─── Fullscreen Player Popup (watch layout) ───────────────────────────── */
 
-function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, onPlayFromSeries }) {
+function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, onPlayFromSeries, onVideoFailure }) {
     const { stream, series, episodeIndex } = playerState
     const episodes = useMemo(() => series?.episodes || [], [series])
     const prevEp = episodeIndex > 0 ? episodes[episodeIndex - 1] : null
@@ -184,6 +184,9 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                             key={stream.videoUrl}
                                             src={stream.videoUrl}
                                             onEnded={() => nextEp && onChangeEpisode(episodeIndex + 1)}
+                                            onError={() => {
+                                                if (isIOSDevice()) onVideoFailure?.()
+                                            }}
                                         />
                                     ) : stream.embedUrl ? (
                                         <iframe
@@ -947,6 +950,9 @@ export default function LifeSyncHentai() {
                     onChangeEpisode={idx => void changePlayerEpisode(idx)}
                     allSeries={seriesList}
                     onPlayFromSeries={(ser, epIdx) => void playEpisode(ser, ser.episodes[epIdx], epIdx)}
+                    onVideoFailure={() => {
+                        setPlayerState(prev => prev ? { ...prev, stream: { ...prev.stream, videoUrl: null } } : prev)
+                    }}
                 />
             )}
 

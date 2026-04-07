@@ -29,6 +29,7 @@ function videoSupportsNativeHls(video) {
 export default function AdvancedVideoPlayer({
     src,
     onEnded,
+    onError,
     autoPlay = false,
     textTracks = [],
     /** @type {'none' | 'metadata' | 'auto'} */
@@ -144,6 +145,10 @@ export default function AdvancedVideoPlayer({
             setShowSpeedMenu(false)
             setShowVolumeSlider(false)
         }
+        const onErr = () => {
+            const err = v.error
+            onError?.(err)
+        }
         const onTime = () => {
             if (!isSeeking) setCurrentTime(v.currentTime)
         }
@@ -156,6 +161,7 @@ export default function AdvancedVideoPlayer({
 
         v.addEventListener('play', onPlay)
         v.addEventListener('pause', onPause)
+        v.addEventListener('error', onErr)
         v.addEventListener('timeupdate', onTime)
         v.addEventListener('durationchange', onDur)
         v.addEventListener('loadedmetadata', onDur)
@@ -166,6 +172,7 @@ export default function AdvancedVideoPlayer({
         return () => {
             v.removeEventListener('play', onPlay)
             v.removeEventListener('pause', onPause)
+            v.removeEventListener('error', onErr)
             v.removeEventListener('timeupdate', onTime)
             v.removeEventListener('durationchange', onDur)
             v.removeEventListener('loadedmetadata', onDur)
@@ -173,7 +180,7 @@ export default function AdvancedVideoPlayer({
             v.removeEventListener('ended', onEnd)
             v.removeEventListener('volumechange', onVol)
         }
-    }, [src, isSeeking, onEnded, resetIdle])
+    }, [src, isSeeking, onEnded, onError, resetIdle])
 
     useEffect(() => {
         const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
@@ -207,7 +214,7 @@ export default function AdvancedVideoPlayer({
         if (!v || !Number.isFinite(t)) return
         v.currentTime = Math.max(0, Math.min(t, v.duration || 0))
         setCurrentTime(v.currentTime)
-    }, [])
+    }, [setCurrentTime])
 
     const skip = useCallback((delta) => {
         const v = videoRef.current
@@ -233,7 +240,7 @@ export default function AdvancedVideoPlayer({
         setSpeed(s)
         setShowSpeedMenu(false)
         resetIdle()
-    }, [resetIdle, setShowSpeedMenu])
+    }, [resetIdle, setShowSpeedMenu, setSpeed])
 
     const toggleFullscreen = useCallback(() => {
         const el = wrapRef.current
@@ -323,7 +330,7 @@ export default function AdvancedVideoPlayer({
         }
         window.addEventListener('pointermove', onMove)
         window.addEventListener('pointerup', onUp)
-    }, [handleSeekBarPointer])
+    }, [handleSeekBarPointer, setIsSeeking])
 
     const progress = duration > 0 ? (currentTime / duration) * 100 : 0
     const bufferedPct = duration > 0 ? (buffered / duration) * 100 : 0
@@ -351,6 +358,7 @@ export default function AdvancedVideoPlayer({
                 key={`${src}|${trackKey}`}
                 className="absolute inset-0 w-full h-full object-contain"
                 playsInline
+                webkitPlaysInline
                 autoPlay={autoPlay}
                 preload={preload}
             >
