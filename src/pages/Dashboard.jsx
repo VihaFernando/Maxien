@@ -486,7 +486,7 @@ export default function Dashboard() {
                     </header>
                 ) : null}
 
-                <div className="w-full flex-1 px-4 sm:px-8 lg:px-10 py-6 sm:py-8">
+                <div className="w-full flex-1 min-h-0 flex flex-col px-4 sm:px-8 lg:px-10 py-6 sm:py-8">
                     {lifeSyncNotice && (
                         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium text-amber-950 flex items-start gap-3">
                             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
