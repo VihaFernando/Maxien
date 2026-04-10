@@ -39,7 +39,7 @@ export function setLifesyncToken(token) {
 }
 
 /**
- * @param {'steam'|'mal'} provider
+ * @param {'steam'|'mal'|'animeschedule'} provider
  * @returns {string|null} URL or null if not logged in to LifeSync
  */
 export function lifesyncOAuthStartUrl(provider) {

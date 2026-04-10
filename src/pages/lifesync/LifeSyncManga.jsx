@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
@@ -651,195 +651,6 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
     )
 })
 
-function MangaReader({ manga, chapter, sortedChapters, chapterIndex, onClose, onChangeChapter, onReportProgress }) {
-    const [pack, setPack] = useState(null)
-    const [loadErr, setLoadErr] = useState('')
-    const [loading, setLoading] = useState(true)
-    const [chapterReadProgress, setChapterReadProgress] = useState(0)
-    const scrollRef = useRef(null)
-    const pagesInnerRef = useRef(null)
-    const scrollRafRef = useRef(null)
-
-    useEffect(() => {
-        if (!onReportProgress || !manga?.id || !chapter?.id) return undefined
-        onReportProgress(manga, chapter)
-        return undefined
-    }, [manga, chapter, onReportProgress])
-
-    useEffect(() => {
-        let cancelled = false
-        ;(async () => {
-            setLoading(true)
-            setLoadErr('')
-            setPack(null)
-            const path =
-                manga.source === 'hentaifox'
-                    ? `/api/manga/hentaifox/chapter/${encodeURIComponent(chapter.id)}`
-                    : manga.source === 'mangadistrict'
-                        ? `/api/manga/mangadistrict/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
-                        : `/api/manga/pages/${chapter.id}`
-            try {
-                const data = await lifesyncFetch(path)
-                if (!cancelled) setPack(data)
-            } catch (e) {
-                if (!cancelled) setLoadErr(e.message || 'Could not load chapter pages')
-            } finally {
-                if (!cancelled) setLoading(false)
-            }
-        })()
-        return () => {
-            cancelled = true
-        }
-    }, [chapter.id, manga.id, manga.source])
-
-    useLayoutEffect(() => {
-        const el = scrollRef.current
-        if (el) el.scrollTop = 0
-        setChapterReadProgress(0)
-    }, [chapter.id])
-
-    const updateScrollProgress = useCallback(() => {
-        const el = scrollRef.current
-        if (!el) return
-        const { scrollTop, scrollHeight, clientHeight } = el
-        const max = scrollHeight - clientHeight
-        const p = max <= 0 ? 1 : Math.min(1, Math.max(0, scrollTop / max))
-        setChapterReadProgress(p)
-    }, [])
-
-    const onReaderScroll = useCallback(() => {
-        if (scrollRafRef.current != null) return
-        scrollRafRef.current = requestAnimationFrame(() => {
-            scrollRafRef.current = null
-            updateScrollProgress()
-        })
-    }, [updateScrollProgress])
-
-    useEffect(
-        () => () => {
-            if (scrollRafRef.current != null) cancelAnimationFrame(scrollRafRef.current)
-        },
-        []
-    )
-
-    const urls = useMemo(() => (pack?.pages?.length ? pack.pages : []), [pack])
-
-    useEffect(() => {
-        if (loading) return
-        const t = requestAnimationFrame(() => updateScrollProgress())
-        return () => cancelAnimationFrame(t)
-    }, [loading, urls.length, chapter.id, updateScrollProgress])
-
-    useEffect(() => {
-        const inner = pagesInnerRef.current
-        if (!inner || loading) return
-        const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => updateScrollProgress()) : null
-        ro?.observe(inner)
-        return () => ro?.disconnect()
-    }, [loading, urls.length, chapter.id, updateScrollProgress])
-
-    const idx =
-        typeof chapterIndex === 'number' && chapterIndex >= 0
-            ? chapterIndex
-            : sortedChapters.findIndex(c => c.id === chapter.id)
-    const safeIdx = idx >= 0 ? idx : -1
-
-    const prevCh = safeIdx > 0 ? sortedChapters[safeIdx - 1] : null
-    const nextCh =
-        safeIdx >= 0 && safeIdx < sortedChapters.length - 1 ? sortedChapters[safeIdx + 1] : null
-
-    return createPortal(
-        <div
-            className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-hidden bg-[#0a0a0a]"
-        >
-            <header className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/70 px-3 py-2 backdrop-blur-xl">
-                <div className="min-w-0 flex-1">
-                    <button type="button" onClick={onClose} className="text-left text-[12px] font-semibold text-[#C6FF00] hover:underline">
-                        ← Back to list
-                    </button>
-                    <p className="truncate text-[11px] text-[#86868b]">{manga.title}</p>
-                    <p className="truncate text-[10px] text-[#a1a1a6]">{formatChapterLabel(chapter)}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <button
-                        type="button"
-                        disabled={!prevCh}
-                        onClick={() => prevCh && onChangeChapter(prevCh)}
-                        className="inline-flex items-center gap-0.5 rounded-lg border border-[#3a3a3c] bg-[#1c1c1e] px-2 py-1.5 text-[11px] text-[#f5f5f7] hover:bg-[#2c2c2e] disabled:opacity-40"
-                    >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-                        Prev
-                    </button>
-                    <button
-                        type="button"
-                        disabled={!nextCh}
-                        onClick={() => nextCh && onChangeChapter(nextCh)}
-                        className="inline-flex items-center gap-0.5 rounded-lg border border-[#3a3a3c] bg-[#1c1c1e] px-2 py-1.5 text-[11px] text-[#f5f5f7] hover:bg-[#2c2c2e] disabled:opacity-40"
-                    >
-                        Next
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                    </button>
-                </div>
-            </header>
-
-            <div
-                ref={scrollRef}
-                onScroll={onReaderScroll}
-                className="min-h-0 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-                {loading ? <LifesyncChapterPagesSkeleton /> : null}
-                {loadErr && !loading && <p className="p-8 text-center text-[13px] text-red-400">{loadErr}</p>}
-                {!loading && !loadErr && urls.length === 0 && (
-                    <p className="p-8 text-center text-[13px] text-[#86868b]">No page images returned for this chapter.</p>
-                )}
-                <div ref={pagesInnerRef} className="mx-auto max-w-3xl pb-8 pt-2">
-                    {urls.map((src, i) => (
-                        <img
-                            key={`${chapter.id}-${i}`}
-                            src={src}
-                            alt={`Page ${i + 1}`}
-                            className="w-full bg-black"
-                            // Native `loading="lazy"` is unreliable inside overflow scroll containers on some browsers
-                            // (often stops after ~10–15 images). We manage perf via decoding and the scroll container instead.
-                            loading="eager"
-                            decoding="async"
-                            onLoad={() => {
-                                requestAnimationFrame(() => updateScrollProgress())
-                            }}
-                            {...mangadexImageProps(src)}
-                        />
-                    ))}
-                </div>
-            </div>
-
-            <footer className="shrink-0 border-t border-white/10 bg-black/85 px-3 py-2 backdrop-blur-xl">
-                <div className="mx-auto max-w-3xl">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-                        <div
-                            className="h-full rounded-full bg-[#C6FF00] transition-[width] duration-100 ease-out"
-                            style={{ width: `${Math.round(chapterReadProgress * 1000) / 10}%` }}
-                            role="progressbar"
-                            aria-valuenow={Math.round(chapterReadProgress * 100)}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            aria-label="Scroll position in this chapter"
-                        />
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-[#86868b]">
-                        <span>
-                            {urls.length > 0 ? `${urls.length} page${urls.length === 1 ? '' : 's'}` : loading ? '…' : '—'}
-                        </span>
-                        <span className="tabular-nums text-[#a1a1a6]">
-                            {Math.round(chapterReadProgress * 100)}% through chapter
-                        </span>
-                    </div>
-                </div>
-            </footer>
-        </div>,
-        document.body
-    )
-}
-
 function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, browseTranslatedLang = 'en' }) {
     const [detail, setDetail] = useState(null)
     const [chapters, setChapters] = useState(null)
@@ -1284,8 +1095,6 @@ export default function LifeSyncManga() {
     const location = useLocation()
     const navigate = useNavigate()
     const resumeKeyDone = useRef(null)
-    const mdReadSyncTimer = useRef(null)
-    const mdReadingStatusSent = useRef(new Set())
 
     const basePath = '/dashboard/lifesync/anime/manga'
     const route = useMemo(() => {
@@ -1303,12 +1112,7 @@ export default function LifeSyncManga() {
 
         const detailIdx = parts.indexOf('manga')
         const detailMangaId = detailIdx >= 0 ? parts[detailIdx + 1] || null : null
-
-        const readIdx = parts.indexOf('read')
-        const readMangaId = readIdx >= 0 ? parts[readIdx + 1] || null : null
-        const readChapterId = readIdx >= 0 ? parts[readIdx + 2] || null : null
-
-        return { src, tab, page, detailMangaId, readMangaId, readChapterId }
+        return { src, tab, page, detailMangaId }
     }, [location.pathname])
     const { isLifeSyncConnected, lifeSyncUser, lifeSyncUpdatePreferences } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
@@ -1321,7 +1125,6 @@ export default function LifeSyncManga() {
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
     const [selectedManga, setSelectedManga] = useState(null)
-    const [reader, setReader] = useState(null)
 
     const listPath = useMemo(() => {
         const src = route.src || 'mangadex'
@@ -1383,12 +1186,24 @@ export default function LifeSyncManga() {
         [basePath, location.search, navigate, route.page, route.src, route.tab]
     )
 
+    // MangaDex state (needs to exist before `goToRead`)
+    const [dexTranslatedLang, setDexTranslatedLang] = useState('en')
+
     const goToRead = useCallback(
         (mangaId, chapterId, srcOverride) => {
             const src = srcOverride || route.src
-            navigate(`${basePath}/${src}/${route.tab}/page/${clampPage(route.page)}/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(chapterId))}${location.search || ''}`)
+            navigate(
+                `${basePath}/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(chapterId))}${location.search || ''}`,
+                {
+                    state: {
+                        from: `${basePath}/${src}/${route.tab}/page/${clampPage(route.page)}${location.search || ''}`,
+                        source: src,
+                        browseTranslatedLang: mangaEnglishReleasesOnly ? 'en' : dexTranslatedLang,
+                    },
+                },
+            )
         },
-        [basePath, location.search, navigate, route.page, route.src, route.tab]
+        [basePath, dexTranslatedLang, location.search, mangaEnglishReleasesOnly, navigate, route.page, route.src, route.tab]
     )
 
     // MangaDex state
@@ -1411,7 +1226,6 @@ export default function LifeSyncManga() {
     const [dexTags, setDexTags] = useState([])
     const [dexFiltersOpen, setDexFiltersOpen] = useState(false)
     const [dexTagsPanelOpen, setDexTagsPanelOpen] = useState(false)
-    const [dexTranslatedLang, setDexTranslatedLang] = useState('en')
     const [includedTags, setIncludedTags] = useState([])
     const [excludedTags, setExcludedTags] = useState([])
     const [includedTagsMode, setIncludedTagsMode] = useState('AND')
@@ -1467,12 +1281,13 @@ export default function LifeSyncManga() {
     )
 
     const [dexListSigBound, setDexListSigBound] = useState(dexFilterSig)
-    if (dexFilterSig !== dexListSigBound) {
+    useEffect(() => {
+        if (dexFilterSig === dexListSigBound) return
         setDexListSigBound(dexFilterSig)
         setDexPopularPage(1)
         setDexRecentPage(1)
         setDexSearchPage(1)
-    }
+    }, [dexFilterSig, dexListSigBound])
 
     // HentaiFox state
     const [hfStatus, setHfStatus] = useState(null)
@@ -1550,68 +1365,6 @@ export default function LifeSyncManga() {
         (mdFilterGenre ? 1 : 0) +
         (mdBrowse !== 'latest-updates' ? 1 : 0)
 
-    const saveProgress = useCallback(async (manga, chapter) => {
-        if (!manga?.id || !chapter?.id) return
-        const src =
-            manga.source === 'mangadistrict' || manga.source === 'hentaifox'
-                ? manga.source
-                : 'mangadex'
-        try {
-            await lifesyncFetch('/api/manga/reading', {
-                method: 'PUT',
-                json: {
-                    source: src,
-                    mangaId: String(manga.id),
-                    title: manga.title || '',
-                    coverUrl: manga.coverUrl || '',
-                    lastChapterId: String(chapter.id),
-                    lastChapterLabel: formatChapterLabel(chapter),
-                    lastVolume: chapter.volume != null && chapter.volume !== '' ? String(chapter.volume) : '',
-                    lastChapterNum: chapter.chapter != null && chapter.chapter !== '' ? String(chapter.chapter) : '',
-                    ...(src === 'mangadex' && manga.contentRating
-                        ? { contentRating: String(manga.contentRating) }
-                        : {}),
-                },
-            })
-        } catch {
-            /* offline */
-        }
-
-        if (src !== 'mangadex' || !dexAuthStatus?.connected) return
-        if (mdReadSyncTimer.current) clearTimeout(mdReadSyncTimer.current)
-        mdReadSyncTimer.current = setTimeout(() => {
-            mdReadSyncTimer.current = null
-            void (async () => {
-                try {
-                    await lifesyncFetch(`/api/manga/mangadex/read-chapters/${encodeURIComponent(String(manga.id))}`, {
-                        method: 'POST',
-                        json: { read: [String(chapter.id)], unread: [] },
-                    })
-                } catch {
-                    /* token / network */
-                }
-                const k = String(manga.id)
-                if (mdReadingStatusSent.current.has(k)) return
-                try {
-                    await lifesyncFetch(`/api/manga/mangadex/reading-status/${encodeURIComponent(k)}`, {
-                        method: 'POST',
-                        json: { status: 'reading' },
-                    })
-                    mdReadingStatusSent.current.add(k)
-                } catch {
-                    /* ignore */
-                }
-            })()
-        }, 450)
-    }, [dexAuthStatus?.connected])
-
-    useEffect(
-        () => () => {
-            if (mdReadSyncTimer.current) clearTimeout(mdReadSyncTimer.current)
-        },
-        []
-    )
-
     const resumeFromEntry = useCallback(async entry => {
         setError('')
         try {
@@ -1631,7 +1384,7 @@ export default function LifeSyncManga() {
                 return
             }
             if (entry.source === 'mangadex') {
-                const detail = await lifesyncFetch(`/api/manga/details/${encodeURIComponent(entry.mangaId)}`)
+                await lifesyncFetch(`/api/manga/details/${encodeURIComponent(entry.mangaId)}`)
                 const feed = await lifesyncFetch(`/api/manga/chapters/${encodeURIComponent(entry.mangaId)}?limit=500&lang=all&order=asc`)
                 const list = [...(feed.data || [])]
                 list.sort(compareChapters)
@@ -1641,11 +1394,9 @@ export default function LifeSyncManga() {
                     setError('No chapters available to resume.')
                     return
                 }
-                const m = { ...detail, source: 'mangadex' }
-                const idx = list.findIndex(c => c.id === ch.id)
                 setSelectedManga(null)
                 setSource('mangadex')
-                setReader({ manga: m, chapter: ch, sortedChapters: list, chapterIndex: idx })
+                goToRead(entry.mangaId, ch.id, 'mangadex')
                 return
             }
             if (entry.source === 'mangadistrict') {
@@ -1658,10 +1409,9 @@ export default function LifeSyncManga() {
                     setError('No chapters available to resume.')
                     return
                 }
-                const idx = list.findIndex(c => c.id === ch.id)
                 setSelectedManga(null)
                 setSource('mangadistrict')
-                setReader({ manga: data, chapter: ch, sortedChapters: list, chapterIndex: idx })
+                goToRead(entry.mangaId, ch.id, 'mangadistrict')
                 return
             }
             if (entry.source === 'hentaifox') {
@@ -1673,15 +1423,14 @@ export default function LifeSyncManga() {
                     setError('Could not open this title.')
                     return
                 }
-                const idx = list.findIndex(c => c.id === ch.id)
                 setSelectedManga(null)
                 setSource('hentaifox')
-                setReader({ manga: data, chapter: ch, sortedChapters: list, chapterIndex: idx >= 0 ? idx : 0 })
+                goToRead(entry.mangaId, ch.id, 'hentaifox')
             }
         } catch (e) {
             setError(e.message || 'Could not resume reading')
         }
-    }, [nsfwEnabled])
+    }, [goToRead, nsfwEnabled])
 
     useEffect(() => {
         if (source === 'mangadex' && tab === 'reading') setTab('popular')
@@ -1730,9 +1479,8 @@ export default function LifeSyncManga() {
     useEffect(() => {
         if (nsfwEnabled) return
         const nsfwSrc = m => m?.source === 'hentaifox' || m?.source === 'mangadistrict'
-        if (reader?.manga && nsfwSrc(reader.manga)) setReader(null)
         if (selectedManga && nsfwSrc(selectedManga)) setSelectedManga(null)
-    }, [nsfwEnabled, reader, selectedManga])
+    }, [nsfwEnabled, selectedManga])
 
     useEffect(() => {
         if (nsfwEnabled) return
@@ -2143,7 +1891,6 @@ export default function LifeSyncManga() {
     )
 
     const routeDetailKey = useRef(null)
-    const routeReadKey = useRef(null)
 
     useEffect(() => {
         if (route.detailMangaId) {
@@ -2180,27 +1927,6 @@ export default function LifeSyncManga() {
             setSelectedManga(null)
         }
     }, [enrichSelectedManga, location.state?.mangaDetailPreview, route.detailMangaId, route.src])
-
-    useEffect(() => {
-        // Route-controlled reader: only clear when leaving a /read/... URL.
-        // (Do not depend on `reader` — hub resume sets reader before the URL has /read/...;
-        // including `reader` here immediately cleared the reader after resumeFromEntry.)
-        if (route.readMangaId && route.readChapterId) {
-            const k = `${route.src}:${route.readMangaId}:${route.readChapterId}`
-            if (routeReadKey.current !== k) {
-                routeReadKey.current = k
-                void resumeFromEntry({
-                    source: route.src,
-                    mangaId: String(route.readMangaId),
-                    lastChapterId: String(route.readChapterId),
-                })
-            }
-        } else {
-            const hadReadInUrl = routeReadKey.current != null
-            routeReadKey.current = null
-            if (hadReadInUrl) setReader(null)
-        }
-    }, [resumeFromEntry, route.readChapterId, route.readMangaId, route.src])
 
     function switchSource(s) {
         goToSource(s)
@@ -2387,27 +2113,6 @@ export default function LifeSyncManga() {
             variants={lifeSyncDollyPageVariants}
             transition={lifeSyncDollyPageTransition}
         >
-            {reader?.manga && reader?.chapter && (
-                <MangaReader
-                    manga={reader.manga}
-                    chapter={reader.chapter}
-                    sortedChapters={reader.sortedChapters}
-                    chapterIndex={reader.chapterIndex}
-                    onClose={() => goToList({ replace: true })}
-                    onChangeChapter={ch => {
-                        const idx = reader.sortedChapters.findIndex(c => c.id === ch.id)
-                        setReader(r => (r ? { ...r, chapter: ch, chapterIndex: idx >= 0 ? idx : r.chapterIndex } : r))
-                        if (reader?.manga?.id && ch?.id) {
-                            navigate(
-                                `${listPath.replace(location.search || '', '')}/read/${encodeURIComponent(String(reader.manga.id))}/${encodeURIComponent(String(ch.id))}${location.search || ''}`,
-                                { replace: true }
-                            )
-                        }
-                    }}
-                    onReportProgress={saveProgress}
-                />
-            )}
-
             <AnimatePresence mode="sync">
                 {selectedManga ? (
                     <MangaDetail

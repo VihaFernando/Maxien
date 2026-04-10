@@ -27,9 +27,10 @@ const NAV_ACTIVE = "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
 const NAV_IDLE = "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
 
 function SidebarLink({ to, icon: Icon, label, active, onClick }) {
+    const iconNode = typeof Icon === "function" ? Icon({ className: "w-4 h-4" }) : null
     return (
         <Link to={to} onClick={onClick} className={`${NAV_BASE} ${active ? NAV_ACTIVE : NAV_IDLE}`}>
-            <Icon className="w-4 h-4" />
+            {iconNode}
             {label}
         </Link>
     )
@@ -78,14 +79,26 @@ export default function Dashboard() {
     const lifeSyncGamesActive = location.pathname.startsWith("/dashboard/lifesync/games")
     const lifeSyncAnimeActive = location.pathname.startsWith("/dashboard/lifesync/anime")
     const isLifeSyncRoute = location.pathname.startsWith("/dashboard/lifesync")
-    const hideMobileMaxienBar = location.pathname.startsWith("/dashboard/lifesync/anime/anime/watch/")
     const showLifeSyncSidebar = isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
     const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
+
+    const isProfileRoute = location.pathname === "/dashboard/profile"
+
+    /** Profile/Settings needs a flex column + min-h-0 so nested scroll works; other dashboard pages keep the original outlet box so padding/layout stay unchanged. */
+    const contentWrapClass = useMemo(
+        () => {
+            const padded = isLifeSyncRoute ? "" : "px-4 sm:px-8 lg:px-10 py-6 sm:py-8"
+            const base = isProfileRoute ? "flex w-full min-h-0 flex-1 flex-col " : "w-full flex-1 "
+            return `${base}${padded}`
+        },
+        [isLifeSyncRoute, isProfileRoute],
+    )
 
     const workplaceId = location.pathname.match(/\/workplaces\/([^/?]+)/)?.[1] || ""
     const currentTab = new URLSearchParams(location.search).get("tab") || "profile"
     /** URL is source of truth on `/workplaces/:id`; avoid effect-driven setState sync. */
-    const activeWorkplaceId = workplaceId || selectedWorkplaceId
+    // `workplaceId` can come from route params; fall back to last selection.
+    // Kept inline where needed to avoid unused-var lint failures.
     const isWorkplaceMode = Boolean(workplaceId) || workspaceMode === "workplace"
 
     useEffect(() => {
@@ -484,7 +497,7 @@ export default function Dashboard() {
                     </button>
                 </header>
 
-                <div className="w-full flex-1 px-4 sm:px-8 lg:px-10 py-6 sm:py-8">
+                <div className={contentWrapClass}>
                     {lifeSyncNotice && (
                         <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium text-amber-950 flex items-start gap-3">
                             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>

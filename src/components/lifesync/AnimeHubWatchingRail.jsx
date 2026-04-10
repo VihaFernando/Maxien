@@ -3,51 +3,46 @@ import { LifesyncEpisodeThumbnail, LifesyncHubMangaRailSkeleton } from './Episod
 
 const ANIME_HUB_PATH = '/dashboard/lifesync/anime/anime'
 
+const focusRing =
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white'
+
 /** Same shape as in-app `goToWatch` — must hit `LifeSyncAnime` (`anime/*`), not `anime/watch/*` (LifeSyncAnimeWatch). */
 function watchPath(malId, episode) {
     const ep = Math.max(1, Math.floor(Number(episode) || 1))
     return `${ANIME_HUB_PATH}/seasonal/page/1/watch/${encodeURIComponent(String(malId))}/${ep}`
 }
 
-/** Compact rail on Anime & Manga hub — resumes last streamed episode per title. */
-export function LifeSyncHubAnimeWatching({ entries, loading, className = 'mb-6' }) {
+/** Hub rail — anime watch resume strip. */
+export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
     if (!loading && entries.length === 0) return null
 
     return (
-        <div
-            className={`${className} relative overflow-hidden rounded-[22px] border border-[#e8e4ef]/70 bg-gradient-to-br from-white/75 via-[#faf8ff]/85 to-[#ede9ff]/80 shadow-[0_12px_40px_-12px_rgba(100,90,140,0.1)] ring-1 ring-[#e8e4ef]/60 backdrop-blur-sm sm:rounded-[26px]`}
-        >
-            <div
-                className="pointer-events-none absolute -right-8 -top-12 h-32 w-32 rounded-full bg-[#a78bfa]/18 blur-2xl"
-                aria-hidden
-            />
-            <div className="relative flex items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-5 sm:pb-3.5 sm:pt-5">
-                <div className="flex min-w-0 items-center gap-3">
-                    <span className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#e0f2fe] to-[#fef9c3] text-[#1a1628] shadow-sm ring-2 ring-white">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
-                            />
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div className={`relative border-l-4 border-l-[#C6FF00] pl-4 sm:pl-5 ${className}`}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#C6FF00]/25 text-slate-900 shadow-sm ring-1 ring-[#C6FF00]/40">
+                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
+                            <path d="M8 5v14l11-7L8 5z" />
                         </svg>
                     </span>
-                    <div className="min-w-0">
-                        <p className="font-['Georgia',serif] text-[13px] font-semibold italic tracking-tight text-[#1a1628] sm:text-[14px]">
-                            On the air
-                        </p>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#7c7794]">Continue watching</p>
+                    <div className="min-w-0 pt-0.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Watching</p>
+                        <h3 className="text-[16px] font-black leading-tight tracking-tight text-slate-900 sm:text-[17px]">Anime queue</h3>
+                        <p className="mt-1 text-[12px] leading-snug text-slate-600">Last episode saved per title.</p>
                     </div>
                 </div>
                 <Link
                     to={ANIME_HUB_PATH}
-                    className="shrink-0 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-[#4338ca] shadow-sm ring-1 ring-[#e0e7ff] transition hover:bg-[#eef2ff] hover:ring-[#c7d2fe]"
+                    className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 self-start rounded-xl bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 sm:min-h-0 sm:shrink-0 sm:px-3 sm:py-2 ${focusRing}`}
                 >
-                    Browse all →
+                    Browse
+                    <span className="opacity-70" aria-hidden>
+                        →
+                    </span>
                 </Link>
             </div>
-            <div className="relative flex max-w-full min-w-0 gap-3.5 overflow-x-auto overflow-y-hidden px-4 pb-5 pt-1 sm:gap-4 sm:px-5 sm:pb-6 snap-x snap-mandatory hide-scrollbar overscroll-x-contain scroll-pl-4 scroll-pr-4 sm:scroll-pl-5 sm:scroll-pr-5">
+
+            <div className="relative mt-5 flex min-w-0 w-full gap-3.5 overflow-x-auto overflow-y-hidden scroll-pl-1 scroll-pr-4 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] snap-x snap-mandatory sm:gap-4 sm:scroll-pr-2 [&::-webkit-scrollbar]:hidden">
                 {loading && entries.length === 0 ? (
                     <LifesyncHubMangaRailSkeleton count={5} />
                 ) : (
@@ -55,29 +50,31 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = 'mb-6' 
                         <Link
                             key={entry.malId}
                             to={watchPath(entry.malId, entry.lastEpisodeNumber)}
-                            className="group relative w-[88px] shrink-0 snap-start sm:w-[96px]"
+                            className={`group w-[112px] shrink-0 snap-start sm:w-[118px] ${focusRing} rounded-2xl outline-none`}
                         >
-                            <div className="overflow-hidden rounded-[14px] border-2 border-white bg-white shadow-[4px_6px_0_0_rgba(167,139,250,0.35)] ring-1 ring-[#e8e4ef] transition-all group-hover:-translate-y-0.5 group-hover:shadow-[6px_8px_0_0_rgba(198,255,0,0.45)] sm:rounded-2xl">
-                                <div className="relative aspect-[2/3] bg-gradient-to-br from-[#f0f4ff] to-[#fdf4ff]">
+                            <div className="overflow-hidden rounded-2xl bg-slate-100 shadow-sm ring-1 ring-slate-200/80 transition duration-300 group-active:scale-[0.98] group-hover:shadow-md group-hover:ring-slate-300">
+                                <div className="relative aspect-[2/3] bg-slate-200/80">
                                     {entry.imageUrl ? (
                                         <LifesyncEpisodeThumbnail
                                             src={entry.imageUrl}
                                             className="absolute inset-0 h-full w-full"
-                                            imgClassName="h-full w-full object-cover"
+                                            imgClassName="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                                             imgProps={{ referrerPolicy: 'no-referrer' }}
                                         />
                                     ) : null}
-                                    <span className="absolute left-2 top-2 z-10 max-w-[calc(100%-0.75rem)] truncate rounded-md bg-black/70 px-1.5 py-0.5 text-[8px] font-bold tabular-nums text-white shadow-sm ring-1 ring-white/25">
-                                        Ep. {entry.lastEpisodeNumber}
+                                    <span className="absolute left-2 top-2 z-1 max-w-[calc(100%-1rem)] truncate rounded-md bg-white/90 px-1.5 py-0.5 font-mono text-[8px] font-bold tabular-nums uppercase tracking-wide text-slate-900 ring-1 ring-slate-200/80">
+                                        EP {entry.lastEpisodeNumber}
                                     </span>
-                                    <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 via-black/10 to-transparent pb-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                        <span className="rounded-full bg-[#C6FF00] px-2.5 py-1 text-[8px] font-bold uppercase tracking-wide text-[#1a1628] shadow-md ring-1 ring-black/10">
+                                    <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-white/80 via-transparent to-transparent pb-3 opacity-100 transition duration-200 sm:opacity-0 sm:group-hover:opacity-100">
+                                        <span className="rounded-full bg-[#C6FF00] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-900">
                                             Resume
                                         </span>
                                     </div>
                                 </div>
+                                <div className="border-t border-slate-200/90 bg-white px-2 py-2">
+                                    <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-slate-800">{entry.title}</p>
+                                </div>
                             </div>
-                            <p className="mt-2 line-clamp-2 text-[9px] font-semibold leading-tight text-[#1a1628]">{entry.title}</p>
                         </Link>
                     ))
                 )}

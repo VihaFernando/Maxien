@@ -6,6 +6,9 @@ export default function GithubCallback() {
     const [status, setStatus] = useState("Connecting GitHub...")
 
     useEffect(() => {
+        const timers = []
+        const ac = new AbortController()
+
         const code = new URLSearchParams(window.location.search).get("code")
 
         if (!code) {
@@ -18,24 +21,32 @@ export default function GithubCallback() {
         fetch(`${import.meta.env.VITE_GITHUB_TOKEN_ENDPOINT}?code=${code}`, {
             headers: {
                 Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
-            }
+            },
+            signal: ac.signal,
         })
             .then(res => res.json())
             .then(async (data) => {
+                if (ac.signal.aborted) return
                 if (data.access_token) {
                     setStatus("Saving GitHub connection...")
                     localStorage.setItem("github_token_pending", data.access_token)
                     setStatus("GitHub connected! Redirecting...")
-                    setTimeout(() => navigate("/dashboard/github"), 800)
+                    timers.push(window.setTimeout(() => navigate("/dashboard/github"), 800))
                 } else {
                     setStatus("Failed to connect GitHub. Redirecting...")
-                    setTimeout(() => navigate("/dashboard/profile"), 1500)
+                    timers.push(window.setTimeout(() => navigate("/dashboard/profile"), 1500))
                 }
             })
             .catch(() => {
+                if (ac.signal.aborted) return
                 setStatus("Something went wrong. Redirecting...")
-                setTimeout(() => navigate("/dashboard/profile"), 1500)
+                timers.push(window.setTimeout(() => navigate("/dashboard/profile"), 1500))
             })
+
+        return () => {
+            ac.abort()
+            for (const t of timers) window.clearTimeout(t)
+        }
     }, [navigate])
 
     return (

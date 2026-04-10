@@ -99,7 +99,7 @@ export function MangaReadingShelf({
                                 <div className="flex max-w-full min-w-0 gap-3 overflow-x-auto overflow-y-hidden px-4 sm:px-5 pb-0.5 hide-scrollbar overscroll-x-contain snap-x snap-mandatory scroll-pl-4 scroll-pr-4">
                                     {entries.slice(0, 12).map((entry) => (
                                         <button
-                                            key={`${entry.source}-${entry.mangaId}`}
+                                            key={`${entry.source}-${entry.mangaId}-${entry.lastChapterId || 'unknown'}`}
                                             type="button"
                                             onClick={() => onContinue?.(entry)}
                                             disabled={continueDisabled}
@@ -199,7 +199,7 @@ export function MangaReadingShelf({
                             <div className="flex items-center gap-3 min-w-0">
                                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fef3c7] to-[#bfdbfe] text-[#1a1628] shadow-sm ring-2 ring-white">
                                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75" aria-hidden>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0112 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                                     </svg>
                                 </div>
                                 <div className="min-w-0">
@@ -240,7 +240,7 @@ export function MangaReadingShelf({
 
                         {nsfwHiddenCount > 0 && (
                             <p className="mb-3 text-[10px] text-[#86868b]">
-                                NSFW off in preferences — {nsfwHiddenCount} saved title{nsfwHiddenCount === 1 ? '' : 's'} not shown.
+                                NSFW is off — {nsfwHiddenCount} saved title{nsfwHiddenCount === 1 ? '' : 's'} hidden.
                             </p>
                         )}
 
@@ -249,13 +249,13 @@ export function MangaReadingShelf({
                 ) : !hasItems ? (
                     <div className="rounded-[18px] border border-dashed border-[#e5e5ea] bg-[#fafafa] px-5 py-8 text-center">
                         <p className="text-[13px] font-medium text-[#1d1d1f]">Nothing on your shelf yet</p>
-                        <p className="mt-1 text-[12px] text-[#86868b]">Browse Popular or Recent and open a chapter — we’ll remember your place.</p>
+                        <p className="mt-1 text-[12px] text-[#86868b]">Browse Popular or Recent, open a chapter, and we’ll save your place.</p>
                     </div>
                 ) : (
                     <div className="-mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory">
                         {entries.map(entry => (
                             <article
-                                key={`${entry.source}-${entry.mangaId}`}
+                                key={`${entry.source}-${entry.mangaId}-${entry.lastChapterId || 'unknown'}`}
                                 className="group relative w-[148px] shrink-0 snap-start sm:w-[164px]"
                             >
                                 <div className="overflow-hidden rounded-[18px] border border-[#d2d2d7]/50 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
@@ -321,92 +321,92 @@ const MANGA_HUB_PATH = '/dashboard/lifesync/anime/manga'
 
 function hubMangaResumeTarget(entry) {
     if (entry?.mangaId != null && entry?.source && entry?.lastChapterId != null) {
-        const src =
-            entry.source === 'hentaifox' || entry.source === 'mangadistrict'
-                ? entry.source
-                : 'mangadex'
-        const tab = src === 'mangadex' ? 'popular' : 'latest'
         return {
-            to: `${MANGA_HUB_PATH}/${src}/${tab}/page/1/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(String(entry.lastChapterId))}`,
-            state: null,
+            to: `${MANGA_HUB_PATH}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(String(entry.lastChapterId))}`,
+            state: {
+                from: MANGA_HUB_PATH,
+                source: entry.source,
+            },
         }
     }
     return { to: MANGA_HUB_PATH, state: { resumeEntry: entry } }
 }
 
-/** Compact rail on Anime & Manga hub — deep-links into reader when progress includes a chapter id. */
-export function LifeSyncHubMangaReading({ entries, loading, className = 'mb-6' }) {
+const hubRailFocusRing =
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white'
+
+/** Hub rail — manga resume strip (matches anime rail structure). */
+export function LifeSyncHubMangaReading({ entries, loading, className = '' }) {
     if (!loading && entries.length === 0) return null
 
     return (
-        <div
-            className={`${className} relative overflow-hidden rounded-[22px] border border-[#e8e4ef]/70 bg-gradient-to-br from-white/75 via-[#faf8ff]/85 to-[#f3f0ff]/80 shadow-[0_12px_40px_-12px_rgba(120,100,80,0.08)] ring-1 ring-[#e8e4ef]/60 backdrop-blur-sm sm:rounded-[26px]`}
-        >
-            <div
-                className="pointer-events-none absolute -left-10 top-1/2 h-28 w-28 -translate-y-1/2 rounded-full bg-[#fdba74]/25 blur-2xl"
-                aria-hidden
-            />
-            <div className="relative flex items-center justify-between gap-3 px-4 pb-3 pt-4 sm:px-5 sm:pb-3.5 sm:pt-5">
-                <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffedd5] to-[#fce7f3] text-[#9d174d] shadow-sm ring-2 ring-white">
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+        <div className={`relative border-l-4 border-l-amber-400 pl-4 sm:pl-5 ${className}`}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-100 text-amber-900 shadow-sm ring-1 ring-amber-200/80">
+                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75v14.25A8.987 8.987 0 0112 18c2.305 0 4.408.867 6 2.292V7.758a8.982 8.982 0 00-6-1.508z" />
                         </svg>
                     </span>
-                    <div className="min-w-0">
-                        <p className="font-['Georgia',serif] text-[13px] font-semibold italic tracking-tight text-[#1a1628] sm:text-[14px]">
-                            Your shelf
-                        </p>
-                        <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[#7c7794]">Pick up where you left off</p>
+                    <div className="min-w-0 pt-0.5">
+                        <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Reading</p>
+                        <h3 className="text-[16px] font-black leading-tight tracking-tight text-slate-900 sm:text-[17px]">Manga shelf</h3>
+                        <p className="mt-1 text-[12px] leading-snug text-slate-600">Continue from your last chapter.</p>
                     </div>
                 </div>
                 <Link
                     to={MANGA_HUB_PATH}
-                    className="shrink-0 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-[#b45309] shadow-sm ring-1 ring-[#fed7aa] transition hover:bg-[#fff7ed] hover:ring-[#fdba74]"
+                    className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 self-start rounded-xl bg-amber-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-amber-700 sm:min-h-0 sm:shrink-0 sm:px-3 sm:py-2 ${hubRailFocusRing}`}
                 >
-                    Open manga →
+                    Library
+                    <span className="opacity-80" aria-hidden>
+                        →
+                    </span>
                 </Link>
             </div>
-            <div className="relative flex max-w-full min-w-0 gap-3.5 overflow-x-auto overflow-y-hidden px-4 pb-5 pt-1 sm:gap-4 sm:px-5 sm:pb-6 snap-x snap-mandatory hide-scrollbar overscroll-x-contain scroll-pl-4 scroll-pr-4 sm:scroll-pl-5 sm:scroll-pr-5">
+
+            <div className="relative mt-5 flex min-w-0 w-full gap-3.5 overflow-x-auto overflow-y-hidden scroll-pl-1 scroll-pr-4 pb-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:none] snap-x snap-mandatory sm:gap-4 sm:scroll-pr-2 [&::-webkit-scrollbar]:hidden">
                 {loading && entries.length === 0 ? (
                     <LifesyncHubMangaRailSkeleton count={5} />
                 ) : (
-                    entries.slice(0, 12).map(entry => {
+                    entries.slice(0, 12).map((entry) => {
                         const { to, state } = hubMangaResumeTarget(entry)
                         return (
-                          <Link
-                              key={`${entry.source}-${entry.mangaId}`}
-                              to={to}
-                              state={state ?? undefined}
-                              className="group relative w-[88px] shrink-0 snap-start sm:w-[96px]"
-                          >
-                              <div className="overflow-hidden rounded-[14px] border-2 border-white bg-white shadow-[4px_6px_0_0_rgba(251,191,36,0.4)] ring-1 ring-[#fde68a]/80 transition-all group-hover:-translate-y-0.5 group-hover:shadow-[6px_8px_0_0_rgba(244,114,182,0.35)] sm:rounded-2xl">
-                                  <div className="relative aspect-[2/3] bg-gradient-to-br from-[#fff7ed] to-[#fdf2f8]">
-                                      {entry.coverUrl ? (
-                                          <LifesyncEpisodeThumbnail
-                                              src={entry.coverUrl}
-                                              className="absolute inset-0 h-full w-full"
-                                              imgClassName="h-full w-full object-cover"
-                                              imgProps={mangadexImageProps(entry.coverUrl)}
-                                          />
-                                      ) : null}
-                                      <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 via-black/10 to-transparent pb-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                          <span className="rounded-full bg-[#C6FF00] px-2.5 py-1 text-[8px] font-bold uppercase tracking-wide text-[#1a1628] shadow-md ring-1 ring-black/10">
-                                              Resume
-                                          </span>
-                                      </div>
-                                      {entry.hasNewChapter && (
-                                          <span
-                                              className="absolute left-2 top-2 rounded-full bg-[#fef08a] px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-wide text-[#854d0e] shadow-sm ring-1 ring-white"
-                                              title="New chapter"
-                                          >
-                                              New
-                                          </span>
-                                      )}
-                                  </div>
-                              </div>
-                              <p className="mt-2 line-clamp-2 text-[9px] font-semibold leading-tight text-[#1a1628]">{entry.title}</p>
-                          </Link>
+                            <Link
+                                key={`${entry.source}-${entry.mangaId}-${entry.lastChapterId || 'unknown'}`}
+                                to={to}
+                                state={state ?? undefined}
+                                className={`group w-[112px] shrink-0 snap-start sm:w-[118px] ${hubRailFocusRing} rounded-2xl outline-none`}
+                            >
+                                <div className="overflow-hidden rounded-2xl bg-amber-50/80 shadow-sm ring-1 ring-amber-200/70 transition duration-300 group-active:scale-[0.98] group-hover:shadow-md group-hover:ring-amber-300">
+                                    <div className="relative aspect-[2/3] bg-amber-100/80">
+                                        {entry.coverUrl ? (
+                                            <LifesyncEpisodeThumbnail
+                                                src={entry.coverUrl}
+                                                className="absolute inset-0 h-full w-full"
+                                                imgClassName="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
+                                                imgProps={mangadexImageProps(entry.coverUrl)}
+                                            />
+                                        ) : null}
+                                        <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-white/75 via-transparent to-transparent pb-3 opacity-100 transition duration-200 sm:opacity-0 sm:group-hover:opacity-100">
+                                            <span className="rounded-full bg-[#C6FF00] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-900">
+                                                Resume
+                                            </span>
+                                        </div>
+                                        {entry.hasNewChapter ? (
+                                            <span
+                                                className="absolute left-2 top-2 z-1 rounded-md bg-[#C6FF00] px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wide text-slate-900 shadow-sm ring-1 ring-white/90"
+                                                title="New chapter"
+                                            >
+                                                New
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                    <div className="border-t border-amber-200/90 bg-white px-2 py-2">
+                                        <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-slate-900">{entry.title}</p>
+                                    </div>
+                                </div>
+                            </Link>
                         )
                     })
                 )}

@@ -4,6 +4,7 @@ import { useLifeSync } from "../context/LifeSyncContext"
 import { supabase } from "../lib/supabase"
 import { useSearchParams } from "react-router-dom"
 import GithubIntegrations from "../components/GithubIntegrations"
+import { getAnimeStreamAudio } from "../lib/lifesyncApi"
 import {
     isLifeSyncReduceAnimationsEnabled,
     notifyReduceMotionPreferenceChanged,
@@ -54,15 +55,12 @@ export default function Profile() {
     const [error, setError] = useState("")
     const [imgError, setImgError] = useState(false)
     const [prefMotionBusy, setPrefMotionBusy] = useState(false)
+    const [prefsBusy, setPrefsBusy] = useState(false)
 
     const [fullName, setFullName] = useState("")
     const [username, setUsername] = useState("")
     const [phone, setPhone] = useState("")
     const [bio, setBio] = useState("")
-
-    const isAppleDevice = typeof navigator !== "undefined"
-        && (/Mac|iPhone|iPad|iPod/i.test(navigator.platform)
-            || (/Mac/i.test(navigator.userAgent) && "ontouchend" in document))
 
     useEffect(() => {
         if (user) {
@@ -111,8 +109,14 @@ export default function Profile() {
         || user?.user_metadata?.photo_url
         || null
 
+    const isAppleDevice = (() => {
+        if (typeof navigator === "undefined") return false
+        const ua = navigator.userAgent || ""
+        return /Macintosh|iPhone|iPad|iPod/i.test(ua)
+    })()
+
     return (
-        <div className="animate-in fade-in duration-500 flex min-h-0 w-full flex-1 flex-col overflow-visible">
+        <div className={`animate-in fade-in duration-500 flex min-h-0 w-full flex-1 flex-col ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
 
             {/* Page header */}
             <div className="shrink-0 mb-4 px-0.5">
@@ -148,7 +152,7 @@ export default function Profile() {
                 </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-5 sm:gap-6 md:flex-row md:items-stretch overflow-visible">
+            <div className={`flex min-h-0 flex-1 flex-col gap-5 sm:gap-6 md:flex-row md:items-stretch ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
 
                 {/* Left sidebar nav */}
                 <div className="hidden md:block w-full md:w-[200px] lg:w-[220px] flex-shrink-0 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm p-3">
@@ -173,11 +177,8 @@ export default function Profile() {
                 </div>
 
                 {/* Main content */}
-                <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-visible">
-                    <div
-                        className={`min-h-0 flex-1 pr-0.5 ${isAppleDevice ? "h-full overflow-y-auto overscroll-contain hide-scrollbar touch-pan-y" : "overflow-visible"}`}
-                        style={isAppleDevice ? { WebkitOverflowScrolling: "touch" } : undefined}
-                    >
+                <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
+                    <div className={`min-h-0 flex-1 pr-0.5 ${isAppleDevice ? "overflow-y-auto overscroll-contain hide-scrollbar" : "overflow-visible"}`}>
                         {activeTab === "profile" && (
                             <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
 
@@ -351,18 +352,20 @@ export default function Profile() {
                         )}
 
                         {activeTab === "preferences" && (
-                            <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
-                                <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
-                                    <h2 className="text-[16px] font-bold text-[#1d1d1f]">Preferences</h2>
-                                    <p className="mt-0.5 text-[12px] text-[#86868b]">
-                                        These apply immediately. Connect LifeSync under Integrations to sync animation settings with your account.
-                                    </p>
-                                </div>
-                                <ul className="divide-y divide-[#f5f5f7]">
-                                    <li className="px-6 sm:px-8 py-5">
-                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="space-y-5 sm:space-y-6">
+                                <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                                    <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
+                                        <h2 className="text-[16px] font-bold text-[#1d1d1f]">Preferences</h2>
+                                        <p className="mt-0.5 text-[12px] text-[#86868b]">
+                                            App preferences apply immediately. LifeSync preferences sync only when your account is connected.
+                                        </p>
+                                    </div>
+
+                                    <div className="px-6 sm:px-8 py-5">
+                                        <div className="flex items-start justify-between gap-4">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-[#1d1d1f]">Reduce animations</p>
+                                                <p className="text-[12px] font-bold text-[#86868b] uppercase tracking-widest">App</p>
+                                                <p className="mt-1 text-[13px] font-semibold text-[#1d1d1f]">Reduce animations</p>
                                                 <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
                                                     Turns off transitions and decorative motion app-wide for less CPU/GPU use and a calmer UI.
                                                 </p>
@@ -389,20 +392,173 @@ export default function Profile() {
                                                         setPrefMotionBusy(false)
                                                     }
                                                 }}
-                                                className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "bg-[#C6FF00]" : "bg-[#d2d2d7]"} disabled:opacity-50`}
+                                                className={`relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "bg-[#C6FF00]" : "bg-[#d2d2d7]"} disabled:opacity-50`}
                                             >
                                                 <span
                                                     className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
                                                 />
                                             </button>
                                         </div>
-                                    </li>
-                                </ul>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                                    <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="min-w-0">
+                                            <p className="text-[12px] font-bold text-[#86868b] uppercase tracking-widest">LifeSync</p>
+                                            <h3 className="mt-1 text-[15px] font-bold text-[#1d1d1f]">LifeSync preferences</h3>
+                                            <p className="mt-0.5 text-[12px] text-[#86868b]">
+                                                NSFW access, MangaDex language filtering, and default anime audio.
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            {lifeSyncUser ? (
+                                                <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-[11px] font-bold text-emerald-700">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                    Connected
+                                                </span>
+                                            ) : (
+                                                <>
+                                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-1 text-[11px] font-bold text-[#86868b]">
+                                                        Not connected
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setActiveTab("integrations")}
+                                                        className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] whitespace-nowrap"
+                                                    >
+                                                        Connect LifeSync
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <ul className="divide-y divide-[#f5f5f7]">
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">NSFW content</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                        Allow mature catalog areas (e.g. Hentai Ocean, NSFW manga sources) when those plugins are enabled.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={prefsBusy || !lifeSyncUser}
+                                                    role="switch"
+                                                    aria-checked={Boolean(lifeSyncUser?.preferences?.nsfwContentEnabled)}
+                                                    onClick={async () => {
+                                                        if (!lifeSyncUser) return
+                                                        const next = !lifeSyncUser?.preferences?.nsfwContentEnabled
+                                                        setPrefsBusy(true)
+                                                        setError("")
+                                                        try {
+                                                            await lifeSyncUpdatePreferences({ nsfwContentEnabled: next })
+                                                        } catch (e) {
+                                                            setError(e?.message || "Could not save preference")
+                                                        } finally {
+                                                            setPrefsBusy(false)
+                                                        }
+                                                    }}
+                                                    className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${lifeSyncUser?.preferences?.nsfwContentEnabled ? "bg-[#C6FF00]" : "bg-[#d2d2d7]"} disabled:opacity-50`}
+                                                    title={!lifeSyncUser ? "Connect LifeSync under Integrations to edit" : undefined}
+                                                >
+                                                    <span
+                                                        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${lifeSyncUser?.preferences?.nsfwContentEnabled ? "translate-x-5" : ""}`}
+                                                    />
+                                                </button>
+                                            </div>
+                                        </li>
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">English manga only</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                        In LifeSync Manga, only list and search titles that have English chapter releases (MangaDex).
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={prefsBusy || !lifeSyncUser}
+                                                    role="switch"
+                                                    aria-checked={lifeSyncUser?.preferences?.mangaEnglishReleasesOnly !== false}
+                                                    onClick={async () => {
+                                                        if (!lifeSyncUser) return
+                                                        const next = !(lifeSyncUser?.preferences?.mangaEnglishReleasesOnly !== false)
+                                                        setPrefsBusy(true)
+                                                        setError("")
+                                                        try {
+                                                            await lifeSyncUpdatePreferences({ mangaEnglishReleasesOnly: next })
+                                                        } catch (e) {
+                                                            setError(e?.message || "Could not save preference")
+                                                        } finally {
+                                                            setPrefsBusy(false)
+                                                        }
+                                                    }}
+                                                    className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${lifeSyncUser?.preferences?.mangaEnglishReleasesOnly !== false ? "bg-[#C6FF00]" : "bg-[#d2d2d7]"} disabled:opacity-50`}
+                                                    title={!lifeSyncUser ? "Connect LifeSync under Integrations to edit" : undefined}
+                                                >
+                                                    <span
+                                                        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${lifeSyncUser?.preferences?.mangaEnglishReleasesOnly !== false ? "translate-x-5" : ""}`}
+                                                    />
+                                                </button>
+                                            </div>
+                                        </li>
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">Anime default audio</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                        Prefer subtitled (Japanese) or dubbed streams when the catalog offers both.
+                                                    </p>
+                                                </div>
+                                                <div
+                                                    className="inline-flex shrink-0 self-end rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] p-0.5 sm:self-auto"
+                                                    role="group"
+                                                    aria-label="Default anime audio"
+                                                    title={!lifeSyncUser ? "Connect LifeSync under Integrations to edit" : undefined}
+                                                >
+                                                    {(["sub", "dub"]).map((mode) => {
+                                                        const active = getAnimeStreamAudio(lifeSyncUser?.preferences) === mode
+                                                        const disabled = prefsBusy || !lifeSyncUser
+                                                        return (
+                                                            <button
+                                                                key={mode}
+                                                                type="button"
+                                                                disabled={disabled}
+                                                                onClick={async () => {
+                                                                    if (!lifeSyncUser) return
+                                                                    if (active) return
+                                                                    setPrefsBusy(true)
+                                                                    setError("")
+                                                                    try {
+                                                                        await lifeSyncUpdatePreferences({ animeStreamAudio: mode })
+                                                                    } catch (e) {
+                                                                        setError(e?.message || "Could not save preference")
+                                                                    } finally {
+                                                                        setPrefsBusy(false)
+                                                                    }
+                                                                }}
+                                                                className={`rounded-lg px-3.5 py-1.5 text-[11px] font-semibold transition-colors ${active
+                                                                    ? "bg-white text-[#1d1d1f] shadow-sm"
+                                                                    : "text-[#86868b] hover:text-[#1d1d1f]"
+                                                                    } disabled:opacity-50`}
+                                                            >
+                                                                {mode === "sub" ? "Sub" : "Dub"}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         )}
                         {activeTab === "integrations" && (
-                            <div className="min-w-0 overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
-                                <div className="border-b border-[#f0f0f0] px-5 pt-5 pb-4 sm:px-8 sm:pt-6">
+                            <div className="min-w-0 rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
+                                <div className="border-b border-[#f0f0f0] px-4 pt-5 pb-4 sm:px-8 sm:pt-6">
                                     <h2 className="text-[16px] font-bold text-[#1d1d1f]">Integrations</h2>
                                     <p className="mt-0.5 text-[12px] text-[#86868b]">
                                         Link LifeSync, GitHub, and external services.

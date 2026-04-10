@@ -23,6 +23,26 @@ export function useMangaReadingList({ enabled, nsfwEnabled }) {
     const [entries, setEntries] = useState([])
     const [loading, setLoading] = useState(false)
 
+    const dedupe = useCallback((raw) => {
+        const list = Array.isArray(raw) ? raw : []
+        const byKey = new Map()
+        for (const e of list) {
+            const source = String(e?.source || '').toLowerCase()
+            const mangaId = String(e?.mangaId || '').trim()
+            if (!source || !mangaId) continue
+            const key = `${source}:${mangaId}`
+            const prev = byKey.get(key)
+            if (!prev) {
+                byKey.set(key, e)
+                continue
+            }
+            const pt = prev?.updatedAt ? new Date(prev.updatedAt).getTime() : 0
+            const et = e?.updatedAt ? new Date(e.updatedAt).getTime() : 0
+            if (et >= pt) byKey.set(key, e)
+        }
+        return [...byKey.values()].sort((a, b) => (new Date(b.updatedAt) - new Date(a.updatedAt)))
+    }, [])
+
     const refresh = useCallback(async () => {
         if (!enabled) {
             setEntries([])
@@ -31,13 +51,14 @@ export function useMangaReadingList({ enabled, nsfwEnabled }) {
         setLoading(true)
         try {
             const d = await lifesyncFetch('/api/manga/reading')
-            setEntries(Array.isArray(d) ? d : d?.entries || [])
+            const next = Array.isArray(d) ? d : d?.entries || []
+            setEntries(dedupe(next))
         } catch {
             setEntries([])
         } finally {
             setLoading(false)
         }
-    }, [enabled])
+    }, [dedupe, enabled])
 
     useEffect(() => {
         void refresh()

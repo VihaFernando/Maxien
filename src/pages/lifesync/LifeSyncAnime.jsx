@@ -656,12 +656,12 @@ function DetailWatchSection({
             ) : null}
             {streamData && streamEps.length === 0 ? (
               <p className="text-[12px] text-[#86868b]">
-                No playable episodes were returned for this mirror.
+                No playable episodes were found for this mirror.
               </p>
             ) : null}
             {streamData === null ? (
               <p className="text-[12px] text-[#86868b]">
-                No streaming catalog matched this title on the mirror search.
+                We couldn’t find this title on the selected mirror. Try a different mirror.
               </p>
             ) : null}
           </MotionDiv>
@@ -675,7 +675,9 @@ function DetailWatchSection({
 function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview }) {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(true);
+  const [detailError, setDetailError] = useState("");
   const [descExpanded, setDescExpanded] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -687,6 +689,12 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
       .catch((err) => {
         if (err?.name === "AbortError") return;
         if (!cancelled) setData(null);
+        if (!cancelled) {
+          setDetailError(
+            err?.message ||
+              "We couldn’t load this title right now. Check your connection and try again.",
+          );
+        }
       })
       .finally(() => {
         if (!cancelled) setBusy(false);
@@ -695,7 +703,16 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
       cancelled = true;
       ac.abort();
     };
-  }, [animeId]);
+  }, [animeId, reloadTick]);
+
+  const triggerReload = useCallback(() => {
+    // Avoid synchronous setState inside the effect body (React can warn about cascading renders).
+    // This runs on user action, and `key={detailId}` remount already resets initial state on open.
+    setBusy(true);
+    setDetailError("");
+    setData(null);
+    setReloadTick((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -717,6 +734,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
   const description = data?.synopsis ? String(data.synopsis).trim() : "";
   const genres = Array.isArray(data?.genres) ? data.genres : [];
   const showPreviewMeta = busy && preview && !data;
+  const malUrl = animeId ? `https://myanimelist.net/anime/${encodeURIComponent(String(animeId))}` : null;
 
   const node = (
     <MotionDiv
@@ -843,7 +861,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                 ) : preview?.title ? (
                   preview.title
                 ) : !busy ? (
-                  "Couldn\u2019t load anime"
+                "Couldn\u2019t load details"
                 ) : (
                   <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[#ebebed]" />
                 )}
@@ -993,8 +1011,50 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
               </div>
             </MotionDiv>
           ) : !busy && !data ? (
-            <div className="px-5 py-8 text-center text-[13px] text-[#86868b] sm:px-6">
-              This title could not be loaded. Try again later.
+            <div className="px-5 py-8 sm:px-6">
+              <div className="rounded-2xl border border-[#e5e5ea] bg-[#fafafa] px-4 py-5 text-center">
+                <p className="text-[13px] font-semibold text-[#1d1d1f]">
+                  Couldn’t load this title
+                </p>
+                <p className="mt-1 text-[12px] text-[#86868b]">
+                  {detailError || "Try again in a moment, or open it on MyAnimeList."}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={triggerReload}
+                    className="min-h-[40px] rounded-xl bg-[#C6FF00] px-4 text-[12px] font-bold text-[#1a1628] shadow-sm ring-1 ring-black/10 transition hover:brightness-95"
+                  >
+                    Try again
+                  </button>
+                  {malUrl ? (
+                    <a
+                      href={malUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="min-h-[40px] rounded-xl border border-[#e5e5ea] bg-white px-4 text-[12px] font-semibold text-[#1d1d1f] transition hover:bg-[#fafafa]"
+                    >
+                      Open on MAL
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : busy ? (
+            <div className="px-5 py-6 sm:px-6">
+              <div className="rounded-2xl border border-[#e5e5ea] bg-white px-4 py-5">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-[#86868b]">
+                  Loading details
+                </p>
+                <div className="mt-3 space-y-2">
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-[#ebebed]" />
+                  <div className="h-3 w-full animate-pulse rounded bg-[#ebebed]" />
+                  <div className="h-3 w-5/6 animate-pulse rounded bg-[#ebebed]" />
+                </div>
+                <div className="mt-4">
+                  <DetailWatchGridSkeleton count={6} />
+                </div>
+              </div>
             </div>
           ) : null}
         </div>

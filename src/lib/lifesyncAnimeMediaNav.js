@@ -7,6 +7,7 @@ export function animeMediaSidebarItems(prefs) {
     const items = []
     if (isPluginEnabled(prefs, 'pluginAnimeEnabled')) {
         items.push({ id: 'anime', to: '/dashboard/lifesync/anime/anime', label: 'Anime' })
+        items.push({ id: 'calendar', to: '/dashboard/lifesync/anime/anime/calendar', label: 'Calendar' })
     }
     if (isPluginEnabled(prefs, 'pluginMangaEnabled')) {
         items.push({ id: 'manga', to: '/dashboard/lifesync/anime/manga', label: 'Manga' })

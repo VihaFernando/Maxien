@@ -10,6 +10,8 @@ const OAUTH_MESSAGES = {
     steam_error: { type: 'error', text: 'Steam OAuth failed. Check server configuration and try again.', redirect: '/dashboard/lifesync/games/steam' },
     mal_ok: { type: 'success', text: 'MyAnimeList linked successfully!', redirect: '/dashboard/lifesync/anime/anime' },
     mal_error: { type: 'error', text: 'MyAnimeList OAuth failed. Make sure MAL_CLIENT_ID is configured.', redirect: '/dashboard/lifesync/anime/anime' },
+    animeschedule_ok: { type: 'success', text: 'AnimeSchedule linked successfully!', redirect: '/dashboard/profile?tab=integrations' },
+    animeschedule_error: { type: 'error', text: 'AnimeSchedule OAuth failed. Make sure ANIMESCHEDULE_CLIENT_ID is configured.', redirect: '/dashboard/profile?tab=integrations' },
     invalid_state: { type: 'error', text: 'OAuth state was rejected (expired link or JWT_SECRET changed). Try connecting again.', redirect: '/dashboard/profile?tab=integrations' },
 }
 

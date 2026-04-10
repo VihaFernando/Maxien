@@ -9,6 +9,7 @@ import {
 } from '../../lib/lifesyncStreamCatalogCache'
 import { animePosterLayoutId } from '../../lib/lifesyncAnimeSharedLayout'
 import { peekAnimeWatchHandoff } from '../../lib/lifesyncWatchHandoff'
+import { LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT } from '../../hooks/useAnimeWatchHistory'
 import AdvancedVideoPlayer from '../../components/lifesync/AdvancedVideoPlayer'
 import {
     LifesyncEpisodeThumbnail,
@@ -142,6 +143,14 @@ export default function LifeSyncAnimeWatch() {
     const prevMalRef = useRef(/** @type {string | null} */ (null))
     const handoffHydratedRef = useRef(false)
     const [videoPreload, setVideoPreload] = useState('metadata')
+
+    const bumpWatchHistory = useCallback(() => {
+        try {
+            window.dispatchEvent(new Event(LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT))
+        } catch {
+            // ignore
+        }
+    }, [])
 
     const startSeasonLabel = useMemo(() => formatStartSeason(anime), [anime])
     const seriesSeasonOptions = useMemo(() => buildSeriesSeasonOptions(anime), [anime])
@@ -323,6 +332,7 @@ export default function LifeSyncAnimeWatch() {
             epForStream?.episodeId
         ) {
             setStream({ ...s, resolving: false })
+            bumpWatchHistory()
             skipStreamResolveOnceRef.current = true
             setVideoPreload('auto')
             const av = s.audioAvailability
@@ -336,7 +346,7 @@ export default function LifeSyncAnimeWatch() {
         }
 
         stripHandoffState()
-    }, [episodeIndex, location.pathname, location.search, location.state?.from, location.state?.handoffId, malId, navigate])
+    }, [episodeIndex, location.pathname, location.search, location.state?.from, location.state?.handoffId, malId, navigate, bumpWatchHistory])
 
     useEffect(() => {
         if (prevMalRef.current === null) {
@@ -435,6 +445,7 @@ export default function LifeSyncAnimeWatch() {
                     setAudioOverride(prev => (prev === 'dub' ? null : prev))
                 }
                 setStream({ ...resolved, resolving: false })
+                bumpWatchHistory()
             } catch (err) {
                 if (ac.signal.aborted) return
                 setStream({
@@ -448,7 +459,29 @@ export default function LifeSyncAnimeWatch() {
         return () => {
             ac.abort()
         }
-    }, [episodes, episodeIdx, isLifeSyncConnected, resolveAnimeStream, audioOverride, mirrorOverrideId])
+    }, [episodes, episodeIdx, isLifeSyncConnected, resolveAnimeStream, audioOverride, mirrorOverrideId, bumpWatchHistory])
+
+    // Persist “continue watching” progress (single slot per MAL title).
+    useEffect(() => {
+        if (!isLifeSyncConnected) return
+        if (!malId) return
+        const epObj = episodes?.[episodeIdx]
+        if (!epObj) return
+
+        const lastEpisodeNumber =
+            epObj?.number != null ? Math.max(1, Math.floor(Number(epObj.number) || 1)) : episodeIdx + 1
+
+        const ac = new AbortController()
+        void lifesyncFetch('/api/anime/watch-progress', {
+            method: 'PUT',
+            signal: ac.signal,
+            json: { malId, lastEpisodeNumber },
+        })
+            .then(() => bumpWatchHistory())
+            .catch(() => {})
+
+        return () => ac.abort()
+    }, [bumpWatchHistory, episodeIdx, episodes, isLifeSyncConnected, malId])
 
     const close = useCallback(() => navigate(closeTo, { replace: true }), [closeTo, navigate])
 
@@ -833,7 +866,7 @@ export default function LifeSyncAnimeWatch() {
                                                             <p className="mt-1 hidden text-[11px] leading-snug text-white/45 md:block">
                                                                 Only category can be changed here. Score and progress update when you watch or on MyAnimeList.
                                                             </p>
-                                                            <div className="mt-2 w-full md:mt-3 md:max-w-[11rem]">
+                                                            <div className="mt-2 w-full md:mt-3 md:max-w-44">
                                                                 <MalListStatusControl
                                                                     id={`watch-mal-status-${malId}`}
                                                                     malId={malId}

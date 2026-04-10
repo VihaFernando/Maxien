@@ -24,6 +24,7 @@ import LifeSyncSteam from './pages/lifesync/LifeSyncSteam'
 import LifeSyncWishlist from './pages/lifesync/LifeSyncWishlist'
 import LifeSyncXbox from './pages/lifesync/LifeSyncXbox'
 import LifeSyncAnime from './pages/lifesync/LifeSyncAnime'
+import LifeSyncAnimeCalendar from './pages/lifesync/LifeSyncAnimeCalendar'
 import LifeSyncManga from './pages/lifesync/LifeSyncManga'
 import LifeSyncHentai from './pages/lifesync/LifeSyncHentai'
 import LifeSyncAnimeMediaLayout from './pages/lifesync/LifeSyncAnimeMediaLayout'
@@ -33,6 +34,7 @@ import GlobalCommandPalette from './components/GlobalCommandPalette'
 import './App.css'
 
 const LifeSyncAnimeWatch = lazy(() => import('./pages/lifesync/LifeSyncAnimeWatch'))
+const LifeSyncMangaRead = lazy(() => import('./pages/lifesync/LifeSyncMangaRead'))
 
 function App() {
   return (
@@ -70,6 +72,15 @@ function App() {
                   </Suspense>
                 }
               />
+              <Route
+                path="manga/read/:mangaId/:chapterId"
+                element={
+                  <Suspense fallback={null}>
+                    <LifeSyncMangaRead />
+                  </Suspense>
+                }
+              />
+              <Route path="anime/calendar" element={<LifeSyncAnimeCalendar />} />
               <Route path="anime/*" element={<LifeSyncAnime />} />
               <Route path="manga/*" element={<LifeSyncManga />} />
               <Route path="hentai/*" element={<LifeSyncHentai />} />

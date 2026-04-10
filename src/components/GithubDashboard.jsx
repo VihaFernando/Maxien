@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 const LANG_COLORS = {
@@ -150,13 +150,15 @@ export default function GithubDashboard() {
     const [loadingCommits, setLoadingCommits] = useState(false)
     const [selectedRepo, setSelectedRepo] = useState(null)
 
+    const loadReqIdRef = useRef(0)
+    const loadAbortRef = useRef(null)
+
     useEffect(() => {
         if (user) {
             const token = user.user_metadata?.github_token
             const cached = localStorage.getItem("github_token")
             const useToken = token || cached
             setGhToken(useToken || null)
-            if (useToken) loadGithubData(useToken)
 
             const pendingToken = localStorage.getItem("github_token_pending")
             if (pendingToken && !useToken) {
@@ -165,7 +167,6 @@ export default function GithubDashboard() {
                         localStorage.removeItem("github_token_pending")
                         localStorage.setItem("github_token", pendingToken)
                         setGhToken(pendingToken)
-                        loadGithubData(pendingToken)
                     })
                     .catch(err => console.error("Failed to save GitHub token:", err))
             }
@@ -174,7 +175,8 @@ export default function GithubDashboard() {
 
     useEffect(() => {
         const cached = localStorage.getItem("github_token")
-        if (cached) { setGhToken(cached); loadGithubData(cached) }
+        // Avoid double-loading if user effect already resolved a token quickly.
+        if (cached) setGhToken(prev => prev ?? cached)
     }, [])
 
     useEffect(() => {
@@ -182,25 +184,43 @@ export default function GithubDashboard() {
         else localStorage.removeItem("github_token")
     }, [ghToken])
 
+    useEffect(() => {
+        if (!ghToken) return
+        loadGithubData(ghToken)
+        return () => {
+            if (loadAbortRef.current) {
+                loadAbortRef.current.abort()
+                loadAbortRef.current = null
+            }
+        }
+    }, [ghToken])
+
     const loadGithubData = async (token) => {
+        const reqId = ++loadReqIdRef.current
+
+        if (loadAbortRef.current) loadAbortRef.current.abort()
+        const ac = new AbortController()
+        loadAbortRef.current = ac
+
         setGhLoading(true)
         try {
             const headers = { Authorization: `token ${token}`, Accept: "application/vnd.github.v3+json" }
             const [userRes, reposRes, issuesRes] = await Promise.all([
-                fetch("https://api.github.com/user", { headers }),
-                fetch("https://api.github.com/user/repos?sort=updated&per_page=15&type=owner", { headers }),
-                fetch("https://api.github.com/user/issues?state=open&per_page=20", { headers }),
+                fetch("https://api.github.com/user", { headers, signal: ac.signal }),
+                fetch("https://api.github.com/user/repos?sort=updated&per_page=15&type=owner", { headers, signal: ac.signal }),
+                fetch("https://api.github.com/user/issues?state=open&per_page=20", { headers, signal: ac.signal }),
             ])
             const [userData, reposData, issuesData] = await Promise.all([
                 userRes.json(), reposRes.json(), issuesRes.json()
             ])
+            if (ac.signal.aborted || reqId !== loadReqIdRef.current) return
             setGhUser(userData)
             if (Array.isArray(reposData)) {
                 setGhRepos(reposData)
                 const topRepos = reposData.slice(0, 5)
                 const results = await Promise.allSettled(
                     topRepos.map(repo =>
-                        fetch(`https://api.github.com/repos/${repo.full_name}/commits?per_page=5`, { headers })
+                        fetch(`https://api.github.com/repos/${repo.full_name}/commits?per_page=5`, { headers, signal: ac.signal })
                             .then(r => r.json())
                             .then(data => Array.isArray(data)
                                 ? data.map(c => ({ ...c, repoFullName: repo.full_name, repoName: repo.name }))
@@ -212,13 +232,14 @@ export default function GithubDashboard() {
                     .filter(r => r.status === "fulfilled")
                     .flatMap(r => r.value)
                     .sort((a, b) => new Date(b.commit.author.date) - new Date(a.commit.author.date))
+                if (ac.signal.aborted || reqId !== loadReqIdRef.current) return
                 setGhCommits(allCommits)
             }
             if (Array.isArray(issuesData)) setGhIssues(issuesData)
         } catch (e) {
-            console.error("GitHub data load failed:", e)
+            if (e?.name !== "AbortError") console.error("GitHub data load failed:", e)
         } finally {
-            setGhLoading(false)
+            if (reqId === loadReqIdRef.current) setGhLoading(false)
         }
     }
 
