@@ -39,6 +39,7 @@ import {
     DEX_TRANSLATION_LANG_OPTIONS,
     formatChapterLabel,
     mangadexImageProps,
+    resolveMangaCoverDisplayUrl,
 } from '../../lib/mangaChapterUtils'
 
 /** Expand/collapse for filter drawers (MangaDex toolbar, Manga District, DexGenreFilter). */
@@ -59,13 +60,13 @@ function mangaDetailPreviewFromCard(manga, source) {
         id: String(manga.id),
         source: src,
         title: manga.title,
-        coverUrl: manga.coverUrl,
+        coverUrl: resolveMangaCoverDisplayUrl(manga.coverUrl, src),
         tags: Array.isArray(manga.tags) ? manga.tags : undefined,
         status: manga.status,
         year: manga.year,
         author: manga.author,
         contentRating: manga.contentRating,
-        backgroundImageUrl: manga.backgroundImageUrl,
+        backgroundImageUrl: resolveMangaCoverDisplayUrl(manga.backgroundImageUrl, src),
         ratingAverage: manga.ratingAverage,
         ratings: manga.ratings,
     }
@@ -555,6 +556,8 @@ function DexGenreFilter({
 }
 
 const MangaCard = memo(function MangaCard({ manga, onClick }) {
+    const cardSrc = manga.source || 'mangadex'
+    const coverDisplayUrl = resolveMangaCoverDisplayUrl(manga.coverUrl, cardSrc)
     const rating = manga.ratings?.average ?? manga.ratingAverage
     const ratingNum = rating != null ? Number(rating) : null
     const showRating = ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0
@@ -587,12 +590,12 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
                             transition={lifeSyncSharedLayoutTransitionProps}
                             className="absolute inset-0"
                         >
-                            {manga.coverUrl ? (
+                            {coverDisplayUrl ? (
                                 <LifesyncEpisodeThumbnail
-                                    src={manga.coverUrl}
+                                    src={coverDisplayUrl}
                                     className="absolute inset-0 h-full w-full"
                                     imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                                    imgProps={mangadexImageProps(manga.coverUrl)}
+                                    imgProps={mangadexImageProps(coverDisplayUrl)}
                                 >
                                     {overlayBadges}
                                 </LifesyncEpisodeThumbnail>
@@ -603,12 +606,12 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
                                 </div>
                             )}
                         </MotionDiv>
-                    ) : manga.coverUrl ? (
+                    ) : coverDisplayUrl ? (
                         <LifesyncEpisodeThumbnail
-                            src={manga.coverUrl}
+                            src={coverDisplayUrl}
                             className="absolute inset-0 h-full w-full"
                             imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                            imgProps={mangadexImageProps(manga.coverUrl)}
+                            imgProps={mangadexImageProps(coverDisplayUrl)}
                         >
                             {overlayBadges}
                         </LifesyncEpisodeThumbnail>
@@ -771,8 +774,9 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
     const src = manga.source || source
     const mergedManga = { ...d, id: d.id || manga.id, source: src }
     const tagList = d.tags?.length ? d.tags : manga.tags
-    const coverImg = d.coverUrl || manga.coverUrl
-    const heroBannerUrl = d.backgroundImageUrl || manga.backgroundImageUrl || null
+    const coverImg = resolveMangaCoverDisplayUrl(d.coverUrl || manga.coverUrl, src)
+    const heroBannerUrl =
+        resolveMangaCoverDisplayUrl(d.backgroundImageUrl || manga.backgroundImageUrl, src) || null
     const heroBackdropUrl = heroBannerUrl || coverImg
     const blurDetailHero =
         src !== 'mangadistrict' && !heroBannerUrl && Boolean(coverImg)
@@ -814,7 +818,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                     {heroBackdropUrl && (
                         <>
                             <div className="absolute inset-0 overflow-hidden">
-                                <FadeInImg
+                                <img
                                     src={heroBackdropUrl}
                                     alt=""
                                     className={

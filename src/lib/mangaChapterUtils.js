@@ -6,11 +6,41 @@
  * @param {string|null|undefined} src
  * @returns {{ referrerPolicy?: 'no-referrer' }}
  */
+const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com', 'hentaifox.com'])
+
+/**
+ * Manga District / HentaiFox APIs may still return root-relative cover URLs; the detail sheet
+ * loads them as `<img src>` against this app’s origin unless expanded here.
+ * @param {string|null|undefined} src
+ * @param {string} [source] mangadistrict | hentaifox | mangadex
+ * @returns {string|null}
+ */
+export function resolveMangaCoverDisplayUrl(src, source) {
+    if (src == null || typeof src !== 'string') return null
+    const s = src.trim()
+    if (!s || s.startsWith('data:')) return null
+    if (s.startsWith('http://') || s.startsWith('https://')) return s
+    if (s.startsWith('//')) return `https:${s}`
+    const key = String(source || '').toLowerCase()
+    const origin =
+        key === 'mangadistrict'
+            ? 'https://mangadistrict.com'
+            : key === 'hentaifox'
+              ? 'https://hentaifox.com'
+              : ''
+    if (!origin) return s
+    if (s.startsWith('/')) return `${origin}${s}`
+    return `${origin}/${s.replace(/^\/+/, '')}`
+}
+
 export function mangadexImageProps(src) {
     if (src == null || typeof src !== 'string') return {}
     try {
         const host = new URL(src).hostname.toLowerCase()
         if (host === 'mangadex.org' || host.endsWith('.mangadex.org')) {
+            return { referrerPolicy: 'no-referrer' }
+        }
+        if (SCRAPER_IMAGE_ORIGINS.has(host) || [...SCRAPER_IMAGE_ORIGINS].some((d) => host.endsWith(`.${d}`))) {
             return { referrerPolicy: 'no-referrer' }
         }
         // MangaDex@Home nodes (`*.mangadex.network`) can be sensitive to referrer policy.
