@@ -3,6 +3,7 @@ import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useLifeSync } from "../context/LifeSyncContext"
 import { getLifesyncToken, isLifeSyncAnimeNavVisible } from "../lib/lifesyncApi"
+import { isLifeSyncAdmin } from "../lib/lifeSyncRoles"
 import { listMyWorkplaces, getWorkplacesByIds } from "../lib/workplaces"
 import {
     FaHome,
@@ -16,6 +17,7 @@ import {
     FaGithub,
     FaGamepad,
     FaFilm,
+    FaUserShield,
 } from "react-icons/fa"
 import AIShortcutHint from "../components/AIShortcutHint"
 
@@ -52,7 +54,14 @@ function WorkplaceTabLink({ to, label, active, onClick }) {
 
 export default function Dashboard() {
     const { user, loading, signOut } = useAuth()
-    const { lifeSyncLogout, isLifeSyncConnected, lifeSyncLoading, lifeSyncUser } = useLifeSync()
+    const {
+        lifeSyncLogout,
+        isLifeSyncConnected,
+        lifeSyncLoading,
+        lifeSyncUser,
+        lifeSyncBroadcast,
+        dismissLifeSyncBroadcast,
+    } = useLifeSync()
     const navigate = useNavigate()
     const location = useLocation()
     const openLifeSyncSettings = useCallback(() => {
@@ -160,16 +169,25 @@ export default function Dashboard() {
         ? profileName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
         : user?.email?.[0]?.toUpperCase() || "U"
 
-    const personalLinks = useMemo(() => ([
-        { to: "/dashboard", icon: FaHome, label: "Overview" },
-        { to: "/dashboard/github", icon: FaGithub, label: "GitHub" },
-        { to: "/dashboard/subscriptions", icon: FaWallet, label: "Subscriptions" },
-        { to: "/dashboard/tasks", icon: FaCheckSquare, label: "Tasks" },
-        { to: "/dashboard/projects", icon: FaFolder, label: "Projects" },
-        { to: "/dashboard/calendar", icon: FaCalendarAlt, label: "Calendar" },
-        { to: "/dashboard/notes", icon: FaStickyNote, label: "Notes" },
-        { to: "/dashboard/ai-assistant", icon: FaBrain, label: "AI Assistant" },
-    ]), [])
+    /** From LifeSync `/me` roles; also shown in Workplace sidebar (Admin was previously personal-only). */
+    const showLifeSyncAdminLink = useMemo(() => isLifeSyncAdmin(lifeSyncUser), [lifeSyncUser])
+
+    const personalLinks = useMemo(() => {
+        const base = [
+            { to: "/dashboard", icon: FaHome, label: "Overview" },
+            { to: "/dashboard/github", icon: FaGithub, label: "GitHub" },
+            { to: "/dashboard/subscriptions", icon: FaWallet, label: "Subscriptions" },
+            { to: "/dashboard/tasks", icon: FaCheckSquare, label: "Tasks" },
+            { to: "/dashboard/projects", icon: FaFolder, label: "Projects" },
+            { to: "/dashboard/calendar", icon: FaCalendarAlt, label: "Calendar" },
+            { to: "/dashboard/notes", icon: FaStickyNote, label: "Notes" },
+            { to: "/dashboard/ai-assistant", icon: FaBrain, label: "AI Assistant" },
+        ]
+        if (showLifeSyncAdminLink) {
+            base.push({ to: "/dashboard/admin", icon: FaUserShield, label: "Admin" })
+        }
+        return base
+    }, [showLifeSyncAdminLink])
 
     const selectedWorkplace = workplaces.find((item) => item.id === selectedWorkplaceId) || null
 
@@ -304,6 +322,18 @@ export default function Dashboard() {
                         active={currentTab === "roles"}
                         onClick={onItemClick}
                     />
+                    {showLifeSyncAdminLink ? (
+                        <>
+                            <div className="my-2 border-t border-[#e5e5ea] pt-2" aria-hidden />
+                            <SidebarLink
+                                to="/dashboard/admin"
+                                icon={FaUserShield}
+                                label="Admin"
+                                active={isActive("/dashboard/admin")}
+                                onClick={onItemClick}
+                            />
+                        </>
+                    ) : null}
                 </nav>
             )
         }
@@ -513,6 +543,24 @@ export default function Dashboard() {
                             </button>
                         </div>
                     )}
+                    {lifeSyncBroadcast?.message ? (
+                        <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-[12px] font-medium text-sky-950 flex items-start gap-3">
+                            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+                                <path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 10-2 0v3a1 1 0 002 0V6zm-1 8a1 1 0 100-2 1 1 0 000 2z" />
+                            </svg>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800/90">LifeSync message</p>
+                                <p className="mt-1 whitespace-pre-wrap break-words">{lifeSyncBroadcast.message}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={dismissLifeSyncBroadcast}
+                                className="shrink-0 text-sky-800/80 hover:text-sky-950 font-semibold"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    ) : null}
                     <Outlet />
                 </div>
             </main>

@@ -2,6 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import AdvancedVideoPlayer from '../../components/lifesync/AdvancedVideoPlayer'
+import { FadeInImg } from '../../components/lifesync/FadeInImg'
 import {
     LifesyncEpisodeThumbnail,
     LifesyncHentaiCatalogGridSkeleton,
@@ -471,7 +472,7 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                     {heroBackground && (
                         <>
                             <div className="absolute inset-0 overflow-hidden">
-                                <img
+                                <FadeInImg
                                     src={heroBackground}
                                     alt=""
                                     onError={() => {
@@ -503,7 +504,7 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                                 style={{ aspectRatio: '2/3' }}
                             >
                                 {coverImg ? (
-                                    <img src={coverImg} alt="" className="h-full w-full object-cover" />
+                                    <FadeInImg src={coverImg} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center">
                                         <svg className="w-10 h-10 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" /></svg>

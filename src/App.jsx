@@ -17,6 +17,7 @@ import Workplaces from './pages/Workplaces'
 import WorkplaceDetail from './pages/WorkplaceDetail'
 import Calendar from './pages/Calendar'
 import AIAssistant from './pages/AIAssistant'
+import LifeSyncAdmin from './pages/LifeSyncAdmin'
 import GithubCallback from './pages/GithubCallback'
 import Github from './pages/Github'
 import LifeSyncOAuthCallback from './pages/lifesync/LifeSyncOAuthCallback'
@@ -31,6 +32,8 @@ import LifeSyncAnimeMediaLayout from './pages/lifesync/LifeSyncAnimeMediaLayout'
 import { LifeSyncGamesHub, LifeSyncAnimeHub } from './pages/lifesync/LifeSyncCategoryHub'
 import FloatingAIChat from './components/FloatingAIChat'
 import GlobalCommandPalette from './components/GlobalCommandPalette'
+import PWAUpdatePrompt from './components/PWAUpdatePrompt'
+import PWAEngagementNotifications from './components/PWAEngagementNotifications'
 import './App.css'
 
 const LifeSyncAnimeWatch = lazy(() => import('./pages/lifesync/LifeSyncAnimeWatch'))
@@ -59,6 +62,7 @@ function App() {
             <Route path="workplaces" element={<Workplaces />} />
             <Route path="workplaces/:id" element={<WorkplaceDetail />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="admin" element={<LifeSyncAdmin />} />
             <Route path="github" element={<Github />} />
             <Route path="lifesync/games" element={<LifeSyncGamesHub />} />
             <Route path="lifesync/games/steam/*" element={<LifeSyncSteam />} />
@@ -110,6 +114,8 @@ function App() {
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         <GlobalCommandPalette />
+        <PWAUpdatePrompt />
+        <PWAEngagementNotifications />
         <FloatingAIChat />
         </LifeSyncMotionRoot>
         </LifeSyncProvider>

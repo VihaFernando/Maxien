@@ -17,6 +17,7 @@ function key(id) {
  *   anime: unknown,
  *   episodes: unknown[],
  *   stream: unknown,
+ *   streamCatalogMirror?: string,
  * }} payload
  * @returns {string} handoff id for `navigate(..., { state: { handoffId } })`
  */
@@ -33,6 +34,7 @@ export function stashAnimeWatchHandoff(payload) {
         anime: payload.anime ?? null,
         episodes: Array.isArray(payload.episodes) ? payload.episodes : [],
         stream: payload.stream ?? null,
+        streamCatalogMirror: payload.streamCatalogMirror ?? '',
       }),
     )
   } catch {
@@ -43,7 +45,7 @@ export function stashAnimeWatchHandoff(payload) {
 
 /**
  * @param {string} id
- * @returns {{ malId: string, episodeIndex: number, anime: unknown, episodes: unknown[], stream: unknown } | null}
+ * @returns {{ malId: string, episodeIndex: number, anime: unknown, episodes: unknown[], stream: unknown, streamCatalogMirror?: string } | null}
  */
 export function peekAnimeWatchHandoff(id) {
   if (!id || typeof sessionStorage === 'undefined') return null
@@ -73,6 +75,8 @@ export function peekAnimeWatchHandoff(id) {
       anime: row?.anime ?? null,
       episodes: Array.isArray(row?.episodes) ? row.episodes : [],
       stream: row?.stream ?? null,
+      streamCatalogMirror:
+        typeof row?.streamCatalogMirror === 'string' ? row.streamCatalogMirror : '',
     }
   } catch {
     try {

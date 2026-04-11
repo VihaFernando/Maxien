@@ -143,6 +143,10 @@ export default function LifeSyncAnimeWatch() {
     const prevMalRef = useRef(/** @type {string | null} */ (null))
     const handoffHydratedRef = useRef(false)
     const [videoPreload, setVideoPreload] = useState('metadata')
+    const [streamCatalogMirror, setStreamCatalogMirror] = useState(() => {
+        const m = location.state?.streamCatalogMirror
+        return typeof m === 'string' && m.toLowerCase() === 'kickassanime' ? 'kickassanime' : ''
+    })
 
     const bumpWatchHistory = useCallback(() => {
         try {
@@ -304,6 +308,10 @@ export default function LifeSyncAnimeWatch() {
 
         handoffHydratedRef.current = true
 
+        if (String(row.streamCatalogMirror || '').toLowerCase() === 'kickassanime') {
+            setStreamCatalogMirror('kickassanime')
+        }
+
         if (row.episodeIndex !== episodeIndex) {
             if (Array.isArray(row.episodes) && row.episodes.length > 0) {
                 seedCatalogQuietRef.current = true
@@ -359,8 +367,12 @@ export default function LifeSyncAnimeWatch() {
             skipStreamResolveOnceRef.current = false
             handoffHydratedRef.current = false
             setVideoPreload('metadata')
+            const m = location.state?.streamCatalogMirror
+            setStreamCatalogMirror(
+                typeof m === 'string' && m.toLowerCase() === 'kickassanime' ? 'kickassanime' : '',
+            )
         }
-    }, [malId])
+    }, [location.state?.streamCatalogMirror, malId])
 
     useEffect(() => {
         if (!isLifeSyncConnected) return
@@ -380,7 +392,9 @@ export default function LifeSyncAnimeWatch() {
                         `/api/anime/details/${encodeURIComponent(malId)}?fields=related_anime,my_list_status`,
                         { signal: ac.signal }
                     ).catch(() => null),
-                    fetchStreamInfoByMalWithCache(malId, lifesyncFetch, { signal: ac.signal }).catch(() => null),
+                    fetchStreamInfoByMalWithCache(malId, lifesyncFetch, { signal: ac.signal }, {
+                        mirror: streamCatalogMirror === 'kickassanime' ? 'kickassanime' : '',
+                    }).catch(() => null),
                     lifesyncFetch(
                         `/api/anime/mal-episode-thumbnails/${encodeURIComponent(malId)}?audio=${audio}`,
                         { signal: ac.signal }
@@ -388,7 +402,11 @@ export default function LifeSyncAnimeWatch() {
                 ])
                 if (ac.signal.aborted) return
                 if (streamInfo?.data != null) {
-                    writeLifesyncStreamCatalogByMal(malId, streamInfo)
+                    writeLifesyncStreamCatalogByMal(
+                        malId,
+                        streamInfo,
+                        streamCatalogMirror === 'kickassanime' ? 'kickassanime' : '',
+                    )
                 }
                 setAnime(detail || null)
                 const thumbMap =
@@ -411,7 +429,7 @@ export default function LifeSyncAnimeWatch() {
         return () => {
             ac.abort()
         }
-    }, [isLifeSyncConnected, malId, streamAudioType])
+    }, [isLifeSyncConnected, malId, streamAudioType, streamCatalogMirror])
 
     useEffect(() => {
         if (!isLifeSyncConnected) return

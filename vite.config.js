@@ -15,7 +15,8 @@ export default defineConfig(() => {
             react(),
             tailwindcss(),
             VitePWA({
-                registerType: 'autoUpdate',
+                // Prompt mode: new SW waits until the user chooses "Update" (see PWAUpdatePrompt).
+                registerType: 'prompt',
                 includeAssets: ['logopwa.svg'],
                 workbox: {
                     // Default is 2 MiB; this app’s main bundle can exceed that.
@@ -58,6 +59,13 @@ export default defineConfig(() => {
                             proxyReq.setHeader('X-Forwarded-Proto', proto)
                         })
                     },
+                },
+                /** LifeSync admin Socket.IO (namespace `/admin`, path `/socket.io`) */
+                '/socket.io': {
+                    target: proxyTarget,
+                    changeOrigin: true,
+                    ws: true,
+                    secure: false,
                 },
             },
         },

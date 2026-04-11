@@ -25,6 +25,7 @@ const SPOTLIGHT_ROTATE_MS = 8000
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
     if (source === 'hentaifox') return 'HentaiFox'
+    if (source === 'mangahere') return 'MangaHere'
     return source || 'MangaDex'
 }
 

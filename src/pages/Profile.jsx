@@ -10,7 +10,11 @@ import {
     notifyReduceMotionPreferenceChanged,
     writeStoredReduceAnimationsSetting,
 } from "../lib/lifeSyncReduceMotion"
-
+import {
+    engagementNotificationsSupported,
+    readPwaEngagementNotificationsEnabled,
+    writePwaEngagementNotificationsEnabled,
+} from "../lib/pwaNotifications"
 const NAV = [
     {
         id: "profile", label: "Profile",
@@ -56,6 +60,8 @@ export default function Profile() {
     const [imgError, setImgError] = useState(false)
     const [prefMotionBusy, setPrefMotionBusy] = useState(false)
     const [prefsBusy, setPrefsBusy] = useState(false)
+    const [engageNotifs, setEngageNotifs] = useState(() => readPwaEngagementNotificationsEnabled())
+    const [engageBusy, setEngageBusy] = useState(false)
 
     const [fullName, setFullName] = useState("")
     const [username, setUsername] = useState("")
@@ -75,6 +81,31 @@ export default function Profile() {
         const nextTab = searchParams.get("tab") || "profile"
         setActiveTab(nextTab)
     }, [searchParams])
+
+    useEffect(() => {
+        const onChange = () => setEngageNotifs(readPwaEngagementNotificationsEnabled())
+        window.addEventListener("pwa-engagement-notifications-changed", onChange)
+        return () => window.removeEventListener("pwa-engagement-notifications-changed", onChange)
+    }, [])
+
+    useEffect(() => {
+        if (
+            readPwaEngagementNotificationsEnabled() &&
+            engagementNotificationsSupported() &&
+            Notification.permission === "denied"
+        ) {
+            writePwaEngagementNotificationsEnabled(false)
+            setEngageNotifs(false)
+        }
+    }, [])
+
+    /** If another device enabled tips in LifeSync, mirror locally. */
+    useEffect(() => {
+        if (lifeSyncUser?.preferences?.pwaEngagementNotifications === true) {
+            writePwaEngagementNotificationsEnabled(true)
+            setEngageNotifs(true)
+        }
+    }, [lifeSyncUser?.preferences?.pwaEngagementNotifications])
 
     const handleSave = async (e) => {
         e.preventDefault()
@@ -396,6 +427,93 @@ export default function Profile() {
                                             >
                                                 <span
                                                     className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
+                                                />
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[#f5f5f7] pt-6">
+                                            <div className="min-w-0">
+                                                <p className="text-[13px] font-semibold text-[#1d1d1f]">Tips & reminders</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                    Occasional nudges for manga, anime, and Steam wishlist deals. They only
+                                                    appear while Maxien has an open tab and your browser allows notifications.
+                                                </p>
+                                                {!engagementNotificationsSupported() && (
+                                                    <p className="mt-2 text-[12px] text-amber-700">
+                                                        Notifications are not available in this browser.
+                                                    </p>
+                                                )}
+                                                {engagementNotificationsSupported() && Notification.permission === "denied" && (
+                                                    <p className="mt-2 text-[12px] text-amber-700">
+                                                        Notifications are blocked for this site — change it in browser or OS
+                                                        settings to turn this on.
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                disabled={engageBusy || !engagementNotificationsSupported()}
+                                                role="switch"
+                                                aria-checked={engageNotifs}
+                                                onClick={async () => {
+                                                    if (!engagementNotificationsSupported()) return
+                                                    const next = !engageNotifs
+                                                    if (!next) {
+                                                        writePwaEngagementNotificationsEnabled(false)
+                                                        setEngageNotifs(false)
+                                                        setError("")
+                                                        setEngageBusy(true)
+                                                        try {
+                                                            if (lifeSyncUser) {
+                                                                await lifeSyncUpdatePreferences({
+                                                                    pwaEngagementNotifications: false,
+                                                                })
+                                                            }
+                                                        } catch (e) {
+                                                            setError(e?.message || "Could not turn off reminders")
+                                                        } finally {
+                                                            setEngageBusy(false)
+                                                        }
+                                                        return
+                                                    }
+                                                    setEngageBusy(true)
+                                                    setError("")
+                                                    try {
+                                                        let perm = Notification.permission
+                                                        if (perm === "default") {
+                                                            perm = await Notification.requestPermission()
+                                                        }
+                                                        if (perm === "granted") {
+                                                            setError("")
+                                                            writePwaEngagementNotificationsEnabled(true)
+                                                            setEngageNotifs(true)
+                                                            if (lifeSyncUser) {
+                                                                await lifeSyncUpdatePreferences({
+                                                                    pwaEngagementNotifications: true,
+                                                                })
+                                                            }
+                                                        } else {
+                                                            writePwaEngagementNotificationsEnabled(false)
+                                                            setEngageNotifs(false)
+                                                            setError(
+                                                                "Notifications are blocked. Enable them in your browser or system settings for this site.",
+                                                            )
+                                                        }
+                                                    } catch (e) {
+                                                        setError(e?.message || "Could not enable reminders")
+                                                    } finally {
+                                                        setEngageBusy(false)
+                                                    }
+                                                }}
+                                                className={`relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors ${engageNotifs ? "bg-[#C6FF00]" : "bg-[#d2d2d7]"} disabled:opacity-50`}
+                                                title={
+                                                    !engagementNotificationsSupported()
+                                                        ? "Not supported in this browser"
+                                                        : undefined
+                                                }
+                                            >
+                                                <span
+                                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${engageNotifs ? "translate-x-5" : ""}`}
                                                 />
                                             </button>
                                         </div>

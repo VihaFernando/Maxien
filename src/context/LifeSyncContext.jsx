@@ -21,6 +21,7 @@ import {
     notifyReduceMotionPreferenceChanged,
     writeStoredReduceAnimationsSetting,
 } from '../lib/lifeSyncReduceMotion'
+import { connectLifeSyncUserBroadcastSocket } from '../lib/lifeSyncUserBroadcastSocket'
 
 const LifeSyncContext = createContext(null)
 
@@ -31,6 +32,23 @@ export function LifeSyncProvider({ children }) {
     const [lastError, setLastError] = useState(null)
     /** Bumped when the LifeSync token is cleared so the no-token effect can re-run (e.g. invalid JWT on mount). */
     const [lifeSyncTokenClears, setLifeSyncTokenClears] = useState(0)
+    /** Server broadcast (operators → all connected LifeSync clients). */
+    const [lifeSyncBroadcast, setLifeSyncBroadcast] = useState(null)
+
+    /** Same `roles` as `GET /api/auth/me`, included on login/register/Supabase exchange so the UI can show Admin before `/me` returns. */
+    const applyLifesyncAuthSnapshot = useCallback((data) => {
+        if (!data || typeof data !== 'object') return
+        const u = data.user
+        const roles = data.roles
+        if (!u || typeof u !== 'object' || !roles || typeof roles !== 'object') return
+        setLifeSyncUser((prev) => ({
+            ...(prev && typeof prev === 'object' ? prev : {}),
+            id: u.id,
+            email: u.email,
+            name: u.name,
+            roles,
+        }))
+    }, [])
 
     const refreshMe = useCallback(async () => {
         const token = getLifesyncToken()
@@ -115,6 +133,7 @@ export function LifeSyncProvider({ children }) {
                     if (cancelled) return
                     if (data?.token) {
                         setLifesyncToken(data.token)
+                        applyLifesyncAuthSnapshot(data)
                         const me = await lifesyncGetMe()
                         if (!cancelled) {
                             if (me?.preferences && typeof me.preferences.reduceAnimations === 'boolean') {
@@ -143,6 +162,7 @@ export function LifeSyncProvider({ children }) {
         authUser?.id,
         authUser?.email,
         lifeSyncTokenClears,
+        applyLifesyncAuthSnapshot,
     ])
 
     /** Connect / Integrations: passwordless link using current Supabase session (creates LifeSync user if needed). */
@@ -161,30 +181,33 @@ export function LifeSyncProvider({ children }) {
         const data = await lifesyncLoginWithSupabase(t)
         if (data?.token) {
             setLifesyncToken(data.token)
+            applyLifesyncAuthSnapshot(data)
             await refreshMe()
         }
         return data
-    }, [session?.access_token, authUser?.email, refreshMe])
+    }, [session?.access_token, authUser?.email, refreshMe, applyLifesyncAuthSnapshot])
 
     const login = useCallback(async (email, password) => {
         setLastError(null)
         const data = await apiLogin(email, password)
         if (data?.token) {
             setLifesyncToken(data.token)
+            applyLifesyncAuthSnapshot(data)
         }
         await refreshMe()
         return data
-    }, [refreshMe])
+    }, [refreshMe, applyLifesyncAuthSnapshot])
 
     const register = useCallback(async ({ email, password, name }) => {
         setLastError(null)
         const data = await apiRegister({ email, password, name })
         if (data?.token) {
             setLifesyncToken(data.token)
+            applyLifesyncAuthSnapshot(data)
         }
         await refreshMe()
         return data
-    }, [refreshMe])
+    }, [refreshMe, applyLifesyncAuthSnapshot])
 
     /**
      * After Maxien has verified the user: log in to LifeSync, or register if no account exists.
@@ -200,6 +223,7 @@ export function LifeSyncProvider({ children }) {
                 const data = await apiLogin(trimmedEmail, password)
                 if (data?.token) {
                     setLifesyncToken(data.token)
+                    applyLifesyncAuthSnapshot(data)
                 }
                 await refreshMe()
                 return { created: false, data }
@@ -213,6 +237,7 @@ export function LifeSyncProvider({ children }) {
                     })
                     if (data?.token) {
                         setLifesyncToken(data.token)
+                        applyLifesyncAuthSnapshot(data)
                     }
                     await refreshMe()
                     return { created: true, data }
@@ -229,15 +254,48 @@ export function LifeSyncProvider({ children }) {
                 }
             }
         },
-        [refreshMe]
+        [refreshMe, applyLifesyncAuthSnapshot]
     )
 
     const logout = useCallback(() => {
         setLifesyncToken(null)
         setLifeSyncUser(null)
         setLastError(null)
+        setLifeSyncBroadcast(null)
         setLifeSyncTokenClears((n) => n + 1)
     }, [])
+
+    const dismissLifeSyncBroadcast = useCallback(() => {
+        setLifeSyncBroadcast(null)
+    }, [])
+
+    /** Receive operator broadcasts on `/lifesync-broadcast` while a LifeSync JWT is present. */
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const token = getLifesyncToken()
+        if (!token) {
+            setLifeSyncBroadcast(null)
+            return undefined
+        }
+        const socket = connectLifeSyncUserBroadcastSocket({
+            onBroadcast: (payload) => {
+                if (payload && typeof payload === 'object') {
+                    setLifeSyncBroadcast({
+                        message: String(payload.message ?? ''),
+                        sentAt: payload.sentAt ? String(payload.sentAt) : new Date().toISOString(),
+                        fromUserId: payload.fromUserId != null ? String(payload.fromUserId) : '',
+                    })
+                }
+                window.dispatchEvent(new CustomEvent('maxien:lifesync-broadcast', { detail: payload }))
+            },
+            onConnectError: () => {},
+        })
+        if (!socket) return undefined
+        return () => {
+            socket.removeAllListeners()
+            socket.disconnect()
+        }
+    }, [lifeSyncUser?.id, lifeSyncTokenClears])
 
     const updatePlugins = useCallback(async (partial) => {
         const data = await lifesyncPostPlugins(partial)
@@ -278,8 +336,24 @@ export function LifeSyncProvider({ children }) {
             lifeSyncUpdatePlugins: updatePlugins,
             lifeSyncUpdatePreferences: updatePreferences,
             isLifeSyncConnected: Boolean(lifeSyncUser),
+            lifeSyncBroadcast,
+            dismissLifeSyncBroadcast,
         }),
-        [lifeSyncUser, loading, lastError, refreshMe, login, register, ensureAccount, connectWithSupabase, logout, updatePlugins, updatePreferences]
+        [
+            lifeSyncUser,
+            loading,
+            lastError,
+            refreshMe,
+            login,
+            register,
+            ensureAccount,
+            connectWithSupabase,
+            logout,
+            updatePlugins,
+            updatePreferences,
+            lifeSyncBroadcast,
+            dismissLifeSyncBroadcast,
+        ]
     )
 
     return (
