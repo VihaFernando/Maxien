@@ -73,7 +73,7 @@ export default function LifeSyncMangaRead() {
     const source = useMemo(() => {
         const s = location.state?.source || location.state?.src
         const v = String(s || '').trim()
-        return v === 'hentaifox' || v === 'mangadistrict' || v === 'mangahere' ? v : 'mangadex'
+        return v === 'hentaifox' || v === 'mangadistrict' ? v : 'mangadex'
     }, [location.state])
 
     const browseTranslatedLang = useMemo(() => {
@@ -115,7 +115,7 @@ export default function LifeSyncMangaRead() {
     const saveProgress = useCallback(async (manga, chapter) => {
         if (!manga?.id || !chapter?.id) return
         const src =
-            manga.source === 'mangadistrict' || manga.source === 'hentaifox' || manga.source === 'mangahere'
+            manga.source === 'mangadistrict' || manga.source === 'hentaifox'
                 ? manga.source
                 : 'mangadex'
         try {
@@ -207,17 +207,6 @@ export default function LifeSyncMangaRead() {
                         setSortedChapters(list)
                         setChapter(ch)
                     }
-                } else if (source === 'mangahere') {
-                    const data = await lifesyncFetch(`/api/manga/mangahere/info/${encodeURIComponent(mangaId)}`)
-                    const list = [...(data?.chapters || [])]
-                    list.sort(compareChapters)
-                    const ch = list.find(c => String(c?.id) === chapterId) || (list.length ? list[list.length - 1] : null)
-                    if (!ch) throw new Error('No chapters available.')
-                    if (!cancelled) {
-                        setManga({ ...data, source: 'mangahere' })
-                        setSortedChapters(list)
-                        setChapter(ch)
-                    }
                 } else {
                     const data = await lifesyncFetch(`/api/manga/hentaifox/info/${encodeURIComponent(mangaId)}`)
                     const list = [...(data?.chapters || [])]
@@ -255,9 +244,7 @@ export default function LifeSyncMangaRead() {
                     ? `/api/manga/hentaifox/chapter/${encodeURIComponent(chapter.id)}`
                     : manga.source === 'mangadistrict'
                         ? `/api/manga/mangadistrict/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
-                        : manga.source === 'mangahere'
-                            ? `/api/manga/mangahere/chapter?id=${encodeURIComponent(chapter.id)}`
-                            : `/api/manga/pages/${chapter.id}`
+                        : `/api/manga/pages/${chapter.id}`
             try {
                 const data = await lifesyncFetch(path)
                 if (!cancelled) setPack(data)
