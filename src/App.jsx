@@ -35,6 +35,8 @@ import './App.css'
 
 const LifeSyncAnimeWatch = lazy(() => import('./pages/lifesync/LifeSyncAnimeWatch'))
 const LifeSyncMangaRead = lazy(() => import('./pages/lifesync/LifeSyncMangaRead'))
+const LifeSyncMangaLibrary = lazy(() => import('./pages/lifesync/LifeSyncMangaLibrary'))
+const LifeSyncAnimeHistory = lazy(() => import('./pages/lifesync/LifeSyncAnimeHistory'))
 
 function App() {
   return (
@@ -77,6 +79,22 @@ function App() {
                 element={
                   <Suspense fallback={null}>
                     <LifeSyncMangaRead />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="manga/library"
+                element={
+                  <Suspense fallback={null}>
+                    <LifeSyncMangaLibrary />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="anime/history"
+                element={
+                  <Suspense fallback={null}>
+                    <LifeSyncAnimeHistory />
                   </Suspense>
                 }
               />

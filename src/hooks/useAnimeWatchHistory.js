@@ -4,9 +4,9 @@ import { lifesyncFetch } from '../lib/lifesyncApi'
 export const LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT = 'lifesync:anime-watch-history-updated'
 
 /**
- * @param {{ enabled: boolean }} opts
+ * @param {{ enabled: boolean, limit?: number }} opts
  */
-export function useAnimeWatchHistory({ enabled }) {
+export function useAnimeWatchHistory({ enabled, limit = 24 }) {
     const [entries, setEntries] = useState([])
     const [loading, setLoading] = useState(false)
 
@@ -17,14 +17,15 @@ export function useAnimeWatchHistory({ enabled }) {
         }
         setLoading(true)
         try {
-            const d = await lifesyncFetch('/api/anime/watch-history?limit=24')
+            const cap = Math.min(100, Math.max(1, Math.floor(Number(limit)) || 24))
+            const d = await lifesyncFetch(`/api/anime/watch-history?limit=${encodeURIComponent(String(cap))}`)
             setEntries(Array.isArray(d?.entries) ? d.entries : [])
         } catch {
             setEntries([])
         } finally {
             setLoading(false)
         }
-    }, [enabled])
+    }, [enabled, limit])
 
     useEffect(() => {
         void refresh()

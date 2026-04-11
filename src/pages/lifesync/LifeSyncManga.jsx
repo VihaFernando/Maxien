@@ -662,10 +662,16 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
     const [dexReadingStatus, setDexReadingStatus] = useState(null)
     const [dexReadingStatusBusy, setDexReadingStatusBusy] = useState(false)
     const [chapterLang, setChapterLang] = useState(() => (browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang))
+    /** `asc` = chapter 1 at top; `desc` = latest chapter at top */
+    const [chapterOrder, setChapterOrder] = useState('asc')
 
     useEffect(() => {
         setChapterLang(browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang)
     }, [manga?.id, browseTranslatedLang])
+
+    useEffect(() => {
+        setChapterOrder('asc')
+    }, [manga?.id])
 
     useEffect(() => {
         if (!manga?.id) return undefined
@@ -727,11 +733,24 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
         }
     }, [manga?.id, manga?.source, source, manga?.chapters, mangadexConnected, chapterLang])
 
-    const sortedChapters = useMemo(() => {
+    const chaptersInSeriesOrder = useMemo(() => {
         const list = chapters?.data ? [...chapters.data] : []
         list.sort(compareChapters)
         return list
     }, [chapters])
+
+    const displayChapters = useMemo(() => {
+        if (chapterOrder === 'desc') return [...chaptersInSeriesOrder].reverse()
+        return chaptersInSeriesOrder
+    }, [chaptersInSeriesOrder, chapterOrder])
+
+    const chapterSeriesIndex = useCallback(
+        ch => {
+            const i = chaptersInSeriesOrder.findIndex(c => String(c?.id) === String(ch?.id))
+            return i >= 0 ? i + 1 : 0
+        },
+        [chaptersInSeriesOrder],
+    )
 
     const chapterLangOptions = useMemo(() => {
         if (!manga) return DEX_TRANSLATION_LANG_OPTIONS
@@ -870,9 +889,9 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                 {d.contentRating && d.contentRating !== 'safe' && (
                                     <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase">{d.contentRating}</span>
                                 )}
-                                {sortedChapters.length > 0 && (
+                                {chaptersInSeriesOrder.length > 0 && (
                                     <span className="text-[10px] font-medium text-[#86868b] bg-[#f5f5f7] px-2 py-0.5 rounded-full">
-                                        {sortedChapters.length} ch.
+                                        {chaptersInSeriesOrder.length} ch.
                                     </span>
                                 )}
                                 {dexStats?.follows != null && dexStats.follows > 0 && (
@@ -996,64 +1015,104 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
 
                         {/* Chapters */}
                         <div>
-                            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                                <div className="flex flex-wrap items-center gap-2 min-w-0">
-                                    <h3 className="text-[13px] font-bold text-[#1d1d1f]">
-                                        {src === 'hentaifox' || src === 'mangadistrict' ? 'Chapters' : 'Chapters'}
-                                    </h3>
+                            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                    <h3 className="text-[13px] font-bold text-[#1d1d1f]">Chapters</h3>
                                     {src === 'mangadex' && (
                                         <select
                                             value={chapterLang}
                                             onChange={e => setChapterLang(e.target.value)}
-                                            className="rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1 text-[11px] font-medium text-[#1d1d1f] max-w-[200px]"
+                                            className="max-w-[200px] rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1 text-[11px] font-medium text-[#1d1d1f]"
                                         >
                                             {chapterLangOptions.map(o => (
                                                 <option key={o.value} value={o.value}>{o.label}</option>
                                             ))}
                                         </select>
                                     )}
+                                    <div
+                                        className="flex rounded-lg border border-[#e5e5ea] bg-[#fafafa] p-0.5"
+                                        role="group"
+                                        aria-label="Chapter list order"
+                                    >
+                                        <button
+                                            type="button"
+                                            onClick={() => setChapterOrder('asc')}
+                                            className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+                                                chapterOrder === 'asc'
+                                                    ? 'bg-white text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea]'
+                                                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                                            }`}
+                                        >
+                                            First → last
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setChapterOrder('desc')}
+                                            className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+                                                chapterOrder === 'desc'
+                                                    ? 'bg-white text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea]'
+                                                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                                            }`}
+                                        >
+                                            Last → first
+                                        </button>
+                                    </div>
                                     {src === 'mangadex' && mergedManga.id && (
                                         <a
                                             href={`https://mangadex.org/title/${mergedManga.id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-[11px] font-semibold text-[#FF6740] hover:underline shrink-0"
+                                            className="shrink-0 text-[11px] font-semibold text-[#FF6740] hover:underline"
                                         >
                                             Open on MangaDex
                                         </a>
                                     )}
                                 </div>
-                                {sortedChapters.length > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => onStartRead(mergedManga, sortedChapters[0], sortedChapters)}
-                                        className="flex items-center gap-1.5 rounded-lg bg-[#C6FF00] px-3 py-1.5 text-[11px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
-                                    >
-                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
-                                        Start reading
-                                    </button>
+                                {chaptersInSeriesOrder.length > 0 && (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                onStartRead(
+                                                    mergedManga,
+                                                    chaptersInSeriesOrder[chaptersInSeriesOrder.length - 1],
+                                                )
+                                            }
+                                            className="flex items-center gap-1.5 rounded-lg border border-[#e5e5ea] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1d1d1f] shadow-sm transition-all hover:bg-[#f5f5f7]"
+                                        >
+                                            Latest chapter
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => onStartRead(mergedManga, chaptersInSeriesOrder[0])}
+                                            className="flex items-center gap-1.5 rounded-lg bg-[#C6FF00] px-3 py-1.5 text-[11px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+                                        >
+                                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
+                                            Start from first
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                             {chapBusy ? (
                                 <LifesyncMangaChapterListSkeleton rows={8} />
-                            ) : sortedChapters.length === 0 ? (
-                                <div className="bg-[#f5f5f7] rounded-xl px-4 py-6 text-center">
+                            ) : chaptersInSeriesOrder.length === 0 ? (
+                                <div className="rounded-xl bg-[#f5f5f7] px-4 py-6 text-center">
                                     <p className="text-[12px] text-[#86868b]">
                                         {src === 'hentaifox' || src === 'mangadistrict' ? 'No chapters in listing.' : 'No chapters for this language filter.'}
                                     </p>
                                 </div>
                             ) : (
-                                <div className="rounded-xl border border-[#e5e5ea] overflow-hidden">
-                                    <ul className="max-h-80 overflow-y-auto divide-y divide-[#f0f0f0]">
-                                        {sortedChapters.map((ch, i) => (
+                                <div className="overflow-hidden rounded-xl border border-[#e5e5ea]">
+                                    <ul className="max-h-80 divide-y divide-[#f0f0f0] overflow-y-auto">
+                                        {displayChapters.map(ch => (
                                             <li key={ch.id}>
                                                 <button
                                                     type="button"
-                                                    onClick={() => onStartRead(mergedManga, ch, sortedChapters)}
-                                                    className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left hover:bg-[#f5f5f7] transition-colors group"
+                                                    onClick={() => onStartRead(mergedManga, ch)}
+                                                    className="group flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-[#f5f5f7]"
                                                 >
-                                                    <span className="shrink-0 w-7 h-7 rounded-lg bg-[#f5f5f7] group-hover:bg-[#C6FF00]/20 flex items-center justify-center text-[10px] font-bold text-[#86868b] group-hover:text-[#1d1d1f] transition-colors">
-                                                        {i + 1}
+                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f7] text-[10px] font-bold text-[#86868b] transition-colors group-hover:bg-[#C6FF00]/20 group-hover:text-[#1d1d1f]">
+                                                        {chapterSeriesIndex(ch) || '—'}
                                                     </span>
                                                     <span className="flex-1 min-w-0">
                                                         <span className="flex items-center gap-2 min-w-0">

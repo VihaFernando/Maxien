@@ -355,7 +355,7 @@ export function LifeSyncHubMangaReading({ entries, loading, className = '' }) {
                     </div>
                 </div>
                 <Link
-                    to={MANGA_HUB_PATH}
+                    to={`${MANGA_HUB_PATH}/library`}
                     className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 self-start rounded-xl bg-amber-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm transition hover:bg-amber-700 sm:min-h-0 sm:shrink-0 sm:px-3 sm:py-2 ${hubRailFocusRing}`}
                 >
                     Library

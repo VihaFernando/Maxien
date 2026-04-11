@@ -6,10 +6,10 @@ const ANIME_HUB_PATH = '/dashboard/lifesync/anime/anime'
 const focusRing =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white'
 
-/** Same shape as in-app `goToWatch` — must hit `LifeSyncAnime` (`anime/*`), not `anime/watch/*` (LifeSyncAnimeWatch). */
+/** Dedicated watch route (`LifeSyncAnimeWatch`); matches `goToWatch` in `LifeSyncAnime.jsx`. */
 function watchPath(malId, episode) {
     const ep = Math.max(1, Math.floor(Number(episode) || 1))
-    return `${ANIME_HUB_PATH}/seasonal/page/1/watch/${encodeURIComponent(String(malId))}/${ep}`
+    return `${ANIME_HUB_PATH}/watch/${encodeURIComponent(String(malId))}/${ep}`
 }
 
 /** Hub rail — anime watch resume strip. */
@@ -32,10 +32,10 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
                     </div>
                 </div>
                 <Link
-                    to={ANIME_HUB_PATH}
+                    to={`${ANIME_HUB_PATH}/history`}
                     className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 self-start rounded-xl bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 sm:min-h-0 sm:shrink-0 sm:px-3 sm:py-2 ${focusRing}`}
                 >
-                    Browse
+                    History
                     <span className="opacity-70" aria-hidden>
                         →
                     </span>

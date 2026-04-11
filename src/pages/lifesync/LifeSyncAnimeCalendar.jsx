@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight, FaStar, FaTimes } from "react-icons/fa";
 import { useLifeSync } from "../../context/LifeSyncContext";
 import { lifesyncFetch } from "../../lib/lifesyncApi";
@@ -12,7 +12,6 @@ import {
   lifeSyncStaggerItemFade,
   MotionDiv,
 } from "../../lib/lifesyncMotion";
-import { createPortal } from "react-dom";
 
 function isoDayKey(d) {
   try {
@@ -122,168 +121,10 @@ function formatClock(ms, tz) {
   }
 }
 
-function MalAnimeDetailsModal({ open, onClose, title, body, busy, error }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose?.();
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [onClose, open]);
-
-  if (!open) return null;
-
-  const pic =
-    body?.main_picture?.large ||
-    body?.main_picture?.medium ||
-    body?.images?.jpg?.large_image_url ||
-    body?.images?.jpg?.image_url ||
-    "";
-  const synopsis = safeString(body?.synopsis).trim();
-  const genres = Array.isArray(body?.genres) ? body.genres : [];
-  const score = body?.mean ?? body?.score ?? null;
-  const eps = body?.num_episodes ?? body?.episodes ?? null;
-  const status = body?.status ?? body?.airing ?? null;
-  const malId = normalizeMalId(body?.id ?? body?.mal_id);
-  const malUrl = malId ? `https://myanimelist.net/anime/${encodeURIComponent(malId)}` : null;
-
-  const node = (
-    <MotionDiv
-      className="fixed inset-0 z-[9999] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18 }}
-      onClick={onClose}
-    >
-      <MotionDiv
-        {...lifeSyncModalSlideProps}
-        className="relative w-full max-w-3xl overflow-hidden rounded-t-[28px] border border-white/35 bg-white shadow-2xl sm:rounded-[28px]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-[#eef2f7] px-5 py-4 sm:px-6">
-          <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#64748b]">
-              MyAnimeList
-            </p>
-            <h3 className="mt-1 line-clamp-2 text-[16px] font-black tracking-tight text-[#0f172a] sm:text-[18px]">
-              {title || "Anime details"}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#e2e8f0] bg-white text-[#475569] transition-colors hover:bg-[#f8fafc]"
-            aria-label="Close"
-          >
-            <FaTimes className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="grid gap-5 px-5 py-5 sm:grid-cols-[132px_1fr] sm:px-6 sm:py-6">
-          <div className="mx-auto w-[132px] overflow-hidden rounded-2xl bg-[#f1f5f9] ring-1 ring-black/5 sm:mx-0">
-            {pic ? (
-              <img src={pic} alt="" className="h-full w-full object-cover" loading="lazy" />
-            ) : (
-              <div className="aspect-[2/3] w-full bg-[linear-gradient(130deg,#f1f5f9,#e2e8f0)]" />
-            )}
-          </div>
-
-          <div className="min-w-0">
-            {busy ? (
-              <div className="space-y-3">
-                <div className="h-4 w-2/3 animate-pulse rounded bg-[#ebebed]" />
-                <div className="h-3 w-full animate-pulse rounded bg-[#ebebed]" />
-                <div className="h-3 w-5/6 animate-pulse rounded bg-[#ebebed]" />
-                <div className="h-3 w-4/5 animate-pulse rounded bg-[#ebebed]" />
-              </div>
-            ) : error ? (
-              <div className="rounded-2xl border border-red-100 bg-red-50 px-4 py-4 text-[12px] text-red-700">
-                {error}
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap items-center gap-2 text-[11px]">
-                  {score != null && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/20 px-2.5 py-1 font-semibold text-[#1e293b]">
-                      <FaStar className="h-3 w-3" aria-hidden />
-                      {score}
-                    </span>
-                  )}
-                  {eps != null && (
-                    <span className="rounded-full bg-[#f5f5f7] px-2.5 py-1 font-semibold text-[#334155]">
-                      {eps} ep
-                    </span>
-                  )}
-                  {status != null && (
-                    <span className="rounded-full bg-[#f5f5f7] px-2.5 py-1 font-medium text-[#64748b]">
-                      {safeString(status).replace(/_/g, " ")}
-                    </span>
-                  )}
-                </div>
-
-                {genres.length ? (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {genres.slice(0, 10).map((g) => (
-                      <span
-                        key={g.id || g.name}
-                        className="rounded-full bg-[#C6FF00]/10 px-2.5 py-1 text-[10px] font-medium text-[#1e293b]"
-                      >
-                        {g.name}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-
-                {synopsis ? (
-                  <p className="mt-3 text-[12px] leading-relaxed text-[#475569] line-clamp-7">
-                    {synopsis}
-                  </p>
-                ) : (
-                  <p className="mt-3 text-[12px] text-[#64748b]">
-                    No synopsis available.
-                  </p>
-                )}
-
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  {malUrl ? (
-                    <a
-                      href={malUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-[40px] items-center justify-center rounded-xl bg-[#2E51A2] px-4 text-[12px] font-bold text-white transition hover:brightness-95"
-                    >
-                      Open on MAL
-                    </a>
-                  ) : null}
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-[#e2e8f0] bg-white px-4 text-[12px] font-semibold text-[#0f172a] transition hover:bg-[#f8fafc]"
-                  >
-                    Close
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </MotionDiv>
-    </MotionDiv>
-  );
-
-  return createPortal(node, document.body);
-}
-
 export default function LifeSyncAnimeCalendar() {
-  const { isLifeSyncConnected, lifeSyncUser } = useLifeSync();
+  const { isLifeSyncConnected } = useLifeSync();
   const location = useLocation();
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -673,15 +514,6 @@ export default function LifeSyncAnimeCalendar() {
     const [query, setQuery] = useState("");
     const [activeKey, setActiveKey] = useState("");
 
-    const malLinked = Boolean(
-      lifeSyncUser?.integrations?.mal || lifeSyncUser?.integrations?.malUsername,
-    );
-
-    const [malModalOpen, setMalModalOpen] = useState(false);
-    const [malModalBusy, setMalModalBusy] = useState(false);
-    const [malModalError, setMalModalError] = useState("");
-    const [malModalTitle, setMalModalTitle] = useState("");
-    const [malModalBody, setMalModalBody] = useState(null);
     const malAbortRef = useRef(null);
 
     const title = selectedDate.toLocaleDateString("en-US", {
@@ -691,7 +523,7 @@ export default function LifeSyncAnimeCalendar() {
       year: "numeric",
     });
 
-    const normalizedItems = useMemo(() => {
+    const normalizedItems = (() => {
       const list = Array.isArray(itemsForSelectedDay) ? itemsForSelectedDay : [];
       return list.map((it, idx) => {
         const key = pinKeyFromItem(it);
@@ -710,7 +542,7 @@ export default function LifeSyncAnimeCalendar() {
           _rowKey: `${key || "row"}:${String(it?.malId || "")}:${String(it?.route || "")}:${String(it?.episodeNumber || "")}:${idx}`,
         };
       });
-    }, [itemsForSelectedDay, pinMap]);
+    })();
 
     const filteredItems = useMemo(() => {
       let list = normalizedItems;
@@ -774,63 +606,68 @@ export default function LifeSyncAnimeCalendar() {
       return filteredItems.find((x) => x._rowKey === activeKey) || null;
     }, [activeKey, filteredItems]);
 
-    const openMalDetails = useCallback(
-      async (it) => {
-        if (!it) return;
-        const titleForSearch = safeString(it?.title).trim();
-        const directMalId = normalizeMalId(it?.malId);
-        if (!malLinked) {
-          setMalModalTitle(titleForSearch || "MyAnimeList");
-          setMalModalBody(null);
-          setMalModalError("Link MyAnimeList in Integrations to load MAL details.");
-          setMalModalBusy(false);
-          setMalModalOpen(true);
-          return;
-        }
+    const openMalDetails = async (it) => {
+      if (!it) return;
+      const titleForSearch = safeString(it?.title).trim();
+      const directMalId = normalizeMalId(it?.malId);
 
-        // Cancel any in-flight modal requests.
-        if (malAbortRef.current) malAbortRef.current.abort();
-        const ac = new AbortController();
-        malAbortRef.current = ac;
+      // Cancel any in-flight lookups.
+      if (malAbortRef.current) malAbortRef.current.abort();
+      const ac = new AbortController();
+      malAbortRef.current = ac;
 
-        setMalModalTitle(titleForSearch || (directMalId ? `MAL #${directMalId}` : "MyAnimeList"));
-        setMalModalBody(null);
-        setMalModalError("");
-        setMalModalBusy(true);
-        setMalModalOpen(true);
-
-        try {
-          let malId = directMalId;
-          if (!malId) {
-            if (!titleForSearch) throw new Error("Missing title to search on MAL.");
-            const res = await lifesyncFetch(
-              `/api/anime/search?q=${encodeURIComponent(titleForSearch)}&limit=5&offset=0`,
-              { signal: ac.signal },
-            );
-            const rows = Array.isArray(res?.data) ? res.data : [];
-            const top = rows[0]?.node || rows[0] || null;
-            const candidateId = normalizeMalId(top?.id);
-            if (!candidateId) throw new Error("No MAL results found for this title.");
-            malId = candidateId;
+      try {
+        let malId = directMalId;
+        if (!malId) {
+          if (!titleForSearch) {
+            navigate(`/dashboard/lifesync/anime/anime/search/page/1?q=`);
+            setShowDayOverlay(false);
+            return;
           }
-
-          const detail = await lifesyncFetch(
-            `/api/anime/details/${encodeURIComponent(malId)}`,
+          const res = await lifesyncFetch(
+            `/api/anime/search?q=${encodeURIComponent(titleForSearch)}&limit=5&offset=0`,
             { signal: ac.signal },
           );
-          setMalModalTitle(detail?.title || titleForSearch || `MAL #${malId}`);
-          setMalModalBody(detail || null);
-          setMalModalError("");
-        } catch (e) {
-          if (e?.name === "AbortError") return;
-          setMalModalBody(null);
-          setMalModalError(e?.message || "Failed to load MAL details.");
-        } finally {
-          setMalModalBusy(false);
+          const rows = Array.isArray(res?.data) ? res.data : [];
+          const top = rows[0]?.node || rows[0] || null;
+          const candidateId = normalizeMalId(top?.id);
+          if (!candidateId) {
+            navigate(
+              `/dashboard/lifesync/anime/anime/search/page/1?q=${encodeURIComponent(
+                titleForSearch,
+              )}`,
+            );
+            setShowDayOverlay(false);
+            return;
+          }
+          malId = candidateId;
         }
-      },
-      [malLinked],
-    );
+
+        // Route-controlled detail overlay on the main Anime page.
+        // That page fetches MAL details + Anitaku episodes internally.
+        const preview = {
+          id: String(malId),
+          title: titleForSearch || safeString(it?.title).trim() || `MAL #${malId}`,
+          main_picture: it?.imageUrl
+            ? { large: String(it.imageUrl), medium: String(it.imageUrl) }
+            : undefined,
+        };
+        navigate(
+          `/dashboard/lifesync/anime/anime/seasonal/page/1/detail/${encodeURIComponent(
+            String(malId),
+          )}`,
+          { state: { animeDetailPreview: preview } },
+        );
+        setShowDayOverlay(false);
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        const q = titleForSearch || "";
+        navigate(
+          `/dashboard/lifesync/anime/anime/search/page/1?q=${encodeURIComponent(q)}`,
+        );
+        setShowDayOverlay(false);
+      }
+    };
 
     return (
       <MotionDiv
@@ -856,7 +693,7 @@ export default function LifeSyncAnimeCalendar() {
             </button>
 
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#64748b]">
-              Broadcast Command Panel
+              Anime day schedule
             </p>
             <h3 className="mt-1 pr-10 text-[19px] font-black tracking-tight text-[#0f172a] sm:text-[23px]">
               {title}
@@ -880,11 +717,11 @@ export default function LifeSyncAnimeCalendar() {
             </div>
           </div>
 
-          <div className="grid min-h-0 flex-1 lg:grid-cols-[240px_1fr_0.9fr]">
-            {/* Date rail */}
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[280px_1fr]">
+            {/* Left rail */}
             <aside className="border-b border-[#dbe4ef] bg-white/65 px-5 py-4 sm:px-7 lg:border-b-0 lg:border-r lg:min-h-0 lg:overflow-y-auto">
               <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
-                Dates
+                Controls
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
@@ -936,6 +773,58 @@ export default function LifeSyncAnimeCalendar() {
 
               <div className="mt-4 rounded-2xl border border-[#dbe4ef] bg-white/85 p-3">
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+                  Filter & sort
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFilterMode("all")}
+                    className={`rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-colors ${
+                      filterMode === "all"
+                        ? "bg-[#0f172a] text-white"
+                        : "bg-white text-[#334155] ring-1 ring-[#dbe4ef] hover:bg-[#f8fafc]"
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFilterMode("pinned")}
+                    className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-colors ${
+                      filterMode === "pinned"
+                        ? "bg-[#C6FF00] text-[#1e293b]"
+                        : "bg-white text-[#334155] ring-1 ring-[#dbe4ef] hover:bg-[#f8fafc]"
+                    }`}
+                  >
+                    <FaStar className="h-3 w-3" aria-hidden />
+                    Pinned
+                  </button>
+                </div>
+
+                <div className="mt-3 grid gap-2">
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setDayPageSize(20);
+                    }}
+                    placeholder="Search title or episode…"
+                    className="h-10 w-full rounded-xl border border-[#dbe4ef] bg-white px-3 text-[13px] text-[#1e293b] placeholder:text-[#94a3b8] focus:border-[#C6FF00]/70 focus:outline-none"
+                  />
+                  <select
+                    value={sortMode}
+                    onChange={(e) => setSortMode(String(e.target.value || "priority"))}
+                    className="h-10 w-full rounded-xl border border-[#dbe4ef] bg-white px-3 text-[12px] font-semibold text-[#334155] focus:border-[#C6FF00]/70 focus:outline-none"
+                  >
+                    <option value="priority">Sort: Priority</option>
+                    <option value="time">Sort: Air time</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-[#dbe4ef] bg-white/85 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
                   Priority Queue
                 </p>
                 {pinnedPreview.length ? (
@@ -963,296 +852,225 @@ export default function LifeSyncAnimeCalendar() {
               </div>
             </aside>
 
-            {/* Episode list */}
-            <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
-              <div className="mb-4 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setFilterMode("all")}
-                  className={`rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-colors ${
-                    filterMode === "all"
-                      ? "bg-[#0f172a] text-white"
-                      : "bg-white text-[#334155] ring-1 ring-[#dbe4ef] hover:bg-[#f8fafc]"
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterMode("pinned")}
-                  className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-colors ${
-                    filterMode === "pinned"
-                      ? "bg-[#C6FF00] text-[#1e293b]"
-                      : "bg-white text-[#334155] ring-1 ring-[#dbe4ef] hover:bg-[#f8fafc]"
-                  }`}
-                >
-                  <FaStar className="h-3 w-3" aria-hidden />
-                  Pinned
-                </button>
-              </div>
+            {/* Main content: list + details */}
+            <div className="grid min-h-0 lg:grid-cols-[1fr_0.9fr]">
+              {/* Episode list */}
+              <div className="min-h-0 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
+                {visibleItems.length ? (
+                  <MotionDiv
+                    variants={lifeSyncStaggerContainerDense}
+                    initial="hidden"
+                    animate="show"
+                    className="space-y-3"
+                  >
+                    {visibleItems.map((it) => {
+                      const time = formatClock(it?._airedAtMs, clientTz);
+                      const selected = it._rowKey === activeKey;
 
-              <div className="mb-5 grid gap-2.5 sm:grid-cols-[1fr_auto]">
-                <input
-                  type="search"
-                  value={query}
-                  onChange={(e) => {
-                    setQuery(e.target.value);
-                    setDayPageSize(20);
-                  }}
-                  placeholder="Search title or episode..."
-                  className="h-10 rounded-xl border border-[#dbe4ef] bg-white px-3 text-[13px] text-[#1e293b] placeholder:text-[#94a3b8] focus:border-[#C6FF00]/70 focus:outline-none"
-                />
-                <select
-                  value={sortMode}
-                  onChange={(e) => setSortMode(String(e.target.value || "priority"))}
-                  className="h-10 rounded-xl border border-[#dbe4ef] bg-white px-3 text-[12px] font-semibold text-[#334155] focus:border-[#C6FF00]/70 focus:outline-none"
-                >
-                  <option value="priority">Sort: Priority</option>
-                  <option value="time">Sort: Air time</option>
-                </select>
-              </div>
-
-              {visibleItems.length ? (
-                <MotionDiv
-                  variants={lifeSyncStaggerContainerDense}
-                  initial="hidden"
-                  animate="show"
-                  className="space-y-3"
-                >
-                  {visibleItems.map((it) => {
-                    const time = formatClock(it?._airedAtMs, clientTz);
-                    const selected = it._rowKey === activeKey;
-
-                    return (
-                      <MotionDiv
-                        key={it._rowKey}
-                        variants={lifeSyncStaggerItemFade}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setActiveKey(it._rowKey)}
-                          className={`w-full rounded-2xl border p-4 text-left transition-all sm:p-5 ${
-                            selected
-                              ? "border-[#0f172a]/20 bg-white shadow-md ring-2 ring-[#C6FF00]/40"
-                              : it._isPinned
-                                ? "border-[#C6FF00]/50 bg-[linear-gradient(115deg,rgba(198,255,0,0.15),rgba(255,255,255,0.75))] hover:shadow-sm"
-                                : "border-[#dbe4ef] bg-white hover:shadow-sm"
-                          }`}
+                      return (
+                        <MotionDiv
+                          key={it._rowKey}
+                          variants={lifeSyncStaggerItemFade}
                         >
-                          <div className="flex gap-3">
-                            <div className="h-[76px] w-[56px] shrink-0 overflow-hidden rounded-2xl bg-[#f1f5f9] ring-1 ring-black/5">
-                              {it.imageUrl ? (
-                                <img
-                                  src={it.imageUrl}
-                                  alt=""
-                                  className="h-full w-full object-cover"
-                                  loading="lazy"
-                                />
-                              ) : (
-                                <div className="h-full w-full bg-[linear-gradient(130deg,#f1f5f9,#e2e8f0)]" />
-                              )}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-[14px] font-black tracking-tight text-[#0f172a]">
-                                {it.title}
-                              </p>
-
-                              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#334155] ring-1 ring-[#e2e8f0]">
-                                  E{it.episodeNumber}
-                                </span>
-                                {time ? (
-                                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#334155] ring-1 ring-[#e2e8f0]">
-                                    {time}
-                                  </span>
-                                ) : null}
-                                {it._isPinned ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/30 px-2 py-0.5 text-[10px] font-bold text-[#1e293b]">
-                                    <FaStar className="h-2.5 w-2.5" aria-hidden />
-                                    Priority {it._priority}
-                                  </span>
-                                ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setActiveKey(it._rowKey)}
+                            className={`w-full rounded-2xl border p-4 text-left transition-all sm:p-5 ${
+                              selected
+                                ? "border-[#0f172a]/20 bg-white shadow-md ring-2 ring-[#C6FF00]/40"
+                                : it._isPinned
+                                  ? "border-[#C6FF00]/50 bg-[linear-gradient(115deg,rgba(198,255,0,0.15),rgba(255,255,255,0.75))] hover:shadow-sm"
+                                  : "border-[#dbe4ef] bg-white hover:shadow-sm"
+                            }`}
+                          >
+                            <div className="flex gap-3">
+                              <div className="h-[76px] w-[56px] shrink-0 overflow-hidden rounded-2xl bg-[#f1f5f9] ring-1 ring-black/5">
+                                {it.imageUrl ? (
+                                  <img
+                                    src={it.imageUrl}
+                                    alt=""
+                                    className="h-full w-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="h-full w-full bg-[linear-gradient(130deg,#f1f5f9,#e2e8f0)]" />
+                                )}
                               </div>
 
-                              {it.episodeTitle ? (
-                                <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-[#475569]">
-                                  {it.episodeTitle}
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[14px] font-black tracking-tight text-[#0f172a]">
+                                  {it.title}
                                 </p>
-                              ) : null}
+
+                                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#334155] ring-1 ring-[#e2e8f0]">
+                                    E{it.episodeNumber}
+                                  </span>
+                                  {time ? (
+                                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#334155] ring-1 ring-[#e2e8f0]">
+                                      {time}
+                                    </span>
+                                  ) : null}
+                                  {it._isPinned ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/30 px-2 py-0.5 text-[10px] font-bold text-[#1e293b]">
+                                      <FaStar className="h-2.5 w-2.5" aria-hidden />
+                                      Priority {it._priority}
+                                    </span>
+                                  ) : null}
+                                </div>
+
+                                {it.episodeTitle ? (
+                                  <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-[#475569]">
+                                    {it.episodeTitle}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      </MotionDiv>
-                    );
-                  })}
+                          </button>
+                        </MotionDiv>
+                      );
+                    })}
 
-                  {canMore ? (
-                    <button
-                      type="button"
-                      onClick={() => setDayPageSize((n) => n + 20)}
-                      className="w-full rounded-xl border border-[#dbe4ef] bg-white px-4 py-3 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-[#f8fafc]"
-                    >
-                      Load more episodes
-                    </button>
-                  ) : null}
-                </MotionDiv>
-              ) : (
-                <div className="rounded-2xl border border-dashed border-[#cbd5e1] bg-white/65 px-4 py-12 text-center text-[#64748b]">
-                  <p className="text-[14px] font-semibold">No episodes found</p>
-                  <p className="mt-1 text-[12px]">Try a different filter, clear search, or pick another date.</p>
-                </div>
-              )}
-            </div>
-
-            {/* Details panel */}
-            <aside className="border-t border-[#dbe4ef] bg-white/65 px-5 py-5 sm:px-7 sm:py-6 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-t-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
-                Details
-              </p>
-
-              {activeItem ? (
-                <div className="mt-3 rounded-2xl border border-[#dbe4ef] bg-white/85 p-4">
-                  <div className="flex gap-3">
-                    <div className="h-[96px] w-[70px] shrink-0 overflow-hidden rounded-2xl bg-[#f1f5f9] ring-1 ring-black/5">
-                      {activeItem.imageUrl ? (
-                        <img
-                          src={activeItem.imageUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-[linear-gradient(130deg,#f1f5f9,#e2e8f0)]" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[14px] font-black tracking-tight text-[#0f172a] line-clamp-2">
-                        {activeItem.title}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                        <span className="rounded-full bg-[#f5f5f7] px-2.5 py-1 font-semibold text-[#334155]">
-                          Episode {activeItem.episodeNumber ?? "?"}
-                        </span>
-                        {activeItem?._airedAtMs ? (
-                          <span className="rounded-full bg-[#f5f5f7] px-2.5 py-1 font-medium text-[#64748b]">
-                            {formatClock(activeItem._airedAtMs, clientTz)}
-                          </span>
-                        ) : null}
-                        {activeItem._isPinned ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/25 px-2.5 py-1 font-bold text-[#1e293b]">
-                            <FaStar className="h-3 w-3" aria-hidden />
-                            P{activeItem._priority}
-                          </span>
-                        ) : null}
-                      </div>
-                      {activeItem.episodeTitle ? (
-                        <p className="mt-2 text-[12px] leading-relaxed text-[#475569] line-clamp-3">
-                          {activeItem.episodeTitle}
-                        </p>
-                      ) : (
-                        <p className="mt-2 text-[12px] text-[#64748b]">
-                          No episode title available.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-2">
-                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                    {canMore ? (
                       <button
                         type="button"
-                        onClick={() =>
-                          activeItem._isPinned
-                            ? unpin(activeItem)
-                            : pinOrUpdatePriority(activeItem, activeItem._priority)
-                        }
-                        className={`inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition-colors ${
-                          activeItem._isPinned
-                            ? "border-[#0f172a] bg-[#0f172a] text-white"
-                            : "border-[#dbe4ef] bg-white text-[#334155] hover:bg-[#f8fafc]"
-                        }`}
+                        onClick={() => setDayPageSize((n) => n + 20)}
+                        className="w-full rounded-xl border border-[#dbe4ef] bg-white px-4 py-3 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-[#f8fafc]"
                       >
-                        <FaStar className="h-3.5 w-3.5" aria-hidden />
-                        {activeItem._isPinned ? "Unpin" : "Pin"}
+                        Load more episodes
                       </button>
+                    ) : null}
+                  </MotionDiv>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[#cbd5e1] bg-white/65 px-4 py-12 text-center text-[#64748b]">
+                    <p className="text-[14px] font-semibold">No episodes found</p>
+                    <p className="mt-1 text-[12px]">Try a different filter, clear search, or pick another date.</p>
+                  </div>
+                )}
+              </div>
 
-                      <select
-                        value={activeItem._priority}
-                        onChange={(e) => pinOrUpdatePriority(activeItem, e.target.value)}
-                        className="min-h-[42px] rounded-xl border border-[#dbe4ef] bg-white px-3 text-[12px] font-semibold text-[#334155] focus:border-[#C6FF00]/70 focus:outline-none"
-                        title="Priority"
-                      >
-                        {Array.from({ length: 10 }).map((_, i) => (
-                          <option key={i + 1} value={i + 1}>
-                            Priority {i + 1}
-                          </option>
-                        ))}
-                      </select>
+              {/* Details panel */}
+              <aside className="border-t border-[#dbe4ef] bg-white/65 px-5 py-5 sm:px-7 sm:py-6 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-t-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+                  Details
+                </p>
+
+                {activeItem ? (
+                  <div className="mt-3 rounded-2xl border border-[#dbe4ef] bg-white/85 p-4">
+                    <div className="flex gap-3">
+                      <div className="h-[96px] w-[70px] shrink-0 overflow-hidden rounded-2xl bg-[#f1f5f9] ring-1 ring-black/5">
+                        {activeItem.imageUrl ? (
+                          <img
+                            src={activeItem.imageUrl}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-[linear-gradient(130deg,#f1f5f9,#e2e8f0)]" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[14px] font-black tracking-tight text-[#0f172a] line-clamp-2">
+                          {activeItem.title}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                          <span className="rounded-full bg-[#f5f5f7] px-2.5 py-1 font-semibold text-[#334155]">
+                            Episode {activeItem.episodeNumber ?? "?"}
+                          </span>
+                          {activeItem?._airedAtMs ? (
+                            <span className="rounded-full bg-[#f5f5f7] px-2.5 py-1 font-medium text-[#64748b]">
+                              {formatClock(activeItem._airedAtMs, clientTz)}
+                            </span>
+                          ) : null}
+                          {activeItem._isPinned ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/25 px-2.5 py-1 font-bold text-[#1e293b]">
+                              <FaStar className="h-3 w-3" aria-hidden />
+                              P{activeItem._priority}
+                            </span>
+                          ) : null}
+                        </div>
+                        {activeItem.episodeTitle ? (
+                          <p className="mt-2 text-[12px] leading-relaxed text-[#475569] line-clamp-3">
+                            {activeItem.episodeTitle}
+                          </p>
+                        ) : (
+                          <p className="mt-2 text-[12px] text-[#64748b]">
+                            No episode title available.
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => openMalDetails(activeItem)}
-                      className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-[#2E51A2] px-3 text-[12px] font-bold text-white transition hover:brightness-95"
-                    >
-                      Search MAL and show details
-                    </button>
+                    <div className="mt-4 grid gap-2">
+                      <div className="grid grid-cols-[1fr_auto] gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            activeItem._isPinned
+                              ? unpin(activeItem)
+                              : pinOrUpdatePriority(activeItem, activeItem._priority)
+                          }
+                          className={`inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition-colors ${
+                            activeItem._isPinned
+                              ? "border-[#0f172a] bg-[#0f172a] text-white"
+                              : "border-[#dbe4ef] bg-white text-[#334155] hover:bg-[#f8fafc]"
+                          }`}
+                        >
+                          <FaStar className="h-3.5 w-3.5" aria-hidden />
+                          {activeItem._isPinned ? "Unpin" : "Pin"}
+                        </button>
 
-                    <div className="rounded-xl bg-[#ecfeff] px-3 py-2 text-[11px] text-[#155e75] ring-1 ring-[#bae6fd]">
-                      MAL linked:{" "}
-                      <span className="font-bold">
-                        {malLinked ? "Yes" : "No"}
-                      </span>
+                        <select
+                          value={activeItem._priority}
+                          onChange={(e) => pinOrUpdatePriority(activeItem, e.target.value)}
+                          className="min-h-[42px] rounded-xl border border-[#dbe4ef] bg-white px-3 text-[12px] font-semibold text-[#334155] focus:border-[#C6FF00]/70 focus:outline-none"
+                          title="Priority"
+                        >
+                          {Array.from({ length: 10 }).map((_, i) => (
+                            <option key={i + 1} value={i + 1}>
+                              Priority {i + 1}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => openMalDetails(activeItem)}
+                        className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-[#2E51A2] px-3 text-[12px] font-bold text-white transition hover:brightness-95"
+                      >
+                        Open anime details
+                      </button>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="mt-3 rounded-2xl border border-dashed border-[#cbd5e1] bg-white/65 px-4 py-10 text-center text-[#64748b]">
-                  <p className="text-[13px] font-semibold">Pick an episode</p>
-                  <p className="mt-1 text-[12px]">Select an item from the list to view details.</p>
-                </div>
-              )}
+                ) : (
+                  <div className="mt-3 rounded-2xl border border-dashed border-[#cbd5e1] bg-white/65 px-4 py-10 text-center text-[#64748b]">
+                    <p className="text-[13px] font-semibold">Pick an episode</p>
+                    <p className="mt-1 text-[12px]">Select an item from the list to view details.</p>
+                  </div>
+                )}
 
-              <div className="mt-4 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowDayOverlay(false)}
-                  className="inline-flex flex-1 items-center justify-center rounded-xl border border-[#dbe4ef] bg-white px-3 py-2.5 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-[#f8fafc]"
-                >
-                  Back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowDayOverlay(false)}
-                  className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#C6FF00] px-3 py-2.5 text-[12px] font-bold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
-                >
-                  Close
-                </button>
-              </div>
-            </aside>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDayOverlay(false)}
+                    className="inline-flex flex-1 items-center justify-center rounded-xl border border-[#dbe4ef] bg-white px-3 py-2.5 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-[#f8fafc]"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDayOverlay(false)}
+                    className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#C6FF00] px-3 py-2.5 text-[12px] font-bold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+                  >
+                    Close
+                  </button>
+                </div>
+              </aside>
+            </div>
           </div>
         </MotionDiv>
-
-        <AnimatePresence mode="sync">
-          {malModalOpen ? (
-            <MalAnimeDetailsModal
-              open={malModalOpen}
-              onClose={() => {
-                if (malAbortRef.current) malAbortRef.current.abort();
-                setMalModalOpen(false);
-                setMalModalBusy(false);
-                setMalModalError("");
-                setMalModalTitle("");
-                setMalModalBody(null);
-              }}
-              title={malModalTitle}
-              body={malModalBody}
-              busy={malModalBusy}
-              error={malModalError}
-            />
-          ) : null}
-        </AnimatePresence>
       </MotionDiv>
     );
   };

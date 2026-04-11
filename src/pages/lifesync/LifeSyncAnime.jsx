@@ -1,7 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { DetailWatchGridSkeleton } from "../../components/lifesync/EpisodeLoadingSkeletons";
+import {
+  DetailWatchGridSkeleton,
+  LifesyncAnimeCatalogGridSkeleton,
+  LifesyncMyListGridSkeleton,
+} from "../../components/lifesync/EpisodeLoadingSkeletons";
 import { LifeSyncSectionNav } from "../../components/lifesync/LifeSyncSectionNav";
 import { useLifeSync } from "../../context/LifeSyncContext";
 import {
@@ -1676,6 +1680,13 @@ export default function LifeSyncAnime() {
           ? myList
           : searchResults;
 
+  const showAnimeListSkeleton =
+    (busy && currentItems.length === 0 && tab !== "search") ||
+    (tab === "search" &&
+      searching &&
+      searchCommittedQ.trim() &&
+      currentItems.length === 0);
+
   const pager = (() => {
     if (tab === "seasonal") {
       return {
@@ -1916,8 +1927,13 @@ export default function LifeSyncAnime() {
             />
           ))}
         </div>
-      ) : (
-        !busy && (
+      ) : showAnimeListSkeleton ? (
+        tab === "mylist" ? (
+          <LifesyncMyListGridSkeleton count={6} />
+        ) : (
+          <LifesyncAnimeCatalogGridSkeleton count={12} />
+        )
+      ) : !busy && !(tab === "search" && searching) ? (
           <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm px-6 py-10 text-center">
             <p className="text-[13px] text-[#86868b]">
               {tab === "mylist"
@@ -1925,8 +1941,7 @@ export default function LifeSyncAnime() {
                 : "No anime to display."}
             </p>
           </div>
-        )
-      )}
+      ) : null}
 
       {pager && currentItems.length > 0 && (
         <div className="flex items-center justify-between gap-3 flex-wrap">
