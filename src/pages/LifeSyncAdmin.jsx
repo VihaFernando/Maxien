@@ -29,7 +29,7 @@ const CAPABILITY_LABELS = {
     mangaDistrict: 'Manga District',
 }
 
-const V1_ADMIN_MODE = true
+const V1_ADMIN_MODE = false
 
 function MetricCard({ label, value, hint }) {
     return (
@@ -170,15 +170,15 @@ export default function LifeSyncAdmin() {
         setLoadError('')
         setLoadBusy(true)
         try {
-            const data = await lifesyncFetch('/api/admin/overview', { method: 'GET' })
+            const data = await lifesyncFetch('/api/v1/admin/overview', { method: 'GET' })
             setOverview(data)
             try {
-                setCapabilities(await lifesyncFetch('/api/admin/capabilities', { method: 'GET' }))
+                setCapabilities(await lifesyncFetch('/api/v1/admin/capabilities', { method: 'GET' }))
             } catch {
                 setCapabilities(null)
             }
             try {
-                setHealth(await lifesyncFetch('/api/admin/health', { method: 'GET' }))
+                setHealth(await lifesyncFetch('/api/v1/admin/health', { method: 'GET' }))
             } catch {
                 setHealth(null)
             }
@@ -200,8 +200,8 @@ export default function LifeSyncAdmin() {
         setActivityError('')
         try {
             const [a, m] = await Promise.all([
-                lifesyncFetch('/api/admin/activity/recent-anime', { method: 'GET' }),
-                lifesyncFetch('/api/admin/activity/recent-manga', { method: 'GET' }),
+                lifesyncFetch('/api/v1/admin/activity/recent-anime', { method: 'GET' }),
+                lifesyncFetch('/api/v1/admin/activity/recent-manga', { method: 'GET' }),
             ])
             setActivityAnime(a)
             setActivityManga(m)
@@ -217,7 +217,7 @@ export default function LifeSyncAdmin() {
     const refreshHealth = async () => {
         setHealthBusy(true)
         try {
-            setHealth(await lifesyncFetch('/api/admin/health', { method: 'GET' }))
+            setHealth(await lifesyncFetch('/api/v1/admin/health', { method: 'GET' }))
         } catch {
             setHealth(null)
         } finally {
@@ -231,7 +231,7 @@ export default function LifeSyncAdmin() {
         setBroadcastBusy(true)
         setBroadcastMsg('')
         try {
-            const r = await lifesyncFetch('/api/admin/broadcast', {
+            const r = await lifesyncFetch('/api/v1/admin/broadcast', {
                 method: 'POST',
                 json: { message: msg },
             })
@@ -286,7 +286,7 @@ export default function LifeSyncAdmin() {
         setLookupBusy(true)
         setLookupResult(null)
         try {
-            const data = await lifesyncFetch(`/api/admin/users/lookup?email=${encodeURIComponent(q)}`, {
+            const data = await lifesyncFetch(`/api/v1/admin/users/lookup?email=${encodeURIComponent(q)}`, {
                 method: 'GET',
             })
             setLookupResult(data)
@@ -310,7 +310,7 @@ export default function LifeSyncAdmin() {
         setLookupIdBusy(true)
         setLookupIdResult(null)
         try {
-            const data = await lifesyncFetch(`/api/admin/users/by-id/${encodeURIComponent(id)}`, {
+            const data = await lifesyncFetch(`/api/v1/admin/users/by-id/${encodeURIComponent(id)}`, {
                 method: 'GET',
             })
             setLookupIdResult(data)

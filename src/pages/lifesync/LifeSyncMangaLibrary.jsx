@@ -69,6 +69,8 @@ function resumeTarget(entry, browseTranslatedLang) {
                 from: MANGA_READING_LIBRARY_PATH,
                 source: entry.source,
                 browseTranslatedLang,
+                resumeChapterId: String(entry.lastChapterId),
+                resumePercent: Number(entry.lastReadPercent || 0),
             },
         }
     }

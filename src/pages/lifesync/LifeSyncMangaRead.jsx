@@ -27,6 +27,12 @@ function formatChapterLabel(ch) {
     return label
 }
 
+function normalizeReadPercent(value) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return 0
+    return Math.min(100, Math.max(0, Math.round(n * 10) / 10))
+}
+
 function mangadexImageProps(url) {
     const src = String(url || '')
     if (!src) return {}
@@ -82,6 +88,9 @@ export default function LifeSyncMangaRead() {
         return s || 'en'
     }, [location.state])
 
+    const resumeChapterId = useMemo(() => String(location.state?.resumeChapterId || '').trim(), [location.state])
+    const resumePercent = useMemo(() => normalizeReadPercent(location.state?.resumePercent), [location.state])
+
     const [busy, setBusy] = useState(true)
     const [error, setError] = useState('')
     const [manga, setManga] = useState(null)
@@ -102,6 +111,8 @@ export default function LifeSyncMangaRead() {
     const [dexAuthStatus, setDexAuthStatus] = useState(null)
     const mdReadSyncTimer = useRef(null)
     const mdReadingStatusSent = useRef(new Set())
+    const resumeRestoreKeyRef = useRef('')
+    const lastSavedPercentRef = useRef({ key: '', percent: 0 })
 
     useEffect(() => {
         if (!isLifeSyncConnected) return
@@ -112,7 +123,7 @@ export default function LifeSyncMangaRead() {
         return () => { cancelled = true }
     }, [isLifeSyncConnected])
 
-    const saveProgress = useCallback(async (manga, chapter) => {
+    const upsertReading = useCallback(async (manga, chapter, readPercent) => {
         if (!manga?.id || !chapter?.id) return
         const src =
             manga.source === 'mangadistrict'
@@ -130,6 +141,7 @@ export default function LifeSyncMangaRead() {
                     lastChapterLabel: formatChapterLabel(chapter),
                     lastVolume: chapter.volume != null && chapter.volume !== '' ? String(chapter.volume) : '',
                     lastChapterNum: chapter.chapter != null && chapter.chapter !== '' ? String(chapter.chapter) : '',
+                    lastReadPercent: normalizeReadPercent(readPercent),
                     ...(src === 'mangadex' && manga.contentRating
                         ? { contentRating: String(manga.contentRating) }
                         : {}),
@@ -138,7 +150,14 @@ export default function LifeSyncMangaRead() {
         } catch {
             /* offline */
         }
+    }, [])
 
+    const syncMangaDexReading = useCallback(async (manga, chapter) => {
+        if (!manga?.id || !chapter?.id) return
+        const src =
+            manga.source === 'mangadistrict'
+                ? manga.source
+                : 'mangadex'
         if (src !== 'mangadex' || !dexAuthStatus?.connected) return
         if (mdReadSyncTimer.current) clearTimeout(mdReadSyncTimer.current)
         mdReadSyncTimer.current = setTimeout(() => {
@@ -220,8 +239,15 @@ export default function LifeSyncMangaRead() {
 
     useEffect(() => {
         if (!manga?.id || !chapter?.id) return
-        void saveProgress(manga, chapter)
-    }, [chapter, manga, saveProgress])
+        const key = `${manga.source || source}:${String(manga.id)}:${String(chapter.id)}`
+        const initialPercent =
+            resumeChapterId && String(chapter.id) === resumeChapterId && resumePercent > 0
+                ? resumePercent
+                : 0
+        lastSavedPercentRef.current = { key, percent: initialPercent }
+        void upsertReading(manga, chapter, initialPercent)
+        void syncMangaDexReading(manga, chapter)
+    }, [chapter, manga, resumeChapterId, resumePercent, source, syncMangaDexReading, upsertReading])
 
     useEffect(() => {
         if (!manga?.id || !chapter?.id) return
@@ -298,6 +324,50 @@ export default function LifeSyncMangaRead() {
         ro?.observe(inner)
         return () => ro?.disconnect()
     }, [loadingPages, urls.length, chapter?.id, updateScrollProgress])
+
+    useEffect(() => {
+        if (loadingPages || !manga?.id || !chapter?.id || urls.length === 0) return
+        if (!resumeChapterId || String(chapter.id) !== resumeChapterId) return
+        if (!(resumePercent > 0 && resumePercent < 100)) return
+
+        const chapterKey = `${manga.source || source}:${String(manga.id)}:${String(chapter.id)}`
+        if (resumeRestoreKeyRef.current === chapterKey) return
+        resumeRestoreKeyRef.current = chapterKey
+
+        const el = scrollRef.current
+        if (!el) return
+        const id = requestAnimationFrame(() => {
+            const max = Math.max(0, el.scrollHeight - el.clientHeight)
+            el.scrollTop = max * (resumePercent / 100)
+            scheduleProgressUpdate()
+        })
+        return () => cancelAnimationFrame(id)
+    }, [
+        chapter?.id,
+        loadingPages,
+        manga?.id,
+        manga?.source,
+        resumeChapterId,
+        resumePercent,
+        scheduleProgressUpdate,
+        source,
+        urls.length,
+    ])
+
+    useEffect(() => {
+        if (loadingPages) return
+        if (!manga?.id || !chapter?.id) return
+        const chapterKey = `${manga.source || source}:${String(manga.id)}:${String(chapter.id)}`
+        const percent = normalizeReadPercent(chapterReadProgress * 100)
+        const prev = lastSavedPercentRef.current
+        if (prev.key === chapterKey && Math.abs(percent - prev.percent) < 1) return
+
+        const timer = setTimeout(() => {
+            lastSavedPercentRef.current = { key: chapterKey, percent }
+            void upsertReading(manga, chapter, percent)
+        }, 700)
+        return () => clearTimeout(timer)
+    }, [chapterReadProgress, chapter?.id, loadingPages, manga, source, upsertReading])
 
     const safeIdx = useMemo(() => {
         if (!chapter?.id) return -1

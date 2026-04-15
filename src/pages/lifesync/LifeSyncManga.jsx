@@ -1255,7 +1255,7 @@ export default function LifeSyncManga() {
     const [dexTranslatedLang, setDexTranslatedLang] = useState('en')
 
     const goToRead = useCallback(
-        (mangaId, chapterId, srcOverride) => {
+        (mangaId, chapterId, srcOverride, options = {}) => {
             const src = srcOverride || route.src
             navigate(
                 `${basePath}/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(chapterId))}${location.search || ''}`,
@@ -1264,6 +1264,8 @@ export default function LifeSyncManga() {
                         from: `${basePath}/${src}/${route.tab}/page/${clampPage(route.page)}${location.search || ''}`,
                         source: src,
                         browseTranslatedLang: mangaEnglishReleasesOnly ? 'en' : dexTranslatedLang,
+                        ...(options?.resumeChapterId ? { resumeChapterId: String(options.resumeChapterId) } : {}),
+                        ...(options?.resumePercent != null ? { resumePercent: Number(options.resumePercent) || 0 } : {}),
                     },
                 },
             )
@@ -1470,7 +1472,10 @@ export default function LifeSyncManga() {
                 }
                 setSelectedManga(null)
                 setSource('mangadex')
-                goToRead(entry.mangaId, ch.id, 'mangadex')
+                goToRead(entry.mangaId, ch.id, 'mangadex', {
+                    resumeChapterId: entry.lastChapterId,
+                    resumePercent: entry.lastReadPercent,
+                })
                 return
             }
             if (entry.source === 'mangadistrict') {
@@ -1485,7 +1490,10 @@ export default function LifeSyncManga() {
                 }
                 setSelectedManga(null)
                 setSource('mangadistrict')
-                goToRead(entry.mangaId, ch.id, 'mangadistrict')
+                goToRead(entry.mangaId, ch.id, 'mangadistrict', {
+                    resumeChapterId: entry.lastChapterId,
+                    resumePercent: entry.lastReadPercent,
+                })
                 return
             }
         } catch (e) {

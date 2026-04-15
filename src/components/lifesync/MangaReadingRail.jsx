@@ -325,6 +325,8 @@ function hubMangaResumeTarget(entry) {
             state: {
                 from: MANGA_HUB_PATH,
                 source: entry.source,
+                resumeChapterId: String(entry.lastChapterId),
+                resumePercent: Number(entry.lastReadPercent || 0),
             },
         }
     }
