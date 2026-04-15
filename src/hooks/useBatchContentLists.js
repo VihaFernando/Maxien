@@ -7,6 +7,8 @@ const EMPTY_CONTENT_LISTS = {
     animeHistory: [],
     mangaReading: [],
 }
+const CONTENT_LISTS_STALE_MS = 1000 * 60 * 2
+const CONTENT_LISTS_GC_MS = 1000 * 60 * 10
 
 const CONTENT_LISTS_QUERY_KEY = lifeSyncQueryKeys.contentLists()
 
@@ -38,6 +40,11 @@ export function useBatchContentLists({ enabled }) {
         queryKey: CONTENT_LISTS_QUERY_KEY,
         queryFn: fetchBatchContentLists,
         enabled,
+        staleTime: CONTENT_LISTS_STALE_MS,
+        gcTime: CONTENT_LISTS_GC_MS,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        refetchOnMount: false,
     })
 
     const refresh = useCallback(async () => {

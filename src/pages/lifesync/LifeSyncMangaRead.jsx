@@ -284,7 +284,8 @@ export default function LifeSyncMangaRead() {
         const { scrollTop, scrollHeight, clientHeight } = el
         const max = scrollHeight - clientHeight
         const p = max <= 0 ? 1 : Math.min(1, Math.max(0, scrollTop / max))
-        setChapterReadProgress(p)
+        // Avoid per-frame rerenders for tiny scroll deltas.
+        setChapterReadProgress((prev) => (Math.abs(prev - p) >= 0.005 ? p : prev))
     }, [])
 
     const scheduleProgressUpdate = useCallback(() => {
@@ -367,7 +368,7 @@ export default function LifeSyncMangaRead() {
             void upsertReading(manga, chapter, percent)
         }, 700)
         return () => clearTimeout(timer)
-    }, [chapterReadProgress, chapter?.id, loadingPages, manga, source, upsertReading])
+    }, [chapterReadProgress, chapter, chapter?.id, loadingPages, manga, source, upsertReading])
 
     const safeIdx = useMemo(() => {
         if (!chapter?.id) return -1
