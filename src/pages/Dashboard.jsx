@@ -85,9 +85,11 @@ export default function Dashboard() {
         return ""
     })
 
-    const lifeSyncGamesActive = location.pathname.startsWith("/dashboard/lifesync/games")
     const lifeSyncAnimeActive = location.pathname.startsWith("/dashboard/lifesync/anime")
     const isLifeSyncRoute = location.pathname.startsWith("/dashboard/lifesync")
+    const hideMobileShellSidebar =
+        location.pathname.startsWith("/dashboard/lifesync/anime/anime/watch/")
+        || location.pathname.startsWith("/dashboard/lifesync/anime/manga/read/")
     const showLifeSyncSidebar = isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
     const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
 
@@ -423,118 +425,122 @@ export default function Dashboard() {
                 </div>
             </aside>
 
-            {sidebarOpen && (
+            {!hideMobileShellSidebar && sidebarOpen && (
                 <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
             )}
 
-            <aside className={`fixed left-0 top-0 h-full w-[240px] bg-white border-r border-[#e5e5ea] z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-                <div className="px-5 py-6 h-full flex flex-col overflow-y-auto hide-scrollbar">
-                    <div className="flex items-center justify-between mb-5">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8">
-                                <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
-                            </div>
-                            <span className="text-[#1d1d1f] font-bold text-[16px] tracking-tight">Maxien</span>
-                        </div>
-                        <button
-                            onClick={() => setSidebarOpen(false)}
-                            className="p-1.5 hover:bg-[#f5f5f7] rounded-lg transition-colors"
-                        >
-                            <svg className="w-5 h-5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    {renderWorkspaceSwitcher()}
-
-                    <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">
-                        {isWorkplaceMode ? "Workplace" : "Platform"}
-                    </p>
-                    <div className="flex-1">{renderPlatformNav(() => setSidebarOpen(false))}</div>
-
-                    {!isWorkplaceMode && showLifeSyncSidebar && (
-                        <div className="mt-3">
-                            <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">LifeSync</p>
-                            <nav className="space-y-0.5">
-                                {/* <SidebarLink
-                                    to="/dashboard/lifesync/games"
-                                    icon={FaGamepad}
-                                    label="Games"
-                                    active={lifeSyncGamesActive}
-                                    onClick={() => setSidebarOpen(false)}
-                                /> */}
-                                {showLifeSyncAnimeLink && (
-                                    <SidebarLink
-                                        to="/dashboard/lifesync/anime"
-                                        icon={FaFilm}
-                                        label="Anime"
-                                        active={lifeSyncAnimeActive}
-                                        onClick={() => setSidebarOpen(false)}
-                                    />
-                                )}
-                                {showLifeSyncAdminLink && (
-                                    <SidebarLink
-                                        to="/dashboard/lifesync/admin"
-                                        icon={FaUserShield}
-                                        label="Admin"
-                                        active={location.pathname === "/dashboard/lifesync/admin"}
-                                        onClick={() => setSidebarOpen(false)}
-                                    />
-                                )}
-                            </nav>
-                        </div>
-                    )}
-
-                    <div className="mt-auto pt-5 border-t border-[#e5e5ea]">
-                        <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} />
-                        <div className="bg-[#f5f5f7] rounded-2xl p-4">
-                            <button
-                                type="button"
-                                onClick={handleOpenProfile}
-                                className="mb-3 flex w-full items-center gap-3 rounded-xl p-1 text-left transition-colors hover:bg-white/70"
-                            >
-                                {user?.user_metadata?.picture ? (
-                                    <img src={user.user_metadata.picture} alt="Avatar" className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5" />
-                                ) : (
-                                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[#1d1d1f] font-bold text-sm ring-1 ring-black/5">
-                                        {initials}
-                                    </div>
-                                )}
-                                <div className="min-w-0">
-                                    <p className="text-[12px] font-bold text-[#1d1d1f] truncate">{profileName}</p>
-                                    <p className="text-[10px] font-medium text-[#86868b] truncate">{user?.email}</p>
+            {!hideMobileShellSidebar ? (
+                <aside className={`fixed left-0 top-0 h-full w-[240px] bg-white border-r border-[#e5e5ea] z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+                    <div className="px-5 py-6 h-full flex flex-col overflow-y-auto hide-scrollbar">
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8">
+                                    <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                                 </div>
-                            </button>
+                                <span className="text-[#1d1d1f] font-bold text-[16px] tracking-tight">Maxien</span>
+                            </div>
                             <button
-                                onClick={(e) => { e.stopPropagation(); handleSignOut() }}
-                                className="w-full bg-white hover:bg-red-50 text-red-500 font-semibold py-2 rounded-lg text-[12px] transition-all border border-[#d2d2d7] active:scale-[0.98]"
+                                onClick={() => setSidebarOpen(false)}
+                                className="p-1.5 hover:bg-[#f5f5f7] rounded-lg transition-colors"
                             >
-                                Sign Out
+                                <svg className="w-5 h-5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
                         </div>
-                    </div>
-                </div>
-            </aside>
 
-            <main className="flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
-                <header className="lg:hidden bg-white/90 backdrop-blur-md border-b border-[#d2d2d7] px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 flex-shrink-0">
-                            <img src="/logo.svg" alt="Maxien" className="w-full h-full" />
-                        </div>
-                        <span className="text-[#1d1d1f] font-bold text-[15px] tracking-tight">Maxien</span>
-                    </div>
-                    <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-[#f5f5f7] rounded-xl transition-colors">
-                        {user?.user_metadata?.picture ? (
-                            <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
-                        ) : (
-                            <div className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1d1d1f] font-bold text-xs ring-1 ring-black/5">
-                                {initials}
+                        {renderWorkspaceSwitcher()}
+
+                        <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">
+                            {isWorkplaceMode ? "Workplace" : "Platform"}
+                        </p>
+                        <div className="flex-1">{renderPlatformNav(() => setSidebarOpen(false))}</div>
+
+                        {!isWorkplaceMode && showLifeSyncSidebar && (
+                            <div className="mt-3">
+                                <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">LifeSync</p>
+                                <nav className="space-y-0.5">
+                                    {/* <SidebarLink
+                                        to="/dashboard/lifesync/games"
+                                        icon={FaGamepad}
+                                        label="Games"
+                                        active={lifeSyncGamesActive}
+                                        onClick={() => setSidebarOpen(false)}
+                                    /> */}
+                                    {showLifeSyncAnimeLink && (
+                                        <SidebarLink
+                                            to="/dashboard/lifesync/anime"
+                                            icon={FaFilm}
+                                            label="Anime"
+                                            active={lifeSyncAnimeActive}
+                                            onClick={() => setSidebarOpen(false)}
+                                        />
+                                    )}
+                                    {showLifeSyncAdminLink && (
+                                        <SidebarLink
+                                            to="/dashboard/lifesync/admin"
+                                            icon={FaUserShield}
+                                            label="Admin"
+                                            active={location.pathname === "/dashboard/lifesync/admin"}
+                                            onClick={() => setSidebarOpen(false)}
+                                        />
+                                    )}
+                                </nav>
                             </div>
                         )}
-                    </button>
-                </header>
+
+                        <div className="mt-auto pt-5 border-t border-[#e5e5ea]">
+                            <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} />
+                            <div className="bg-[#f5f5f7] rounded-2xl p-4">
+                                <button
+                                    type="button"
+                                    onClick={handleOpenProfile}
+                                    className="mb-3 flex w-full items-center gap-3 rounded-xl p-1 text-left transition-colors hover:bg-white/70"
+                                >
+                                    {user?.user_metadata?.picture ? (
+                                        <img src={user.user_metadata.picture} alt="Avatar" className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5" />
+                                    ) : (
+                                        <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[#1d1d1f] font-bold text-sm ring-1 ring-black/5">
+                                            {initials}
+                                        </div>
+                                    )}
+                                    <div className="min-w-0">
+                                        <p className="text-[12px] font-bold text-[#1d1d1f] truncate">{profileName}</p>
+                                        <p className="text-[10px] font-medium text-[#86868b] truncate">{user?.email}</p>
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleSignOut() }}
+                                    className="w-full bg-white hover:bg-red-50 text-red-500 font-semibold py-2 rounded-lg text-[12px] transition-all border border-[#d2d2d7] active:scale-[0.98]"
+                                >
+                                    Sign Out
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            ) : null}
+
+            <main className="flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
+                {!hideMobileShellSidebar ? (
+                    <header className="lg:hidden bg-white/90 backdrop-blur-md border-b border-[#d2d2d7] px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 flex-shrink-0">
+                                <img src="/logo.svg" alt="Maxien" className="w-full h-full" />
+                            </div>
+                            <span className="text-[#1d1d1f] font-bold text-[15px] tracking-tight">Maxien</span>
+                        </div>
+                        <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-[#f5f5f7] rounded-xl transition-colors">
+                            {user?.user_metadata?.picture ? (
+                                <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1d1d1f] font-bold text-xs ring-1 ring-black/5">
+                                    {initials}
+                                </div>
+                            )}
+                        </button>
+                    </header>
+                ) : null}
 
                 <div className={contentWrapClass}>
                     {lifeSyncNotice && (
