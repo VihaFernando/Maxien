@@ -51,13 +51,71 @@ function monthKey(d, tz = "UTC") {
   return `${y}-${m}-${z}`;
 }
 
+const MONTH_CACHE_PREFIX = "maxien_anime_calendar_month_";
+const MONTH_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 45;
+const MONTH_CACHE_MAX_ROWS = 18;
+
+function pruneMonthCaches() {
+  if (typeof sessionStorage === "undefined") return;
+  const now = Date.now();
+  const keys = [];
+  try {
+    for (let i = 0; i < sessionStorage.length; i += 1) {
+      const k = sessionStorage.key(i);
+      if (k && k.startsWith(MONTH_CACHE_PREFIX)) keys.push(k);
+    }
+  } catch {
+    return;
+  }
+  const live = [];
+  for (const key of keys) {
+    try {
+      const raw = sessionStorage.getItem(key);
+      if (!raw) {
+        sessionStorage.removeItem(key);
+        continue;
+      }
+      const parsed = JSON.parse(raw);
+      const at = Number(parsed?.at || 0);
+      if (!Number.isFinite(at) || now - at > MONTH_CACHE_TTL_MS) {
+        sessionStorage.removeItem(key);
+        continue;
+      }
+      live.push({ key, at });
+    } catch {
+      try {
+        sessionStorage.removeItem(key);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+  if (live.length <= MONTH_CACHE_MAX_ROWS) return;
+  live
+    .sort((a, b) => a.at - b.at)
+    .slice(0, live.length - MONTH_CACHE_MAX_ROWS)
+    .forEach((row) => {
+      try {
+        sessionStorage.removeItem(row.key);
+      } catch {
+        /* ignore */
+      }
+    });
+}
+
 function readMonthCache(key) {
   try {
-    const raw = sessionStorage.getItem(`maxien_anime_calendar_month_${key}`);
+    const raw = sessionStorage.getItem(`${MONTH_CACHE_PREFIX}${key}`);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return null;
+    const at = Number(parsed?.at || 0);
+    if (!Number.isFinite(at) || Date.now() - at > MONTH_CACHE_TTL_MS) {
+      sessionStorage.removeItem(`${MONTH_CACHE_PREFIX}${key}`);
+      return null;
+    }
     if (!parsed.days || typeof parsed.days !== "object") return null;
+    if (Math.random() < 0.03) pruneMonthCaches();
     return parsed;
   } catch {
     return null;
@@ -67,13 +125,14 @@ function readMonthCache(key) {
 function writeMonthCache(key, payload) {
   try {
     sessionStorage.setItem(
-      `maxien_anime_calendar_month_${key}`,
+      `${MONTH_CACHE_PREFIX}${key}`,
       JSON.stringify({
         at: Date.now(),
         days: payload?.days && typeof payload.days === "object" ? payload.days : {},
         pins: Array.isArray(payload?.pins) ? payload.pins : [],
       }),
     );
+    pruneMonthCaches();
   } catch {
     /* ignore */
   }

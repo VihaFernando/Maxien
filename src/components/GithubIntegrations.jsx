@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react"
+import { useCallback, useSyncExternalStore } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 import LifeSyncIntegration from "./LifeSyncIntegration"
+
+const GITHUB_TOKEN_CHANGED_EVENT = "maxien:github-token-changed"
 
 const GitHubIcon = ({ className }) => (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -12,22 +14,30 @@ const GitHubIcon = ({ className }) => (
 
 export default function GithubIntegrations({ embedded = false }) {
     const { user } = useAuth()
-    const [ghConnected, setGhConnected] = useState(false)
 
-    const syncGithubState = () => {
-        const t = user?.user_metadata?.github_token || localStorage.getItem("github_token")
-        setGhConnected(Boolean(t))
-    }
+    const getSnapshot = useCallback(() => {
+        const tokenFromProfile = user?.user_metadata?.github_token
+        if (tokenFromProfile) return true
+        try {
+            return Boolean(localStorage.getItem("github_token"))
+        } catch {
+            return false
+        }
+    }, [user?.user_metadata?.github_token])
 
-    useEffect(() => {
-        syncGithubState()
-    }, [user])
-
-    useEffect(() => {
-        const onStorage = () => syncGithubState()
-        window.addEventListener("storage", onStorage)
-        return () => window.removeEventListener("storage", onStorage)
-    }, [user])
+    const ghConnected = useSyncExternalStore(
+        (onStoreChange) => {
+            if (typeof window === "undefined") return () => {}
+            window.addEventListener("storage", onStoreChange)
+            window.addEventListener(GITHUB_TOKEN_CHANGED_EVENT, onStoreChange)
+            return () => {
+                window.removeEventListener("storage", onStoreChange)
+                window.removeEventListener(GITHUB_TOKEN_CHANGED_EVENT, onStoreChange)
+            }
+        },
+        getSnapshot,
+        () => false,
+    )
 
     const connectGithub = () => {
         const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
@@ -38,7 +48,7 @@ export default function GithubIntegrations({ embedded = false }) {
     const disconnectGithub = async () => {
         await supabase.auth.updateUser({ data: { github_token: null } })
         localStorage.removeItem("github_token")
-        setGhConnected(false)
+        window.dispatchEvent(new Event(GITHUB_TOKEN_CHANGED_EVENT))
     }
 
     return (

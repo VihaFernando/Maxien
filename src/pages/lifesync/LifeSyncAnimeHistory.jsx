@@ -214,10 +214,18 @@ export default function LifeSyncAnimeHistory() {
 
     useEffect(() => {
         if (spotlightCandidates.length <= 1) return undefined
-        const id = window.setInterval(() => {
+        const rotate = () => {
+            if (document.visibilityState !== 'visible') return
             setSpotlightIndex((i) => (i + 1) % spotlightCandidates.length)
+        }
+        const id = window.setInterval(() => {
+            rotate()
         }, SPOTLIGHT_ROTATE_MS)
-        return () => window.clearInterval(id)
+        document.addEventListener('visibilitychange', rotate)
+        return () => {
+            window.clearInterval(id)
+            document.removeEventListener('visibilitychange', rotate)
+        }
     }, [spotlightCandidates.length, candidatesSig])
 
     const spotlight = spotlightCandidates[spotlightIndex] ?? null

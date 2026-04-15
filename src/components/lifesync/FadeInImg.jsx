@@ -1,30 +1,28 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 
 /**
  * Image that fades in when the browser finishes loading (or errors).
  * While loading, `opacity: 0` is applied inline so final opacity utilities on `className` still apply once loaded.
  */
 export function FadeInImg({ src, alt = '', className = '', style, onLoad, onError, ...rest }) {
-    const [loaded, setLoaded] = useState(false)
-
-    useEffect(() => {
-        setLoaded(false)
-    }, [src])
+    const [loadedSrc, setLoadedSrc] = useState('')
+    const normalizedSrc = typeof src === 'string' ? src : ''
+    const loaded = Boolean(normalizedSrc) && loadedSrc === normalizedSrc
 
     const handleLoad = useCallback(
         (e) => {
-            setLoaded(true)
+            setLoadedSrc(normalizedSrc)
             onLoad?.(e)
         },
-        [onLoad]
+        [normalizedSrc, onLoad]
     )
 
     const handleError = useCallback(
         (e) => {
-            setLoaded(true)
+            setLoadedSrc(normalizedSrc)
             onError?.(e)
         },
-        [onError]
+        [normalizedSrc, onError]
     )
 
     return (

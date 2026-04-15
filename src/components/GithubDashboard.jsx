@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 const LANG_COLORS = {
@@ -8,6 +8,7 @@ const LANG_COLORS = {
     PHP: "#4F5D95", Swift: "#ffac45", Kotlin: "#A97BFF", Dart: "#00B4AB",
     Shell: "#89e051", Vue: "#41b883", default: "#8b8b8b"
 }
+const GITHUB_TOKEN_CHANGED_EVENT = "maxien:github-token-changed"
 
 const GitHubIcon = ({ className }) => (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -31,23 +32,47 @@ function RepoDropdown({ repos, value, onChange }) {
     const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 240 })
     const btnRef = useRef(null)
     const menuRef = useRef(null)
+    const repositionRafRef = useRef(null)
     const selected = repos.find(r => r.full_name === value)
 
+    const computeDropPos = useCallback(() => {
+        if (!btnRef.current) return null
+        const rect = btnRef.current.getBoundingClientRect()
+        const menuWidth = 240
+        // Align right edge with button right edge; clamp to viewport left
+        let left = rect.right - menuWidth
+        if (left < 8) left = 8
+        // Place below button; if not enough room flip above
+        const spaceBelow = window.innerHeight - rect.bottom
+        const menuMaxH = 280 // header + max-h-[220px]
+        const top = spaceBelow >= menuMaxH ? rect.bottom + 6 : rect.top - menuMaxH - 6
+        return { top, left, width: menuWidth }
+    }, [])
+
+    const applyDropPos = useCallback(() => {
+        const next = computeDropPos()
+        if (!next) return
+        setDropPos((prev) => {
+            if (prev.top === next.top && prev.left === next.left && prev.width === next.width) {
+                return prev
+            }
+            return next
+        })
+    }, [computeDropPos])
+
     const openDropdown = () => {
-        if (!open && btnRef.current) {
-            const rect = btnRef.current.getBoundingClientRect()
-            const menuWidth = 240
-            // Align right edge with button right edge; clamp to viewport left
-            let left = rect.right - menuWidth
-            if (left < 8) left = 8
-            // Place below button; if not enough room flip above
-            const spaceBelow = window.innerHeight - rect.bottom
-            const menuMaxH = 280 // header + max-h-[220px]
-            const top = spaceBelow >= menuMaxH ? rect.bottom + 6 : rect.top - menuMaxH - 6
-            setDropPos({ top, left, width: menuWidth })
-        }
+        if (!open) applyDropPos()
         setOpen(o => !o)
     }
+
+    useEffect(() => {
+        return () => {
+            if (repositionRafRef.current != null) {
+                window.cancelAnimationFrame(repositionRafRef.current)
+                repositionRafRef.current = null
+            }
+        }
+    }, [])
 
     useEffect(() => {
         if (!open) return
@@ -64,24 +89,25 @@ function RepoDropdown({ repos, value, onChange }) {
     // Reposition on scroll/resize while open
     useEffect(() => {
         if (!open) return
-        const update = () => {
-            if (!btnRef.current) return
-            const rect = btnRef.current.getBoundingClientRect()
-            const menuWidth = 240
-            let left = rect.right - menuWidth
-            if (left < 8) left = 8
-            const spaceBelow = window.innerHeight - rect.bottom
-            const menuMaxH = 280
-            const top = spaceBelow >= menuMaxH ? rect.bottom + 6 : rect.top - menuMaxH - 6
-            setDropPos({ top, left, width: menuWidth })
+        const scheduleUpdate = () => {
+            if (repositionRafRef.current != null) return
+            repositionRafRef.current = window.requestAnimationFrame(() => {
+                repositionRafRef.current = null
+                applyDropPos()
+            })
         }
-        window.addEventListener("scroll", update, true)
-        window.addEventListener("resize", update)
+        scheduleUpdate()
+        window.addEventListener("scroll", scheduleUpdate, true)
+        window.addEventListener("resize", scheduleUpdate)
         return () => {
-            window.removeEventListener("scroll", update, true)
-            window.removeEventListener("resize", update)
+            window.removeEventListener("scroll", scheduleUpdate, true)
+            window.removeEventListener("resize", scheduleUpdate)
+            if (repositionRafRef.current != null) {
+                window.cancelAnimationFrame(repositionRafRef.current)
+                repositionRafRef.current = null
+            }
         }
-    }, [open])
+    }, [open, applyDropPos])
 
     return (
         <div className="relative flex-shrink-0">
@@ -166,6 +192,7 @@ export default function GithubDashboard() {
                     .then(() => {
                         localStorage.removeItem("github_token_pending")
                         localStorage.setItem("github_token", pendingToken)
+                        window.dispatchEvent(new Event(GITHUB_TOKEN_CHANGED_EVENT))
                         setGhToken(pendingToken)
                     })
                     .catch(err => console.error("Failed to save GitHub token:", err))
@@ -182,6 +209,7 @@ export default function GithubDashboard() {
     useEffect(() => {
         if (ghToken) localStorage.setItem("github_token", ghToken)
         else localStorage.removeItem("github_token")
+        window.dispatchEvent(new Event(GITHUB_TOKEN_CHANGED_EVENT))
     }, [ghToken])
 
     useEffect(() => {
@@ -273,6 +301,7 @@ export default function GithubDashboard() {
     const disconnectGithub = async () => {
         await supabase.auth.updateUser({ data: { github_token: null } })
         localStorage.removeItem("github_token")
+        window.dispatchEvent(new Event(GITHUB_TOKEN_CHANGED_EVENT))
         setGhToken(null); setGhUser(null); setGhRepos([]); setGhIssues([]); setGhCommits([]); setSelectedRepo(null)
     }
 
