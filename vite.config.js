@@ -60,9 +60,9 @@ export default defineConfig(() => {
                         })
                     },
                 },
-                /** LifeSync admin Socket.IO (namespace `/admin`, path `/socket.io`) */
-                '/socket.io': {
-                    target: proxyTarget,
+                /** Native WebSockets for LifeSync (namespace `/ws/...`) */
+                '/ws': {
+                    target: proxyTarget.replace(/^http/, 'ws'),
                     changeOrigin: true,
                     ws: true,
                     secure: false,

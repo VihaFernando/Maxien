@@ -403,7 +403,7 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
         const slug = slugFromItem(series.episodes?.[0] || series)
         if (!slug) return
         let cancelled = false
-        lifesyncFetch(`/api/anime/hentai-ocean/detail?slug=${encodeURIComponent(slug)}`)
+        lifesyncFetch(`/api/v1/hentai/ocean/detail?slug=${encodeURIComponent(slug)}&view=full`)
             .then(d => {
                 if (!cancelled) {
                     setDetail(d)
@@ -745,7 +745,16 @@ export default function LifeSyncHentai() {
             const params = new URLSearchParams({ page: String(p), perPage: String(SERIES_PER_PAGE) })
             if (q.trim()) params.set('q', q.trim())
             if (refresh) params.set('refresh', '1')
-            const data = await lifesyncFetch(`/api/anime/hentai-ocean/home?${params}`)
+            params.set('view', 'standard')
+            let data = await lifesyncFetch(`/api/v1/hentai/ocean/home?${params}`)
+
+            // Backward-safe retry for servers that still transform away `series/items` on compact-like views.
+            if (!Array.isArray(data?.series) && !Array.isArray(data?.items)) {
+                const fallbackParams = new URLSearchParams(params)
+                fallbackParams.delete('view')
+                data = await lifesyncFetch(`/api/v1/hentai/ocean/home?${fallbackParams}`)
+            }
+
             if (!pageMountedRef.current) return
             setCatalog(data)
         } catch (e) {
@@ -783,7 +792,7 @@ export default function LifeSyncHentai() {
         if (!slug || !embedUrl) return null
         const base = { title: ep.title, embedUrl, watchUrl, slug, videoUrl: null, resolving: false }
         try {
-            const data = await lifesyncFetch(`/api/anime/hentai-ocean/stream?slug=${encodeURIComponent(slug)}`)
+            const data = await lifesyncFetch(`/api/v1/hentai/ocean/stream?slug=${encodeURIComponent(slug)}&view=full`)
             const mp4 = typeof data.videoUrl === 'string' && data.videoUrl.startsWith('http') ? data.videoUrl : null
             const hls = typeof data.hlsUrl === 'string' && data.hlsUrl.startsWith('http') ? data.hlsUrl : null
             // iOS Safari: third-party HLS master playlists often fail (segments, codecs, TLS); match anime watch

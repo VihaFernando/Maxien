@@ -384,7 +384,7 @@ export default function Dashboard() {
                         <div className="mt-3">
                             <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">LifeSync</p>
                             <nav className="space-y-0.5">
-                                <SidebarLink to="/dashboard/lifesync/games" icon={FaGamepad} label="Games" active={lifeSyncGamesActive} />
+                                {/* <SidebarLink to="/dashboard/lifesync/games" icon={FaGamepad} label="Games" active={lifeSyncGamesActive} /> */}
                                 {showLifeSyncAnimeLink && (
                                     <SidebarLink to="/dashboard/lifesync/anime" icon={FaFilm} label="Anime" active={lifeSyncAnimeActive} />
                                 )}
@@ -457,19 +457,28 @@ export default function Dashboard() {
                         <div className="mt-3">
                             <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">LifeSync</p>
                             <nav className="space-y-0.5">
-                                <SidebarLink
+                                {/* <SidebarLink
                                     to="/dashboard/lifesync/games"
                                     icon={FaGamepad}
                                     label="Games"
                                     active={lifeSyncGamesActive}
                                     onClick={() => setSidebarOpen(false)}
-                                />
+                                /> */}
                                 {showLifeSyncAnimeLink && (
                                     <SidebarLink
                                         to="/dashboard/lifesync/anime"
                                         icon={FaFilm}
                                         label="Anime"
                                         active={lifeSyncAnimeActive}
+                                        onClick={() => setSidebarOpen(false)}
+                                    />
+                                )}
+                                {showLifeSyncAdminLink && (
+                                    <SidebarLink
+                                        to="/dashboard/lifesync/admin"
+                                        icon={FaUserShield}
+                                        label="Admin"
+                                        active={location.pathname === "/dashboard/lifesync/admin"}
                                         onClick={() => setSidebarOpen(false)}
                                     />
                                 )}

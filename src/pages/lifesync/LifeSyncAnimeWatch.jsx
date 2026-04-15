@@ -216,7 +216,7 @@ export default function LifeSyncAnimeWatch() {
                     : ''
 
             const pack = await lifesyncFetch(
-                `/api/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${malQ}${mirrorQ}`,
+                `/api/v1/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${malQ}${mirrorQ}&view=full`,
                 signal ? { signal } : undefined
             )
             const apiBase = getLifesyncApiBase()
@@ -389,14 +389,14 @@ export default function LifeSyncAnimeWatch() {
                 const audio = streamAudioType === 'dub' ? 'dub' : 'sub'
                 const [detail, streamInfo, thumbs] = await Promise.all([
                     lifesyncFetch(
-                        `/api/anime/details/${encodeURIComponent(malId)}?fields=related_anime,my_list_status`,
+                        `/api/v1/anime/details/${encodeURIComponent(malId)}?fields=related_anime,my_list_status&view=full`,
                         { signal: ac.signal }
                     ).catch(() => null),
                     fetchStreamInfoByMalWithCache(malId, lifesyncFetch, { signal: ac.signal }, {
                         mirror: streamCatalogMirror === 'kickassanime' ? 'kickassanime' : '',
                     }).catch(() => null),
                     lifesyncFetch(
-                        `/api/anime/mal-episode-thumbnails/${encodeURIComponent(malId)}?audio=${audio}`,
+                        `/api/v1/anime/mal-episode-thumbnails/${encodeURIComponent(malId)}?audio=${audio}&view=compact`,
                         { signal: ac.signal }
                     ).catch(() => null),
                 ])
@@ -490,7 +490,7 @@ export default function LifeSyncAnimeWatch() {
             epObj?.number != null ? Math.max(1, Math.floor(Number(epObj.number) || 1)) : episodeIdx + 1
 
         const ac = new AbortController()
-        void lifesyncFetch('/api/anime/watch-progress', {
+        void lifesyncFetch('/api/v1/anime/watch-progress', {
             method: 'PUT',
             signal: ac.signal,
             json: { malId, lastEpisodeNumber },
@@ -1157,4 +1157,3 @@ export default function LifeSyncAnimeWatch() {
         </MotionDiv>
     )
 }
-

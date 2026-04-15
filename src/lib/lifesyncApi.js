@@ -21,6 +21,108 @@ export function getLifesyncApiBase() {
     return 'http://localhost:5000'
 }
 
+function remapToV1Path(path) {
+    if (typeof path !== 'string' || !path.startsWith('/api/')) return path
+
+    const qIndex = path.indexOf('?')
+    const pathname = qIndex >= 0 ? path.slice(0, qIndex) : path
+    const suffix = qIndex >= 0 ? path.slice(qIndex) : ''
+
+    // Auth (implemented v1 endpoints only)
+    if (
+        pathname === '/api/auth/register' ||
+        pathname === '/api/auth/login' ||
+        pathname === '/api/auth/login-with-supabase' ||
+        pathname === '/api/auth/me' ||
+        pathname === '/api/auth/plugins' ||
+        pathname === '/api/auth/preferences'
+    ) {
+        return pathname.replace('/api/auth', '/api/v1/auth') + suffix
+    }
+
+    // Anime stream + hentai ocean
+    if (pathname.startsWith('/api/anime/stream/')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname === '/api/anime/search') {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname.startsWith('/api/anime/details/')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname.startsWith('/api/anime/ranking')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname.startsWith('/api/anime/seasonal')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname.startsWith('/api/anime/mylist')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname.startsWith('/api/anime/mal-episode-thumbnails/')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname === '/api/anime/link') {
+        return '/api/v1/anime/link' + suffix
+    }
+    if (pathname.startsWith('/api/anime/watch-progress')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname.startsWith('/api/anime/watch-history')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname.startsWith('/api/anime/calendar/')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
+    if (pathname.startsWith('/api/anime/hentai-ocean/')) {
+        return pathname.replace('/api/anime/hentai-ocean', '/api/v1/hentai/ocean') + suffix
+    }
+
+    // Manga
+    if (pathname.startsWith('/api/manga/mangadex/')) {
+        return pathname.replace('/api/manga', '/api/v1/manga') + suffix
+    }
+    if (pathname.startsWith('/api/manga/mangadistrict/')) {
+        return pathname.replace('/api/manga', '/api/v1/manga') + suffix
+    }
+    if (
+        pathname.startsWith('/api/manga/tags') ||
+        pathname.startsWith('/api/manga/search') ||
+        pathname.startsWith('/api/manga/popular') ||
+        pathname.startsWith('/api/manga/recent') ||
+        pathname.startsWith('/api/manga/details/') ||
+        pathname.startsWith('/api/manga/chapters/') ||
+        pathname.startsWith('/api/manga/pages/') ||
+        pathname.startsWith('/api/manga/statistics/')
+    ) {
+        return pathname.replace('/api/manga', '/api/v1/manga') + suffix
+    }
+    if (pathname.startsWith('/api/manga/reading')) {
+        return pathname.replace('/api/manga', '/api/v1/manga') + suffix
+    }
+
+    // Xbox OpenXBL
+    if (pathname.startsWith('/api/xbox/openxbl/')) {
+        return pathname.replace('/api/xbox/openxbl', '/api/v1/xbox/openxbl') + suffix
+    }
+
+    // Steam v1 routes
+    if (pathname === '/api/steam/sync-games') {
+        return '/api/v1/steam/sync' + suffix
+    }
+    if (
+        pathname === '/api/steam/status' ||
+        pathname === '/api/steam/games' ||
+        pathname === '/api/steam/store' ||
+        pathname === '/api/steam/news' ||
+        pathname === '/api/steam/sync'
+    ) {
+        return pathname.replace('/api/steam', '/api/v1/steam') + suffix
+    }
+
+    return path
+}
+
 export function getLifesyncToken() {
     try {
         return localStorage.getItem(LIFESYNC_TOKEN_KEY)
@@ -46,7 +148,7 @@ export function lifesyncOAuthStartUrl(provider) {
     const token = getLifesyncToken()
     if (!token) return null
     const base = getLifesyncApiBase()
-    return `${base}/api/oauth/${provider}/start?access_token=${encodeURIComponent(token)}`
+    return `${base}/api/v1/oauth/${provider}/start?access_token=${encodeURIComponent(token)}`
 }
 
 async function parseResponse(res) {
@@ -77,7 +179,9 @@ export async function lifesyncFetch(path, options = {}) {
         if (t) headers.set('Authorization', `Bearer ${t}`)
     }
 
-    const res = await fetch(`${base}${path}`, {
+    const apiPath = remapToV1Path(path)
+
+    const res = await fetch(`${base}${apiPath}`, {
         ...rest,
         headers,
         body: json !== undefined ? JSON.stringify(json) : rest.body,
@@ -130,11 +234,11 @@ export function lifesyncGetMe() {
 }
 
 export function lifesyncPostPlugins(body) {
-    return lifesyncFetch('/api/auth/plugins', { method: 'POST', json: body })
+    return lifesyncFetch('/api/v1/auth/plugins', { method: 'POST', json: body })
 }
 
 export function lifesyncPatchPreferences(body) {
-    return lifesyncFetch('/api/auth/preferences', { method: 'PATCH', json: body })
+    return lifesyncFetch('/api/v1/auth/preferences', { method: 'PATCH', json: body })
 }
 
 /** @param {Record<string, unknown>|null|undefined} prefs */
@@ -146,6 +250,26 @@ export function getAnimeStreamAudio(prefs) {
 export function isPluginEnabled(prefs, key) {
     if (!prefs || prefs[key] === undefined) return true
     return Boolean(prefs[key])
+}
+
+/**
+ * v1 startup bundle (client-side fan-out).
+ * Keeps old call-sites compatible without relying on removed `/api/batch/*` routes.
+ */
+export function lifesyncBatchUserStartup() {
+    return Promise.allSettled([
+        lifesyncFetch('/api/v1/auth/me', { method: 'GET' }),
+        lifesyncFetch('/api/v1/steam/status?view=compact', { method: 'GET' }),
+        lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact', { method: 'GET' }),
+        lifesyncFetch('/api/v1/xbox/openxbl/status?view=compact', { method: 'GET' }),
+    ]).then(([me, steam, mangadex, xbox]) => ({
+        user: me.status === 'fulfilled' ? me.value : null,
+        integrations: {
+            steam: steam.status === 'fulfilled' ? steam.value : null,
+            mangadex: mangadex.status === 'fulfilled' ? mangadex.value : null,
+            xbox: xbox.status === 'fulfilled' ? xbox.value : null,
+        },
+    }))
 }
 
 /** Matches LifeSyncHentai: plugin on and NSFW preference on. */

@@ -73,7 +73,7 @@ export default function LifeSyncMangaRead() {
     const source = useMemo(() => {
         const s = location.state?.source || location.state?.src
         const v = String(s || '').trim()
-        return v === 'hentaifox' || v === 'mangadistrict' ? v : 'mangadex'
+        return v === 'mangadistrict' ? v : 'mangadex'
     }, [location.state])
 
     const browseTranslatedLang = useMemo(() => {
@@ -106,7 +106,7 @@ export default function LifeSyncMangaRead() {
     useEffect(() => {
         if (!isLifeSyncConnected) return
         let cancelled = false
-        lifesyncFetch('/api/manga/mangadex/auth/status')
+        lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact')
             .then(s => { if (!cancelled) setDexAuthStatus(s) })
             .catch(() => { if (!cancelled) setDexAuthStatus({ oauthConfigured: false, connected: false }) })
         return () => { cancelled = true }
@@ -115,11 +115,11 @@ export default function LifeSyncMangaRead() {
     const saveProgress = useCallback(async (manga, chapter) => {
         if (!manga?.id || !chapter?.id) return
         const src =
-            manga.source === 'mangadistrict' || manga.source === 'hentaifox'
+            manga.source === 'mangadistrict'
                 ? manga.source
                 : 'mangadex'
         try {
-            await lifesyncFetch('/api/manga/reading', {
+            await lifesyncFetch('/api/v1/manga/reading', {
                 method: 'PUT',
                 json: {
                     source: src,
@@ -145,7 +145,7 @@ export default function LifeSyncMangaRead() {
             mdReadSyncTimer.current = null
             void (async () => {
                 try {
-                    await lifesyncFetch(`/api/manga/mangadex/read-chapters/${encodeURIComponent(String(manga.id))}`, {
+                    await lifesyncFetch(`/api/v1/manga/mangadex/read-chapters/${encodeURIComponent(String(manga.id))}`, {
                         method: 'POST',
                         json: { read: [String(chapter.id)], unread: [] },
                     })
@@ -155,7 +155,7 @@ export default function LifeSyncMangaRead() {
                 const k = String(manga.id)
                 if (mdReadingStatusSent.current.has(k)) return
                 try {
-                    await lifesyncFetch(`/api/manga/mangadex/reading-status/${encodeURIComponent(k)}`, {
+                    await lifesyncFetch(`/api/v1/manga/mangadex/reading-status/${encodeURIComponent(k)}`, {
                         method: 'POST',
                         json: { status: 'reading' },
                     })
@@ -182,10 +182,11 @@ export default function LifeSyncMangaRead() {
             setError('')
             try {
                 if (source === 'mangadex') {
-                    const detail = await lifesyncFetch(`/api/manga/details/${encodeURIComponent(mangaId)}`)
+                    const detail = await lifesyncFetch(`/api/v1/manga/details/${encodeURIComponent(mangaId)}?view=full`)
                     const langParam = browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang
                     const feed = await lifesyncFetch(
-                        `/api/manga/chapters/${encodeURIComponent(mangaId)}?limit=500&lang=${encodeURIComponent(langParam)}&order=asc`
+                        `/api/v1/manga/chapters/${encodeURIComponent(mangaId)}?limit=500&lang=${encodeURIComponent(langParam)}&order=asc`
+                        + '&view=full'
                     )
                     const list = [...(feed?.data || [])]
                     list.sort(compareChapters)
@@ -197,23 +198,13 @@ export default function LifeSyncMangaRead() {
                         setChapter(ch)
                     }
                 } else if (source === 'mangadistrict') {
-                    const data = await lifesyncFetch(`/api/manga/mangadistrict/info/${encodeURIComponent(mangaId)}`)
+                    const data = await lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(mangaId)}?view=full`)
                     const list = [...(data?.chapters || [])]
                     list.sort(compareChapters)
                     const ch = list.find(c => String(c?.id) === chapterId) || (list.length ? list[list.length - 1] : null)
                     if (!ch) throw new Error('No chapters available.')
                     if (!cancelled) {
                         setManga({ ...data, source: 'mangadistrict' })
-                        setSortedChapters(list)
-                        setChapter(ch)
-                    }
-                } else {
-                    const data = await lifesyncFetch(`/api/manga/hentaifox/info/${encodeURIComponent(mangaId)}`)
-                    const list = [...(data?.chapters || [])]
-                    const ch = list.find(c => String(c?.id) === chapterId) || (list.length ? list[0] : null)
-                    if (!ch) throw new Error('No chapters available.')
-                    if (!cancelled) {
-                        setManga({ ...data, source: 'hentaifox' })
                         setSortedChapters(list)
                         setChapter(ch)
                     }
@@ -240,13 +231,11 @@ export default function LifeSyncMangaRead() {
             setLoadErr('')
             setPack(null)
             const path =
-                manga.source === 'hentaifox'
-                    ? `/api/manga/hentaifox/chapter/${encodeURIComponent(chapter.id)}`
-                    : manga.source === 'mangadistrict'
-                        ? `/api/manga/mangadistrict/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
-                        : `/api/manga/pages/${chapter.id}`
+                manga.source === 'mangadistrict'
+                        ? `/api/v1/manga/mangadistrict/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
+                        : `/api/v1/manga/pages/${chapter.id}`
             try {
-                const data = await lifesyncFetch(path)
+                const data = await lifesyncFetch(`${path}${path.includes('?') ? '&' : '?'}view=full`)
                 if (!cancelled) setPack(data)
             } catch (e) {
                 if (!cancelled) setLoadErr(e?.message || 'Could not load chapter pages')
@@ -501,4 +490,3 @@ export default function LifeSyncMangaRead() {
         </div>
     )
 }
-

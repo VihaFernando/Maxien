@@ -238,6 +238,7 @@ export default function AIAssistant() {
     const bottomRef = useRef(null)
     const inputRef = useRef(null)
     const chatRef = useRef(null)
+    const timeoutRefs = useRef([])
 
     // ── Voice ────────────────────────────────────────────────────────────
     const voice = useVoice()
@@ -269,6 +270,15 @@ export default function AIAssistant() {
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: "smooth" })
     }, [messages])
+
+    // ── Cleanup pending timeouts on unmount ─────────────────────────────────────
+    useEffect(() => {
+        return () => {
+            for (const id of timeoutRefs.current) {
+                clearTimeout(id)
+            }
+        }
+    }, [])
 
     // ── Save API key ───────────────────────────────────────────────────────────
     const handleSaveKey = async (e) => {
@@ -306,7 +316,7 @@ export default function AIAssistant() {
                     action: null,
                 }])
             }
-            setTimeout(() => setKeySuccess(""), 3000)
+            timeoutRefs.current.push(setTimeout(() => setKeySuccess(""), 3000))
         } catch {
             setKeyError("Network error. Please check your connection.")
         } finally {
@@ -420,7 +430,7 @@ export default function AIAssistant() {
             }))
         } finally {
             setSending(false)
-            setTimeout(() => inputRef.current?.focus(), 50)
+            timeoutRefs.current.push(setTimeout(() => inputRef.current?.focus(), 50))
         }
     }
 

@@ -1,5 +1,5 @@
 /**
- * Client-side cache for `GET /api/anime/stream/info/by-mal/:malId` (episode list + embed ids).
+ * Client-side cache for `GET /api/v1/anime/stream/info/by-mal/:malId` (episode list + embed ids).
  * Reduces repeat fetches when browsing / reopening the same title. TTL aligns loosely with server AnimeData.
  */
 
@@ -112,8 +112,9 @@ export async function fetchStreamInfoByMalWithCache(malId, fetcher, init, opts =
   const mirror = normalizeMirror(opts.mirror)
   const hit = readLifesyncStreamCatalogByMal(id, mirror)
   if (hit) return hit
-  const qs = mirror === 'kickassanime' ? '?mirror=kickassanime' : ''
-  const res = await fetcher(`/api/anime/stream/info/by-mal/${encodeURIComponent(id)}${qs}`, init).catch(() => null)
+  const qs = new URLSearchParams({ view: 'full' })
+  if (mirror === 'kickassanime') qs.set('mirror', 'kickassanime')
+  const res = await fetcher(`/api/v1/anime/stream/info/by-mal/${encodeURIComponent(id)}?${qs.toString()}`, init).catch(() => null)
   const body = res && typeof res === 'object' ? res : null
   if (body?.data != null) writeLifesyncStreamCatalogByMal(id, body, mirror)
   return body

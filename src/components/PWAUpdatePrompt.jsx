@@ -60,7 +60,6 @@ export default function PWAUpdatePrompt() {
       >
         <p className="leading-snug">
           <span className="font-medium text-white">A new version of Maxien is ready.</span>{' '}
-          Reload to get the latest fixes and features.
         </p>
         <div className="flex shrink-0 gap-2 sm:justify-end">
           <button

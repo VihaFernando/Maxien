@@ -5,8 +5,8 @@ import { FaCalendarAlt, FaGamepad, FaFilm, FaArrowRight, FaChevronRight, FaStar 
 import { LifeSyncHubMangaReading } from '../../components/lifesync/MangaReadingRail'
 import { LifeSyncHubAnimeWatching } from '../../components/lifesync/AnimeHubWatchingRail'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { useMangaReadingList } from '../../hooks/useMangaReadingList'
-import { useAnimeWatchHistory } from '../../hooks/useAnimeWatchHistory'
+import { useBatchContentLists } from '../../hooks/useBatchContentLists'
+import { filterMangaReadingByNsfw } from '../../hooks/useMangaReadingList'
 import {
     isLifeSyncAnimeNavVisible,
     isLifeSyncHentaiHubVisible,
@@ -432,7 +432,7 @@ async function fetchCalendarMonthCached(year, month1) {
         }
     } catch { /* ignore */ }
 
-    const res = await lifesyncFetch(`/api/anime/calendar/month?year=${year}&month=${month1}&tz=${encodeURIComponent(tz)}`)
+    const res = await lifesyncFetch(`/api/v1/anime/calendar/month?year=${year}&month=${month1}&tz=${encodeURIComponent(tz)}&view=compact`)
     const payload = {
         at: Date.now(),
         days: res?.days && typeof res.days === 'object' ? res.days : {},
@@ -937,14 +937,21 @@ export function LifeSyncAnimeHub() {
         () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
         [weekStart]
     )
+    const { animeHistory, mangaReading, loading: batchLoading } = useBatchContentLists({
+        enabled: isLifeSyncConnected && (animePluginOn || mangaPluginOn),
+    })
 
-    const { entries: animeWatchEntries, loading: animeWatchLoading } = useAnimeWatchHistory({
-        enabled: isLifeSyncConnected && animePluginOn,
-    })
-    const { visibleEntries: mangaReadingVisible, loading: mangaReadingLoading } = useMangaReadingList({
-        enabled: isLifeSyncConnected && mangaPluginOn,
-        nsfwEnabled,
-    })
+    const { entries: animeWatchEntries, loading: animeWatchLoading } = useMemo(() => ({
+        entries: animeHistory,
+        loading: batchLoading,
+    }), [animeHistory, batchLoading])
+
+    const { visibleEntries: mangaReadingVisible, loading: mangaReadingLoading } = useMemo(() => ({
+        visibleEntries: filterMangaReadingByNsfw(mangaReading, nsfwEnabled),
+        loading: batchLoading,
+    }), [mangaReading, nsfwEnabled, batchLoading])
+
+    
 
     useEffect(() => {
         if (!isLifeSyncConnected || !animePluginOn) return
@@ -1226,4 +1233,3 @@ export function LifeSyncAnimeHub() {
         </div>
     )
 }
-

@@ -5,7 +5,6 @@ import { mangadexImageProps } from '../../lib/mangaChapterUtils'
 
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
-    if (source === 'hentaifox') return 'HentaiFox'
     return source || 'MangaDex'
 }
 

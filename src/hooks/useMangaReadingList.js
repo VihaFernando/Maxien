@@ -6,7 +6,7 @@ const MD_NSFW_RATINGS = new Set(['erotica', 'pornographic'])
 export function filterMangaReadingByNsfw(entries, nsfwEnabled) {
     if (nsfwEnabled) return entries
     return entries.filter((e) => {
-        if (e.source === 'hentaifox' || e.source === 'mangadistrict') return false
+        if (e.source === 'mangadistrict') return false
         if (e.source === 'mangadex') {
             const cr = e.contentRating
             if (cr && MD_NSFW_RATINGS.has(String(cr))) return false
@@ -50,7 +50,7 @@ export function useMangaReadingList({ enabled, nsfwEnabled }) {
         }
         setLoading(true)
         try {
-            const d = await lifesyncFetch('/api/manga/reading')
+            const d = await lifesyncFetch('/api/v1/manga/reading?view=standard')
             const next = Array.isArray(d) ? d : d?.entries || []
             setEntries(dedupe(next))
         } catch {

@@ -11,7 +11,7 @@ export const MAL_LIST_STATUS_OPTIONS = [
 ]
 
 /**
- * @param {unknown} res — PATCH `/api/anime/mylist/:id` JSON body
+ * @param {unknown} res — PATCH `/api/v1/anime/mylist/:id` JSON body
  * @returns {Record<string, unknown>}
  */
 export function malListStatusPatchFromResponse(res) {
@@ -67,7 +67,7 @@ export function MalListStatusControl({
       setBusy(true)
       setMsg('')
       try {
-        const res = await lifesyncFetch(`/api/anime/mylist/${encodeURIComponent(mid)}`, {
+        const res = await lifesyncFetch(`/api/v1/anime/mylist/${encodeURIComponent(mid)}`, {
           method: 'PATCH',
           json: { status: next },
         })

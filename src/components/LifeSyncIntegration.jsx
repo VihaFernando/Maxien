@@ -86,7 +86,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
 
     useEffect(() => {
         let cancelled = false
-        lifesyncFetch('/api/manga/mangadex/auth/status')
+        lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact')
             .then(data => { if (!cancelled) setMangadexStatus(data) })
             .catch(() => { if (!cancelled) setMangadexStatus(null) })
         return () => { cancelled = true }
@@ -94,7 +94,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
 
     useEffect(() => {
         let cancelled = false
-        lifesyncFetch('/api/xbox/openxbl/status')
+        lifesyncFetch('/api/v1/xbox/openxbl/status?view=compact')
             .then(data => { if (!cancelled) setXboxOpenXbl(data || null) })
             .catch(() => { if (!cancelled) setXboxOpenXbl(null) })
         return () => { cancelled = true }
@@ -116,12 +116,12 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
         setError('')
         setMessage('')
         try {
-            await lifesyncFetch('/api/manga/mangadex/auth', { method: 'POST', json: { username: u, password: p } })
+            await lifesyncFetch('/api/v1/manga/mangadex/auth', { method: 'POST', json: { username: u, password: p } })
             setMangadexPassword('')
             setMessage(
                 'MangaDex linked. Your MangaDex reading list is importing in the background — open Manga and refresh the reading shelf if titles do not appear right away.'
             )
-            const st = await lifesyncFetch('/api/manga/mangadex/auth/status')
+            const st = await lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact')
             setMangadexStatus(st)
         } catch (err) {
             setError(err.message || 'MangaDex login failed')
@@ -134,10 +134,10 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
         setUnlinkBusy('MangaDex')
         setError('')
         try {
-            await lifesyncFetch('/api/manga/mangadex/auth', { method: 'DELETE' })
+            await lifesyncFetch('/api/v1/manga/mangadex/auth', { method: 'DELETE' })
             setMessage('MangaDex disconnected.')
             setMangadexStatus(s => (s ? { ...s, connected: false, username: null } : s))
-            const st = await lifesyncFetch('/api/manga/mangadex/auth/status').catch(() => null)
+            const st = await lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact').catch(() => null)
             if (st) setMangadexStatus(st)
         } catch (err) {
             setError(err.message || 'Could not disconnect MangaDex')
@@ -180,7 +180,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
         setError('')
         setMessage('')
         try {
-            const data = await lifesyncFetch(`/api/xbox/openxbl/proxy/search/${encodeURIComponent(gt)}`)
+            const data = await lifesyncFetch(`/api/v1/xbox/openxbl/proxy/search/${encodeURIComponent(gt)}?view=standard`)
             const people = extractOpenXblPeople(data)
             const codeOk = data?.code === undefined || data?.code === 200
             if (!codeOk) {
@@ -190,7 +190,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
             if (!person) {
                 throw new Error('No matching player profile was returned for that gamertag')
             }
-            await lifesyncFetch('/api/xbox/openxbl/saved', {
+            await lifesyncFetch('/api/v1/xbox/openxbl/saved', {
                 method: 'POST',
                 json: { response: { code: 200, content: { people: [person] } } },
             })
@@ -268,9 +268,9 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                 </div>
                             </div>
                             {steamLinked ? (
-                                <button type="button" onClick={() => unlinkProvider('Steam', '/api/steam/link')} disabled={unlinkBusy === 'Steam'} className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto">
-                                    {unlinkBusy === 'Steam' ? 'Unlinking…' : 'Disconnect'}
-                                </button>
+                                <span className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] px-3 py-1.5 rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] sm:ml-auto">
+                                    Connected
+                                </span>
                             ) : (
                                 <a href={lifesyncOAuthStartUrl('steam') || '#'} className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[#1d1d1f] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('steam') ? 'opacity-50 pointer-events-none' : ''}`}>
                                     Link Steam
@@ -298,7 +298,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                 </div>
                             </div>
                             {malLinked ? (
-                                <button type="button" onClick={() => unlinkProvider('MAL', '/api/anime/link')} disabled={unlinkBusy === 'MAL'} className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto">
+                                <button type="button" onClick={() => unlinkProvider('MAL', '/api/v1/anime/link')} disabled={unlinkBusy === 'MAL'} className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto">
                                     {unlinkBusy === 'MAL' ? 'Unlinking…' : 'Disconnect'}
                                 </button>
                             ) : (
@@ -328,14 +328,9 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                 </div>
                             </div>
                             {animeScheduleLinked ? (
-                                <button
-                                    type="button"
-                                    onClick={() => unlinkProvider('AnimeSchedule', '/api/anime/animeschedule/link')}
-                                    disabled={unlinkBusy === 'AnimeSchedule'}
-                                    className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto"
-                                >
-                                    {unlinkBusy === 'AnimeSchedule' ? 'Unlinking…' : 'Disconnect'}
-                                </button>
+                                <span className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] px-3 py-1.5 rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] sm:ml-auto">
+                                    Connected
+                                </span>
                             ) : (
                                 <a
                                     href={lifesyncOAuthStartUrl('animeschedule') || '#'}

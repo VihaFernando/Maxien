@@ -11,7 +11,6 @@ import { LifeSyncSectionNav } from '../../components/lifesync/LifeSyncSectionNav
 import { StoreGameDetailModal } from '../../components/lifesync/StoreGameDetailModal'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch } from '../../lib/lifesyncApi'
-import { fetchMsStoreDetailsMap, fetchMsStoreProductDetail } from '../../lib/msStoreCatalogLifeSync'
 import { detailFromOpenXblProductSummary } from '../../lib/msStoreParseProductDetail'
 import {
     extractMinutesPlayedMapFromStats,
@@ -48,48 +47,16 @@ const GAMEPASS_FEEDS = [
 const XBOX_SECTION_NAV_ITEMS = [
     { id: 'library', label: 'My games' },
     { id: 'gamepass', label: 'Game Pass' },
-    { id: 'deals', label: 'Store deals' },
 ]
 
 const LIBRARY_MAX = 36
 const STATS_BATCH = 24
-const DEALS_PAGE_SIZE = 24
 /** Matches xl:grid-cols-6 — full rows per page */
 const GAMEPASS_PAGE_SIZE = 24
 
-/** Game Pass + Store deals: six tiles per row on wide viewports */
+/** Game Pass catalog: six tiles per row on wide viewports */
 const CATALOG_GRID_CLASS =
     'grid gap-2.5 sm:gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
-
-function flattenDeals(root) {
-    if (!root) return []
-    if (Array.isArray(root)) return root
-    return root.Products || root.products || root.items || root.Items || root.value || []
-}
-
-function normalizeDeal(p) {
-    const bigId = p && typeof p === 'object' ? pickMicrosoftStoreBigId(p) : null
-    if (p && typeof p === 'object' && typeof p.storeUrl === 'string' && typeof p.title === 'string') {
-        return {
-            key: String(p.id || p.title),
-            bigId,
-            title: p.title,
-            imageUrl: p.imageUrl || null,
-            href: p.storeUrl,
-            subtitle: p.priceText || 'Deal',
-        }
-    }
-    const title = p?.LocalizedTitle?.[0]?.value || p?.LocalizedTitle || p?.ProductTitle || p?.title || p?.Title || p?.name || 'Deal'
-    const key = String(p?.ProductId || p?.productId || p?.id || title)
-    return {
-        key,
-        bigId,
-        title,
-        imageUrl: null,
-        href: `https://www.xbox.com/search?q=${encodeURIComponent(title)}`,
-        subtitle: 'Microsoft Store',
-    }
-}
 
 /** Minimal store detail when Display Catalog / OpenXBL summary is unavailable */
 function buildFallbackStoreDetail({ title, href, imageUrl, subtitle, tagline }) {
@@ -231,62 +198,6 @@ function mergeRowsWithMinutesMap(rows, map) {
     })
 }
 
-function DealTile({ title, imageUrl, subtitle, tagline, onOpen }) {
-    const hasArt = Boolean(imageUrl)
-    return (
-        <button
-            type="button"
-            onClick={onOpen}
-            className="group relative aspect-[2/3] w-full overflow-hidden rounded-[12px] sm:rounded-[14px] border border-[#d2d2d7]/50 bg-[#f5f5f7] text-left shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#107C10]/40 focus-visible:ring-offset-2"
-        >
-            {hasArt ? (
-                <LifesyncEpisodeThumbnail
-                    src={imageUrl}
-                    className="absolute inset-0 h-full w-full"
-                    imgClassName="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
-                />
-            ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#f5f5f7] to-[#e8e8ed]">
-                    <svg className="h-9 w-9 text-[#c7c7cc]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5" aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
-                    </svg>
-                    <span className="mt-2 text-[10px] font-medium text-[#86868b]">No art</span>
-                </div>
-            )}
-            <div
-                className={`pointer-events-none absolute inset-0 ${hasArt ? 'bg-gradient-to-t from-black/88 via-black/35 to-black/5' : ''}`}
-                aria-hidden
-            />
-            <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col justify-end p-2.5 pt-14 sm:p-3 sm:pt-16">
-                <p
-                    className={`line-clamp-2 text-[11px] font-bold leading-snug sm:text-[12px] ${hasArt ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]' : 'text-[#1d1d1f]'}`}
-                >
-                    {title}
-                </p>
-                {subtitle ? (
-                    <p
-                        className={`mt-0.5 line-clamp-1 text-[10px] font-medium sm:text-[11px] ${hasArt ? 'text-white/85' : 'text-[#424245]'}`}
-                    >
-                        {subtitle}
-                    </p>
-                ) : null}
-                {tagline ? (
-                    <p
-                        className={`mt-1 line-clamp-2 text-[9px] leading-snug sm:text-[10px] ${hasArt ? 'text-white/70' : 'text-[#86868b]'}`}
-                    >
-                        {tagline}
-                    </p>
-                ) : null}
-                <p
-                    className={`mt-1.5 text-[9px] font-semibold sm:text-[10px] ${hasArt ? 'text-[#6ecf6e]' : 'text-[#107C10]'}`}
-                >
-                    View details
-                </p>
-            </div>
-        </button>
-    )
-}
-
 function ProfileCard({ person, presenceBusy, presence }) {
     const d = person?.detail || {}
     const accent = person?.preferredColor?.primaryColor ? `#${String(person.preferredColor.primaryColor).replace(/^#/, '')}` : null
@@ -383,14 +294,13 @@ function ProfileCard({ person, presenceBusy, presence }) {
     )
 }
 
-function GamePassTile({ item, catalog, onOpenDetail }) {
+function GamePassTile({ item, onOpenDetail }) {
     const bigId = pickMicrosoftStoreBigId(item)
-    const cat = bigId && catalog instanceof Map ? catalog.get(bigId) : null
-    const title = cat?.title || pickOpenXblItemTitle(item)
-    const img = cat?.heroImage || pickOpenXblItemImage(item)
-    const href = cat?.storeUrl || (bigId ? `https://www.xbox.com/games/store/p/${encodeURIComponent(bigId)}` : `https://www.xbox.com/search?q=${encodeURIComponent(title)}`)
-    const priceLine = cat?.priceText || null
-    const blurb = cat?.shortDescription || null
+    const title = pickOpenXblItemTitle(item)
+    const img = pickOpenXblItemImage(item)
+    const href = bigId ? `https://www.xbox.com/games/store/p/${encodeURIComponent(bigId)}` : `https://www.xbox.com/search?q=${encodeURIComponent(title)}`
+    const priceLine = null
+    const blurb = null
     const hasArt = Boolean(img)
 
     return (
@@ -597,11 +507,6 @@ export default function LifeSyncXbox() {
     const [mainTab, setMainTab] = useState('library')
     const [gpFeedId, setGpFeedId] = useState('all')
 
-    const [deals, setDeals] = useState([])
-    const [dealsError, setDealsError] = useState('')
-    const [meta, setMeta] = useState(null)
-    const [dealsBusy, setDealsBusy] = useState(false)
-
     const [openXbl, setOpenXbl] = useState(null)
     const [dashBusy, setDashBusy] = useState(false)
     const [dashErr, setDashErr] = useState('')
@@ -623,10 +528,6 @@ export default function LifeSyncXbox() {
     const [achBusy, setAchBusy] = useState(false)
     const [achErr, setAchErr] = useState('')
 
-    const [dealCatalogMap, setDealCatalogMap] = useState(() => new Map())
-    const [gpCatalogMap, setGpCatalogMap] = useState(() => new Map())
-
-    const [dealsPage, setDealsPage] = useState(1)
     const [gpPage, setGpPage] = useState(1)
 
     const [storeModalOpen, setStoreModalOpen] = useState(false)
@@ -650,23 +551,6 @@ export default function LifeSyncXbox() {
         setStoreModalBusy(false)
     }, [])
 
-    const loadDeals = useCallback(async () => {
-        setDealsBusy(true)
-        setDealsError('')
-        try {
-            const data = await lifesyncFetch('/api/xbox/deals')
-            const raw = flattenDeals(data?.deals)
-            setDeals(raw.map(normalizeDeal))
-            setDealsPage(1)
-            setMeta({ locale: data?.locale, source: data?.source, totalProducts: data?.totalProducts })
-        } catch {
-            setDeals([])
-            setDealsError('We couldn’t load deals right now. Try again shortly.')
-        } finally {
-            setDealsBusy(false)
-        }
-    }, [])
-
     const loadLinkedProfile = useCallback(async (statusPack, preferredGamertag) => {
         setProfileErr('')
         const preferred = String(preferredGamertag || '').trim()
@@ -676,12 +560,12 @@ export default function LifeSyncXbox() {
         }
         if (!statusPack?.configured) {
             setProfilePayload(null)
-            setProfileErr('Your host hasn’t finished Xbox setup yet, so profiles and game data can’t load here. Store deals still work.')
+            setProfileErr('Your host hasn’t finished Xbox setup yet, so profiles and game data can’t load here.')
             return
         }
         setProfileBusy(true)
         try {
-            const data = await lifesyncFetch(`/api/xbox/openxbl/proxy/search/${encodeURIComponent(preferred)}`)
+            const data = await lifesyncFetch(`/api/v1/xbox/openxbl/proxy/search/${encodeURIComponent(preferred)}?view=standard`)
             const people = extractOpenXblPeople(data)
             const person = pickBestGamertagMatch(people, preferred)
             if (!person) {
@@ -706,7 +590,7 @@ export default function LifeSyncXbox() {
         setDashErr('')
         let statusPack = null
         try {
-            const data = await lifesyncFetch('/api/xbox/openxbl/status')
+            const data = await lifesyncFetch('/api/v1/xbox/openxbl/status?view=compact')
             statusPack = data || null
             setOpenXbl(statusPack)
         } catch {
@@ -720,28 +604,9 @@ export default function LifeSyncXbox() {
 
     useEffect(() => {
         if (isLifeSyncConnected) {
-            void loadDeals()
             void loadXboxDashboard()
         }
-    }, [isLifeSyncConnected, loadDeals, loadXboxDashboard])
-
-    useEffect(() => {
-        let cancelled = false
-        const ids = [...new Set(deals.map((d) => d.bigId).filter(Boolean))]
-        if (!ids.length) {
-            setDealCatalogMap(new Map())
-            return () => {
-                cancelled = true
-            }
-        }
-        ;(async () => {
-            const m = await fetchMsStoreDetailsMap(ids, (path) => lifesyncFetch(path))
-            if (!cancelled) setDealCatalogMap(m)
-        })()
-        return () => {
-            cancelled = true
-        }
-    }, [deals])
+    }, [isLifeSyncConnected, loadXboxDashboard])
 
     const people = useMemo(() => extractOpenXblPeople(profilePayload), [profilePayload])
     const activeXuid = people[0]?.xuid ?? null
@@ -777,7 +642,7 @@ export default function LifeSyncXbox() {
         setPresenceBusy(true)
         ;(async () => {
             try {
-                const data = await lifesyncFetch(`/api/xbox/openxbl/proxy/presence/${encodeURIComponent(String(activeXuid))}`)
+                const data = await lifesyncFetch(`/api/v1/xbox/openxbl/proxy/presence/${encodeURIComponent(String(activeXuid))}?view=standard`)
                 if (!cancelled) setPresencePayload(data)
             } catch {
                 if (!cancelled) setPresencePayload(null)
@@ -799,7 +664,7 @@ export default function LifeSyncXbox() {
         ;(async () => {
             try {
                 const data = await lifesyncFetch(
-                    `/api/xbox/openxbl/proxy/v3/achievements/player/${encodeURIComponent(String(activeXuid))}`,
+                    `/api/v1/xbox/openxbl/proxy/v3/achievements/player/${encodeURIComponent(String(activeXuid))}?view=standard`,
                 )
                 if (!cancelled) setV3AchievementsPayload(data)
             } catch {
@@ -822,7 +687,7 @@ export default function LifeSyncXbox() {
         setLibraryErr('')
         ;(async () => {
             try {
-                const data = await lifesyncFetch(`/api/xbox/openxbl/proxy/player/titleHistory/${encodeURIComponent(activeXuid)}`)
+                const data = await lifesyncFetch(`/api/v1/xbox/openxbl/proxy/player/titleHistory/${encodeURIComponent(activeXuid)}?view=standard`)
                 if (cancelled) return
                 const raw = extractTitleHistoryItems(data)
                 let rows = raw.map((item) => normalizeTitleHistoryRow(item)).filter(Boolean)
@@ -845,7 +710,7 @@ export default function LifeSyncXbox() {
                         stats: unique.map((titleId) => ({ name: 'MinutesPlayed', titleId })),
                     }
                     try {
-                        const statsData = await lifesyncFetch('/api/xbox/openxbl/proxy/player/stats', {
+                        const statsData = await lifesyncFetch('/api/v1/xbox/openxbl/proxy/player/stats?view=standard', {
                             method: 'POST',
                             json: statsBody,
                         })
@@ -855,7 +720,7 @@ export default function LifeSyncXbox() {
                         }
                     } catch {
                         try {
-                            const statsData2 = await lifesyncFetch('/api/xbox/openxbl/proxy/player/stats', {
+                            const statsData2 = await lifesyncFetch('/api/v1/xbox/openxbl/proxy/player/stats?view=standard', {
                                 method: 'POST',
                                 json: {
                                     xuids: [String(activeXuid)],
@@ -898,10 +763,9 @@ export default function LifeSyncXbox() {
         setGpErr('')
         ;(async () => {
             try {
-                const data = await lifesyncFetch(`/api/xbox/openxbl/proxy/${path}`)
+                const data = await lifesyncFetch(`/api/v1/xbox/openxbl/proxy/${path}?view=compact`)
                 if (cancelled) return
                 const items = extractOpenXblItemList(data)
-                setGpCatalogMap(new Map())
                 setGpItems(items)
             } catch {
                 if (!cancelled) {
@@ -924,20 +788,9 @@ export default function LifeSyncXbox() {
         return gpItems.slice(start, start + GAMEPASS_PAGE_SIZE)
     }, [gpItems, gpPageSafe])
 
-    const dealsPageCount = Math.max(1, Math.ceil(deals.length / DEALS_PAGE_SIZE))
-    const dealsPageSafe = Math.min(dealsPage, dealsPageCount)
-    const dealsVisible = useMemo(() => {
-        const start = (dealsPageSafe - 1) * DEALS_PAGE_SIZE
-        return deals.slice(start, start + DEALS_PAGE_SIZE)
-    }, [deals, dealsPageSafe])
-
     useEffect(() => {
         setGpPage(1)
     }, [gpFeedId])
-
-    useEffect(() => {
-        setDealsPage((p) => Math.min(p, Math.max(1, Math.ceil(deals.length / DEALS_PAGE_SIZE) || 1)))
-    }, [deals.length])
 
     useEffect(() => {
         if (!storeModalOpen || !storeModalReq) return
@@ -945,16 +798,8 @@ export default function LifeSyncXbox() {
         ;(async () => {
             setStoreModalBusy(true)
             setStoreModalDetail(null)
-            const { bigId, openXblItem, fallback } = storeModalReq
+            const { openXblItem, fallback } = storeModalReq
             try {
-                if (bigId) {
-                    const d = await fetchMsStoreProductDetail(bigId, (path) => lifesyncFetch(path))
-                    if (cancelled) return
-                    if (d) {
-                        setStoreModalDetail(d)
-                        return
-                    }
-                }
                 if (!cancelled && openXblItem) {
                     const d2 = detailFromOpenXblProductSummary(openXblItem)
                     if (d2) {
@@ -975,30 +820,6 @@ export default function LifeSyncXbox() {
     }, [storeModalOpen, storeModalReq])
 
     useEffect(() => {
-        let cancelled = false
-        const ids = gpVisibleItems.map((it) => pickMicrosoftStoreBigId(it)).filter(Boolean)
-        const unique = [...new Set(ids)]
-        if (!unique.length) {
-            return () => {
-                cancelled = true
-            }
-        }
-        ;(async () => {
-            const m = await fetchMsStoreDetailsMap(unique, (path) => lifesyncFetch(path))
-            if (!cancelled) {
-                setGpCatalogMap((prev) => {
-                    const next = new Map(prev)
-                    for (const [k, v] of m) next.set(k, v)
-                    return next
-                })
-            }
-        })()
-        return () => {
-            cancelled = true
-        }
-    }, [gpVisibleItems])
-
-    useEffect(() => {
         if (!openXblReady || !activeXuid || !selectedLibraryTitleId) {
             setAchPayload(null)
             setAchErr('')
@@ -1014,7 +835,7 @@ export default function LifeSyncXbox() {
                 const path = ['achievements', 'player', String(activeXuid), String(selectedLibraryTitleId)]
                     .map((s) => encodeURIComponent(s))
                     .join('/')
-                const data = await lifesyncFetch(`/api/xbox/openxbl/proxy/${path}`)
+                const data = await lifesyncFetch(`/api/v1/xbox/openxbl/proxy/${path}?view=full`)
                 if (!cancelled) setAchPayload(data)
             } catch {
                 if (!cancelled) {
@@ -1058,7 +879,7 @@ export default function LifeSyncXbox() {
                     </p>
                     <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1a1628] tracking-tight">Xbox</h1>
                     <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
-                        Your games, playtime, achievements, Game Pass picks, and current Store deals in one place.
+                        Your games, playtime, achievements, and Game Pass picks in one place.
                     </p>
                 </div>
                 <div className="flex w-full flex-col gap-2 sm:w-auto sm:shrink-0 sm:flex-row sm:items-center sm:justify-end sm:pt-0.5">
@@ -1069,14 +890,6 @@ export default function LifeSyncXbox() {
                         className="w-full text-center text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2.5 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 sm:w-auto sm:min-w-[9.5rem] sm:py-2"
                     >
                         {dashBusy ? 'Refreshing…' : 'Refresh profile'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => void loadDeals()}
-                        disabled={dealsBusy}
-                        className="w-full text-center text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2.5 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 sm:w-auto sm:min-w-[9.5rem] sm:py-2"
-                    >
-                        {dealsBusy ? 'Loading…' : 'Refresh deals'}
                     </button>
                 </div>
             </div>
@@ -1104,7 +917,7 @@ export default function LifeSyncXbox() {
 
                 {!openXblReady ? (
                     <p className="text-[12px] text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-                        Your host still needs to enable Xbox lookups. Until then, you can browse Store deals below; library and Game Pass need that setup.
+                        Your host still needs to enable Xbox lookups before library and Game Pass data can load.
                     </p>
                 ) : null}
 
@@ -1279,7 +1092,6 @@ export default function LifeSyncXbox() {
                                             <GamePassTile
                                                 key={`${pickMicrosoftStoreBigId(item) || 'gp'}-${gpPageSafe}-${i}`}
                                                 item={item}
-                                                catalog={gpCatalogMap}
                                                 onOpenDetail={openStoreDetail}
                                             />
                                         ))}
@@ -1293,75 +1105,6 @@ export default function LifeSyncXbox() {
                 </section>
             ) : null}
 
-            {mainTab === 'deals' ? (
-                <section className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <h2 className="text-[17px] font-bold text-[#1d1d1f]">Microsoft Store deals</h2>
-                        {meta?.locale ? (
-                            <p className="text-[11px] text-[#86868b]">
-                                Region <span className="font-semibold text-[#1d1d1f]">{meta.locale}</span>
-                                {meta.totalProducts != null && <span> · {meta.totalProducts} titles</span>}
-                            </p>
-                        ) : null}
-                    </div>
-
-                    {dealsError && (
-                        <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{dealsError}</div>
-                    )}
-
-                    {dealsBusy && deals.length === 0 && !dealsError ? (
-                        <LifesyncXboxCatalogGridSkeleton gridClass={CATALOG_GRID_CLASS} count={12} />
-                    ) : null}
-
-                    {deals.length > 0 ? (
-                        <>
-                            <PaginationBar
-                                page={dealsPageSafe}
-                                pageCount={dealsPageCount}
-                                totalLabel={`${deals.length} deals`}
-                                busy={dealsBusy}
-                                onPrev={() => setDealsPage((p) => Math.max(1, p - 1))}
-                                onNext={() =>
-                                    setDealsPage((p) =>
-                                        Math.min(Math.max(1, Math.ceil(deals.length / DEALS_PAGE_SIZE)), p + 1),
-                                    )
-                                }
-                            />
-                            <div className={CATALOG_GRID_CLASS}>
-                                {dealsVisible.map((d) => {
-                                    const cat = d.bigId ? dealCatalogMap.get(d.bigId) : null
-                                    return (
-                                        <DealTile
-                                            key={d.key}
-                                            title={cat?.title || d.title}
-                                            imageUrl={cat?.heroImage || d.imageUrl}
-                                            subtitle={cat?.priceText || d.subtitle}
-                                            tagline={cat?.shortDescription || null}
-                                            onOpen={() =>
-                                                openStoreDetail({
-                                                    bigId: d.bigId || null,
-                                                    openXblItem: null,
-                                                    fallback: {
-                                                        title: cat?.title || d.title,
-                                                        href: cat?.storeUrl || d.href,
-                                                        imageUrl: cat?.heroImage || d.imageUrl,
-                                                        subtitle: cat?.priceText || d.subtitle,
-                                                        tagline: cat?.shortDescription || null,
-                                                    },
-                                                })
-                                            }
-                                        />
-                                    )
-                                })}
-                            </div>
-                        </>
-                    ) : !dealsBusy && !dealsError && (
-                        <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm px-6 py-10 text-center">
-                            <p className="text-[13px] text-[#86868b]">No deals returned. The store layout may have changed.</p>
-                        </div>
-                    )}
-                </section>
-            ) : null}
                 </MotionDiv>
             </AnimatePresence>
 

@@ -6,13 +6,13 @@
  * @param {string|null|undefined} src
  * @returns {{ referrerPolicy?: 'no-referrer' }}
  */
-const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com', 'hentaifox.com'])
+const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com'])
 
 /**
- * Manga District / HentaiFox APIs may still return root-relative cover URLs; the detail sheet
+ * Manga District APIs may still return root-relative cover URLs; the detail sheet
  * loads them as `<img src>` against this app’s origin unless expanded here.
  * @param {string|null|undefined} src
- * @param {string} [source] mangadistrict | hentaifox | mangadex
+ * @param {string} [source] mangadistrict | mangadex
  * @returns {string|null}
  */
 export function resolveMangaCoverDisplayUrl(src, source) {
@@ -25,9 +25,7 @@ export function resolveMangaCoverDisplayUrl(src, source) {
     const origin =
         key === 'mangadistrict'
             ? 'https://mangadistrict.com'
-            : key === 'hentaifox'
-              ? 'https://hentaifox.com'
-              : ''
+            : ''
     if (!origin) return s
     if (s.startsWith('/')) return `${origin}${s}`
     return `${origin}/${s.replace(/^\/+/, '')}`

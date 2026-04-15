@@ -188,9 +188,9 @@ export default function LifeSyncAnimeCalendar() {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth() + 1;
       const res = await lifesyncFetch(
-        `/api/anime/calendar/month?year=${year}&month=${month}&tz=${encodeURIComponent(
+        `/api/v1/anime/calendar/month?year=${year}&month=${month}&tz=${encodeURIComponent(
           clientTz,
-        )}`,
+        )}&view=standard`,
         { signal: ac.signal },
       );
       const nextDays = res?.days && typeof res.days === "object" ? res.days : {};
@@ -281,7 +281,7 @@ export default function LifeSyncAnimeCalendar() {
       writeMonthCache(monthKeyRef.current, { days: nextDays, pins: nextPins });
 
       try {
-        await lifesyncFetch("/api/anime/calendar/pins", {
+        await lifesyncFetch("/api/v1/anime/calendar/pins", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -331,7 +331,7 @@ export default function LifeSyncAnimeCalendar() {
 
       try {
         // Prefer key delete (route pins supported). Fallback to legacy MAL delete for older servers.
-        await lifesyncFetch(`/api/anime/calendar/pins/key/${encodeURIComponent(key)}`, {
+        await lifesyncFetch(`/api/v1/anime/calendar/pins/key/${encodeURIComponent(key)}`, {
           method: "DELETE",
         });
       } catch (e) {
@@ -339,7 +339,7 @@ export default function LifeSyncAnimeCalendar() {
         if (/^mal:\d+$/.test(key)) {
           try {
             const mid = key.slice(4);
-            await lifesyncFetch(`/api/anime/calendar/pins/${encodeURIComponent(mid)}`, { method: "DELETE" });
+            await lifesyncFetch(`/api/v1/anime/calendar/pins/${encodeURIComponent(mid)}`, { method: "DELETE" });
           } catch {
             // fall through to revert
           }
@@ -625,7 +625,7 @@ export default function LifeSyncAnimeCalendar() {
             return;
           }
           const res = await lifesyncFetch(
-            `/api/anime/search?q=${encodeURIComponent(titleForSearch)}&limit=5&offset=0`,
+            `/api/v1/anime/search?q=${encodeURIComponent(titleForSearch)}&limit=5&offset=0&view=compact`,
             { signal: ac.signal },
           );
           const rows = Array.isArray(res?.data) ? res.data : [];
@@ -1168,4 +1168,3 @@ export default function LifeSyncAnimeCalendar() {
     </MotionDiv>
   );
 }
-

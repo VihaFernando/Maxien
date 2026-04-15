@@ -154,9 +154,9 @@ export default function LifeSyncSteam() {
         }
         try {
             const [st, gm, store] = await Promise.all([
-                lifesyncFetch('/api/steam/status'),
-                lifesyncFetch('/api/steam/games').catch(() => null),
-                lifesyncFetch('/api/steam/store').catch(() => null),
+                lifesyncFetch('/api/v1/steam/status?view=compact'),
+                lifesyncFetch('/api/v1/steam/games?view=standard').catch(() => null),
+                lifesyncFetch('/api/v1/steam/store?view=standard').catch(() => null),
             ])
             if (!steamPageMountedRef.current) return
             setStatus(st)
@@ -221,7 +221,7 @@ export default function LifeSyncSteam() {
     async function syncLibrary() {
         setSyncBusy(true)
         try {
-            const data = await lifesyncFetch('/api/steam/sync-games', { method: 'POST' })
+            const data = await lifesyncFetch('/api/v1/steam/sync', { method: 'POST' })
             if (steamPageMountedRef.current) setDoc(data)
         } catch (e) {
             if (steamPageMountedRef.current) setError(e.message || 'Sync failed')
@@ -306,23 +306,9 @@ export default function LifeSyncSteam() {
 
             {status?.steamLinked && (
                 <div className="flex items-center gap-2 justify-end">
-                    <button
-                        type="button"
-                        onClick={async () => {
-                            try {
-                                await lifesyncFetch('/api/steam/link', { method: 'DELETE' })
-                                await refreshLifeSyncMe()
-                                setStatus(prev => ({ ...prev, steamLinked: false }))
-                                setOauthMsg('Steam disconnected.')
-                                scheduleClearOauthMsg(5000)
-                            } catch (e) {
-                                setError(e.message || 'Failed to disconnect Steam')
-                            }
-                        }}
-                        className="text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors"
-                    >
-                        Disconnect Steam
-                    </button>
+                    <span className="text-[11px] font-semibold text-[#86868b] px-3 py-1.5 rounded-lg border border-[#e5e5ea] bg-[#f5f5f7]">
+                        Steam connected
+                    </span>
                 </div>
             )}
 

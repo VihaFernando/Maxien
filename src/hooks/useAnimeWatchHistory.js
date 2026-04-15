@@ -18,7 +18,7 @@ export function useAnimeWatchHistory({ enabled, limit = 24 }) {
         setLoading(true)
         try {
             const cap = Math.min(100, Math.max(1, Math.floor(Number(limit)) || 24))
-            const d = await lifesyncFetch(`/api/anime/watch-history?limit=${encodeURIComponent(String(cap))}`)
+            const d = await lifesyncFetch(`/api/v1/anime/watch-history?limit=${encodeURIComponent(String(cap))}&view=standard`)
             setEntries(Array.isArray(d?.entries) ? d.entries : [])
         } catch {
             setEntries([])

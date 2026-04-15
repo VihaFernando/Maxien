@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import {
@@ -15,9 +15,19 @@ export default function Workplaces() {
   const [rows, setRows] = useState([])
   const [error, setError] = useState("")
   const [message, setMessage] = useState("")
+  const messageTimeoutRef = useRef(null)
 
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState({ name: "", description: "", bannerUrl: "" })
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (messageTimeoutRef.current) {
+        clearTimeout(messageTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const accepted = useMemo(
     () => rows.filter((r) => r.status === "accepted" && r.workplaces?.id),
@@ -81,7 +91,7 @@ export default function Workplaces() {
       setShowCreate(false)
       setForm({ name: "", description: "", bannerUrl: "" })
       await refresh()
-      setTimeout(() => setMessage(""), 2000)
+      messageTimeoutRef.current = setTimeout(() => setMessage(""), 2000)
     } catch (e2) {
       setError(e2?.message || "Failed to create workplace.")
     } finally {
@@ -97,7 +107,7 @@ export default function Workplaces() {
       await setMyMembershipStatus({ workplaceMemberId: memberId, status: nextStatus })
       setMessage(nextStatus === "accepted" ? "Invite accepted." : "Invite rejected.")
       await refresh()
-      setTimeout(() => setMessage(""), 2000)
+      messageTimeoutRef.current = setTimeout(() => setMessage(""), 2000)
     } catch (e) {
       setError(e?.message || "Failed to update invite.")
     } finally {

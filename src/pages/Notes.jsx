@@ -54,6 +54,7 @@ export default function Notes() {
     const editorMountRef = useRef(null)
     const quillRef = useRef(null)
     const pendingEditorHtmlRef = useRef(EMPTY_EDITOR_HTML)
+    const messageTimeoutRef = useRef(null)
 
     const syncEditorHtml = (html) => {
         const normalizedHtml = html || EMPTY_EDITOR_HTML
@@ -108,6 +109,15 @@ export default function Notes() {
             syncEditorHtml(pendingEditorHtmlRef.current)
         }
     }, [showEditorModal])
+
+    // Cleanup message timeouts on unmount
+    useEffect(() => {
+        return () => {
+            if (messageTimeoutRef.current) {
+                clearTimeout(messageTimeoutRef.current)
+            }
+        }
+    }, [])
 
     const fetchNotes = async () => {
         setLoading(true)
@@ -217,7 +227,7 @@ export default function Notes() {
         } finally {
             setSaving(false)
             if (saved) {
-                setTimeout(() => setMessage(""), 2000)
+                messageTimeoutRef.current = setTimeout(() => setMessage(""), 2000)
             }
         }
     }
@@ -243,7 +253,7 @@ export default function Notes() {
 
             setMessage("Note deleted")
             setNotes((prev) => prev.filter((n) => n.id !== noteId))
-            setTimeout(() => setMessage(""), 2000)
+            messageTimeoutRef.current = setTimeout(() => setMessage(""), 2000)
         } catch {
             setError("Failed to delete note")
         }

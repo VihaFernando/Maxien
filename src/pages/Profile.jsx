@@ -51,7 +51,7 @@ const LANG_COLORS = {
 
 export default function Profile() {
     const { user } = useAuth()
-    const { lifeSyncUser, lifeSyncUpdatePreferences } = useLifeSync()
+    const { lifeSyncUser, lifeSyncUpdatePreferences, refreshLifeSyncPreferencesFromDb } = useLifeSync()
     const [searchParams] = useSearchParams()
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile")
     const [loading, setLoading] = useState(false)
@@ -98,6 +98,10 @@ export default function Profile() {
             setEngageNotifs(false)
         }
     }, [])
+
+    useEffect(() => {
+        refreshLifeSyncPreferencesFromDb().catch(() => {})
+    }, [refreshLifeSyncPreferencesFromDb])
 
     /** If another device enabled tips in LifeSync, mirror locally. */
     useEffect(() => {

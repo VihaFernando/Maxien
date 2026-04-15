@@ -1,6 +1,6 @@
 /**
- * Roles come from `GET /api/auth/me` and auth login responses (`roles.lifeSyncAdmin` / legacy `animeDataAdmin`).
- * The API still enforces admin on every `/api/admin/*` call — never trust the client alone.
+ * Roles come from `GET /api/v1/auth/me` and auth login responses (`roles.lifeSyncAdmin` / legacy `animeDataAdmin`).
+ * Server-side authorization is always source-of-truth.
  */
 export function isLifeSyncAdmin(user) {
     if (!user || typeof user !== 'object') return false

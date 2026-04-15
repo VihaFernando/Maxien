@@ -352,7 +352,7 @@ function DetailWatchSection({
     const audio = animeStreamAudio === "dub" ? "dub" : "sub";
 
     lifesyncFetch(
-      `/api/anime/stream/info/by-mal/${encodeURIComponent(animeId)}`,
+      `/api/v1/anime/stream/info/by-mal/${encodeURIComponent(animeId)}?view=full`,
       { signal },
     )
       .then((res) => {
@@ -367,7 +367,7 @@ function DetailWatchSection({
       });
 
     lifesyncFetch(
-      `/api/anime/mal-episode-thumbnails/${encodeURIComponent(animeId)}?audio=${audio}`,
+      `/api/v1/anime/mal-episode-thumbnails/${encodeURIComponent(animeId)}?audio=${audio}&view=compact`,
       { signal },
     )
       .then((res) => {
@@ -384,7 +384,7 @@ function DetailWatchSection({
         setThumbMap({});
       });
 
-    lifesyncFetch(`/api/anime/watch-progress/${encodeURIComponent(animeId)}`, {
+    lifesyncFetch(`/api/v1/anime/watch-progress/${encodeURIComponent(animeId)}`, {
       signal,
     })
       .then((p) => {
@@ -682,7 +682,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
   useEffect(() => {
     const ac = new AbortController();
     let cancelled = false;
-    lifesyncFetch(`/api/anime/details/${animeId}`, { signal: ac.signal })
+    lifesyncFetch(`/api/v1/anime/details/${animeId}?view=full`, { signal: ac.signal })
       .then((next) => {
         if (!cancelled) setData(next);
       })
@@ -1308,7 +1308,7 @@ export default function LifeSyncAnime() {
             ? `&server=${encodeURIComponent(String(mirrorId).trim())}`
             : "";
         const pack = await lifesyncFetch(
-          `/api/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${malQ}${mirrorQ}`,
+          `/api/v1/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${malQ}${mirrorQ}&view=full`,
         );
         const apiBase = getLifesyncApiBase();
         const iframeFromPack =
@@ -1470,7 +1470,7 @@ export default function LifeSyncAnime() {
     try {
       const offset = (Math.max(1, seasonalPage) - 1) * PAGE_SIZE;
       const data = await lifesyncFetch(
-        `/api/anime/seasonal?year=${seasonalYear}&season=${encodeURIComponent(seasonalSeason)}&limit=${PAGE_SIZE}&offset=${offset}&fields=mean,media_type,num_episodes`,
+        `/api/v1/anime/seasonal?year=${seasonalYear}&season=${encodeURIComponent(seasonalSeason)}&limit=${PAGE_SIZE}&offset=${offset}&fields=mean,media_type,num_episodes&view=compact`,
       );
       if (!listFetchMountedRef.current) return;
       setSeasonal(data?.data || []);
@@ -1484,7 +1484,7 @@ export default function LifeSyncAnime() {
     try {
       const offset = (Math.max(1, rankingPage) - 1) * PAGE_SIZE;
       const data = await lifesyncFetch(
-        `/api/anime/ranking?ranking_type=${encodeURIComponent(rankingType)}&limit=${PAGE_SIZE}&offset=${offset}`,
+        `/api/v1/anime/ranking?ranking_type=${encodeURIComponent(rankingType)}&limit=${PAGE_SIZE}&offset=${offset}&view=compact`,
       );
       if (!listFetchMountedRef.current) return;
       setRanking(data?.data || []);
@@ -1496,7 +1496,7 @@ export default function LifeSyncAnime() {
 
   const loadMyList = useCallback(async () => {
     try {
-      const data = await lifesyncFetch("/api/anime/mylist?limit=50");
+      const data = await lifesyncFetch("/api/v1/anime/mylist?limit=50&view=standard");
       if (!listFetchMountedRef.current) return;
       setMyList(data?.data || []);
     } catch {
@@ -1615,7 +1615,7 @@ export default function LifeSyncAnime() {
     let cancelled = false;
     setSearching(true);
     lifesyncFetch(
-      `/api/anime/search?q=${encodeURIComponent(searchCommittedQ.trim())}&limit=${PAGE_SIZE}&offset=${offset}`,
+      `/api/v1/anime/search?q=${encodeURIComponent(searchCommittedQ.trim())}&limit=${PAGE_SIZE}&offset=${offset}&view=compact`,
     )
       .then((data) => {
         if (cancelled) return;
@@ -1756,7 +1756,7 @@ export default function LifeSyncAnime() {
               type="button"
               onClick={async () => {
                 try {
-                  await lifesyncFetch("/api/anime/link", { method: "DELETE" });
+                  await lifesyncFetch("/api/v1/anime/link", { method: "DELETE" });
                   await refreshLifeSyncMe();
                   setOauthMsg("MyAnimeList disconnected.");
                   scheduleClearOauthMsg(5000);

@@ -570,11 +570,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
             )}
             {manga.source && manga.source !== 'mangadex' && (
                 <span className="pointer-events-none absolute bottom-12 left-2 z-[2] rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase text-white backdrop-blur-sm">
-                    {manga.source === 'mangadistrict'
-                        ? 'District'
-                        : manga.source === 'hentaifox'
-                          ? 'HF'
-                          : manga.source}
+                    {manga.source === 'mangadistrict' ? 'District' : manga.source}
                 </span>
             )}
         </>
@@ -684,7 +680,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
         if (!manga?.id) return undefined
         const src = manga.source || source
 
-        if (src === 'hentaifox' || src === 'mangadistrict') {
+        if (src === 'mangadistrict') {
             const list = Array.isArray(manga.chapters) ? manga.chapters : []
             setChapters({ data: [...list] })
             setDetail(null)
@@ -703,23 +699,23 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
         ;(async () => {
             setChapBusy(true)
             try {
-                const d = await lifesyncFetch(`/api/manga/details/${manga.id}`).catch(() => null)
+                const d = await lifesyncFetch(`/api/v1/manga/details/${manga.id}?view=full`).catch(() => null)
                 if (!cancelled) setDetail(d)
                 const langParam = chapterLang === 'all' ? 'all' : chapterLang
-                const c = await lifesyncFetch(`/api/manga/chapters/${manga.id}?limit=500&lang=${encodeURIComponent(langParam)}&order=asc`).catch(() => ({ data: [] }))
+                const c = await lifesyncFetch(`/api/v1/manga/chapters/${manga.id}?limit=500&lang=${encodeURIComponent(langParam)}&order=asc&view=full`).catch(() => ({ data: [] }))
                 if (!cancelled) setChapters(c)
                 if (src === 'mangadex' && manga.id) {
-                    const st = await lifesyncFetch(`/api/manga/statistics/${manga.id}`).catch(() => null)
+                    const st = await lifesyncFetch(`/api/v1/manga/statistics/${manga.id}?view=compact`).catch(() => null)
                     if (!cancelled && st && typeof st === 'object') setDexStats(st)
                 }
                 if (src === 'mangadex' && mangadexConnected && manga.id) {
-                    const fol = await lifesyncFetch(`/api/manga/mangadex/follows?limit=100&offset=0`).catch(() => null)
+                    const fol = await lifesyncFetch(`/api/v1/manga/mangadex/follows?limit=100&offset=0&view=compact`).catch(() => null)
                     if (!cancelled && fol?.data) {
                         const ids = new Set(fol.data.map(m => m.id))
                         setIsDexFollowing(ids.has(manga.id))
                     } else if (!cancelled) setIsDexFollowing(false)
                     try {
-                        const rs = await lifesyncFetch('/api/manga/mangadex/reading-statuses')
+                        const rs = await lifesyncFetch('/api/v1/manga/mangadex/reading-statuses?view=compact')
                         const mid = String(manga.id)
                         const stVal = rs?.statuses?.[mid] ?? rs?.statuses?.[manga.id] ?? null
                         if (!cancelled) setDexReadingStatus(stVal || null)
@@ -920,7 +916,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                                 onClick={async () => {
                                                     setDexFollowBusy(true)
                                                     try {
-                                                        await lifesyncFetch(`/api/manga/mangadex/follow/${encodeURIComponent(mergedManga.id)}`, { method: 'DELETE' })
+                                                        await lifesyncFetch(`/api/v1/manga/mangadex/follow/${encodeURIComponent(mergedManga.id)}`, { method: 'DELETE' })
                                                         setIsDexFollowing(false)
                                                     } catch { /* ignore */ }
                                                     finally {
@@ -938,7 +934,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                                 onClick={async () => {
                                                     setDexFollowBusy(true)
                                                     try {
-                                                        await lifesyncFetch(`/api/manga/mangadex/follow/${encodeURIComponent(mergedManga.id)}`, { method: 'POST' })
+                                                        await lifesyncFetch(`/api/v1/manga/mangadex/follow/${encodeURIComponent(mergedManga.id)}`, { method: 'POST' })
                                                         setIsDexFollowing(true)
                                                     } catch { /* ignore */ }
                                                     finally {
@@ -959,7 +955,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                                 const val = e.target.value || null
                                                 setDexReadingStatusBusy(true)
                                                 try {
-                                                    await lifesyncFetch(`/api/manga/mangadex/reading-status/${encodeURIComponent(mergedManga.id)}`, {
+                                                    await lifesyncFetch(`/api/v1/manga/mangadex/reading-status/${encodeURIComponent(mergedManga.id)}`, {
                                                         method: 'POST',
                                                         json: { status: val },
                                                     })
@@ -1106,7 +1102,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                             ) : chaptersInSeriesOrder.length === 0 ? (
                                 <div className="rounded-xl bg-[#f5f5f7] px-4 py-6 text-center">
                                     <p className="text-[12px] text-[#86868b]">
-                                        {src === 'hentaifox' || src === 'mangadistrict'
+                                        {src === 'mangadistrict'
                                             ? 'No chapters in listing.'
                                             : 'No chapters for this language filter.'}
                                     </p>
@@ -1151,7 +1147,6 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
 
 const SOURCES = [
     { id: 'mangadex', label: 'MangaDex' },
-    { id: 'hentaifox', label: 'HentaiFox', nsfw: true },
     { id: 'mangadistrict', label: 'Manga District', nsfw: true },
 ]
 
@@ -1169,7 +1164,7 @@ export default function LifeSyncManga() {
     const route = useMemo(() => {
         const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : ''
         const parts = rel.split('/').filter(Boolean)
-        const allowedSources = new Set(['mangadex', 'hentaifox', 'mangadistrict'])
+        const allowedSources = new Set(['mangadex', 'mangadistrict'])
         const src = allowedSources.has(parts[0]) ? parts[0] : 'mangadex'
 
         // Tab is source-specific, but we keep it as a string and validate later.
@@ -1216,7 +1211,7 @@ export default function LifeSyncManga() {
         s => {
             const next = String(s || '').trim()
             const src =
-                next === 'hentaifox' || next === 'mangadistrict' ? next : 'mangadex'
+                next === 'mangadistrict' ? next : 'mangadex'
             const t = src === 'mangadex' ? 'popular' : 'latest'
             navigate(`${basePath}/${src}/${t}/page/1${location.search || ''}`)
         },
@@ -1359,14 +1354,6 @@ export default function LifeSyncManga() {
         setDexSearchPage(1)
     }, [dexFilterSig, dexListSigBound])
 
-    // HentaiFox state
-    const [hfStatus, setHfStatus] = useState(null)
-    const [hfLatest, setHfLatest] = useState(null)
-    const [hfPage, setHfPage] = useState(1)
-    const [hfFilter, setHfFilter] = useState('')
-    const [hfSearchResults, setHfSearchResults] = useState([])
-    const [hfSearchBusy, setHfSearchBusy] = useState(false)
-
     // Manga District state
     const [mdStatus, setMdStatus] = useState(null)
     const [mdLatest, setMdLatest] = useState(null)
@@ -1383,8 +1370,6 @@ export default function LifeSyncManga() {
     const mdLatestFetchGenRef = useRef(0)
     /** Invalidates debounced Manga District search when query or source changes. */
     const mdSearchFetchGenRef = useRef(0)
-    /** Invalidates in-flight HentaiFox latest when page/source changes. */
-    const hfLatestFetchGenRef = useRef(0)
     /** Invalidates in-flight manga detail enrichment when route/source changes or another open supersedes. */
     const mangaDetailEnrichGenRef = useRef(0)
 
@@ -1420,13 +1405,11 @@ export default function LifeSyncManga() {
         if (route.src === 'mangadex' && nextTab === 'popular' && dexPopularPage !== route.page) setDexPopularPage(route.page)
         if (route.src === 'mangadex' && nextTab === 'recent' && dexRecentPage !== route.page) setDexRecentPage(route.page)
         if (route.src === 'mangadex' && nextTab === 'search' && dexSearchPage !== route.page) setDexSearchPage(route.page)
-        if (route.src === 'hentaifox' && hfPage !== route.page) setHfPage(route.page)
         if (route.src === 'mangadistrict' && mdPage !== route.page) setMdPage(route.page)
     }, [
         dexPopularPage,
         dexRecentPage,
         dexSearchPage,
-        hfPage,
         mdPage,
         route.page,
         route.src,
@@ -1461,7 +1444,7 @@ export default function LifeSyncManga() {
         try {
             if (
                 !nsfwEnabled &&
-                (entry.source === 'hentaifox' || entry.source === 'mangadistrict')
+                entry.source === 'mangadistrict'
             ) {
                 setError('Enable NSFW content in LifeSync preferences to open this title.')
                 return
@@ -1475,8 +1458,8 @@ export default function LifeSyncManga() {
                 return
             }
             if (entry.source === 'mangadex') {
-                await lifesyncFetch(`/api/manga/details/${encodeURIComponent(entry.mangaId)}`)
-                const feed = await lifesyncFetch(`/api/manga/chapters/${encodeURIComponent(entry.mangaId)}?limit=500&lang=all&order=asc`)
+                await lifesyncFetch(`/api/v1/manga/details/${encodeURIComponent(entry.mangaId)}?view=full`)
+                const feed = await lifesyncFetch(`/api/v1/manga/chapters/${encodeURIComponent(entry.mangaId)}?limit=500&lang=all&order=asc&view=full`)
                 const list = [...(feed.data || [])]
                 list.sort(compareChapters)
                 let ch = list.find(c => c.id === entry.lastChapterId)
@@ -1491,7 +1474,7 @@ export default function LifeSyncManga() {
                 return
             }
             if (entry.source === 'mangadistrict') {
-                const data = await lifesyncFetch(`/api/manga/mangadistrict/info/${encodeURIComponent(entry.mangaId)}`)
+                const data = await lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(entry.mangaId)}?view=full`)
                 const list = [...(data.chapters || [])]
                 list.sort(compareChapters)
                 let ch = list.find(c => c.id === entry.lastChapterId)
@@ -1503,20 +1486,6 @@ export default function LifeSyncManga() {
                 setSelectedManga(null)
                 setSource('mangadistrict')
                 goToRead(entry.mangaId, ch.id, 'mangadistrict')
-                return
-            }
-            if (entry.source === 'hentaifox') {
-                const data = await lifesyncFetch(`/api/manga/hentaifox/info/${encodeURIComponent(entry.mangaId)}`)
-                const list = [...(data.chapters || [])]
-                let ch = list.find(c => c.id === entry.lastChapterId)
-                if (!ch && list.length) ch = list[0]
-                if (!ch) {
-                    setError('Could not open this title.')
-                    return
-                }
-                setSelectedManga(null)
-                setSource('hentaifox')
-                goToRead(entry.mangaId, ch.id, 'hentaifox')
                 return
             }
         } catch (e) {
@@ -1543,7 +1512,7 @@ export default function LifeSyncManga() {
     useEffect(() => {
         if (!isLifeSyncConnected) return
         let cancelled = false
-        lifesyncFetch('/api/manga/mangadex/auth/status')
+        lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact')
             .then(s => { if (!cancelled) setDexAuthStatus(s) })
             .catch(() => { if (!cancelled) setDexAuthStatus({ oauthConfigured: false, connected: false }) })
         return () => { cancelled = true }
@@ -1551,8 +1520,7 @@ export default function LifeSyncManga() {
 
     useEffect(() => {
         if (!isLifeSyncConnected || !nsfwEnabled) return
-        lifesyncFetch('/api/manga/hentaifox/status').then(setHfStatus).catch(() => setHfStatus({ configured: false }))
-        lifesyncFetch('/api/manga/mangadistrict/status').then(setMdStatus).catch(() => setMdStatus({ configured: false }))
+        lifesyncFetch('/api/v1/manga/mangadistrict/status?view=compact').then(setMdStatus).catch(() => setMdStatus({ configured: false }))
     }, [isLifeSyncConnected, nsfwEnabled])
 
     useEffect(() => {
@@ -1564,7 +1532,7 @@ export default function LifeSyncManga() {
     useEffect(() => {
         if (lifeSyncLoading || !isLifeSyncConnected) return
         if (nsfwEnabled) return
-        if (route.src !== 'hentaifox' && route.src !== 'mangadistrict') return
+        if (route.src !== 'mangadistrict') return
         navigate(`${basePath}/mangadex/popular/page/1${location.search || ''}`, { replace: true })
     }, [
         basePath,
@@ -1578,7 +1546,7 @@ export default function LifeSyncManga() {
 
     useEffect(() => {
         if (nsfwEnabled) return
-        const nsfwSrc = m => m?.source === 'hentaifox' || m?.source === 'mangadistrict'
+        const nsfwSrc = m => m?.source === 'mangadistrict'
         if (selectedManga && nsfwSrc(selectedManga)) setSelectedManga(null)
     }, [nsfwEnabled, selectedManga])
 
@@ -1617,7 +1585,7 @@ export default function LifeSyncManga() {
                 orderDir: 'desc',
                 shuffle: browseShuffle,
             })
-            const d = await lifesyncFetch(`/api/manga/popular?${q}`)
+            const d = await lifesyncFetch(`/api/v1/manga/popular?${q}&view=standard`)
             setPopular(d?.data || [])
             setPopularTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
         } catch { /* ignore */ }
@@ -1665,7 +1633,7 @@ export default function LifeSyncManga() {
                 orderDir: 'desc',
                 shuffle: browseShuffle,
             })
-            const d = await lifesyncFetch(`/api/manga/recent?${q}`)
+            const d = await lifesyncFetch(`/api/v1/manga/recent?${q}&view=standard`)
             setRecent(d?.data || [])
             setRecentTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
         } catch { /* ignore */ }
@@ -1694,7 +1662,7 @@ export default function LifeSyncManga() {
         setDexFollowsBusy(true)
         if (offset === 0) setError('')
         try {
-            const d = await lifesyncFetch(`/api/manga/mangadex/follows?limit=24&offset=${offset}`)
+            const d = await lifesyncFetch(`/api/v1/manga/mangadex/follows?limit=24&offset=${offset}&view=standard`)
             const rows = d?.data || []
             if (offset === 0) setDexFollows(rows)
             else setDexFollows(prev => [...prev, ...rows])
@@ -1716,7 +1684,7 @@ export default function LifeSyncManga() {
         setError('')
         try {
             const d = await lifesyncFetch(
-                `/api/manga/mangadex/reading-library?status=${encodeURIComponent(status)}`
+                `/api/v1/manga/mangadex/reading-library?status=${encodeURIComponent(status)}&view=standard`
             )
             setDexLibraryList(Array.isArray(d?.data) ? d.data : [])
         } catch (e) {
@@ -1740,7 +1708,7 @@ export default function LifeSyncManga() {
     useEffect(() => {
         if (!isLifeSyncConnected) return
         let cancelled = false
-        lifesyncFetch('/api/manga/tags')
+        lifesyncFetch('/api/v1/manga/tags?view=compact')
             .then(d => {
                 if (!cancelled && Array.isArray(d?.tags)) setDexTags(d.tags)
             })
@@ -1774,7 +1742,7 @@ export default function LifeSyncManga() {
                     orderDir: dexSearchOrderDir,
                 })
                 q.set('q', committedSearchQuery.trim())
-                const d = await lifesyncFetch(`/api/manga/search?${q}`)
+                const d = await lifesyncFetch(`/api/v1/manga/search?${q}&view=standard`)
                 if (!cancelled) {
                     setSearchResults(d?.data || [])
                     setSearchTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
@@ -1824,61 +1792,6 @@ export default function LifeSyncManga() {
         void loadDexLibrary(libraryListStatus)
     }, [isLifeSyncConnected, source, tab, dexAuthStatus?.connected, libraryListStatus, loadDexLibrary])
 
-    // HentaiFox latest (generation-guarded so rapid page changes do not apply stale data or clear `busy` early)
-    useEffect(() => {
-        if (!isLifeSyncConnected || lifeSyncLoading) return
-        if (source !== 'hentaifox') return
-        if (hfFilter.trim()) return
-        const gen = ++hfLatestFetchGenRef.current
-        setBusy(true)
-        setError('')
-        const page = clampPage(hfPage)
-        ;(async () => {
-            try {
-                const d = await lifesyncFetch(`/api/manga/hentaifox/latest/${page}`)
-                if (hfLatestFetchGenRef.current !== gen) return
-                setHfLatest(d)
-                setHfPage(page)
-            } catch (e) {
-                if (hfLatestFetchGenRef.current !== gen) return
-                setError(e.message || 'Failed to load HentaiFox')
-            } finally {
-                if (hfLatestFetchGenRef.current === gen) setBusy(false)
-            }
-        })()
-    }, [isLifeSyncConnected, lifeSyncLoading, source, hfFilter, hfPage])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || lifeSyncLoading) return
-        if (source !== 'hentaifox') return
-        const q = hfFilter.trim()
-        if (!q) {
-            setHfSearchResults([])
-            setHfSearchBusy(false)
-            return
-        }
-        setHfSearchBusy(true)
-        let cancelled = false
-        let fetchStarted = false
-        const t = setTimeout(async () => {
-            if (cancelled) return
-            fetchStarted = true
-            try {
-                const d = await lifesyncFetch(`/api/manga/hentaifox/search?q=${encodeURIComponent(q)}`)
-                if (!cancelled) setHfSearchResults(d?.data || d || [])
-            } catch {
-                if (!cancelled) setHfSearchResults([])
-            } finally {
-                if (!cancelled) setHfSearchBusy(false)
-            }
-        }, 400)
-        return () => {
-            cancelled = true
-            clearTimeout(t)
-            if (!fetchStarted) setHfSearchBusy(false)
-        }
-    }, [isLifeSyncConnected, lifeSyncLoading, source, hfFilter])
-
     // Manga District latest — single effect + generation guard so order-by / section / page changes never apply stale responses
     useEffect(() => {
         if (!isLifeSyncConnected || lifeSyncLoading) return
@@ -1895,7 +1808,7 @@ export default function LifeSyncManga() {
         const qs = buildMangaDistrictListQuery(mdSection, mdTypeSlug, mdFilterGenre, mdBrowse)
         ;(async () => {
             try {
-                const d = await lifesyncFetch(`/api/manga/mangadistrict/latest/${page}?${qs}`)
+                const d = await lifesyncFetch(`/api/v1/manga/mangadistrict/latest/${page}?${qs}&view=standard`)
                 if (mdLatestFetchGenRef.current !== gen) return
                 setMdLatest(d)
                 setMdPage(page)
@@ -1933,7 +1846,7 @@ export default function LifeSyncManga() {
             if (mdSearchFetchGenRef.current !== gen) return
             setMdSearchBusy(true)
             try {
-                const d = await lifesyncFetch(`/api/manga/mangadistrict/search?q=${encodeURIComponent(q)}`)
+                const d = await lifesyncFetch(`/api/v1/manga/mangadistrict/search?q=${encodeURIComponent(q)}&view=standard`)
                 if (mdSearchFetchGenRef.current !== gen) return
                 setMdSearchResults(d?.data || d || [])
             } catch {
@@ -1973,23 +1886,11 @@ export default function LifeSyncManga() {
             const src = srcParam || source
             if (!id) return
             const gen = ++mangaDetailEnrichGenRef.current
-            if (!nsfwEnabled && (src === 'hentaifox' || src === 'mangadistrict')) return
+            if (!nsfwEnabled && src === 'mangadistrict') return
             setError('')
             try {
-                if (src === 'hentaifox') {
-                    const data = await lifesyncFetch(`/api/manga/hentaifox/info/${encodeURIComponent(id)}`)
-                    if (mangaDetailEnrichGenRef.current !== gen) return
-                    setSelectedManga(prev => ({
-                        ...prev,
-                        ...data,
-                        id: data.id || id,
-                        coverUrl: data.coverUrl || prev?.coverUrl,
-                        source: 'hentaifox',
-                    }))
-                    return
-                }
                 if (src === 'mangadistrict') {
-                    const data = await lifesyncFetch(`/api/manga/mangadistrict/info/${encodeURIComponent(id)}`)
+                    const data = await lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(id)}?view=full`)
                     if (mangaDetailEnrichGenRef.current !== gen) return
                     setSelectedManga(prev => ({
                         ...prev,
@@ -2000,7 +1901,7 @@ export default function LifeSyncManga() {
                     }))
                     return
                 }
-                const data = await lifesyncFetch(`/api/manga/details/${id}`)
+                const data = await lifesyncFetch(`/api/v1/manga/details/${id}?view=full`)
                 if (mangaDetailEnrichGenRef.current !== gen) return
                 setSelectedManga(prev => ({
                     ...prev,
@@ -2066,8 +1967,6 @@ export default function LifeSyncManga() {
         goToRead(mergedManga.id, chapter.id, src)
     }
 
-    const hfLastPage = Math.max(1, parseInt(String(hfLatest?.lastPage ?? '1'), 10) || 1)
-    const hfCurPage = Math.min(hfLastPage, Math.max(1, parseInt(String(hfLatest?.currentPage ?? hfPage), 10) || 1))
     const mdLastPage = Math.max(1, parseInt(String(mdLatest?.lastPage ?? '1'), 10) || 1)
     const mdCurPage = Math.min(mdLastPage, Math.max(1, parseInt(String(mdLatest?.currentPage ?? mdPage), 10) || 1))
     const dexPopularLast = dexBrowseLastPage(popularTotal)
@@ -2158,10 +2057,6 @@ export default function LifeSyncManga() {
             if (tab === 'recent') return recent
             if (tab === 'search') return searchResults
         }
-        if (source === 'hentaifox') {
-            if (hfFilter.trim()) return hfSearchResults
-            return hfLatest?.data || []
-        }
         if (source === 'mangadistrict') {
             if (mdFilter.trim()) return mdSearchResults
             return mdLatest?.data || []
@@ -2175,9 +2070,6 @@ export default function LifeSyncManga() {
         searchResults,
         dexFollows,
         dexLibraryList,
-        hfLatest,
-        hfFilter,
-        hfSearchResults,
         mdLatest,
         mdFilter,
         mdSearchResults,
@@ -2194,7 +2086,6 @@ export default function LifeSyncManga() {
             if (tab === 'recent' && recentLoading) return true
         }
         if (source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy) return true
-        if (source === 'hentaifox' && hfFilter.trim() && hfSearchBusy) return true
         return false
     }, [
         currentItems.length,
@@ -2209,8 +2100,6 @@ export default function LifeSyncManga() {
         recentLoading,
         mdFilter,
         mdSearchBusy,
-        hfFilter,
-        hfSearchBusy,
     ])
 
     const dexTabs = useMemo(() => {
@@ -2296,9 +2185,7 @@ export default function LifeSyncManga() {
                     ariaLabel="Manga source"
                     layoutId="lifesync-manga-source"
                     items={sourceChoices.map(s => {
-                        const disabled =
-                            (s.id === 'hentaifox' && hfStatus?.configured === false) ||
-                            (s.id === 'mangadistrict' && mdStatus?.configured === false)
+                        const disabled = s.id === 'mangadistrict' && mdStatus?.configured === false
                         return { id: s.id, label: s.label, disabled, title: disabled ? 'This source is not available here yet' : undefined }
                     })}
                     activeId={source}
@@ -2582,32 +2469,6 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {source === 'hentaifox' && (
-                <div className="min-w-0 w-full max-w-full space-y-3">
-                    <form
-                        className="flex min-w-0 w-full max-w-full flex-wrap items-stretch gap-2"
-                        onSubmit={e => {
-                            e.preventDefault()
-                        }}
-                    >
-                        <input
-                            type="search"
-                            value={hfFilter}
-                            onChange={e => setHfFilter(e.target.value)}
-                            placeholder="Search HentaiFox..."
-                            className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
-                        />
-                        <button
-                            type="submit"
-                            disabled={hfSearchBusy && Boolean(hfFilter.trim())}
-                            className="shrink-0 rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50"
-                        >
-                            {hfSearchBusy && hfFilter.trim() ? 'Searching...' : 'Search'}
-                        </button>
-                    </form>
-                </div>
-            )}
-
             {source === 'mangadistrict' && (
                 <div className="min-w-0 w-full max-w-full space-y-3">
                     <form
@@ -2760,7 +2621,7 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {/* Content tabs (MangaDex only; HentaiFox & Manga District use search + filters without tabs) */}
+            {/* Content tabs (MangaDex only; Manga District uses search + filters without tabs) */}
             {tabs.length > 0 && (
                 <LifeSyncSectionNav
                     ariaLabel="MangaDex lists"
@@ -2835,17 +2696,7 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {/* Pagination for HentaiFox/MangaDistrict latest */}
-            {source === 'hentaifox' && !hfFilter.trim() && hfLatest && (
-                <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] text-[#86868b]">Page {hfCurPage} of {hfLastPage}</p>
-                    <div className="flex gap-2">
-                        <button type="button" disabled={busy || hfCurPage <= 1} onClick={() => goToPage(hfCurPage - 1)} className="text-[11px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-1.5 rounded-lg border border-[#e5e5ea] disabled:opacity-40">Previous</button>
-                        <button type="button" disabled={busy || hfCurPage >= hfLastPage} onClick={() => goToPage(hfCurPage + 1)} className="text-[11px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-1.5 rounded-lg border border-[#e5e5ea] disabled:opacity-40">Next</button>
-                    </div>
-                </div>
-            )}
-
+            {/* Pagination for MangaDistrict latest */}
             {source === 'mangadistrict' && !mdFilter.trim() && mdLatest && (
                 <div className="flex items-center justify-between gap-3">
                     <p className="text-[11px] text-[#86868b]">Page {mdCurPage} of {mdLastPage}</p>
@@ -3054,9 +2905,6 @@ export default function LifeSyncManga() {
                     <p className="text-[13px] text-[#86868b]">
                         {source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy ? 'Searching...'
                             : source === 'mangadistrict' && mdFilter.trim() && !mdSearchBusy && mdSearchResults.length === 0
-                              ? 'No titles matched your search.'
-                            : source === 'hentaifox' && hfFilter.trim() && hfSearchBusy ? 'Searching...'
-                            : source === 'hentaifox' && hfFilter.trim() && !hfSearchBusy && hfSearchResults.length === 0
                               ? 'No titles matched your search.'
                             : source === 'mangadex' && tab === 'search' && committedSearchQuery.trim() && searching ? 'Searching…'
                             : source === 'mangadex' && tab === 'search' && committedSearchQuery.trim() && !searching ? 'No titles matched your search.'

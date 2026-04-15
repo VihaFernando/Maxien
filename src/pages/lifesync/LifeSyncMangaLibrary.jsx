@@ -24,7 +24,6 @@ const SPOTLIGHT_ROTATE_MS = 8000
 
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
-    if (source === 'hentaifox') return 'HentaiFox'
     return source || 'MangaDex'
 }
 
@@ -158,7 +157,7 @@ export default function LifeSyncMangaLibrary() {
         if (syncBusy) return
         setSyncBusy(true)
         try {
-            await lifesyncFetch('/api/manga/reading/sync', { method: 'POST', json: {} })
+            await lifesyncFetch('/api/v1/manga/reading/sync', { method: 'POST', json: {} })
             await refresh()
         } catch {
             /* network */
@@ -174,7 +173,7 @@ export default function LifeSyncMangaLibrary() {
             setRemoveBusyKey(key)
             try {
                 await lifesyncFetch(
-                    `/api/manga/reading/${encodeURIComponent(entry.source)}/${encodeURIComponent(entry.mangaId)}`,
+                    `/api/v1/manga/reading/${encodeURIComponent(entry.source)}/${encodeURIComponent(entry.mangaId)}`,
                     { method: 'DELETE' },
                 )
                 await refresh()

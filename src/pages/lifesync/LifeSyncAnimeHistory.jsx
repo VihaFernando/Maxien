@@ -144,7 +144,7 @@ export default function LifeSyncAnimeHistory() {
             if (!key || removeBusyKey) return
             setRemoveBusyKey(key)
             try {
-                await lifesyncFetch(`/api/anime/watch-progress/${encodeURIComponent(key)}`, {
+                await lifesyncFetch(`/api/v1/anime/watch-progress/${encodeURIComponent(key)}`, {
                     method: 'DELETE',
                 })
                 window.dispatchEvent(new CustomEvent(LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT))

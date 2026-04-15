@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLifeSync } from '../context/LifeSyncContext'
 import { getLifesyncToken, lifesyncFetch } from '../lib/lifesyncApi'
-import { connectAdminLiveSocket } from '../lib/adminLiveSocket'
 import { isLifeSyncAdmin } from '../lib/lifeSyncRoles'
 import { LifeSyncSectionNav } from '../components/lifesync/LifeSyncSectionNav'
 
@@ -28,8 +27,9 @@ const CAPABILITY_LABELS = {
     hentaiOcean: 'HentaiOcean RSS',
     anitakuFallback: 'Anitaku fallback',
     mangaDistrict: 'Manga District',
-    hentaiFox: 'HentaiFox',
 }
+
+const V1_ADMIN_MODE = true
 
 function MetricCard({ label, value, hint }) {
     return (
@@ -128,9 +128,6 @@ export default function LifeSyncAdmin() {
     const [lookupIdBusy, setLookupIdBusy] = useState(false)
     const [lookupIdResult, setLookupIdResult] = useState(null)
 
-    const [liveProcess, setLiveProcess] = useState(null)
-    const [liveStatus, setLiveStatus] = useState('idle')
-    const [liveError, setLiveError] = useState('')
     const [capabilities, setCapabilities] = useState(null)
     const [health, setHealth] = useState(null)
     const [healthBusy, setHealthBusy] = useState(false)
@@ -143,11 +140,33 @@ export default function LifeSyncAdmin() {
     const [activityManga, setActivityManga] = useState(null)
     const [activityBusy, setActivityBusy] = useState(false)
     const [activityError, setActivityError] = useState('')
+    const [v1Health, setV1Health] = useState(null)
+    const [v1HealthError, setV1HealthError] = useState('')
 
     const hasToken = Boolean(getLifesyncToken())
     const allowed = isLifeSyncAdmin(lifeSyncUser)
 
+    useEffect(() => {
+        if (!V1_ADMIN_MODE) return
+        if (!allowed || !hasToken) return
+        let cancelled = false
+        setV1HealthError('')
+        lifesyncFetch('/api/v1/health', { method: 'GET' })
+            .then((data) => {
+                if (!cancelled) setV1Health(data || null)
+            })
+            .catch((e) => {
+                if (cancelled) return
+                setV1Health(null)
+                setV1HealthError(e?.message || 'Could not load v1 health.')
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [allowed, hasToken])
+
     const load = useCallback(async () => {
+        if (V1_ADMIN_MODE) return
         setLoadError('')
         setLoadBusy(true)
         try {
@@ -176,6 +195,7 @@ export default function LifeSyncAdmin() {
     }, [])
 
     const loadActivity = useCallback(async () => {
+        if (V1_ADMIN_MODE) return
         setActivityBusy(true)
         setActivityError('')
         try {
@@ -228,42 +248,6 @@ export default function LifeSyncAdmin() {
 
     useEffect(() => {
         if (!allowed || !hasToken) return undefined
-
-        setLiveStatus('connecting')
-        setLiveError('')
-        const socket = connectAdminLiveSocket({
-            onProcess: (p) => {
-                setLiveStatus('connected')
-                setLiveProcess(p)
-            },
-            onHello: () => {
-                setLiveStatus('connected')
-            },
-            onConnectError: (err) => {
-                setLiveStatus('error')
-                setLiveError(err?.message || 'Socket connection failed')
-            },
-        })
-        if (!socket) {
-            setLiveStatus('error')
-            setLiveError('No LifeSync token for live stream.')
-            return undefined
-        }
-        socket.on('connect', () => {
-            setLiveStatus('connected')
-            setLiveError('')
-        })
-        socket.on('disconnect', () => {
-            setLiveStatus((prev) => (prev === 'error' ? prev : 'idle'))
-        })
-        return () => {
-            socket.removeAllListeners()
-            socket.disconnect()
-        }
-    }, [allowed, hasToken])
-
-    useEffect(() => {
-        if (!allowed || !hasToken) return undefined
         const onBroadcast = (e) => {
             const b = e?.detail
             if (!b || typeof b !== 'object') return
@@ -283,10 +267,12 @@ export default function LifeSyncAdmin() {
         if (lifeSyncLoading) return
         if (!hasToken) return
         if (!allowed) return
+        if (V1_ADMIN_MODE) return
         load()
     }, [lifeSyncLoading, hasToken, allowed, load])
 
     useEffect(() => {
+        if (V1_ADMIN_MODE) return
         if (!allowed || tab !== 'activity') return
         loadActivity()
     }, [allowed, tab, loadActivity])
@@ -347,7 +333,7 @@ export default function LifeSyncAdmin() {
     }
 
     const copyServerTime = async () => {
-        const t = liveProcess?.serverTime || overview?.serverTime
+        const t = overview?.serverTime
         if (!t) return
         await copyText(t)
     }
@@ -394,6 +380,35 @@ export default function LifeSyncAdmin() {
                 >
                     Back to overview
                 </Link>
+            </div>
+        )
+    }
+
+    if (V1_ADMIN_MODE) {
+        return (
+            <div className="mx-auto max-w-3xl space-y-4">
+                <div className="rounded-2xl border border-[#e5e5ea] bg-white p-6 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">Operator</p>
+                    <h1 className="mt-1 text-[22px] font-bold tracking-tight text-apple-text">LifeSync admin (v1)</h1>
+                    <p className="mt-2 text-[13px] leading-relaxed text-apple-subtext">
+                        Legacy admin endpoints were removed from v1. This page now exposes the v1 health contract only.
+                    </p>
+                    {v1HealthError ? (
+                        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                            {v1HealthError}
+                        </p>
+                    ) : null}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                    <MetricCard label="Service" value={v1Health?.service || '—'} />
+                    <MetricCard label="Runtime" value={v1Health?.runtime || '—'} />
+                    <MetricCard label="Health" value={v1Health?.ok ? 'OK' : '—'} />
+                </div>
+                <div className="rounded-2xl border border-[#e5e5ea] bg-white p-5 shadow-sm">
+                    <p className="text-[12px] text-apple-subtext">
+                        For full operator workflows, implement dedicated `/api/v1/admin/*` routes and then reconnect this UI.
+                    </p>
+                </div>
             </div>
         )
     }
@@ -469,8 +484,7 @@ export default function LifeSyncAdmin() {
                 <div className="space-y-8">
                     <Panel>
                         <SectionIntro title="Snapshot">
-                            Server time and resource snapshot from the last overview refresh. Live metrics update in the
-                            Live & ops tab.
+                            Server time and resource snapshot from the last overview refresh.
                         </SectionIntro>
                         <div className="grid gap-4 sm:grid-cols-2">
                             <div>
@@ -482,7 +496,7 @@ export default function LifeSyncAdmin() {
                                 </p>
                                 <button
                                     type="button"
-                                    disabled={!overview?.serverTime && !liveProcess?.serverTime}
+                                    disabled={!overview?.serverTime}
                                     onClick={copyServerTime}
                                     className="mt-2 text-[11px] font-semibold text-primary hover:underline disabled:opacity-40"
                                 >
@@ -554,63 +568,45 @@ export default function LifeSyncAdmin() {
             {tab === 'live' && (
                 <div className="space-y-8">
                     <Panel>
-                        <SectionIntro title="Live process stream (Socket.IO)">
-                            Authenticated admin namespace; updates about every 3 seconds. If the WebSocket fails, ensure
-                            the API URL matches your deployment and that <code className="rounded bg-apple-bg px-1 font-mono text-[11px]">/socket.io</code> is proxied with WebSocket support.
+                        <SectionIntro title="Live process stream (WebSocket)">
+                            Frontend live socket updates are disabled. This panel now reflects static values from the
+                            latest overview refresh.
                         </SectionIntro>
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <BoolPill
-                                ok={liveStatus === 'connected'}
-                                label={
-                                    liveStatus === 'connected'
-                                        ? 'Connected'
-                                        : liveStatus === 'connecting'
-                                          ? 'Connecting…'
-                                          : liveStatus === 'error'
-                                            ? 'Error'
-                                            : 'Idle'
-                                }
-                            />
+                            <BoolPill ok={false} label="Disabled" />
                         </div>
-                        {liveError ? <p className="mt-2 text-[12px] text-amber-800">{liveError}</p> : null}
-                        {liveProcess ? (
-                            <dl className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
-                                <div>
-                                    <dt className="text-apple-subtext">Server time</dt>
-                                    <dd className="mt-0.5 font-mono text-[11px]">{liveProcess.serverTime}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-apple-subtext">PID</dt>
-                                    <dd className="mt-0.5 font-mono">{liveProcess.pid}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-apple-subtext">Uptime</dt>
-                                    <dd className="mt-0.5">{formatUptime(liveProcess.uptimeSeconds)}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-apple-subtext">Mongo state</dt>
-                                    <dd className="mt-0.5 font-mono">{liveProcess.mongoReadyState}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-apple-subtext">RSS / heap</dt>
-                                    <dd className="mt-0.5 tabular-nums">
-                                        {liveProcess.memory?.rssMb} MB / {liveProcess.memory?.heapUsedMb} MB
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt className="text-apple-subtext">Admin sockets</dt>
-                                    <dd className="mt-0.5 tabular-nums">{liveProcess.adminConnections}</dd>
-                                </div>
-                                <div>
-                                    <dt className="text-apple-subtext">User broadcast sockets</dt>
-                                    <dd className="mt-0.5 tabular-nums">{liveProcess.userBroadcastConnections ?? '—'}</dd>
-                                </div>
-                            </dl>
-                        ) : (
-                            <p className="mt-3 text-[12px] text-apple-subtext">
-                                {liveStatus === 'connecting' ? 'Negotiating connection…' : 'Waiting for live payload…'}
-                            </p>
-                        )}
+                        <dl className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
+                            <div>
+                                <dt className="text-apple-subtext">Server time</dt>
+                                <dd className="mt-0.5 font-mono text-[11px]">{overview?.serverTime ?? '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-apple-subtext">PID</dt>
+                                <dd className="mt-0.5 font-mono">{s?.pid ?? '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-apple-subtext">Uptime</dt>
+                                <dd className="mt-0.5">{s?.uptimeSeconds != null ? formatUptime(s.uptimeSeconds) : '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-apple-subtext">Mongo state</dt>
+                                <dd className="mt-0.5 font-mono">{health?.mongoReadyState ?? '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-apple-subtext">RSS / heap</dt>
+                                <dd className="mt-0.5 tabular-nums">
+                                    {s?.memoryRssMb ?? '—'} MB / {s?.memoryHeapUsedMb ?? '—'} MB
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-apple-subtext">Admin sockets</dt>
+                                <dd className="mt-0.5 tabular-nums">{s?.connectedAdminSockets ?? '—'}</dd>
+                            </div>
+                            <div>
+                                <dt className="text-apple-subtext">User broadcast sockets</dt>
+                                <dd className="mt-0.5 tabular-nums">{s?.connectedUserBroadcastSockets ?? '—'}</dd>
+                            </div>
+                        </dl>
                     </Panel>
 
                     <Panel>

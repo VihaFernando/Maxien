@@ -6,6 +6,7 @@ import {
     useMemo,
     useState,
 } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './AuthContext'
 import {
     getLifesyncToken,
@@ -21,19 +22,59 @@ import {
     notifyReduceMotionPreferenceChanged,
     writeStoredReduceAnimationsSetting,
 } from '../lib/lifeSyncReduceMotion'
+import { lifeSyncQueryKeys } from '../lib/lifeSyncQueryKeys'
 import { connectLifeSyncUserBroadcastSocket } from '../lib/lifeSyncUserBroadcastSocket'
 
 const LifeSyncContext = createContext(null)
+const LIFESYNC_USER_SNAPSHOT_KEY = 'maxien_lifesync_user_snapshot_v1'
+
+function readLifeSyncUserSnapshot() {
+    try {
+        const raw = localStorage.getItem(LIFESYNC_USER_SNAPSHOT_KEY)
+        if (!raw) return null
+        const parsed = JSON.parse(raw)
+        return parsed && typeof parsed === 'object' ? parsed : null
+    } catch {
+        return null
+    }
+}
+
+function writeLifeSyncUserSnapshot(user) {
+    try {
+        if (user && typeof user === 'object') {
+            localStorage.setItem(LIFESYNC_USER_SNAPSHOT_KEY, JSON.stringify(user))
+            return
+        }
+        localStorage.removeItem(LIFESYNC_USER_SNAPSHOT_KEY)
+    } catch {
+        // ignore storage failures
+    }
+}
 
 export function LifeSyncProvider({ children }) {
     const { session, user: authUser, loading: authLoading } = useAuth()
-    const [lifeSyncUser, setLifeSyncUser] = useState(null)
+    const queryClient = useQueryClient()
+    const [lifeSyncUser, setLifeSyncUser] = useState(() => (
+        getLifesyncToken() ? readLifeSyncUserSnapshot() : null
+    ))
     const [loading, setLoading] = useState(true)
     const [lastError, setLastError] = useState(null)
     /** Bumped when the LifeSync token is cleared so the no-token effect can re-run (e.g. invalid JWT on mount). */
     const [lifeSyncTokenClears, setLifeSyncTokenClears] = useState(0)
     /** Server broadcast (operators → all connected LifeSync clients). */
     const [lifeSyncBroadcast, setLifeSyncBroadcast] = useState(null)
+
+    const clearLifeSyncQueries = useCallback(() => {
+        queryClient.removeQueries({ queryKey: lifeSyncQueryKeys.root })
+    }, [queryClient])
+
+    const syncLifeSyncUserQuery = useCallback((user) => {
+        queryClient.setQueryData(lifeSyncQueryKeys.user(), user || null)
+    }, [queryClient])
+
+    const invalidateLifeSyncQueries = useCallback(async () => {
+        await queryClient.invalidateQueries({ queryKey: lifeSyncQueryKeys.root })
+    }, [queryClient])
 
     /** Same `roles` as `GET /api/auth/me`, included on login/register/Supabase exchange so the UI can show Admin before `/me` returns. */
     const applyLifesyncAuthSnapshot = useCallback((data) => {
@@ -54,6 +95,8 @@ export function LifeSyncProvider({ children }) {
         const token = getLifesyncToken()
         if (!token) {
             setLifeSyncUser(null)
+            syncLifeSyncUserQuery(null)
+            clearLifeSyncQueries()
             setLoading(false)
             notifyReduceMotionPreferenceChanged()
             return null
@@ -65,6 +108,7 @@ export function LifeSyncProvider({ children }) {
                 writeStoredReduceAnimationsSetting(me.preferences.reduceAnimations)
             }
             setLifeSyncUser(me)
+            syncLifeSyncUserQuery(me)
             notifyReduceMotionPreferenceChanged()
             return me
         } catch (e) {
@@ -72,6 +116,8 @@ export function LifeSyncProvider({ children }) {
             if (e.status === 401 || e.status === 404) {
                 setLifesyncToken(null)
                 setLifeSyncUser(null)
+                syncLifeSyncUserQuery(null)
+                clearLifeSyncQueries()
                 setLifeSyncTokenClears((n) => n + 1)
                 notifyReduceMotionPreferenceChanged()
             }
@@ -79,7 +125,11 @@ export function LifeSyncProvider({ children }) {
         } finally {
             setLoading(false)
         }
-    }, [])
+    }, [clearLifeSyncQueries, syncLifeSyncUserQuery])
+
+    useEffect(() => {
+        writeLifeSyncUserSnapshot(lifeSyncUser)
+    }, [lifeSyncUser])
 
     /** Hydrate from a LifeSync JWT already in storage (mount only). */
     useEffect(() => {
@@ -87,25 +137,10 @@ export function LifeSyncProvider({ children }) {
         ;(async () => {
             if (!getLifesyncToken()) return
             try {
-                const me = await lifesyncGetMe()
-                if (!cancelled) {
-                    if (me?.preferences && typeof me.preferences.reduceAnimations === 'boolean') {
-                        writeStoredReduceAnimationsSetting(me.preferences.reduceAnimations)
-                    }
-                    setLifeSyncUser(me)
-                    setLastError(null)
-                    notifyReduceMotionPreferenceChanged()
-                }
+                // Source-of-truth preferences come from DB-backed `/api/auth/me`.
+                await refreshMe()
             } catch (e) {
-                if (!cancelled) {
-                    setLastError(e)
-                    if (e.status === 401 || e.status === 404) {
-                        setLifesyncToken(null)
-                        setLifeSyncUser(null)
-                        setLifeSyncTokenClears((n) => n + 1)
-                        notifyReduceMotionPreferenceChanged()
-                    }
-                }
+                if (!cancelled) setLastError(e)
             } finally {
                 if (!cancelled) setLoading(false)
             }
@@ -113,7 +148,7 @@ export function LifeSyncProvider({ children }) {
         return () => {
             cancelled = true
         }
-    }, [])
+    }, [refreshMe])
 
     /**
      * No stored LifeSync token: after Maxien auth is ready, exchange Supabase access token for LifeSync JWT
@@ -134,14 +169,7 @@ export function LifeSyncProvider({ children }) {
                     if (data?.token) {
                         setLifesyncToken(data.token)
                         applyLifesyncAuthSnapshot(data)
-                        const me = await lifesyncGetMe()
-                        if (!cancelled) {
-                            if (me?.preferences && typeof me.preferences.reduceAnimations === 'boolean') {
-                                writeStoredReduceAnimationsSetting(me.preferences.reduceAnimations)
-                            }
-                            setLifeSyncUser(me)
-                            notifyReduceMotionPreferenceChanged()
-                        }
+                        await refreshMe()
                     }
                 } catch (e) {
                     if (!cancelled) setLastError(e)
@@ -163,6 +191,7 @@ export function LifeSyncProvider({ children }) {
         authUser?.email,
         lifeSyncTokenClears,
         applyLifesyncAuthSnapshot,
+        refreshMe,
     ])
 
     /** Connect / Integrations: passwordless link using current Supabase session (creates LifeSync user if needed). */
@@ -260,10 +289,12 @@ export function LifeSyncProvider({ children }) {
     const logout = useCallback(() => {
         setLifesyncToken(null)
         setLifeSyncUser(null)
+        syncLifeSyncUserQuery(null)
+        clearLifeSyncQueries()
         setLastError(null)
         setLifeSyncBroadcast(null)
         setLifeSyncTokenClears((n) => n + 1)
-    }, [])
+    }, [clearLifeSyncQueries, syncLifeSyncUserQuery])
 
     const dismissLifeSyncBroadcast = useCallback(() => {
         setLifeSyncBroadcast(null)
@@ -288,20 +319,32 @@ export function LifeSyncProvider({ children }) {
                 }
                 window.dispatchEvent(new CustomEvent('maxien:lifesync-broadcast', { detail: payload }))
             },
-            onConnectError: () => {},
+            onConnectError: (err) => {
+                console.warn('LifeSync broadcast connection error:', err)
+                setLifeSyncBroadcast(null)
+                // Close socket immediately on error to prevent stale connections
+                socket?.close?.()
+            },
         })
         if (!socket) return undefined
         return () => {
-            socket.removeAllListeners()
-            socket.disconnect()
+            // Remove event listeners to prevent memory leaks
+            if (socket.__messageHandler) {
+                socket.removeEventListener('message', socket.__messageHandler)
+            }
+            if (socket.__errorHandler) {
+                socket.removeEventListener('error', socket.__errorHandler)
+            }
+            socket.close()
         }
     }, [lifeSyncUser?.id, lifeSyncTokenClears])
 
     const updatePlugins = useCallback(async (partial) => {
         const data = await lifesyncPostPlugins(partial)
         await refreshMe()
+        await invalidateLifeSyncQueries()
         return data
-    }, [refreshMe])
+    }, [invalidateLifeSyncQueries, refreshMe])
 
     const updatePreferences = useCallback(async (partial) => {
         setLifeSyncUser((u) => {
@@ -315,11 +358,18 @@ export function LifeSyncProvider({ children }) {
         try {
             const data = await lifesyncPatchPreferences(partial)
             await refreshMe()
+            await invalidateLifeSyncQueries()
             return data
         } catch (e) {
             await refreshMe().catch(() => {})
+            await invalidateLifeSyncQueries()
             throw e
         }
+    }, [invalidateLifeSyncQueries, refreshMe])
+
+    const refreshPreferencesFromDb = useCallback(async () => {
+        const me = await refreshMe()
+        return me?.preferences || null
     }, [refreshMe])
 
     const value = useMemo(
@@ -328,6 +378,7 @@ export function LifeSyncProvider({ children }) {
             lifeSyncLoading: loading,
             lifeSyncError: lastError,
             refreshLifeSyncMe: refreshMe,
+            refreshLifeSyncPreferencesFromDb: refreshPreferencesFromDb,
             lifeSyncLogin: login,
             lifeSyncRegister: register,
             lifeSyncEnsureAccount: ensureAccount,
@@ -344,6 +395,7 @@ export function LifeSyncProvider({ children }) {
             loading,
             lastError,
             refreshMe,
+            refreshPreferencesFromDb,
             login,
             register,
             ensureAccount,
