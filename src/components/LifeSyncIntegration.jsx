@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useLifeSync } from '../context/LifeSyncContext'
+import useTimeoutRegistry from '../hooks/useTimeoutRegistry'
 import {
     ANIPUB_API_REFERENCE_URL,
     isPluginEnabled,
@@ -548,6 +549,7 @@ export default function LifeSyncIntegration({ embedded = false }) {
     const [busy, setBusy] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+    const { registerTimeout } = useTimeoutRegistry()
 
     const prefs = lifeSyncUser?.preferences
     const connected = Boolean(lifeSyncUser)
@@ -608,7 +610,7 @@ export default function LifeSyncIntegration({ embedded = false }) {
         try {
             await lifeSyncUpdatePlugins({ [key]: next })
             setMessage('Plugin settings saved.')
-            setTimeout(() => setMessage(''), 2500)
+            registerTimeout(() => setMessage(''), 2500)
         } catch (err) {
             setError(err.message || 'Failed to update plugins')
         } finally {

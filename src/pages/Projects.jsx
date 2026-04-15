@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { FaPlus, FaEllipsisH, FaTimes, FaSearch, FaChevronDown, FaArchive, FaSync, FaCheckSquare } from "react-icons/fa"
 import { formatTimestamp, formatDate } from "../lib/dateUtils"
+import useTimeoutRegistry from "../hooks/useTimeoutRegistry"
 
 export default function Projects() {
     const { user } = useAuth()
@@ -40,6 +41,7 @@ export default function Projects() {
     const [taskLoading, setTaskLoading] = useState(false)
     const [actionMenu, setActionMenu] = useState(null)
     const [editing, setEditing] = useState(null)
+    const { registerTimeout } = useTimeoutRegistry()
 
     const [form, setForm] = useState({
         name: "",
@@ -218,7 +220,7 @@ export default function Projects() {
                 target_end_date: ""
             })
             setShowForm(false)
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch {
             setError(editing ? "Failed to update project" : "Failed to create project")
         } finally {
@@ -239,7 +241,7 @@ export default function Projects() {
             ))
             setMessage("Project status updated")
             setActionMenu(null)
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch {
             setError("Failed to update project status")
         }
@@ -258,7 +260,7 @@ export default function Projects() {
             setProjects(prev => prev.filter(p => p.id !== projectId))
             setMessage("Project deleted")
             setActionMenu(null)
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch {
             setError("Failed to delete project")
         }

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { useLifeSync } from "../context/LifeSyncContext"
+import useTimeoutRegistry from "../hooks/useTimeoutRegistry"
 
 export default function Signup() {
     const [fullName, setFullName] = useState("")
@@ -14,6 +15,7 @@ export default function Signup() {
     const navigate = useNavigate()
     const { signUp, signInWithGoogle, user, loading: authLoading } = useAuth()
     const { lifeSyncEnsureAccount } = useLifeSync()
+    const { registerTimeout } = useTimeoutRegistry()
 
     useEffect(() => {
         if (!authLoading && user) {
@@ -54,7 +56,7 @@ export default function Signup() {
                         // ignore
                     }
                 }
-                setTimeout(() => navigate("/login"), 2200)
+                registerTimeout(() => navigate("/login"), 2200)
             }
         } catch {
             setError("An unexpected error occurred")

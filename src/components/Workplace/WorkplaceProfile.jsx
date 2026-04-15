@@ -4,6 +4,7 @@ import { FaChevronLeft, FaEdit, FaTimes, FaUsers, FaFolderOpen, FaCheckCircle, F
 import { convertGoogleDriveLink } from "../../lib/imageUtils"
 import { updateWorkplace } from "../../lib/workplaces"
 import { getUsersByIds, getDisplayName } from "../../lib/users"
+import useTimeoutRegistry from "../../hooks/useTimeoutRegistry"
 
 export default function WorkplaceProfile({ workplace, loading, isOwner, onRefresh, setMessage, setError, members = [], projects = [], tasks = [], currentMembership = null }) {
     const [isEditing, setIsEditing] = useState(false)
@@ -15,6 +16,7 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
         description: workplace?.description || "",
         bannerUrl: workplace?.banner_url || "",
     })
+    const { registerTimeout } = useTimeoutRegistry()
 
     // Load user data for members
     useEffect(() => {
@@ -86,7 +88,7 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
             setIsEditing(false)
             setImageLoadError(false)
             await onRefresh?.()
-            setTimeout(() => setMessage?.(""), 2000)
+            registerTimeout(() => setMessage?.(""), 2000)
         } catch (e) {
             setError?.(e?.message || "Failed to update workplace.")
         } finally {

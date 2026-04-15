@@ -15,6 +15,7 @@ import {
     readPwaEngagementNotificationsEnabled,
     writePwaEngagementNotificationsEnabled,
 } from "../lib/pwaNotifications"
+import useTimeoutRegistry from "../hooks/useTimeoutRegistry"
 const NAV = [
     {
         id: "profile", label: "Profile",
@@ -62,6 +63,7 @@ export default function Profile() {
     const [prefsBusy, setPrefsBusy] = useState(false)
     const [engageNotifs, setEngageNotifs] = useState(() => readPwaEngagementNotificationsEnabled())
     const [engageBusy, setEngageBusy] = useState(false)
+    const { registerTimeout } = useTimeoutRegistry()
 
     const [fullName, setFullName] = useState("")
     const [username, setUsername] = useState("")
@@ -123,7 +125,7 @@ export default function Profile() {
             if (updateError) setError(updateError.message)
             else {
                 setMessage("Profile updated successfully.")
-                setTimeout(() => setMessage(""), 3000)
+                registerTimeout(() => setMessage(""), 3000)
             }
         } catch {
             setError("Failed to update profile")

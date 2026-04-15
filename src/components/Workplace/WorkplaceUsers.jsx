@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { FaPlus, FaCheckCircle, FaClock, FaUserTag, FaUserMinus } from "react-icons/fa"
 import { inviteToWorkplace, setWorkplaceMemberRoles, removeWorkplaceMember } from "../../lib/workplaces"
 import { getUsersByIds, getUsername } from "../../lib/users"
+import useTimeoutRegistry from "../../hooks/useTimeoutRegistry"
 
 export default function WorkplaceUsers({
     members,
@@ -23,6 +24,7 @@ export default function WorkplaceUsers({
     const [userMap, setUserMap] = useState({})
     const [rolePickerOpenFor, setRolePickerOpenFor] = useState(null)
     const [roleDraft, setRoleDraft] = useState([])
+    const { registerTimeout } = useTimeoutRegistry()
     const workplaceId = workplace?.id || null
     const safeRoles = (roles || []).filter((role) => role?.id)
 
@@ -80,7 +82,7 @@ export default function WorkplaceUsers({
             setMessage("Member roles updated.")
             setRolePickerOpenFor(null)
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to update member roles.")
         } finally {
@@ -101,7 +103,7 @@ export default function WorkplaceUsers({
             setMessage("Invite sent (pending).")
             setShowForm(false)
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to invite user.")
         } finally {
@@ -135,7 +137,7 @@ export default function WorkplaceUsers({
             setMessage("Member removed from workplace.")
             setRolePickerOpenFor(null)
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to remove member.")
         } finally {

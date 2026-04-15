@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useRef } from "react"
 import { supabase } from "../lib/supabase"
 import { useAuth } from "../context/AuthContext"
 import { Link, useLocation } from "react-router-dom"
 import { FaSearch, FaEllipsisH, FaTimes, FaCalendar, FaFilter, FaPlus, FaFolder, FaListUl, FaColumns, FaBorderAll, FaTags } from "react-icons/fa"
 import { formatTimestamp } from "../lib/dateUtils"
+import useTimeoutRegistry from "../hooks/useTimeoutRegistry"
 
 export default function Tasks() {
     const { user } = useAuth()
@@ -42,6 +43,8 @@ export default function Tasks() {
     const [showFilters, setShowFilters] = useState(false)
     const [showTaskModal, setShowTaskModal] = useState(false)
     const [viewMode, setViewMode] = useState("grid")
+    const sectionRetryTimeoutRef = useRef(null)
+    const { registerTimeout, clearTimeoutById } = useTimeoutRegistry()
 
     const statusOptions = ["To Do", "In Progress", "Done", "Cancelled"]
     const priorityOptions = ["Low", "Medium", "High", "Urgent"]
@@ -152,16 +155,29 @@ export default function Tasks() {
         const params = new URLSearchParams(location.search)
         const section = params.get("section")
         if (!section) return
+        if (sectionRetryTimeoutRef.current != null) {
+            clearTimeoutById(sectionRetryTimeoutRef.current)
+            sectionRetryTimeoutRef.current = null
+        }
         const attempt = (tries = 0) => {
             const el = document.getElementById(`section-${section}`)
             if (el) {
                 el.scrollIntoView({ behavior: "smooth", block: "start" })
             } else if (tries < 8) {
-                setTimeout(() => attempt(tries + 1), 150)
+                sectionRetryTimeoutRef.current = registerTimeout(() => {
+                    sectionRetryTimeoutRef.current = null
+                    attempt(tries + 1)
+                }, 150)
             }
         }
         attempt()
-    }, [loading, location.search])
+        return () => {
+            if (sectionRetryTimeoutRef.current != null) {
+                clearTimeoutById(sectionRetryTimeoutRef.current)
+                sectionRetryTimeoutRef.current = null
+            }
+        }
+    }, [clearTimeoutById, loading, location.search, registerTimeout])
 
     const fetchProjects = async () => {
         try {
@@ -265,7 +281,7 @@ export default function Tasks() {
             setForm({ title: "", description: "", type_id: "", project_id: "", due_date: "", due_time: getCurrentTime(), priority: "Medium", status: "To Do" })
             setEditing(null)
             setShowTaskModal(false)
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch {
             setError(editing ? "Failed to update task." : "Failed to create task.")
         } finally {
@@ -285,7 +301,7 @@ export default function Tasks() {
                 t.id === taskId ? { ...t, ...updates, updated_at: new Date().toISOString() } : t
             ))
             setMessage("Task updated.")
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch {
             setError("Failed to update task.")
         }
@@ -316,7 +332,7 @@ export default function Tasks() {
             if (!error && data) {
                 setTasks(prev => [data, ...prev])
                 setMessage("Task duplicated.")
-                setTimeout(() => setMessage(""), 2000)
+                registerTimeout(() => setMessage(""), 2000)
             }
         } catch {
             setError("Failed to duplicate task.")

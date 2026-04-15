@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
 import { Link } from "react-router-dom"
 import { FaEdit, FaToggleOn, FaToggleOff, FaEllipsisH, FaTimes, FaPlus } from "react-icons/fa"
+import useTimeoutRegistry from "../hooks/useTimeoutRegistry"
 
 export default function TaskTypes() {
     const { user } = useAuth()
@@ -14,6 +15,7 @@ export default function TaskTypes() {
     const [editing, setEditing] = useState(null)
     const [actionMenu, setActionMenu] = useState(null)
     const [showForm, setShowForm] = useState(false)
+    const { registerTimeout } = useTimeoutRegistry()
 
     const defaultColors = [
         "#C6FF00", // Brand yellow
@@ -111,7 +113,7 @@ export default function TaskTypes() {
                 resetForm()
                 setShowForm(false)
             }
-            setTimeout(() => setMessage(""), 2500)
+            registerTimeout(() => setMessage(""), 2500)
         } catch {
             setError("Failed to save task type.")
         } finally {
@@ -132,7 +134,7 @@ export default function TaskTypes() {
                 setError("Failed to update status.")
             } else {
                 setMessage(`Type ${newStatus === "Active" ? "activated" : "deactivated"}.`)
-                setTimeout(() => setMessage(""), 1500)
+                registerTimeout(() => setMessage(""), 1500)
             }
         } catch {
             setError("Failed to update status.")

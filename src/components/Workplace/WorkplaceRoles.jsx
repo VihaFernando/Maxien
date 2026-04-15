@@ -5,6 +5,7 @@ import {
     updateWorkplaceRole,
     deleteWorkplaceRole,
 } from "../../lib/workplaces"
+import useTimeoutRegistry from "../../hooks/useTimeoutRegistry"
 
 const ROLE_COLORS = ["#6366f1", "#0ea5e9", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"]
 
@@ -18,6 +19,7 @@ export default function WorkplaceRoles({ roles, workplace, user, loading, onRefr
         description: "",
         color: "#6366f1",
     })
+    const { registerTimeout } = useTimeoutRegistry()
 
     const filteredRoles = useMemo(() => {
         const query = searchTerm.trim().toLowerCase()
@@ -53,7 +55,7 @@ export default function WorkplaceRoles({ roles, workplace, user, loading, onRefr
             await deleteWorkplaceRole({ roleId })
             setMessage("Role deleted successfully.")
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to delete role.")
         } finally {
@@ -91,7 +93,7 @@ export default function WorkplaceRoles({ roles, workplace, user, loading, onRefr
             }
             resetForm()
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to save role.")
         } finally {

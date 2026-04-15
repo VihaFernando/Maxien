@@ -3,6 +3,7 @@ import { Link } from "react-router-dom"
 import { FaPlus, FaEdit, FaTrash, FaSearch, FaBars, FaThLarge, FaEllipsisH, FaCalendarAlt, FaTags, FaBuilding } from "react-icons/fa"
 import { createWorkplaceTask, updateWorkplaceTask, deleteWorkplaceTask } from "../../lib/workplaces"
 import { getUsersByIds, getUsername } from "../../lib/users"
+import useTimeoutRegistry from "../../hooks/useTimeoutRegistry"
 
 export default function WorkplaceTasks({
     tasks,
@@ -43,6 +44,7 @@ export default function WorkplaceTasks({
         status: "To Do",
         assigned_to: [],
     })
+    const { registerTimeout } = useTimeoutRegistry()
 
     const acceptedMembers = useMemo(() => members.filter((m) => m.status === "accepted"), [members])
     const memberIds = useMemo(() => members.map((m) => m.user_id), [members])
@@ -229,7 +231,7 @@ export default function WorkplaceTasks({
             })
             setShowForm(false)
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to save task.")
         } finally {
@@ -271,7 +273,7 @@ export default function WorkplaceTasks({
             })
             setMessage("Task status updated.")
             await onRefresh()
-            setTimeout(() => setMessage(""), 1500)
+            registerTimeout(() => setMessage(""), 1500)
         } catch (e) {
             setError(e?.message || "Failed to update task status.")
         }
@@ -335,7 +337,7 @@ export default function WorkplaceTasks({
             await deleteWorkplaceTask({ taskId })
             setMessage("Task deleted successfully.")
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to delete task.")
         } finally {

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useRegisterSW } from 'virtual:pwa-register/react'
 
 let swPingIntervalId = null
@@ -8,6 +8,16 @@ function scheduleServiceWorkerChecks(registration) {
   if (!registration) return
   const ping = () => registration.update()
 
+  resetServiceWorkerChecks()
+
+  swVisHandler = () => {
+    if (document.visibilityState === 'visible') ping()
+  }
+  document.addEventListener('visibilitychange', swVisHandler)
+  swPingIntervalId = window.setInterval(ping, 60 * 60 * 1000)
+}
+
+function resetServiceWorkerChecks() {
   if (swVisHandler) {
     document.removeEventListener('visibilitychange', swVisHandler)
     swVisHandler = null
@@ -16,12 +26,6 @@ function scheduleServiceWorkerChecks(registration) {
     window.clearInterval(swPingIntervalId)
     swPingIntervalId = null
   }
-
-  swVisHandler = () => {
-    if (document.visibilityState === 'visible') ping()
-  }
-  document.addEventListener('visibilitychange', swVisHandler)
-  swPingIntervalId = window.setInterval(ping, 60 * 60 * 1000)
 }
 
 /**
@@ -46,6 +50,12 @@ export default function PWAUpdatePrompt() {
   const onDismiss = useCallback(() => {
     setNeedRefresh(false)
   }, [setNeedRefresh])
+
+  useEffect(() => {
+    return () => {
+      resetServiceWorkerChecks()
+    }
+  }, [])
 
   if (!needRefresh) return null
 

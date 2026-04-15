@@ -5,6 +5,7 @@ import {
     updateWorkplaceProject,
     deleteWorkplaceProject,
 } from "../../lib/workplaces"
+import useTimeoutRegistry from "../../hooks/useTimeoutRegistry"
 
 export default function WorkplaceProjects({
     projects,
@@ -31,6 +32,7 @@ export default function WorkplaceProjects({
         start_date: "",
         target_end_date: "",
     })
+    const { registerTimeout } = useTimeoutRegistry()
 
     const statusOptions = ["Active", "On Hold", "Completed", "Archived"]
 
@@ -80,7 +82,7 @@ export default function WorkplaceProjects({
             await deleteWorkplaceProject({ projectId })
             setMessage("Project deleted successfully.")
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to delete project.")
         } finally {
@@ -123,7 +125,7 @@ export default function WorkplaceProjects({
 
             resetForm()
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || (editingId ? "Failed to update project." : "Failed to create project."))
         } finally {

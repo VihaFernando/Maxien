@@ -5,6 +5,7 @@ import {
     updateWorkplaceTaskType,
     deleteWorkplaceTaskType,
 } from "../../lib/workplaces"
+import useTimeoutRegistry from "../../hooks/useTimeoutRegistry"
 
 export default function WorkplaceTaskTypes({
     types,
@@ -22,6 +23,7 @@ export default function WorkplaceTaskTypes({
     const [editingId, setEditingId] = useState(null)
     const [searchTerm, setSearchTerm] = useState("")
     const [newType, setNewType] = useState({ name: "", description: "", color: "#C6FF00", status: "Active" })
+    const { registerTimeout } = useTimeoutRegistry()
 
     const filteredTypes = useMemo(() => {
         return types.filter((t) => t.name?.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -54,7 +56,7 @@ export default function WorkplaceTaskTypes({
             await deleteWorkplaceTaskType({ typeId })
             setMessage("Task type deleted successfully.")
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to delete task type.")
         } finally {
@@ -89,7 +91,7 @@ export default function WorkplaceTaskTypes({
 
             resetForm()
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e2) {
             setError(e2?.message || (editingId ? "Failed to update task type." : "Failed to create task type."))
         } finally {

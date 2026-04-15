@@ -6,6 +6,7 @@ import {
     deleteWorkplaceDepartment,
 } from "../../lib/workplaces"
 import { getUsersByIds, getUsername } from "../../lib/users"
+import useTimeoutRegistry from "../../hooks/useTimeoutRegistry"
 
 const DEPARTMENT_COLORS = ["#0ea5e9", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#14b8a6"]
 
@@ -30,6 +31,7 @@ export default function WorkplaceDepartments({
         color: "#0ea5e9",
         member_user_ids: [],
     })
+    const { registerTimeout } = useTimeoutRegistry()
 
     const acceptedMembers = useMemo(
         () => members.filter((m) => m.status === "accepted"),
@@ -110,7 +112,7 @@ export default function WorkplaceDepartments({
             await deleteWorkplaceDepartment({ departmentId })
             setMessage("Department deleted.")
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to delete department.")
         } finally {
@@ -155,7 +157,7 @@ export default function WorkplaceDepartments({
 
             resetForm()
             await onRefresh()
-            setTimeout(() => setMessage(""), 2000)
+            registerTimeout(() => setMessage(""), 2000)
         } catch (e) {
             setError(e?.message || "Failed to save department.")
         } finally {
