@@ -14,7 +14,7 @@ import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
 import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lifeSyncDetailBodyRevealTransition, lifeSyncDetailOverlayFadeTransition, lifeSyncDetailSheetEnterAnimate, lifeSyncDetailSheetEnterInitial, lifeSyncDetailSheetExitVariant, lifeSyncDetailSheetMainTransition, lifeSyncDollyPageTransition, lifeSyncDollyPageVariants, lifeSyncSharedLayoutTransitionProps, MotionDiv } from '../../lib/lifesyncMotion'
 
-const HENTAI_OCEAN_SITE = 'https://hentaiocean.com'
+const WATCH_HENTAI_SITE = 'https://watchhentai.net'
 
 function isIOSDevice() {
     if (typeof navigator === 'undefined') return false
@@ -29,6 +29,10 @@ function hentaiSeriesPosterLayoutId(seriesKey) {
     return `lifesync-hentai-poster-${k}`
 }
 const SERIES_PER_PAGE = 24
+const hentaiFilterExpandTransition = {
+    height: { duration: 0.3 },
+    opacity: { duration: 0.22 },
+}
 
 /** Stable pseudo-shuffle for recommendation order (pure, no Math.random in render). */
 function seriesMixOrderKey(seriesKey) {
@@ -62,21 +66,94 @@ function slugFromItem(it) {
     return ''
 }
 
-/** Per-episode still on HentaiOcean CDN (series cards keep using posterUrl). */
-function hentaiOceanEpisodeThumbnailUrl(ep) {
-    const slug = slugFromItem(ep)
-    if (!slug) return ''
-    return `${HENTAI_OCEAN_SITE}/thumbnail/${encodeURIComponent(slug)}.webp`
+
+
+function hentaiEpisodeThumbnailUrl(ep) {
+    return ep?.posterUrl || ''
+}
+
+function hentaiSourceApiBase() {
+    return '/api/v1/hentai/watchhentai'
+}
+
+function pickStableRandomBackdrop(backdropUrls, seedValue) {
+    if (!Array.isArray(backdropUrls) || backdropUrls.length === 0) return null
+    const clean = backdropUrls.filter(Boolean)
+    if (clean.length === 0) return null
+
+    const seed = String(seedValue || 'lifesync-hentai')
+    let hash = 2166136261
+    for (let i = 0; i < seed.length; i++) {
+        hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619)
+    }
+    const idx = Math.abs(hash >>> 0) % clean.length
+    return clean[idx]
+}
+
+function qualityRank(value) {
+    const m = String(value || '').match(/(\d{3,4})p/i)
+    if (!m?.[1]) return 0
+    const n = Number(m[1])
+    return Number.isFinite(n) ? n : 0
+}
+
+function normalizeQualityOptions(rawOptions) {
+    if (!Array.isArray(rawOptions)) return []
+    const out = []
+    const seen = new Set()
+    for (const raw of rawOptions) {
+        const url = typeof raw?.url === 'string' && raw.url.startsWith('http') ? raw.url : ''
+        if (!url) continue
+        const type = raw?.type === 'hls' ? 'hls' : 'mp4'
+        const rank = Number.isFinite(Number(raw?.rank)) ? Number(raw.rank) : Math.max(qualityRank(raw?.label), qualityRank(url))
+        const label = String(raw?.label || (rank > 0 ? `${rank}p` : type === 'hls' ? 'Auto (HLS)' : 'Default')).trim()
+        const idBase = String(raw?.id || `${rank || 'default'}p-${type}`).trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-') || `${rank || 'default'}p-${type}`
+        const uniqueKey = `${type}|${url.toLowerCase()}`
+        if (seen.has(uniqueKey)) continue
+        seen.add(uniqueKey)
+        out.push({ id: idBase, label, url, type, rank })
+    }
+
+    out.sort((a, b) => {
+        if (b.rank !== a.rank) return b.rank - a.rank
+        if (a.type !== b.type) return a.type === 'mp4' ? -1 : 1
+        return a.label.localeCompare(b.label)
+    })
+
+    const idCounts = new Map()
+    return out.map(item => {
+        const count = (idCounts.get(item.id) || 0) + 1
+        idCounts.set(item.id, count)
+        if (count === 1) return item
+        return { ...item, id: `${item.id}-${count}` }
+    })
+}
+
+function pickQualityOption(options, preferredId, iosDevice) {
+    if (!Array.isArray(options) || options.length === 0) return null
+    const pool = iosDevice
+        ? options.filter(opt => opt.type === 'mp4')
+        : options
+    const candidates = pool.length > 0 ? pool : options
+
+    if (preferredId) {
+        const exact = candidates.find(opt => opt.id === preferredId)
+        if (exact) return exact
+    }
+
+    return candidates[0] || null
 }
 
 /* ─── Fullscreen Player Popup (watch layout) ───────────────────────────── */
 
-function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, onPlayFromSeries, onVideoFailure }) {
+function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSelectQuality, allSeries, onPlayFromSeries, onVideoFailure }) {
     const { stream, series, episodeIndex } = playerState
     const episodes = useMemo(() => series?.episodes || [], [series])
     const prevEp = episodeIndex > 0 ? episodes[episodeIndex - 1] : null
     const nextEp = episodeIndex >= 0 && episodeIndex < episodes.length - 1 ? episodes[episodeIndex + 1] : null
     const activeEpisode = episodeIndex >= 0 ? episodes[episodeIndex] : null
+    const qualityOptions = Array.isArray(stream?.qualityOptions) ? stream.qualityOptions : []
+    const canSelectQuality = Boolean(stream?.videoUrl && qualityOptions.length > 1)
     const playingRef = useRef(null)
 
     const shuffledPool = useMemo(() => {
@@ -186,7 +263,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                             src={stream.videoUrl}
                                             onEnded={() => nextEp && onChangeEpisode(episodeIndex + 1)}
                                             onError={() => {
-                                                if (isIOSDevice()) onVideoFailure?.()
+                                                onVideoFailure?.()
                                             }}
                                         />
                                     ) : stream.embedUrl ? (
@@ -227,6 +304,22 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                             <span className="inline-flex rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[10px] text-white/55">
                                                 {formatEpisodeDate(activeEpisode.pubDate) || activeEpisode.pubDate}
                                             </span>
+                                        )}
+                                        {canSelectQuality && (
+                                            <label className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-black/35 px-2.5 py-1">
+                                                <span className="text-[10px] font-semibold uppercase tracking-wide text-white/55">Quality</span>
+                                                <select
+                                                    value={stream.activeQuality || qualityOptions[0]?.id || ''}
+                                                    onChange={e => onSelectQuality?.(e.target.value)}
+                                                    className="rounded bg-transparent text-[10px] font-semibold text-white outline-none"
+                                                >
+                                                    {qualityOptions.map(opt => (
+                                                        <option key={opt.id} value={opt.id} className="text-black">
+                                                            {opt.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
                                         )}
                                     </div>
                                 </div>
@@ -279,7 +372,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                             const isCurrent = i === episodeIndex
                                             const epLabel = ep.episodeNum > 0 ? `Ep ${ep.episodeNum}` : `Part ${i + 1}`
                                             const dateLabel = formatEpisodeDate(ep.pubDate)
-                                            const queueThumb = hentaiOceanEpisodeThumbnailUrl(ep) || ep.posterUrl || series?.posterUrl
+                                            const queueThumb = hentaiEpisodeThumbnailUrl(ep, source) || ep.posterUrl || series?.posterUrl
                                             return (
                                                 <li key={ep.slug || ep.watchUrl || i}>
                                                     <button
@@ -337,7 +430,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
                                 <div className={`mt-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 ${hideScroll}`}>
                                     <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
                                         {recommendations.map(rec => {
-                                            const sugThumb = hentaiOceanEpisodeThumbnailUrl(rec._firstEp) || rec._firstEp?.posterUrl || rec.posterUrl
+                                            const sugThumb = hentaiEpisodeThumbnailUrl(rec._firstEp) || rec._firstEp?.posterUrl || rec.posterUrl
                                             return (
                                             <li key={rec.seriesKey}>
                                                 <button
@@ -390,7 +483,7 @@ function StreamPlayerPopup({ playerState, onClose, onChangeEpisode, allSeries, o
 
 /* ─── Cinematic Series Detail + Episode Picker ─────────────────────────── */
 
-function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGenresLoaded }) {
+function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagClick, onGenresLoaded }) {
     const firstEp = series?.episodes?.[0]
     const initialSlug = series ? slugFromItem(firstEp || series) : ''
     const [detail, setDetail] = useState(null)
@@ -403,7 +496,8 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
         const slug = slugFromItem(series.episodes?.[0] || series)
         if (!slug) return
         let cancelled = false
-        lifesyncFetch(`/api/v1/hentai/ocean/detail?slug=${encodeURIComponent(slug)}&view=full`)
+        const detailApiBase = hentaiSourceApiBase()
+        lifesyncFetch(`${detailApiBase}/detail?slug=${encodeURIComponent(slug)}&view=full`)
             .then(d => {
                 if (!cancelled) {
                     setDetail(d)
@@ -413,7 +507,7 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
             .catch(() => {})
             .finally(() => { if (!cancelled) setDetailBusy(false) })
         return () => { cancelled = true }
-    }, [series, onGenresLoaded])
+    }, [series, source, onGenresLoaded])
 
     useEffect(() => {
         const onKey = e => { if (e.key === 'Escape') onClose?.() }
@@ -433,12 +527,20 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
     const coverImg = detail?.coverUrl || series.posterUrl
     const description = detail?.description ? String(detail.description).replace(/<[^>]*>/g, '') : ''
     const genres = detail?.genres || []
-    const episodes = series.episodes || []
+    const episodes = Array.isArray(detail?.episodes) && detail.episodes.length > 0 ? detail.episodes : (series.episodes || [])
     const episodeSkeletonCount = Math.min(12, Math.max(3, episodes.length || 6))
     const hentaiSlug = slugFromItem(detail) || slugFromItem(episodes[0] || series)
-    const storyboardBg = hentaiSlug ? `${HENTAI_OCEAN_SITE}/storyboard/${encodeURIComponent(hentaiSlug)}.webp` : ''
-    const usingStoryboardBg = Boolean(storyboardBg && !storyboardFailed)
-    const heroBackground = usingStoryboardBg ? storyboardBg : coverImg
+    const randomWatchBackdrop = source === 'watchhentai'
+        ? pickStableRandomBackdrop(detail?.backdropUrls, `${series.seriesKey || series.title}-${hentaiSlug}`)
+        : null
+    const usingStoryboardBg = Boolean(source !== 'watchhentai' && storyboardBg && !storyboardFailed)
+    const heroBackground = source === 'watchhentai' ? (randomWatchBackdrop || coverImg) : (usingStoryboardBg ? storyboardBg : coverImg)
+    const playbackSeries = {
+        ...series,
+        posterUrl: coverImg || series.posterUrl,
+        episodes,
+        episodeCount: episodes.length,
+    }
 
     const node = (
         <MotionDiv
@@ -519,7 +621,7 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                                 <span className="inline-flex items-center gap-1 bg-[#C6FF00]/20 text-[#1d1d1f] text-[10px] font-semibold px-2 py-0.5 rounded-full">
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
-                                    {series.episodeCount === 1 ? '1 episode' : `${series.episodeCount} episodes`}
+                                    {episodes.length === 1 ? '1 episode' : `${episodes.length} episodes`}
                                 </span>
                                 {detail?.releaseDate && (
                                     <span className="text-[10px] font-medium text-[#86868b] bg-[#f5f5f7] px-2 py-0.5 rounded-full">{detail.releaseDate}</span>
@@ -575,7 +677,7 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                         </div>
                     )}
 
-                    {/* Episode grid — 16:9 thumbs (HentaiOcean episode stills) */}
+                    {/* Episode grid — 16:9 thumbs */}
                     <div className="px-5 sm:px-6 py-4">
                         <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b] mb-3">
                             {detailBusy
@@ -590,14 +692,14 @@ function SeriesDetailPopup({ series, onClose, onPlayEpisode, genreTagClick, onGe
                         ) : (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {episodes.map((ep, i) => {
-                                const oceanEpThumb = hentaiOceanEpisodeThumbnailUrl(ep)
-                                const epThumbSrc = oceanEpThumb || ep.posterUrl || coverImg
-                                const dimSeriesCover = !oceanEpThumb && !ep.posterUrl && coverImg
+                                const sourceEpThumb = hentaiEpisodeThumbnailUrl(ep, source)
+                                const epThumbSrc = sourceEpThumb || ep.posterUrl || coverImg
+                                const dimSeriesCover = !sourceEpThumb && !ep.posterUrl && coverImg
                                 return (
                                 <button
                                     key={ep.watchUrl || ep.slug || i}
                                     type="button"
-                                    onClick={() => onPlayEpisode(ep, i)}
+                                    onClick={() => onPlayEpisode(playbackSeries, ep, i)}
                                     className="group text-left overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-white shadow-sm hover:shadow-md hover:border-[#C6FF00]/40 transition-all"
                                 >
                                     <div className="relative aspect-video w-full overflow-hidden bg-[#1d1d1f]">
@@ -665,6 +767,11 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                                         {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
                                     </span>
                                 )}
+                                {!series.episodeCount && series.episodes?.length && (
+                                    <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
+                                        {series.episodes.length === 1 ? '1 ep' : `${series.episodes.length} ep`}
+                                    </span>
+                                )}
                                 <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-transparent" />
                                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
                                     <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow">{series.title}</p>
@@ -680,6 +787,11 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                                 {series.episodeCount != null && (
                                     <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
                                         {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
+                                    </span>
+                                )}
+                                {!series.episodeCount && series.episodes?.length && (
+                                    <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
+                                        {series.episodes.length === 1 ? '1 ep' : `${series.episodes.length} ep`}
                                     </span>
                                 )}
                                 <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-transparent" />
@@ -716,13 +828,19 @@ export default function LifeSyncHentai() {
     const [page, setPage] = useState(1)
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
+    const activeSource = 'watchhentai'
+    const [catalogMode, setCatalogMode] = useState('series')
+    const [watchGenre, setWatchGenre] = useState('')
+    const [watchYear, setWatchYear] = useState('')
+    const [filtersExpanded, setFiltersExpanded] = useState(false)
 
     const [selectedSeries, setSelectedSeries] = useState(null)
     const [playerState, setPlayerState] = useState(null)
+    const [preferredQualityId, setPreferredQualityId] = useState(null)
+    const [sortOrder, setSortOrder] = useState('random')
 
     const [knownGenres, setKnownGenres] = useState([])
     const seriesGenresRef = useRef(new Map())
-    const [activeGenre, setActiveGenre] = useState(null)
     const pageMountedRef = useRef(true)
     useEffect(() => {
         pageMountedRef.current = true
@@ -746,13 +864,19 @@ export default function LifeSyncHentai() {
             if (q.trim()) params.set('q', q.trim())
             if (refresh) params.set('refresh', '1')
             params.set('view', 'standard')
-            let data = await lifesyncFetch(`/api/v1/hentai/ocean/home?${params}`)
+            params.set('section', 'series')
+            params.set('sort', sortOrder)
+            if (watchGenre) params.set('genre', watchGenre)
+            if (watchYear) params.set('year', watchYear)
+
+            const apiBase = hentaiSourceApiBase()
+            let data = await lifesyncFetch(`${apiBase}/home?${params}`)
 
             // Backward-safe retry for servers that still transform away `series/items` on compact-like views.
             if (!Array.isArray(data?.series) && !Array.isArray(data?.items)) {
                 const fallbackParams = new URLSearchParams(params)
                 fallbackParams.delete('view')
-                data = await lifesyncFetch(`/api/v1/hentai/ocean/home?${fallbackParams}`)
+                data = await lifesyncFetch(`${apiBase}/home?${fallbackParams}`)
             }
 
             if (!pageMountedRef.current) return
@@ -766,14 +890,23 @@ export default function LifeSyncHentai() {
                 setBusy(false)
             }
         }
-    }, [])
+    }, [catalogMode, watchGenre, watchYear, sortOrder])
 
     useEffect(() => {
         if (isLifeSyncConnected && nsfwEnabled && pluginEnabled) {
             setPage(1)
             load(1, debouncedSearch, false)
         }
-    }, [isLifeSyncConnected, nsfwEnabled, pluginEnabled, debouncedSearch, load])
+    }, [
+        isLifeSyncConnected,
+        nsfwEnabled,
+        pluginEnabled,
+        debouncedSearch,
+        catalogMode,
+        watchGenre,
+        watchYear,
+        load,
+    ])
 
     const addGenresForSeries = useCallback((seriesKey, genres) => {
         if (!genres?.length) return
@@ -785,24 +918,62 @@ export default function LifeSyncHentai() {
         setKnownGenres([...all].sort())
     }, [])
 
-    const resolveStream = useCallback(async (ep) => {
+    const resolveStream = useCallback(async (ep, preferredQuality = null) => {
         const slug = slugFromItem(ep)
-        const embedUrl = ep?.embedUrl || (slug ? `${HENTAI_OCEAN_SITE}/embed/${encodeURIComponent(slug)}` : '')
-        const watchUrl = ep?.watchUrl || (slug ? `${HENTAI_OCEAN_SITE}/watch/${encodeURIComponent(slug)}` : '')
+        const embedUrl = ep?.embedUrl || (slug ? `${WATCH_HENTAI_SITE}/videos/${encodeURIComponent(slug)}/` : '')
+        const watchUrl = ep?.watchUrl || (slug ? `${WATCH_HENTAI_SITE}/videos/${encodeURIComponent(slug)}/` : '')
         if (!slug || !embedUrl) return null
-        const base = { title: ep.title, embedUrl, watchUrl, slug, videoUrl: null, resolving: false }
+        const base = { title: ep.title, embedUrl, watchUrl, slug, videoUrl: null, qualityOptions: [], activeQuality: null, resolving: false }
         try {
-            const data = await lifesyncFetch(`/api/v1/hentai/ocean/stream?slug=${encodeURIComponent(slug)}&view=full`)
+            const apiBase = hentaiSourceApiBase()
+            const data = await lifesyncFetch(`${apiBase}/stream?slug=${encodeURIComponent(slug)}&view=full`)
             const mp4 = typeof data.videoUrl === 'string' && data.videoUrl.startsWith('http') ? data.videoUrl : null
             const hls = typeof data.hlsUrl === 'string' && data.hlsUrl.startsWith('http') ? data.hlsUrl : null
-            // iOS Safari: third-party HLS master playlists often fail (segments, codecs, TLS); match anime watch
-            // (preferIframe) by using the site embed when only HLS is available, and MP4 when both exist.
-            let videoUrl = hls || mp4
-            if (isIOSDevice()) {
-                if (mp4) videoUrl = mp4
-                else if (hls) videoUrl = null
+            let qualityOptions = normalizeQualityOptions(data?.qualityOptions)
+
+            if (qualityOptions.length === 0) {
+                const inferred = []
+                if (mp4) {
+                    const rank = qualityRank(mp4)
+                    inferred.push({
+                        id: `${rank || 'default'}p-mp4`,
+                        label: rank > 0 ? `${rank}p` : 'Default',
+                        url: mp4,
+                        type: 'mp4',
+                        rank,
+                    })
+                }
+                if (hls) {
+                    const rank = qualityRank(hls)
+                    inferred.push({
+                        id: `${rank || 'auto'}p-hls`,
+                        label: rank > 0 ? `${rank}p (HLS)` : 'Auto (HLS)',
+                        url: hls,
+                        type: 'hls',
+                        rank,
+                    })
+                }
+                qualityOptions = normalizeQualityOptions(inferred)
             }
-            return { ...base, embedUrl: data.embedUrl || embedUrl, videoUrl }
+
+            const selectedQuality = pickQualityOption(qualityOptions, preferredQuality, isIOSDevice())
+
+            let videoUrl = selectedQuality?.url || null
+            if (!videoUrl) {
+                if (isIOSDevice()) {
+                    videoUrl = mp4 || null
+                } else {
+                    videoUrl = hls || mp4 || null
+                }
+            }
+
+            return {
+                ...base,
+                embedUrl: data.embedUrl || embedUrl,
+                videoUrl,
+                qualityOptions,
+                activeQuality: selectedQuality?.id || null,
+            }
         } catch {
             return base
         }
@@ -810,51 +981,144 @@ export default function LifeSyncHentai() {
 
     const playEpisode = useCallback(async (series, ep, epIndex) => {
         setSelectedSeries(null)
-        const stream = { title: ep.title, embedUrl: ep.embedUrl || '', watchUrl: ep.watchUrl || '', slug: slugFromItem(ep), videoUrl: null, resolving: true }
+        const stream = {
+            title: ep.title,
+            embedUrl: ep.embedUrl || '',
+            watchUrl: ep.watchUrl || '',
+            slug: slugFromItem(ep),
+            videoUrl: null,
+            qualityOptions: [],
+            activeQuality: preferredQualityId,
+            resolving: true,
+        }
         setPlayerState({ stream, series, episodeIndex: epIndex })
-        const resolved = await resolveStream(ep)
+        const resolved = await resolveStream(ep, preferredQualityId)
         if (!pageMountedRef.current) return
         if (resolved) {
             setPlayerState(prev => prev ? { ...prev, stream: resolved } : null)
         }
-    }, [resolveStream])
+    }, [preferredQualityId, resolveStream])
 
     const changePlayerEpisode = useCallback(async (newIndex) => {
         setPlayerState(prev => {
             if (!prev?.series?.episodes?.[newIndex]) return prev
             const ep = prev.series.episodes[newIndex]
-            const stream = { title: ep.title, embedUrl: ep.embedUrl || '', watchUrl: ep.watchUrl || '', slug: slugFromItem(ep), videoUrl: null, resolving: true }
+            const stream = {
+                title: ep.title,
+                embedUrl: ep.embedUrl || '',
+                watchUrl: ep.watchUrl || '',
+                slug: slugFromItem(ep),
+                videoUrl: null,
+                qualityOptions: [],
+                activeQuality: preferredQualityId,
+                resolving: true,
+            }
             return { ...prev, stream, episodeIndex: newIndex }
         })
         const series = playerState?.series
         const ep = series?.episodes?.[newIndex]
         if (ep) {
-            const resolved = await resolveStream(ep)
+            const resolved = await resolveStream(ep, preferredQualityId)
             if (!pageMountedRef.current) return
             if (resolved) {
                 setPlayerState(prev => prev ? { ...prev, stream: resolved } : null)
             }
         }
-    }, [playerState?.series, resolveStream])
+    }, [playerState?.series, preferredQualityId, resolveStream])
+
+    const selectStreamQuality = useCallback((qualityId) => {
+        setPreferredQualityId(qualityId || null)
+        setPlayerState(prev => {
+            if (!prev?.stream) return prev
+            const options = Array.isArray(prev.stream.qualityOptions) ? prev.stream.qualityOptions : []
+            const selected = options.find(opt => opt.id === qualityId)
+            if (!selected?.url) return prev
+            return {
+                ...prev,
+                stream: {
+                    ...prev.stream,
+                    activeQuality: selected.id,
+                    videoUrl: selected.url,
+                },
+            }
+        })
+    }, [])
+
+    const fallbackStreamQuality = useCallback(() => {
+        let nextQualityId = null
+        setPlayerState(prev => {
+            if (!prev?.stream) return prev
+            const options = Array.isArray(prev.stream.qualityOptions) ? prev.stream.qualityOptions : []
+            if (options.length === 0) {
+                return { ...prev, stream: { ...prev.stream, videoUrl: null, activeQuality: null } }
+            }
+
+            const currentIndex = options.findIndex(opt => opt.id === prev.stream.activeQuality)
+            const fromIndex = currentIndex >= 0 ? currentIndex + 1 : 0
+            const next = options.slice(fromIndex).find(opt => opt?.url && opt.url !== prev.stream.videoUrl)
+            if (!next) {
+                return { ...prev, stream: { ...prev.stream, videoUrl: null, activeQuality: null } }
+            }
+
+            nextQualityId = next.id
+            return {
+                ...prev,
+                stream: {
+                    ...prev.stream,
+                    activeQuality: next.id,
+                    videoUrl: next.url,
+                },
+            }
+        })
+        if (nextQualityId) setPreferredQualityId(nextQualityId)
+    }, [])
+
+    function handleCatalogModeChange(nextMode) {
+        if (nextMode === catalogMode) return
+        setCatalogMode('series')
+        setPage(1)
+        setCatalog(null)
+        setError('')
+        setSelectedSeries(null)
+        setPlayerState(null)
+    }
+
+    function handleWatchGenreChange(value) {
+        setWatchGenre(value || '')
+        setPage(1)
+    }
+
+    function handleWatchYearChange(value) {
+        setWatchYear(String(value || '').trim())
+        setPage(1)
+    }
 
     function handleSearch(e) {
         e.preventDefault()
-        setActiveGenre(null)
         setPage(1)
         setDebouncedSearch(searchQ.trim())
     }
 
     function handleGenreClick(genre) {
-        if (activeGenre === genre) {
-            setActiveGenre(null)
+        const raw = String(genre || '').trim()
+        const normalized = raw.toLowerCase()
+        const matched = watchGenreOptions.find(opt => {
+            const id = String(opt?.id || '').toLowerCase()
+            const label = String(opt?.label || '').toLowerCase()
+            return id === normalized || label === normalized
+        })
+        if (matched) {
+            const nextId = String(matched.id)
+            handleWatchGenreChange(watchGenre === nextId ? '' : nextId)
+            setCatalogMode('series')
             setSearchQ('')
             setDebouncedSearch('')
         } else {
-            setActiveGenre(genre)
-            setSearchQ(genre)
-            setDebouncedSearch(genre)
+            setSearchQ(raw)
+            setDebouncedSearch(raw)
+            setCatalogMode('series')
+            setPage(1)
         }
-        setPage(1)
     }
 
     function goPage(p) {
@@ -871,6 +1135,30 @@ export default function LifeSyncHentai() {
     const seriesList = catalog?.series || []
     const flatItems = catalog?.items || []
     const useFlatOnly = seriesList.length === 0 && flatItems.length > 0
+    const watchFilters = catalog?.filters || {}
+    const watchGenreOptions = Array.isArray(watchFilters.genres) ? watchFilters.genres : []
+    const watchYearOptions = Array.isArray(watchFilters.years) ? watchFilters.years : []
+
+    const genreTagOptions = useMemo(() => {
+        const map = new Map()
+        for (const opt of watchGenreOptions) {
+            if (!opt) continue
+            const id = String(opt.id || opt.label || '').trim()
+            const label = String(opt.label || opt.id || '').trim()
+            if (!id || !label) continue
+            if (!map.has(id)) map.set(id, { id, label })
+        }
+        if (!map.size && Array.isArray(knownGenres)) {
+            for (const label of knownGenres) {
+                const v = String(label || '').trim()
+                if (!v || map.has(v)) continue
+                map.set(v, { id: v, label: v })
+            }
+        }
+        return [...map.values()].sort((a, b) => a.label.localeCompare(b.label))
+    }, [watchGenreOptions, knownGenres])
+
+    const activeFilterCount = (watchGenre ? 1 : 0) + (watchYear ? 1 : 0)
 
     const filteredFlat = useMemo(() => {
         const q = debouncedSearch.toLowerCase()
@@ -943,8 +1231,9 @@ export default function LifeSyncHentai() {
                     <SeriesDetailPopup
                         key={selectedSeries.seriesKey}
                         series={selectedSeries}
+                        source={activeSource}
                         onClose={() => setSelectedSeries(null)}
-                        onPlayEpisode={(ep, idx) => void playEpisode(selectedSeries, ep, idx)}
+                        onPlayEpisode={(playSeries, ep, idx) => void playEpisode(playSeries, ep, idx)}
                         onGenresLoaded={addGenresForSeries}
                         genreTagClick={g => {
                             addGenresForSeries(selectedSeries.seriesKey, [g])
@@ -956,13 +1245,13 @@ export default function LifeSyncHentai() {
             {playerState && (
                 <StreamPlayerPopup
                     playerState={playerState}
+                    source={activeSource}
                     onClose={() => setPlayerState(null)}
                     onChangeEpisode={idx => void changePlayerEpisode(idx)}
+                    onSelectQuality={selectStreamQuality}
                     allSeries={seriesList}
                     onPlayFromSeries={(ser, epIdx) => void playEpisode(ser, ser.episodes[epIdx], epIdx)}
-                    onVideoFailure={() => {
-                        setPlayerState(prev => prev ? { ...prev, stream: { ...prev.stream, videoUrl: null } } : prev)
-                    }}
+                    onVideoFailure={fallbackStreamQuality}
                 />
             )}
 
@@ -998,52 +1287,152 @@ export default function LifeSyncHentai() {
                 <input
                     type="search"
                     value={searchQ}
-                    onChange={e => { setSearchQ(e.target.value); setActiveGenre(null) }}
-                    placeholder="Search catalog…"
+                    onChange={e => { setSearchQ(e.target.value) }}
+                    placeholder="Search WatchHentai titles…"
                     className="flex-1 px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
                 />
-                <button type="submit" disabled={busy} className="w-full sm:w-auto rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50">
-                    Search
-                </button>
+                <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-[auto_auto]">
+                    <button
+                        type="button"
+                        onClick={() => setFiltersExpanded(p => !p)}
+                        className="rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-4 py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#ebebed]"
+                    >
+                        Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                    </button>
+                    <button type="submit" disabled={busy} className="rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50">
+                        Search
+                    </button>
+                </div>
             </form>
 
-            {/* Genre filter pills */}
-            {knownGenres.length > 0 && (
-                <div className="flex gap-1.5 overflow-x-auto pb-1 hide-scrollbar overscroll-x-contain sm:flex-wrap sm:overflow-visible">
-                    <span className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider self-center mr-1">Genres</span>
-                    {knownGenres.map(g => (
-                        <button
-                            key={g}
-                            type="button"
-                            onClick={() => handleGenreClick(g)}
-                            className={`text-[11px] font-medium px-2.5 py-1 rounded-full border transition-all ${
-                                activeGenre === g
-                                    ? 'bg-[#C6FF00] text-[#1d1d1f] border-[#C6FF00] shadow-sm'
-                                    : 'bg-white text-[#424245] border-[#e5e5ea] hover:border-[#C6FF00]/50 hover:bg-[#C6FF00]/5'
-                            }`}
-                        >
-                            {g}
-                        </button>
-                    ))}
-                    {activeGenre && (
-                        <button
-                            type="button"
-                            onClick={() => { setActiveGenre(null); setSearchQ(''); setDebouncedSearch(''); setPage(1) }}
-                            className="text-[10px] font-semibold text-[#86868b] hover:text-[#1d1d1f] self-center ml-1"
-                        >
-                            Clear
-                        </button>
-                    )}
-                </div>
-            )}
+            <AnimatePresence initial={false}>
+                {filtersExpanded && (
+                    <MotionDiv
+                        key="hentai-filter-panel"
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={hentaiFilterExpandTransition}
+                        className="overflow-hidden"
+                    >
+                        <div className="rounded-[18px] border border-[#d2d2d7]/50 bg-white shadow-sm">
+                            <div className="space-y-4 px-4 py-4">
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Filters &amp; Genres</p>
+                                    {activeFilterCount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                handleWatchGenreChange('')
+                                                handleWatchYearChange('')
+                                            }}
+                                            className="text-[10px] font-semibold text-[#86868b] transition-colors hover:text-[#1d1d1f]"
+                                        >
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
+
+                            <div className="space-y-1.5">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Genre</p>
+                                    <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleWatchGenreChange('')}
+                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                !watchGenre
+                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                            }`}
+                                        >
+                                            All genres
+                                        </button>
+                                        {genreTagOptions.map(opt => (
+                                            <button
+                                                key={opt.id}
+                                                type="button"
+                                                onClick={() => handleWatchGenreChange(opt.id)}
+                                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                    watchGenre === String(opt.id)
+                                                        ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                        : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                                }`}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Sort order</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSortOrder('trending')}
+                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                sortOrder === 'trending'
+                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                            }`}
+                                        >
+                                            Trending
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSortOrder('latest')}
+                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                sortOrder === 'latest'
+                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                            }`}
+                                        >
+                                            Latest
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSortOrder('random')}
+                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                sortOrder === 'random'
+                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
+                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                            }`}
+                                        >
+                                            Random
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="w-full max-w-[14rem]">
+                                    <label className="flex flex-col gap-1">
+                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Year</span>
+                                        <select
+                                            value={watchYear}
+                                            onChange={e => handleWatchYearChange(e.target.value)}
+                                            className="rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2 text-[12px] text-[#1d1d1f] focus:border-[#C6FF00]/60 focus:bg-white focus:outline-none"
+                                        >
+                                            <option value="">All years</option>
+                                            {watchYearOptions.map(opt => (
+                                                <option key={opt.id} value={String(opt.id || '').trim()}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </MotionDiv>
+                )}
+            </AnimatePresence>
 
             {/* Stats */}
             {(catalog?.totalSeries != null || catalog?.totalEpisodes != null) && (
                 <p className="text-[11px] text-[#86868b]">
                     {catalog.totalSeries != null && <span>{catalog.totalSeries} series</span>}
                     {catalog.totalEpisodes != null && <span> · {catalog.totalEpisodes} episodes</span>}
+                    {catalog?.totalUpcoming != null && <span> · {catalog.totalUpcoming} upcoming</span>}
                     {catalog.catalogSource === 'recent_api' && <span> · cached index</span>}
                     {catalog.catalogSource === 'rss' && <span> · RSS mode</span>}
+                    <span> · WatchHentai</span>
                 </p>
             )}
 

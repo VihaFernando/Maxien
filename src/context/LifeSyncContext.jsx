@@ -23,6 +23,7 @@ import {
     writeStoredReduceAnimationsSetting,
 } from '../lib/lifeSyncReduceMotion'
 import { lifeSyncQueryKeys } from '../lib/lifeSyncQueryKeys'
+import { connectLifeSyncUserBroadcastSocket } from '../lib/lifeSyncUserBroadcastSocket'
 
 const LifeSyncContext = createContext(null)
 const LIFESYNC_USER_SNAPSHOT_KEY = 'maxien_lifesync_user_snapshot_v1'
@@ -298,6 +299,45 @@ export function LifeSyncProvider({ children }) {
     const dismissLifeSyncBroadcast = useCallback(() => {
         setLifeSyncBroadcast(null)
     }, [])
+
+    /** Receive operator broadcasts on `/lifesync-broadcast` while a LifeSync JWT is present. */
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const token = getLifesyncToken()
+        if (!token) {
+            setLifeSyncBroadcast(null)
+            return undefined
+        }
+        const socket = connectLifeSyncUserBroadcastSocket({
+            onBroadcast: (payload) => {
+                if (payload && typeof payload === 'object') {
+                    setLifeSyncBroadcast({
+                        message: String(payload.message ?? ''),
+                        sentAt: payload.sentAt ? String(payload.sentAt) : new Date().toISOString(),
+                        fromUserId: payload.fromUserId != null ? String(payload.fromUserId) : '',
+                    })
+                }
+                window.dispatchEvent(new CustomEvent('maxien:lifesync-broadcast', { detail: payload }))
+            },
+            onConnectError: (err) => {
+                console.warn('LifeSync broadcast connection error:', err)
+                setLifeSyncBroadcast(null)
+                // Close socket immediately on error to prevent stale connections
+                socket?.close?.()
+            },
+        })
+        if (!socket) return undefined
+        return () => {
+            // Remove event listeners to prevent memory leaks
+            if (socket.__messageHandler) {
+                socket.removeEventListener('message', socket.__messageHandler)
+            }
+            if (socket.__errorHandler) {
+                socket.removeEventListener('error', socket.__errorHandler)
+            }
+            socket.close()
+        }
+    }, [lifeSyncUser?.id, lifeSyncTokenClears])
 
     const updatePlugins = useCallback(async (partial) => {
         const data = await lifesyncPostPlugins(partial)

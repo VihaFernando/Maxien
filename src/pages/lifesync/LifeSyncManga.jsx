@@ -1444,6 +1444,12 @@ export default function LifeSyncManga() {
     const resumeFromEntry = useCallback(async entry => {
         setError('')
         try {
+            const lastChapterId = String(entry?.lastChapterId || '').trim()
+            const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
+            const openLatest = Boolean(entry?.hasNewChapter) && latestChapterId && latestChapterId !== lastChapterId
+            const preferredChapterId = openLatest ? latestChapterId : lastChapterId
+            const preferredResumePercent = openLatest ? 0 : Number(entry?.lastReadPercent || 0)
+
             if (
                 !nsfwEnabled &&
                 entry.source === 'mangadistrict'
@@ -1464,7 +1470,10 @@ export default function LifeSyncManga() {
                 const feed = await lifesyncFetch(`/api/v1/manga/chapters/${encodeURIComponent(entry.mangaId)}?limit=500&lang=all&order=asc&view=full`)
                 const list = [...(feed.data || [])]
                 list.sort(compareChapters)
-                let ch = list.find(c => c.id === entry.lastChapterId)
+                let ch = list.find(c => String(c?.id) === preferredChapterId)
+                if (!ch && preferredChapterId !== lastChapterId) {
+                    ch = list.find(c => String(c?.id) === lastChapterId)
+                }
                 if (!ch && list.length) ch = list[list.length - 1]
                 if (!ch) {
                     setError('No chapters available to resume.')
@@ -1473,8 +1482,8 @@ export default function LifeSyncManga() {
                 setSelectedManga(null)
                 setSource('mangadex')
                 goToRead(entry.mangaId, ch.id, 'mangadex', {
-                    resumeChapterId: entry.lastChapterId,
-                    resumePercent: entry.lastReadPercent,
+                    resumeChapterId: String(ch.id),
+                    resumePercent: preferredResumePercent,
                 })
                 return
             }
@@ -1482,7 +1491,10 @@ export default function LifeSyncManga() {
                 const data = await lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(entry.mangaId)}?view=full`)
                 const list = [...(data.chapters || [])]
                 list.sort(compareChapters)
-                let ch = list.find(c => c.id === entry.lastChapterId)
+                let ch = list.find(c => String(c?.id) === preferredChapterId)
+                if (!ch && preferredChapterId !== lastChapterId) {
+                    ch = list.find(c => String(c?.id) === lastChapterId)
+                }
                 if (!ch && list.length) ch = list[list.length - 1]
                 if (!ch) {
                     setError('No chapters available to resume.')
@@ -1491,8 +1503,8 @@ export default function LifeSyncManga() {
                 setSelectedManga(null)
                 setSource('mangadistrict')
                 goToRead(entry.mangaId, ch.id, 'mangadistrict', {
-                    resumeChapterId: entry.lastChapterId,
-                    resumePercent: entry.lastReadPercent,
+                    resumeChapterId: String(ch.id),
+                    resumePercent: preferredResumePercent,
                 })
                 return
             }

@@ -94,6 +94,7 @@ function useDailyValidatedPool(namespace, urls, { maxValidate = 18 } = {}) {
                     const i = idx++
                     if (i >= target.length) return
                     const u = target[i]
+                    // eslint-disable-next-line no-await-in-loop
                     const good = await validateImageUrl(u)
                     if (cancelled) return
                     if (good) ok.push(u)
@@ -418,33 +419,20 @@ function startOfWeekMonday(d = new Date()) {
     return x
 }
 
-async function fetchCalendarMonthCached(year, month1, signal) {
+async function fetchCalendarMonthCached(year, month1) {
     const tz = Intl?.DateTimeFormat?.().resolvedOptions?.().timeZone || 'UTC'
     const key = `maxien_animehub_weekcal_${year}-${String(month1).padStart(2, '0')}-${tz}`
-    const ttlMs = 1000 * 60 * 60 * 6
     try {
         const raw = sessionStorage.getItem(key)
         if (raw) {
             const parsed = JSON.parse(raw)
-            const at = Number(parsed?.at || 0)
-            if (
-                parsed &&
-                typeof parsed === 'object' &&
-                parsed.days &&
-                typeof parsed.days === 'object' &&
-                Number.isFinite(at) &&
-                Date.now() - at <= ttlMs
-            ) {
+            if (parsed && typeof parsed === 'object' && parsed.days && typeof parsed.days === 'object') {
                 return parsed
             }
-            sessionStorage.removeItem(key)
         }
     } catch { /* ignore */ }
 
-    const res = await lifesyncFetch(
-        `/api/v1/anime/calendar/month?year=${year}&month=${month1}&tz=${encodeURIComponent(tz)}&view=compact`,
-        { signal },
-    )
+    const res = await lifesyncFetch(`/api/v1/anime/calendar/month?year=${year}&month=${month1}&tz=${encodeURIComponent(tz)}&view=compact`)
     const payload = {
         at: Date.now(),
         days: res?.days && typeof res.days === 'object' ? res.days : {},
@@ -968,7 +956,6 @@ export function LifeSyncAnimeHub() {
     useEffect(() => {
         if (!isLifeSyncConnected || !animePluginOn) return
         let cancelled = false
-        const ac = new AbortController()
 
         const run = async () => {
             if (!cancelled) {
@@ -982,7 +969,7 @@ export function LifeSyncAnimeHub() {
                     monthKeys.map(async (monthKey) => {
                         const [yy, mm] = monthKey.split('-').map(Number)
                         try {
-                            return await fetchCalendarMonthCached(yy, mm, ac.signal)
+                            return await fetchCalendarMonthCached(yy, mm)
                         } catch {
                             return { at: Date.now(), days: {}, pins: [] }
                         }
@@ -1011,22 +998,19 @@ export function LifeSyncAnimeHub() {
                         return xt - yt
                     })
                 }
-                if (!cancelled && !ac.signal.aborted) setWeekDays(out)
+                if (!cancelled) setWeekDays(out)
             } catch (e) {
-                if (!cancelled && e?.name !== 'AbortError' && !ac.signal.aborted) {
+                if (!cancelled) {
                     setWeekDays({})
                     setWeekError(e?.message || 'We couldn’t load your weekly schedule. Try again.')
                 }
             } finally {
-                if (!cancelled && !ac.signal.aborted) setWeekBusy(false)
+                if (!cancelled) setWeekBusy(false)
             }
         }
 
         run()
-        return () => {
-            cancelled = true
-            ac.abort()
-        }
+        return () => { cancelled = true }
     }, [animePluginOn, isLifeSyncConnected, weekList, weekReloadTick])
 
     const weeklyStats = useMemo(() => {

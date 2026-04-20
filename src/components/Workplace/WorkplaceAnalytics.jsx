@@ -43,9 +43,12 @@ export default function WorkplaceAnalytics({
   isAdmin,
   loading,
 }) {
-  const [scopeChoice, setScopeChoice] = useState(isAdmin ? "company" : "me")
+  const [scope, setScope] = useState(isAdmin ? "company" : "me")
   const [userMap, setUserMap] = useState({})
-  const scope = isAdmin ? scopeChoice : "me"
+
+  useEffect(() => {
+    if (!isAdmin) setScope("me")
+  }, [isAdmin])
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -195,14 +198,14 @@ export default function WorkplaceAnalytics({
             <div className="inline-flex items-center gap-1 rounded-xl bg-white/90 p-1 border border-[#e5e7eb] shadow-sm">
               <button
                 type="button"
-                onClick={() => setScopeChoice("company")}
+                onClick={() => setScope("company")}
                 className={`px-3.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${scope === "company" ? "bg-[#111827] text-white shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}
               >
                 Company
               </button>
               <button
                 type="button"
-                onClick={() => setScopeChoice("me")}
+                onClick={() => setScope("me")}
                 className={`px-3.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${scope === "me" ? "bg-[#111827] text-white shadow-sm" : "text-[#6b7280] hover:text-[#111827]"}`}
               >
                 My Tasks

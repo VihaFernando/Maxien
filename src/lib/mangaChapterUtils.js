@@ -1,6 +1,18 @@
 /** Chapter ordering and labels for LifeSync manga reader (aligned with client/src/pages/MangaPage.jsx). */
 
 /**
+ * Decode HTML entities in a string (e.g., &#8217; → ').
+ * @param {string|null|undefined} str
+ * @returns {string}
+ */
+export function decodeHtmlEntities(str) {
+    if (str == null || typeof str !== 'string') return ''
+    const textarea = document.createElement('textarea')
+    textarea.innerHTML = str
+    return textarea.value
+}
+
+/**
  * Props for <img> when loading MangaDex CDN assets. Deployed sites send a cross-origin Referer;
  * uploads/chapter CDNs often reject that unless Referer is omitted (same pattern as Profile avatars).
  * @param {string|null|undefined} src

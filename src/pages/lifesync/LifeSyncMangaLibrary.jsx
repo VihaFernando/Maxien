@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { FaChevronLeft, FaBookOpen, FaSyncAlt, FaStar } from 'react-icons/fa'
+import { FaBookOpen, FaChevronLeft, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTrashAlt } from 'react-icons/fa'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
+import { isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
-import { mangadexImageProps } from '../../lib/mangaChapterUtils'
+import { mangadexImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 import { LifesyncEpisodeThumbnail, LifesyncMediaLibraryPageSkeleton } from '../../components/lifesync/EpisodeLoadingSkeletons'
-import { NewChapterSpotlightBanner, SeriesCompleteBadge } from '../../components/lifesync/LifeSyncShelfDecor'
+import { SeriesCompleteBadge } from '../../components/lifesync/LifeSyncShelfDecor'
 import {
     MotionDiv,
     lifeSyncEaseOut,
@@ -17,14 +17,52 @@ import {
 } from '../../lib/lifesyncMotion'
 
 const MotionLi = motion.li
+const MotionUl = motion.ul
 
 const MANGA_BASE = '/dashboard/lifesync/anime/manga'
-const MANGA_READING_LIBRARY_PATH = `${MANGA_BASE}/library`
-const SPOTLIGHT_ROTATE_MS = 8000
+const MANGA_READING_HISTORY_PATH = `${MANGA_BASE}/history`
+
+const SOURCE_OPTIONS = [
+    { id: 'all', label: 'All sources' },
+    { id: 'mangadex', label: 'MangaDex' },
+    { id: 'mangadistrict', label: 'Manga District' },
+]
+
+const STATUS_OPTIONS = [
+    { id: 'all', label: 'Any status' },
+    { id: 'reading', label: 'Reading' },
+    { id: 'on_hold', label: 'On hold' },
+    { id: 'plan_to_read', label: 'Plan to read' },
+    { id: 'completed', label: 'Completed' },
+    { id: 'dropped', label: 'Dropped' },
+    { id: 're_reading', label: 'Re-reading' },
+]
+
+const UPDATE_STATE_OPTIONS = [
+    { id: 'all', label: 'Any update state' },
+    { id: 'new', label: 'New chapters' },
+    { id: 'needs_sync', label: 'Needs sync' },
+    { id: 'caught_up', label: 'Caught up' },
+    { id: 'series_ended', label: 'Series ended' },
+    { id: 'up_to_date', label: 'Up to date' },
+]
+
+const SORT_OPTIONS = [
+    { id: 'updatedAt', label: 'Last updated' },
+    { id: 'lastOpenedAt', label: 'Last opened' },
+    { id: 'title', label: 'Title' },
+    { id: 'source', label: 'Source' },
+    { id: 'lastReadPercent', label: 'Read progress' },
+    { id: 'lastChapterLabel', label: 'Last chapter label' },
+]
 
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
     return source || 'MangaDex'
+}
+
+function entryKey(entry) {
+    return `${entry?.source || ''}:${entry?.mangaId || ''}`
 }
 
 function formatUpdatedAt(iso) {
@@ -39,38 +77,50 @@ function formatUpdatedAt(iso) {
 function relativeTouch(iso) {
     if (!iso) return ''
     try {
-        const d = new Date(iso)
+        const date = new Date(iso)
         const now = Date.now()
-        const diff = now - d.getTime()
-        const days = Math.floor(diff / (864e5))
+        const diff = now - date.getTime()
+        const days = Math.floor(diff / 86400000)
         if (days <= 0) return 'Today'
         if (days === 1) return 'Yesterday'
         if (days < 7) return `${days}d ago`
         if (days < 30) return `${Math.floor(days / 7)}w ago`
-        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
     } catch {
         return ''
     }
-}
-
-function entryKey(e) {
-    return `${e?.source || ''}:${e?.mangaId || ''}`
 }
 
 function isFinishedManga(entry) {
     return entry?.seriesEnded === true
 }
 
+function resolveResumeChapter(entry) {
+    const lastChapterId = String(entry?.lastChapterId || '').trim()
+    const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
+    const chapterId = lastChapterId || latestChapterId
+    return {
+        chapterId,
+        resumeChapterId: chapterId,
+        resumePercent: Number(entry?.lastReadPercent || 0),
+    }
+}
+
 function resumeTarget(entry, browseTranslatedLang) {
-    if (entry?.mangaId != null && entry?.source && entry?.lastChapterId != null) {
+    const { chapterId, resumeChapterId, resumePercent } = resolveResumeChapter(entry)
+    if (entry?.mangaId != null && entry?.source && chapterId) {
+        const readerQuery = new URLSearchParams({
+            source: String(entry.source),
+            lang: browseTranslatedLang === 'all' ? 'all' : 'en',
+        }).toString()
         return {
-            to: `${MANGA_BASE}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(String(entry.lastChapterId))}`,
+            to: `${MANGA_BASE}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(chapterId)}?${readerQuery}`,
             state: {
-                from: MANGA_READING_LIBRARY_PATH,
+                from: MANGA_READING_HISTORY_PATH,
                 source: entry.source,
                 browseTranslatedLang,
-                resumeChapterId: String(entry.lastChapterId),
-                resumePercent: Number(entry.lastReadPercent || 0),
+                resumeChapterId,
+                resumePercent,
             },
         }
     }
@@ -80,51 +130,239 @@ function resumeTarget(entry, browseTranslatedLang) {
     }
 }
 
-const spotlightSlide = {
-    initial: { opacity: 0, x: 28 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -28 },
+function statusLabel(status) {
+    if (!status) return 'No status'
+    const row = STATUS_OPTIONS.find((opt) => opt.id === status)
+    return row?.label || status
 }
 
-const spotlightTransition = {
-    type: 'tween',
-    duration: 0.38,
-    ease: lifeSyncEaseOut,
+function parseChapterNum(label) {
+    if (!label) return NaN
+    const match = String(label).match(/Ch\.?\s*([\d.]+)/i)
+    return match ? parseFloat(match[1]) : NaN
 }
 
-/** Grid cards: diagonal corner ribbon — not a pill tag */
-function NewChapterRibbon() {
+function clampPercent(value) {
+    const n = Number(value)
+    if (!Number.isFinite(n)) return 0
+    return Math.min(100, Math.max(0, n))
+}
+
+function formatChapterNum(value) {
+    if (!Number.isFinite(value)) return ''
+    if (Math.abs(value - Math.round(value)) < 0.001) return String(Math.round(value))
+    return String(Math.round(value * 10) / 10)
+}
+
+function calculateProgressPercent(entry) {
+    const lastNum = parseChapterNum(entry?.lastChapterLabel)
+    const latestNum = parseChapterNum(entry?.remoteLatestChapterLabel)
+    if (Number.isFinite(lastNum) && Number.isFinite(latestNum) && latestNum > 0) {
+        return Math.round(clampPercent((lastNum / latestNum) * 100) * 10) / 10
+    }
+
+    if (entry?.caughtUp && !entry?.hasNewChapter) return 100
+    return clampPercent(Number(entry?.lastReadPercent || 0))
+}
+
+function progressDetailLabel(entry) {
+    const lastNum = parseChapterNum(entry?.lastChapterLabel)
+    const latestNum = parseChapterNum(entry?.remoteLatestChapterLabel)
+    if (Number.isFinite(lastNum) && Number.isFinite(latestNum) && latestNum > 0) {
+        return `Ch ${formatChapterNum(lastNum)} / ${formatChapterNum(latestNum)}`
+    }
+    if (entry?.remoteLatestChapterLabel) return `Latest: ${entry.remoteLatestChapterLabel}`
+    return entry?.needsSync ? 'Latest chapter needs sync' : 'Latest chapter unavailable'
+}
+
+function StatusSelect({ value, onChange, disabled, className = '' }) {
     return (
-        <div
-            className="pointer-events-none absolute right-0 top-0 z-20 h-[4.25rem] w-[4.25rem] overflow-hidden"
-            aria-hidden
+        <select
+            value={value || ''}
+            onChange={(event) => onChange(event.target.value || null)}
+            disabled={disabled}
+            className={`min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:opacity-50 ${className}`}
         >
-            <motion.div
-                className="absolute right-[-42%] top-[16%] w-[140%] rotate-45 bg-gradient-to-b from-[#eeff77] via-[#C6FF00] to-[#b4e830] py-1.5 text-center text-[7px] font-black uppercase tracking-[0.22em] text-slate-900 shadow-[0_3px_14px_rgba(0,0,0,0.18)] sm:text-[8px]"
-                animate={{ filter: ['brightness(1)', 'brightness(1.09)', 'brightness(1)'] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-            >
-                NEW
-            </motion.div>
-        </div>
+            <option value="">No status</option>
+            {STATUS_OPTIONS.filter((opt) => opt.id !== 'all').map((opt) => (
+                <option key={opt.id} value={opt.id}>
+                    {opt.label}
+                </option>
+            ))}
+        </select>
     )
 }
 
-function CaughtUpDivider() {
+function ConfirmationModal({ isOpen, title, message, confirmLabel, cancelLabel, onConfirm, onCancel }) {
+    if (!isOpen) return null
+
     return (
-        <div className="relative py-2.5">
-            <div className="pointer-events-none absolute inset-x-2 top-1/2 h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-emerald-200/90 to-transparent" />
-            <p className="relative mx-auto flex w-fit items-center gap-1.5 bg-white px-2 text-[10px] font-semibold text-emerald-800/90">
-                <svg className="h-3.5 w-3.5 shrink-0 text-emerald-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
-                    <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
+        <MotionDiv
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onClick={onCancel}
+        >
+            <MotionDiv
+                className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+                initial={{ scale: 0.94, y: 14 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.94, y: 14 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="mb-3 flex justify-center">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+                        <FaExclamationTriangle className="h-4 w-4" />
+                    </span>
+                </div>
+                <h2 className="text-center text-[18px] font-bold text-slate-900">{title}</h2>
+                <p className="mt-2 text-center text-[14px] leading-relaxed text-slate-600">{message}</p>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                    <button
+                        type="button"
+                        onClick={onCancel}
+                        className="min-h-[42px] rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                        {cancelLabel || 'Cancel'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onConfirm}
+                        className="min-h-[42px] rounded-xl border border-red-200 bg-red-600 px-4 text-[13px] font-semibold text-white transition hover:bg-red-700"
+                    >
+                        {confirmLabel || 'Confirm'}
+                    </button>
+                </div>
+            </MotionDiv>
+        </MotionDiv>
+    )
+}
+
+function LibraryMangaCard({
+    entry,
+    browseTranslatedLang,
+    selected,
+    busy,
+    removeBusy,
+    onToggleSelect,
+    onStatusChange,
+    onRequestRemove,
+}) {
+    const { to, state } = resumeTarget(entry, browseTranslatedLang)
+    const progressPercent = calculateProgressPercent(entry)
+
+    return (
+        <MotionLi
+            variants={lifeSyncStaggerItemFade}
+            className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+            whileHover={{ y: -2, transition: { type: 'tween', duration: 0.2, ease: lifeSyncEaseOut } }}
+        >
+            <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-100">
+                <Link to={to} state={state} className="absolute inset-0 block">
+                    {entry.coverUrl ? (
+                        <LifesyncEpisodeThumbnail
+                            src={entry.coverUrl}
+                            className="absolute inset-0 h-full w-full"
+                            imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-[1.05]"
+                            imgProps={mangadexImageProps(entry.coverUrl)}
+                        />
+                    ) : (
+                        <div className="flex h-full items-center justify-center text-slate-300">
+                            <FaBookOpen className="h-12 w-12" />
+                        </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                </Link>
+
+                <div className="absolute left-2 top-2 z-20 flex items-center gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => onToggleSelect(entry)}
+                        className={`flex h-6 w-6 items-center justify-center rounded border text-[11px] ${
+                            selected
+                                ? 'border-[#C6FF00] bg-[#C6FF00] text-black'
+                                : 'border-white/70 bg-white/90 text-transparent hover:border-white'
+                        }`}
+                        aria-label={selected ? 'Unselect' : 'Select'}
+                    >
+                        ✓
+                    </button>
+                    {entry.hasNewChapter ? (
+                        <span className="rounded-full bg-[#C6FF00] px-2 py-0.5 text-[9px] font-bold text-slate-900">New</span>
+                    ) : null}
+                </div>
+
+                <button
+                    type="button"
+                    onClick={() => onRequestRemove(entry)}
+                    disabled={removeBusy}
+                    className="absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#C6FF00]/90 text-black opacity-0 shadow-sm ring-1 ring-[#C6FF00]/50 transition group-hover:opacity-100 hover:bg-[#C6FF00] disabled:opacity-50"
+                    aria-label="Remove"
+                >
+                    {removeBusy ? '…' : '✕'}
+                </button>
+
+                <div className="absolute inset-x-0 bottom-0 p-3">
+                    <h3 className="line-clamp-2 text-[13px] font-bold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
+                        {decodeHtmlEntities(entry.title) || 'Untitled'}
+                    </h3>
+                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-white/85">{sourceLabel(entry.source)}</p>
+                </div>
+
+                {entry.seriesEnded ? <SeriesCompleteBadge /> : null}
+            </div>
+
+            <div className="flex flex-1 flex-col gap-2 border-t border-slate-100 px-3 pb-2 pt-3">
+                {/* Reading Status & Progress */}
+                <div>
+                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold">
+                        <span className="text-slate-600">{statusLabel(entry.readingStatus)}</span>
+                        <span className="text-slate-800">{Math.round(progressPercent)}%</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div className="h-full rounded-full" style={{ width: `${progressPercent}%`, backgroundColor: '#C6FF00' }} />
+                    </div>
+                    <p className="mt-0.5 text-[9px] text-slate-500">{progressDetailLabel(entry)}</p>
+                </div>
+
+                {/* Chapter Info Compact */}
+                <div className="flex gap-2 text-[9px]">
+                    <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-500 uppercase tracking-wide">Last read</p>
+                        <p className="mt-0.5 truncate text-slate-700 font-medium">{entry.lastChapterLabel || '—'}</p>
+                        <p className="text-slate-400">{relativeTouch(entry.updatedAt)}</p>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-slate-500 uppercase tracking-wide">Latest</p>
+                        <p className="mt-0.5 truncate text-slate-700 font-medium">
+                            {entry.remoteLatestChapterLabel || (entry.needsSync ? 'Sync needed' : '—')}
+                        </p>
+                        <p className="text-slate-400">{entry.needsSync ? 'pending' : 'up to date'}</p>
+                    </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                    <Link
+                        to={to}
+                        state={state}
+                        className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-bold text-black transition hover:shadow-lg active:scale-95"
+                        style={{ backgroundColor: '#C6FF00' }}
+                    >
+                        Continue
+                    </Link>
+                    <StatusSelect
+                        value={entry.readingStatus}
+                        onChange={(value) => onStatusChange(entry, value)}
+                        disabled={busy}
+                        className="min-h-[32px] text-[10px]"
                     />
-                </svg>
-                <span className="tracking-tight">Up to date</span>
-            </p>
-        </div>
+                </div>
+            </div>
+        </MotionLi>
     )
 }
 
@@ -137,17 +375,23 @@ export default function LifeSyncMangaLibrary() {
     const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false
     const browseTranslatedLang = mangaEnglishReleasesOnly ? 'en' : 'all'
 
-    const { visibleEntries, loading, refresh } = useMangaReadingList({
-        enabled: isLifeSyncConnected && mangaPluginOn,
-        nsfwEnabled,
-    })
+    const [queryInput, setQueryInput] = useState('')
+    const [query, setQuery] = useState('')
+    const [sourceFilter, setSourceFilter] = useState('all')
+    const [statusFilter, setStatusFilter] = useState('all')
+    const [updateStateFilter, setUpdateStateFilter] = useState('all')
+    const [sortBy, setSortBy] = useState('updatedAt')
+    const [sortOrder, setSortOrder] = useState('desc')
+    const [page, setPage] = useState(1)
+    const [limit, setLimit] = useState(24)
 
     const [syncBusy, setSyncBusy] = useState(false)
+    const [actionBusyKeys, setActionBusyKeys] = useState(() => new Set())
     const [removeBusyKey, setRemoveBusyKey] = useState('')
-    const [filter, setFilter] = useState('all')
-    const [sortBy, setSortBy] = useState('recent')
-    const [query, setQuery] = useState('')
-    const [spotlightIndex, setSpotlightIndex] = useState(0)
+    const [bulkBusy, setBulkBusy] = useState(false)
+    const [selectedKeys, setSelectedKeys] = useState(() => new Set())
+
+    const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, entry: null })
 
     useEffect(() => {
         if (!isLifeSyncConnected) {
@@ -155,141 +399,231 @@ export default function LifeSyncMangaLibrary() {
         }
     }, [isLifeSyncConnected, navigate])
 
+    useEffect(() => {
+        const id = window.setTimeout(() => setQuery(queryInput.trim()), 260)
+        return () => window.clearTimeout(id)
+    }, [queryInput])
+
+    useEffect(() => {
+        setPage(1)
+    }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, limit])
+
+    const listFilters = useMemo(
+        () => ({
+            q: query,
+            source: sourceFilter,
+            status: statusFilter,
+            updateState: updateStateFilter,
+            sortBy,
+            order: sortOrder,
+            page,
+            limit,
+        }),
+        [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, page, limit],
+    )
+
+    const {
+        entries: listEntries,
+        visibleEntries,
+        summary,
+        pageInfo,
+        error,
+        initialLoading,
+        refreshing,
+        refresh: refreshList,
+        patchEntry,
+        removeEntry,
+        bulkPatch,
+        bulkDelete,
+    } = useMangaReadingList({
+        enabled: isLifeSyncConnected && mangaPluginOn,
+        nsfwEnabled,
+        filters: listFilters,
+    })
+
+
+
+    useEffect(() => {
+        if (!pageInfo?.page) return
+        if (page !== pageInfo.page) setPage(pageInfo.page)
+    }, [page, pageInfo?.page])
+
+    const selectableEntries = useMemo(() => {
+        const byKey = new Map()
+        for (const entry of visibleEntries) {
+            const key = entryKey(entry)
+            if (key && key !== ':') byKey.set(key, entry)
+        }
+        return [...byKey.values()]
+    }, [visibleEntries])
+
+    const selectableKeySet = useMemo(() => new Set(selectableEntries.map(entryKey)), [selectableEntries])
+    useEffect(() => {
+        setSelectedKeys((prev) => {
+            const next = new Set([...prev].filter((key) => selectableKeySet.has(key)))
+            if (next.size === prev.size) return prev
+            return next
+        })
+    }, [selectableKeySet])
+
+    const selectedEntries = useMemo(
+        () => selectableEntries.filter((entry) => selectedKeys.has(entryKey(entry))),
+        [selectedKeys, selectableEntries],
+    )
+
+    const nsfwHiddenCount = Math.max(0, listEntries.length - visibleEntries.length)
+
+    const anyRefreshing = refreshing
+
+    const refreshAll = useCallback(async () => {
+        await refreshList()
+    }, [refreshList])
+
+    const runEntryAction = useCallback(async (entry, action) => {
+        const key = entryKey(entry)
+        setActionBusyKeys((prev) => {
+            const next = new Set(prev)
+            next.add(key)
+            return next
+        })
+        try {
+            await action()
+            return true
+        } catch {
+            return false
+        } finally {
+            setActionBusyKeys((prev) => {
+                const next = new Set(prev)
+                next.delete(key)
+                return next
+            })
+        }
+    }, [])
+
+    const onStatusChange = useCallback(
+        async (entry, nextStatus) => {
+            await runEntryAction(entry, async () => {
+                await patchEntry(entry, { readingStatus: nextStatus || null })
+                await refreshList()
+            })
+        },
+        [patchEntry, refreshList, runEntryAction],
+    )
+
+    const onRequestDelete = useCallback((entry) => {
+        setDeleteConfirmation({ isOpen: true, entry })
+    }, [])
+
+    const onCancelDelete = useCallback(() => {
+        setDeleteConfirmation({ isOpen: false, entry: null })
+    }, [])
+
+    const onRemove = useCallback(
+        async (entry) => {
+            const key = entryKey(entry)
+            if (!entry || removeBusyKey) return false
+            setRemoveBusyKey(key)
+            try {
+                await removeEntry(entry)
+                setSelectedKeys((prev) => {
+                    const next = new Set(prev)
+                    next.delete(key)
+                    return next
+                })
+                return true
+            } catch {
+                return false
+            } finally {
+                setRemoveBusyKey('')
+            }
+        },
+        [removeBusyKey, removeEntry],
+    )
+
+    const onConfirmDelete = useCallback(async () => {
+        if (!deleteConfirmation.entry) return
+        await onRemove(deleteConfirmation.entry)
+        setDeleteConfirmation({ isOpen: false, entry: null })
+    }, [deleteConfirmation.entry, onRemove])
+
     const onSync = useCallback(async () => {
         if (syncBusy) return
         setSyncBusy(true)
         try {
             await lifesyncFetch('/api/v1/manga/reading/sync', { method: 'POST', json: {} })
-            await refresh()
+            await refreshAll()
         } catch {
-            /* network */
+            // ignored here; list hook handles fetch errors on next refresh
         } finally {
             setSyncBusy(false)
         }
-    }, [refresh, syncBusy])
+    }, [refreshAll, syncBusy])
 
-    const onRemove = useCallback(
-        async (entry) => {
-            const key = `${entry.source}:${entry.mangaId}`
-            if (removeBusyKey) return
-            setRemoveBusyKey(key)
+    const onToggleSelect = useCallback((entry) => {
+        const key = entryKey(entry)
+        setSelectedKeys((prev) => {
+            const next = new Set(prev)
+            if (next.has(key)) next.delete(key)
+            else next.add(key)
+            return next
+        })
+    }, [])
+
+    const onSelectAllVisible = useCallback(() => {
+        setSelectedKeys(new Set(selectableEntries.map(entryKey)))
+    }, [selectableEntries])
+
+    const onClearSelection = useCallback(() => {
+        setSelectedKeys(new Set())
+    }, [])
+
+    const onBulkDelete = useCallback(async () => {
+        if (bulkBusy || selectedEntries.length === 0) return
+        setBulkBusy(true)
+        try {
+            await bulkDelete(selectedEntries)
+            setSelectedKeys(new Set())
+        } catch {
+            // ignored for now
+        } finally {
+            setBulkBusy(false)
+        }
+    }, [bulkBusy, bulkDelete, selectedEntries])
+
+    const onBulkSetStatus = useCallback(
+        async (status) => {
+            if (bulkBusy || selectedEntries.length === 0) return
+            setBulkBusy(true)
             try {
-                await lifesyncFetch(
-                    `/api/v1/manga/reading/${encodeURIComponent(entry.source)}/${encodeURIComponent(entry.mangaId)}`,
-                    { method: 'DELETE' },
-                )
-                await refresh()
+                await bulkPatch(selectedEntries, { readingStatus: status || null })
+                setSelectedKeys(new Set())
             } catch {
-                /* ignore */
+                // ignored for now
             } finally {
-                setRemoveBusyKey('')
+                setBulkBusy(false)
             }
         },
-        [refresh, removeBusyKey],
+        [bulkBusy, bulkPatch, selectedEntries],
     )
-
-    const stats = useMemo(() => {
-        const withNew = visibleEntries.filter((e) => e.hasNewChapter).length
-        const needsSync = visibleEntries.filter((e) => e.needsSync).length
-        return { withNew, needsSync, total: visibleEntries.length }
-    }, [visibleEntries])
-
-    const filteredSorted = useMemo(() => {
-        let list = [...visibleEntries]
-        const q = query.trim().toLowerCase()
-        if (q) {
-            list = list.filter((e) => String(e.title || '').toLowerCase().includes(q))
-        }
-        if (filter === 'updates') {
-            list = list.filter((e) => e.hasNewChapter)
-        }
-        if (filter === 'needs') {
-            list = list.filter((e) => e.needsSync)
-        }
-        if (sortBy === 'recent') {
-            list.sort((a, b) => {
-                const ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
-                const tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
-                return tb - ta
-            })
-        } else {
-            list.sort((a, b) =>
-                String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity: 'base' }),
-            )
-        }
-        return list
-    }, [visibleEntries, filter, sortBy, query])
-
-    /** “Pick up here” only surfaces titles that are not marked finished (`seriesEnded`). */
-    const spotlightCandidates = useMemo(() => {
-        const open = visibleEntries.filter((e) => !isFinishedManga(e))
-        return [...open].sort((a, b) => {
-            const ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
-            const tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
-            return tb - ta
-        })
-    }, [visibleEntries])
-
-    const candidatesSig = useMemo(() => spotlightCandidates.map(entryKey).join('|'), [spotlightCandidates])
-
-    useEffect(() => {
-        setSpotlightIndex(0)
-    }, [candidatesSig])
-
-    useEffect(() => {
-        setSpotlightIndex((i) => {
-            if (!spotlightCandidates.length) return 0
-            return Math.min(i, spotlightCandidates.length - 1)
-        })
-    }, [spotlightCandidates.length])
-
-    useEffect(() => {
-        if (spotlightCandidates.length <= 1) return undefined
-        const rotate = () => {
-            if (document.visibilityState !== 'visible') return
-            setSpotlightIndex((i) => (i + 1) % spotlightCandidates.length)
-        }
-        const id = window.setInterval(() => {
-            rotate()
-        }, SPOTLIGHT_ROTATE_MS)
-        document.addEventListener('visibilitychange', rotate)
-        return () => {
-            window.clearInterval(id)
-            document.removeEventListener('visibilitychange', rotate)
-        }
-    }, [spotlightCandidates.length, candidatesSig])
-
-    const spotlight = spotlightCandidates[spotlightIndex] ?? null
-
-    const showSpotlight =
-        Boolean(spotlight) &&
-        spotlightCandidates.length > 0 &&
-        visibleEntries.length > 1 &&
-        filter === 'all' &&
-        !query.trim()
 
     if (!isLifeSyncConnected) return null
 
     if (!mangaPluginOn) {
         return (
             <MotionDiv
-                className="relative overflow-hidden rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-white to-lime-50/40 px-6 py-14 text-center shadow-lg sm:px-10"
-                initial={{ opacity: 0, y: 12 }}
+                className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-lime-50/40 px-6 py-14 text-center shadow-sm"
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={lifeSyncPageTransition}
             >
-                <div
-                    className="pointer-events-none absolute -left-20 top-0 h-56 w-56 rounded-full bg-amber-300/25 blur-3xl"
-                    aria-hidden
-                />
-                <FaBookOpen className="mx-auto h-12 w-12 text-amber-600" aria-hidden />
-                <p className="mt-5 text-lg font-bold tracking-tight text-slate-900">Manga is turned off</p>
+                <FaBookOpen className="mx-auto h-10 w-10 text-amber-600" aria-hidden />
+                <p className="mt-4 text-[19px] font-bold text-slate-900">Manga is turned off</p>
                 <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-slate-600">
                     Turn on the Manga plugin in LifeSync preferences to see your shelf and reading progress here.
                 </p>
                 <Link
                     to="/dashboard/profile"
-                    className="mt-8 inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-amber-600 px-6 py-3 text-[14px] font-semibold text-white shadow-md transition hover:bg-amber-700"
+                    className="mt-7 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-amber-600 px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-amber-700"
                 >
                     Open preferences
                 </Link>
@@ -299,535 +633,337 @@ export default function LifeSyncMangaLibrary() {
 
     return (
         <MotionDiv
-            className="relative min-w-0"
-            initial={{ opacity: 0, y: 10 }}
+            className="relative min-w-0 space-y-4"
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={lifeSyncPageTransition}
         >
-            <div
-                className="pointer-events-none absolute -left-32 top-0 h-[28rem] w-[28rem] rounded-full bg-gradient-to-br from-amber-200/35 via-lime-100/20 to-transparent blur-3xl"
-                aria-hidden
-            />
-            <div
-                className="pointer-events-none absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-gradient-to-tl from-lime-200/20 via-amber-100/20 to-transparent blur-3xl"
-                aria-hidden
-            />
-
-            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-                <aside className="lg:w-[min(100%,280px)] lg:shrink-0">
-                    <div className="sticky top-2 space-y-4 rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)] backdrop-blur-md ring-1 ring-white/60">
-                        <div className="flex items-start gap-3">
-                            <Link
-                                to="/dashboard/lifesync/anime"
-                                className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-white hover:shadow-sm"
-                                aria-label="Back to hub"
-                            >
-                                <FaChevronLeft className="h-4 w-4" aria-hidden />
-                            </Link>
-                            <div className="min-w-0">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-800/90">
-                                    Shelf
-                                </p>
-                                <h1 className="mt-0.5 text-[20px] font-black leading-tight tracking-tight text-slate-900">
-                                    Reading library
-                                </h1>
-                            </div>
-                        </div>
-
-                        <p className="text-[12px] leading-relaxed text-slate-600">
-                            Your saved progress stays in sync. Check for new chapters anytime.
-                        </p>
-
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white px-2 py-3 text-center ring-1 ring-slate-100">
-                                <p className="text-[20px] font-black tabular-nums text-slate-900">
-                                    {loading ? '…' : stats.total}
-                                </p>
-                                <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Saved</p>
-                            </div>
-                            <div className="rounded-2xl bg-gradient-to-br from-lime-50 to-[#ecfccb] px-2 py-3 text-center ring-1 ring-lime-200/60">
-                                <p className="text-[20px] font-black tabular-nums text-slate-900">
-                                    {loading ? '…' : stats.withNew}
-                                </p>
-                                <p className="text-[9px] font-bold uppercase tracking-wide text-lime-900/70">New</p>
-                            </div>
-                            <div className="rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50/80 px-2 py-3 text-center ring-1 ring-amber-200/50">
-                                <p className="text-[20px] font-black tabular-nums text-slate-900">
-                                    {loading ? '…' : stats.needsSync}
-                                </p>
-                                <p className="text-[9px] font-bold uppercase tracking-wide text-amber-900/70">Sync</p>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <button
-                                type="button"
-                                onClick={() => void onSync()}
-                                disabled={loading || syncBusy || stats.total === 0}
-                                className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-2xl bg-[#C6FF00] px-4 py-3 text-[13px] font-bold text-slate-900 shadow-sm ring-1 ring-slate-900/5 transition hover:brightness-95 disabled:opacity-45"
-                            >
-                                <FaSyncAlt className={`h-3.5 w-3.5 ${syncBusy ? 'animate-spin' : ''}`} aria-hidden />
-                                {syncBusy ? 'Checking…' : 'Check for updates'}
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => void refresh()}
-                                disabled={loading || syncBusy}
-                                className="min-h-[42px] rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50"
-                            >
-                                {loading ? 'Refreshing…' : 'Reload list'}
-                            </button>
-                            <Link
-                                to={`${MANGA_BASE}/mangadex/popular/page/1`}
-                                className="flex min-h-[42px] items-center justify-center rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-2.5 text-center text-[12px] font-semibold text-amber-950 transition hover:bg-amber-100"
-                            >
-                                Discover more manga
-                            </Link>
-                        </div>
-
-                        <div className="border-t border-slate-100 pt-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Filter</p>
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                                {[
-                                    { id: 'all', label: 'All' },
-                                    { id: 'updates', label: 'New ch.' },
-                                    { id: 'needs', label: 'Needs sync' },
-                                ].map((f) => (
-                                    <button
-                                        key={f.id}
-                                        type="button"
-                                        onClick={() => setFilter(f.id)}
-                                        className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${
-                                            filter === f.id
-                                                ? 'bg-slate-900 text-white shadow-sm'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        }`}
-                                    >
-                                        {f.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Sort</p>
-                            <div className="mt-2 flex rounded-xl border border-slate-200 bg-slate-50/80 p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setSortBy('recent')}
-                                    className={`flex-1 rounded-lg py-2 text-[11px] font-semibold transition ${
-                                        sortBy === 'recent'
-                                            ? 'bg-white text-slate-900 shadow-sm'
-                                            : 'text-slate-500 hover:text-slate-800'
-                                    }`}
-                                >
-                                    Recent
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setSortBy('title')}
-                                    className={`flex-1 rounded-lg py-2 text-[11px] font-semibold transition ${
-                                        sortBy === 'title'
-                                            ? 'bg-white text-slate-900 shadow-sm'
-                                            : 'text-slate-500 hover:text-slate-800'
-                                    }`}
-                                >
-                                    A–Z
-                                </button>
-                            </div>
-                        </div>
-
-                        <label className="block">
-                            <span className="sr-only">Search titles</span>
-                            <input
-                                type="search"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Search your shelf…"
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-[#C6FF00]/70 focus:outline-none focus:ring-2 focus:ring-amber-200/80"
-                            />
-                        </label>
-                    </div>
-                </aside>
-
-                <div className="min-w-0 flex-1 space-y-5">
-                    {loading && visibleEntries.length === 0 ? (
-                        <div className="rounded-3xl border border-slate-100 bg-white/60 p-6">
-                            <LifesyncMediaLibraryPageSkeleton gridCount={8} showSpotlight />
-                        </div>
-                    ) : visibleEntries.length === 0 ? (
-                        <MotionDiv
-                            className="relative overflow-hidden rounded-3xl border border-dashed border-amber-200/70 bg-gradient-to-br from-white via-amber-50/40 to-lime-50/25 px-6 py-16 text-center"
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={lifeSyncPageTransition}
-                        >
-                            <FaStar className="mx-auto h-10 w-10 text-amber-400" aria-hidden />
-                            <p className="mt-4 text-[17px] font-bold text-slate-900">Your shelf is empty</p>
-                            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-slate-600">
-                                Open any chapter in the reader — we remember your place and surface updates here.
-                            </p>
-                            <Link
-                                to={`${MANGA_BASE}/mangadex/popular/page/1`}
-                                className="mt-8 inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-slate-900 px-6 py-3 text-[14px] font-semibold text-white shadow-lg transition hover:bg-slate-800"
-                            >
-                                Browse popular
-                            </Link>
-                        </MotionDiv>
-                    ) : (
-                        <>
-                            {showSpotlight && spotlight ? (
-                                <div className="space-y-3">
-                                    <AnimatePresence mode="wait" initial={false}>
-                                        <SpotlightCard
-                                            key={entryKey(spotlight)}
-                                            entry={spotlight}
-                                            browseTranslatedLang={browseTranslatedLang}
-                                            onRemove={onRemove}
-                                            removeBusyKey={removeBusyKey}
-                                            slideVariants={spotlightSlide}
-                                            transition={spotlightTransition}
-                                        />
-                                    </AnimatePresence>
-                                    {spotlightCandidates.length > 1 ? (
-                                        <div
-                                            className="flex justify-center gap-1.5"
-                                            role="tablist"
-                                            aria-label="Rotating picks"
-                                        >
-                                            {spotlightCandidates.map((c, i) => (
-                                                <button
-                                                    key={entryKey(c)}
-                                                    type="button"
-                                                    role="tab"
-                                                    aria-selected={i === spotlightIndex}
-                                                    onClick={() => setSpotlightIndex(i)}
-                                                    className={`h-2 rounded-full transition-all duration-300 ${
-                                                        i === spotlightIndex
-                                                            ? 'w-6 bg-amber-600 ring-2 ring-amber-200'
-                                                            : 'w-2 bg-amber-200/80 hover:bg-amber-300'
-                                                    }`}
-                                                />
-                                            ))}
-                                        </div>
-                                    ) : null}
-                                </div>
-                            ) : null}
-
-                            {filteredSorted.length === 0 ? (
-                                <MotionDiv
-                                    className="rounded-3xl border border-slate-200 bg-white/90 px-6 py-12 text-center"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={lifeSyncPageTransition}
-                                >
-                                    <p className="text-[15px] font-semibold text-slate-800">No matches</p>
-                                    <p className="mt-2 text-[13px] text-slate-500">
-                                        Try another filter or clear search.
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setFilter('all')
-                                            setQuery('')
-                                        }}
-                                        className="mt-4 text-[13px] font-semibold text-amber-800 hover:underline"
-                                    >
-                                        Reset filters
-                                    </button>
-                                </MotionDiv>
-                            ) : (
-                                <MotionDiv
-                                    className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4"
-                                    variants={lifeSyncStaggerContainerDense}
-                                    initial="hidden"
-                                    animate="show"
-                                >
-                                    {filteredSorted.map((entry) => {
-                                        const isSpotlightSlot =
-                                            showSpotlight &&
-                                            spotlight &&
-                                            entryKey(entry) === entryKey(spotlight)
-                                        if (isSpotlightSlot) return null
-                                        return (
-                                            <LibraryMangaCard
-                                                key={entryKey(entry)}
-                                                entry={entry}
-                                                browseTranslatedLang={browseTranslatedLang}
-                                                onRemove={onRemove}
-                                                removeBusyKey={removeBusyKey}
-                                            />
-                                        )
-                                    })}
-                                </MotionDiv>
-                            )}
-                        </>
-                    )}
-                </div>
-            </div>
-        </MotionDiv>
-    )
-}
-
-function SpotlightCard({
-    entry,
-    browseTranslatedLang,
-    onRemove,
-    removeBusyKey,
-    slideVariants,
-    transition,
-}) {
-    const { to, state } = resumeTarget(entry, browseTranslatedLang)
-    const busyRemove = removeBusyKey === `${entry.source}:${entry.mangaId}`
-    const rel = relativeTouch(entry.updatedAt)
-
-    return (
-        <MotionDiv
-            layout
-            className="relative overflow-visible rounded-3xl border border-amber-200/90 bg-white shadow-[0_12px_40px_-14px_rgba(180,140,60,0.18)] ring-1 ring-amber-100/60"
-            variants={slideVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={transition}
-        >
-            <div
-                className="pointer-events-none absolute -right-6 -top-10 h-40 w-40 rounded-full bg-[#C6FF00]/15 blur-3xl"
-                aria-hidden
-            />
-            <div
-                className="pointer-events-none absolute -left-4 bottom-0 h-32 w-32 rounded-full bg-amber-200/25 blur-2xl"
-                aria-hidden
-            />
-
-            <div className="relative flex flex-col gap-4 border-l-[6px] border-l-amber-500 pl-4 pr-4 pb-5 pt-4 sm:flex-row sm:items-stretch sm:gap-6 sm:pl-5 sm:pr-6 sm:pb-8 sm:pt-5">
-                <div className="flex shrink-0 items-start gap-3 sm:flex-col sm:items-center">
-                    <span
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 text-amber-900 shadow-sm ring-1 ring-amber-200/80"
-                        aria-hidden
-                    >
-                        <FaBookOpen className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0 pt-0.5 sm:hidden">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-800/90">
-                            Pick up here
-                        </p>
-                    </div>
-                </div>
-
-                <div className="relative mx-auto shrink-0 sm:mx-0">
-                    <Link
-                        to={to}
-                        state={state}
-                        className="relative mx-auto block h-[196px] w-[128px] overflow-hidden rounded-2xl bg-slate-100 shadow-md ring-2 ring-amber-200/70 sm:h-[218px] sm:w-[146px]"
-                    >
-                        {entry.coverUrl ? (
-                            <motion.div
-                                className="absolute inset-0 h-full w-full"
-                                initial={{ scale: 1.06 }}
-                                animate={{ scale: 1 }}
-                                transition={{ duration: 0.55, ease: lifeSyncEaseOut }}
-                            >
-                                <LifesyncEpisodeThumbnail
-                                    src={entry.coverUrl}
-                                    className="absolute inset-0 h-full w-full"
-                                    imgClassName="h-full w-full object-cover"
-                                    imgProps={mangadexImageProps(entry.coverUrl)}
-                                />
-                            </motion.div>
-                        ) : null}
-                        {entry.hasNewChapter ? <NewChapterSpotlightBanner /> : null}
-                    </Link>
-                    {entry.seriesEnded ? <SeriesCompleteBadge /> : null}
-                </div>
-
-                <div className="flex min-w-0 flex-1 flex-col justify-center">
-                    <p className="hidden text-[10px] font-black uppercase tracking-[0.2em] text-amber-800/90 sm:block">
-                        Pick up here
-                    </p>
-                    <h2 className="mt-0 line-clamp-2 text-[19px] font-black leading-tight tracking-tight text-slate-900 sm:mt-1 sm:text-[22px]">
-                        <Link to={to} state={state} className="transition hover:text-amber-900">
-                            {entry.title || 'Untitled'}
-                        </Link>
-                    </h2>
-                    <p className="mt-1 text-[12px] font-medium text-slate-500">
-                        {sourceLabel(entry.source)}
-                        {rel ? ` · ${rel}` : ''}
-                    </p>
-                    <div className="relative mt-3 pl-4">
-                        <div className="absolute bottom-1.5 left-[7px] top-1.5 w-px bg-gradient-to-b from-amber-400/90 via-slate-200 to-slate-200" />
-                        <div className="space-y-3">
-                            <div className="relative">
-                                <span
-                                    className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-sm ring-1 ring-amber-300/60"
-                                    aria-hidden
-                                />
-                                <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
-                                    Last read
-                                </p>
-                                <p className="text-[13px] font-bold text-slate-900">
-                                    {entry.lastChapterLabel || '—'}
-                                </p>
-                            </div>
-                            <div className="relative">
-                                <span
-                                    className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-slate-400 shadow-sm ring-1 ring-slate-300/50"
-                                    aria-hidden
-                                />
-                                <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
-                                    Latest
-                                </p>
-                                <p className="text-[13px] font-semibold text-slate-800">
-                                    {entry.remoteLatestChapterLabel
-                                        ? entry.remoteLatestChapterLabel
-                                        : entry.needsSync
-                                          ? (
-                                                <span className="text-slate-500 italic">Run check for updates</span>
-                                            )
-                                          : '—'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    {entry.caughtUp && !entry.hasNewChapter && !entry.seriesEnded ? (
-                        <div className="mt-2">
-                            <CaughtUpDivider />
-                        </div>
-                    ) : null}
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
                         <Link
-                            to={to}
-                            state={state}
-                            className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-bold text-slate-900 shadow-sm ring-1 ring-slate-900/10 transition hover:brightness-95 sm:flex-none"
+                            to="/dashboard/lifesync/anime"
+                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-white"
+                            aria-label="Back to hub"
                         >
-                            Resume reading
+                            <FaChevronLeft className="h-4 w-4" />
                         </Link>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">Library</p>
+                            <h1 className="text-[22px] font-black leading-tight text-slate-900">Reading History</h1>
+                            <p className="mt-1 text-[13px] text-slate-600">Track progress, manage status, and continue reading quickly.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
                         <button
                             type="button"
-                            onClick={() => void onRemove(entry)}
-                            disabled={busyRemove}
-                            className="min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            onClick={() => void onSync()}
+                            disabled={syncBusy || anyRefreshing || summary.total === 0}
+                            className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-[#C6FF00] px-3 text-[12px] font-bold text-slate-900 transition hover:brightness-95 disabled:opacity-50"
                         >
-                            {busyRemove ? '…' : 'Remove'}
+                            <FaSyncAlt className={`h-3 w-3 ${syncBusy ? 'animate-spin' : ''}`} />
+                            {syncBusy ? 'Syncing' : 'Sync'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void refreshAll()}
+                            disabled={syncBusy || anyRefreshing}
+                            className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                        >
+                            {anyRefreshing ? 'Refreshing' : 'Reload'}
                         </button>
                     </div>
                 </div>
-            </div>
-        </MotionDiv>
-    )
-}
 
-function LibraryMangaCard({ entry, browseTranslatedLang, onRemove, removeBusyKey }) {
-    const { to, state } = resumeTarget(entry, browseTranslatedLang)
-    const busyRemove = removeBusyKey === `${entry.source}:${entry.mangaId}`
-    const showCaughtUpDivider =
-        entry.caughtUp && !entry.hasNewChapter && !entry.seriesEnded
+                <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center">
+                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : summary.total}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Visible</p>
+                    </div>
+                    <div className="rounded-xl border border-lime-200 bg-lime-50 px-3 py-2.5 text-center">
+                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : summary.withNewChapter}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-lime-700">New</p>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-center">
+                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : summary.needsSync}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">Needs sync</p>
+                    </div>
+                </div>
+            </section>
 
-    return (
-        <MotionLi
-            variants={lifeSyncStaggerItemFade}
-            className="group relative flex min-w-0 flex-col overflow-visible rounded-3xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.15)]"
-            whileHover={{ y: -4, transition: { type: 'tween', duration: 0.2, ease: lifeSyncEaseOut } }}
-        >
-            <div className="relative w-full">
-                <div className="relative aspect-[2/3] w-full overflow-hidden rounded-t-3xl bg-gradient-to-br from-slate-100 to-slate-50">
-                    <Link to={to} state={state} className="absolute inset-0 block">
-                        {entry.coverUrl ? (
-                            <LifesyncEpisodeThumbnail
-                                src={entry.coverUrl}
-                                className="absolute inset-0 h-full w-full"
-                                imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-[1.06]"
-                                imgProps={mangadexImageProps(entry.coverUrl)}
-                            />
-                        ) : (
-                            <div className="flex h-full items-center justify-center text-slate-300">
-                                <FaBookOpen className="h-14 w-14" aria-hidden />
-                            </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent opacity-95" />
+            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex items-center justify-between gap-2">
+                    <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                        <FaFilter className="h-3 w-3" />
+                        Filter and Search
+                    </p>
+                    <Link
+                        to={`${MANGA_BASE}/mangadex/popular/page/1`}
+                        className="text-[12px] font-semibold text-amber-700 transition hover:text-amber-900"
+                    >
+                        Browse manga
                     </Link>
-                    {entry.hasNewChapter ? <NewChapterRibbon /> : null}
+                </div>
+
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                    <input
+                        type="search"
+                        value={queryInput}
+                        onChange={(event) => setQueryInput(event.target.value)}
+                        placeholder="Search titles, chapters, notes"
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 sm:col-span-2 lg:col-span-3 xl:col-span-2"
+                    />
+                    <select
+                        value={sourceFilter}
+                        onChange={(event) => setSourceFilter(event.target.value)}
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                    >
+                        {SOURCE_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                    <select
+                        value={statusFilter}
+                        onChange={(event) => setStatusFilter(event.target.value)}
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                    >
+                        {STATUS_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                    <select
+                        value={updateStateFilter}
+                        onChange={(event) => setUpdateStateFilter(event.target.value)}
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                    >
+                        {UPDATE_STATE_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                    <select
+                        value={sortBy}
+                        onChange={(event) => setSortBy(event.target.value)}
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                    >
+                        {SORT_OPTIONS.map((opt) => (
+                            <option key={opt.id} value={opt.id}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => void onRemove(entry)}
-                        disabled={busyRemove}
-                        className="absolute right-2.5 top-2.5 z-30 rounded-full bg-white/95 p-2 text-[11px] font-bold text-slate-500 opacity-0 shadow-md ring-1 ring-slate-200/80 transition group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                        aria-label="Remove from shelf"
+                        onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                        className="min-h-[34px] rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
-                        {busyRemove ? '…' : '✕'}
+                        Order: {sortOrder === 'desc' ? 'Desc' : 'Asc'}
                     </button>
-                    <div className={`absolute left-0 right-0 p-3 ${entry.seriesEnded ? 'bottom-5' : 'bottom-0'}`}>
-                        <Link to={to} state={state} className="block">
-                            <h3 className="line-clamp-2 text-[13px] font-bold leading-snug text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] sm:text-[14px]">
-                                {entry.title || 'Untitled'}
-                            </h3>
-                        </Link>
-                        <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/80">
-                            {sourceLabel(entry.source)}
-                        </p>
-                    </div>
+                    <select
+                        value={String(limit)}
+                        onChange={(event) => setLimit(Number(event.target.value) || 24)}
+                        className="min-h-[34px] rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                    >
+                        <option value="12">12 per page</option>
+                        <option value="24">24 per page</option>
+                        <option value="36">36 per page</option>
+                        <option value="48">48 per page</option>
+                    </select>
+                    {nsfwHiddenCount > 0 ? (
+                        <span className="ml-auto rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-800">
+                            {nsfwHiddenCount} NSFW hidden
+                        </span>
+                    ) : null}
                 </div>
-                {entry.seriesEnded ? <SeriesCompleteBadge /> : null}
-            </div>
+            </section>
 
-            <div
-                className={`relative flex flex-1 flex-col gap-1 border-t border-slate-100/90 bg-[linear-gradient(180deg,#fafaf9_0%,#ffffff_100%)] px-3 pb-3 pt-3 sm:gap-1.5 sm:px-4 sm:pb-4 sm:pt-4 ${entry.seriesEnded ? 'pt-5 sm:pt-6' : ''}`}
-            >
-                <div className="relative pl-4">
-                    <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-amber-400/80 via-slate-200 to-slate-200" />
-                    <div className="space-y-3.5">
-                        <div className="relative">
-                            <span
-                                className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-sm ring-1 ring-amber-300/60"
-                                aria-hidden
-                            />
-                            <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
-                                Last read
-                            </p>
-                            <p className="text-[11px] font-bold leading-snug text-slate-900">
-                                {entry.lastChapterLabel || '—'}
-                            </p>
-                            <p className="text-[9px] text-slate-400">{formatUpdatedAt(entry.updatedAt)}</p>
-                        </div>
-                        <div className="relative">
-                            <span
-                                className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-slate-400 shadow-sm ring-1 ring-slate-300/50"
-                                aria-hidden
-                            />
-                            <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
-                                Latest on shelf
-                            </p>
-                            <p className="text-[11px] font-semibold leading-snug text-slate-800">
-                                {entry.remoteLatestChapterLabel
-                                    ? entry.remoteLatestChapterLabel
-                                    : entry.needsSync
-                                      ? (
-                                            <span className="text-slate-500 italic">
-                                                Sync to load latest
-                                            </span>
-                                        )
-                                      : '—'}
-                            </p>
+            {anyRefreshing && !initialLoading ? (
+                <div className="overflow-hidden rounded-lg border border-amber-100 bg-white">
+                    <div className="h-1 w-full animate-pulse bg-gradient-to-r from-amber-200 via-[#C6FF00] to-amber-200" />
+                </div>
+            ) : null}
+
+            {selectedEntries.length > 0 ? (
+                <section className="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-[13px] font-semibold text-amber-900">{selectedEntries.length} selected</p>
+                        <div className="flex flex-wrap gap-2">
+                            <select
+                                defaultValue=""
+                                onChange={(event) => {
+                                    const value = event.target.value
+                                    if (!value) return
+                                    void onBulkSetStatus(value)
+                                    event.target.value = ''
+                                }}
+                                disabled={bulkBusy}
+                                className="min-h-[34px] rounded-lg border border-amber-300 bg-white px-3 text-[11px] font-semibold text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:opacity-50"
+                            >
+                                <option value="">Set status</option>
+                                {STATUS_OPTIONS.filter((opt) => opt.id !== 'all').map((opt) => (
+                                    <option key={opt.id} value={opt.id}>
+                                        {opt.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                type="button"
+                                onClick={() => void onBulkDelete()}
+                                disabled={bulkBusy}
+                                className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-red-200 bg-white px-3 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                            >
+                                <FaTrashAlt className="h-3 w-3" />
+                                Remove
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onClearSelection}
+                                className="min-h-[34px] rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                            >
+                                Clear
+                            </button>
                         </div>
                     </div>
+                </section>
+            ) : null}
+
+            {initialLoading && visibleEntries.length === 0 ? (
+                <div className="rounded-2xl border border-slate-100 bg-white/60 p-5 sm:p-6">
+                    <LifesyncMediaLibraryPageSkeleton
+                        gridCount={Math.max(8, limit)}
+                        showSpotlight={false}
+                        spotlightHistoryRows={2}
+                        cardHistoryRows={2}
+                    />
                 </div>
-
-                {entry.syncError ? (
-                    <p className="mt-1 rounded-lg border border-red-100 bg-red-50/90 px-2.5 py-2 text-[10px] leading-snug text-red-700">
-                        {entry.syncError}
-                    </p>
-                ) : null}
-
-                {showCaughtUpDivider ? <CaughtUpDivider /> : null}
-
-                <Link
-                    to={to}
-                    state={state}
-                    className="mt-auto flex min-h-[40px] w-full items-center justify-center rounded-2xl bg-slate-900 py-2.5 text-[11px] font-bold text-white transition hover:bg-slate-800 sm:min-h-[42px] sm:text-[12px]"
+            ) : error ? (
+                <MotionDiv
+                    className="rounded-2xl border border-red-200 bg-red-50/70 px-6 py-10 text-center"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
                 >
-                    Open reader
-                </Link>
-            </div>
-        </MotionLi>
+                    <p className="text-[17px] font-semibold text-red-900">Failed to load reading history</p>
+                    <p className="mt-2 text-[13px] text-red-700">{error}</p>
+                    <button
+                        type="button"
+                        onClick={() => void refreshList({ forceInitial: true })}
+                        className="mt-4 rounded-lg border border-red-200 bg-white px-4 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100"
+                    >
+                        Retry
+                    </button>
+                </MotionDiv>
+            ) : visibleEntries.length === 0 ? (
+                <MotionDiv
+                    className="rounded-2xl border border-dashed border-amber-200 bg-gradient-to-br from-white via-amber-50/40 to-lime-50/25 px-6 py-14 text-center"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                >
+                    <FaBookOpen className="mx-auto h-10 w-10 text-amber-400" />
+                    <p className="mt-4 text-[18px] font-bold text-slate-900">
+                        {query || sourceFilter !== 'all' || statusFilter !== 'all' || updateStateFilter !== 'all'
+                            ? 'No matches for current filters'
+                            : 'Your shelf is empty'}
+                    </p>
+                    <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-slate-600">
+                        Open any chapter in the reader to track progress here.
+                    </p>
+                    <Link
+                        to={`${MANGA_BASE}/mangadex/popular/page/1`}
+                        className="mt-7 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-slate-800"
+                    >
+                        Browse popular manga
+                    </Link>
+                </MotionDiv>
+            ) : (
+                <>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-slate-600">
+                        <p>
+                            Showing {visibleEntries.length} of {pageInfo.total} results · Page {pageInfo.page} of {pageInfo.totalPages}
+                        </p>
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={onSelectAllVisible}
+                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                            >
+                                Select all
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onClearSelection}
+                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                            >
+                                Clear
+                            </button>
+                        </div>
+                    </div>
+
+                    <MotionUl
+                        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                        variants={lifeSyncStaggerContainerDense}
+                        initial="hidden"
+                        animate="show"
+                    >
+                        {visibleEntries.map((entry) => {
+                            const key = entryKey(entry)
+                            return (
+                                <LibraryMangaCard
+                                    key={key}
+                                    entry={entry}
+                                    browseTranslatedLang={browseTranslatedLang}
+                                    selected={selectedKeys.has(key)}
+                                    busy={actionBusyKeys.has(key)}
+                                    removeBusy={removeBusyKey === key}
+                                    onToggleSelect={onToggleSelect}
+                                    onStatusChange={onStatusChange}
+                                    onRequestRemove={onRequestDelete}
+                                />
+                            )
+                        })}
+                    </MotionUl>
+
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                            disabled={pageInfo.page <= 1 || refreshing}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+                        >
+                            Previous
+                        </button>
+                        <p className="text-[12px] font-semibold text-slate-700">
+                            Page {pageInfo.page} of {pageInfo.totalPages}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setPage((prev) => prev + 1)}
+                            disabled={!pageInfo.hasMore || refreshing}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </>
+            )}
+
+            <ConfirmationModal
+                isOpen={deleteConfirmation.isOpen}
+                title="Remove from reading history"
+                message={`Remove "${decodeHtmlEntities(deleteConfirmation.entry?.title) || 'this manga'}" from your shelf?`}
+                confirmLabel="Remove"
+                cancelLabel="Cancel"
+                onConfirm={onConfirmDelete}
+                onCancel={onCancelDelete}
+            />
+        </MotionDiv>
     )
 }

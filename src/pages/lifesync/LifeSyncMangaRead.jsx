@@ -2,6 +2,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch } from '../../lib/lifesyncApi'
+import { decodeHtmlEntities } from '../../lib/mangaChapterUtils'
+
+const MANGA_PROGRESS_QUEUE_KEY = 'lifesync:manga-progress-queue:v1'
+const MANGA_PROGRESS_LOCAL_SAVE_MS = 8000
+const MANGA_PROGRESS_FLUSH_BATCH = 16
+const MANGA_PROGRESS_SOURCES = new Set(['mangadex', 'mangadistrict', 'hentaifox'])
 
 function compareChapters(a, b) {
     const av = a?.volume != null && a.volume !== '' ? Number(a.volume) : null
@@ -23,7 +29,7 @@ function formatChapterLabel(ch) {
     const c = ch.chapter != null && ch.chapter !== '' ? String(ch.chapter) : ''
     if (v) bits.push(`Vol. ${v}`)
     if (c) bits.push(`Ch. ${c}`)
-    const label = bits.length ? bits.join(' ') : (ch.title ? String(ch.title) : 'Chapter')
+    const label = bits.length ? bits.join(' ') : (ch.title ? decodeHtmlEntities(String(ch.title)) : 'Chapter')
     return label
 }
 
@@ -31,6 +37,134 @@ function normalizeReadPercent(value) {
     const n = Number(value)
     if (!Number.isFinite(n)) return 0
     return Math.min(100, Math.max(0, Math.round(n * 10) / 10))
+}
+
+function normalizeMangaSource(value) {
+    const source = String(value || '').trim().toLowerCase()
+    if (source === 'mangadistrict') return 'mangadistrict'
+    if (source === 'mangadex') return 'mangadex'
+    return ''
+}
+
+function sanitizeProgressPayload(raw) {
+    const source = String(raw?.source || '').trim().toLowerCase()
+    if (!MANGA_PROGRESS_SOURCES.has(source)) return null
+
+    const mangaId = String(raw?.mangaId || '').trim()
+    const lastChapterId = String(raw?.lastChapterId || '').trim()
+    if (!mangaId || !lastChapterId) return null
+
+    const payload = {
+        source,
+        mangaId,
+        title: String(raw?.title || ''),
+        coverUrl: String(raw?.coverUrl || ''),
+        lastChapterId,
+        lastChapterLabel: String(raw?.lastChapterLabel || ''),
+        lastVolume: String(raw?.lastVolume || ''),
+        lastChapterNum: String(raw?.lastChapterNum || ''),
+        lastReadPercent: normalizeReadPercent(raw?.lastReadPercent),
+    }
+    const contentRating = String(raw?.contentRating || '').trim()
+    if (source === 'mangadex' && contentRating) {
+        payload.contentRating = contentRating
+    }
+    return payload
+}
+
+function queueKeyForPayload(payload) {
+    return `${payload?.source || ''}:${payload?.mangaId || ''}`
+}
+
+function readProgressQueue() {
+    if (typeof window === 'undefined') return {}
+    try {
+        const raw = window.localStorage.getItem(MANGA_PROGRESS_QUEUE_KEY)
+        if (!raw) return {}
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+        return parsed
+    } catch {
+        return {}
+    }
+}
+
+function writeProgressQueue(queue) {
+    if (typeof window === 'undefined') return
+    try {
+        window.localStorage.setItem(MANGA_PROGRESS_QUEUE_KEY, JSON.stringify(queue))
+    } catch {
+        // ignore localStorage failures
+    }
+}
+
+function pickQueuedResumeCandidate(mangaId, preferredSource = '') {
+    const targetMangaId = String(mangaId || '').trim()
+    if (!targetMangaId) return null
+    const queue = readProgressQueue()
+
+    let best = null
+    for (const raw of Object.values(queue)) {
+        const payload = sanitizeProgressPayload(raw)
+        if (!payload || payload.mangaId !== targetMangaId) continue
+        const percent = normalizeReadPercent(payload.lastReadPercent)
+        if (!(percent > 0 && percent < 100)) continue
+
+        const chapterId = String(payload.lastChapterId || '').trim()
+        if (!chapterId) continue
+
+        const source = normalizeMangaSource(payload.source)
+        const score = preferredSource && source === preferredSource ? 1 : 0
+        const savedAtRaw = Date.parse(String(raw?.savedAt || ''))
+        const savedAt = Number.isFinite(savedAtRaw) ? savedAtRaw : 0
+
+        if (!best || score > best.score || (score === best.score && savedAt > best.savedAt)) {
+            best = { source, chapterId, percent, savedAt, score }
+        }
+    }
+
+    if (!best) return null
+    return {
+        source: best.source,
+        chapterId: best.chapterId,
+        percent: best.percent,
+        savedAt: best.savedAt,
+    }
+}
+
+function pickReadingResumeCandidate(rows, mangaId, preferredSource = '') {
+    const targetMangaId = String(mangaId || '').trim()
+    if (!targetMangaId || !Array.isArray(rows)) return null
+
+    let best = null
+    for (const row of rows) {
+        if (String(row?.mangaId || '').trim() !== targetMangaId) continue
+
+        const chapterId = String(row?.lastChapterId || '').trim()
+        if (!chapterId) continue
+
+        const percent = normalizeReadPercent(row?.lastReadPercent)
+        if (!(percent > 0 && percent < 100)) continue
+
+        const source = normalizeMangaSource(row?.source)
+        if (!source) continue
+
+        const score = preferredSource && source === preferredSource ? 1 : 0
+        const updatedAtRaw = Date.parse(String(row?.updatedAt || ''))
+        const savedAt = Number.isFinite(updatedAtRaw) ? updatedAtRaw : 0
+
+        if (!best || score > best.score || (score === best.score && savedAt > best.savedAt)) {
+            best = { source, chapterId, percent, savedAt, score }
+        }
+    }
+
+    if (!best) return null
+    return {
+        source: best.source,
+        chapterId: best.chapterId,
+        percent: best.percent,
+        savedAt: best.savedAt,
+    }
 }
 
 function mangadexImageProps(url) {
@@ -76,20 +210,64 @@ export default function LifeSyncMangaRead() {
             ? from
             : '/dashboard/lifesync/anime/manga/mangadex/popular/page/1'
 
-    const source = useMemo(() => {
-        const s = location.state?.source || location.state?.src
-        const v = String(s || '').trim()
-        return v === 'mangadistrict' ? v : 'mangadex'
-    }, [location.state])
+    const searchParams = useMemo(() => new URLSearchParams(location.search || ''), [location.search])
+
+    const sourceHint = useMemo(() => {
+        const fromQuery = normalizeMangaSource(searchParams.get('source') || searchParams.get('src'))
+        if (fromQuery) return fromQuery
+        return normalizeMangaSource(location.state?.source || location.state?.src)
+    }, [location.state, searchParams])
+
+    const [fallbackResume, setFallbackResume] = useState({ source: '', chapterId: '', percent: 0 })
+
+    const source = sourceHint || fallbackResume.source || 'mangadex'
 
     const browseTranslatedLang = useMemo(() => {
-        const v = location.state?.browseTranslatedLang
-        const s = String(v || '').trim()
-        return s || 'en'
-    }, [location.state])
+        const fromQuery = String(searchParams.get('lang') || '').trim().toLowerCase()
+        if (fromQuery === 'all' || fromQuery === 'en') return fromQuery
 
-    const resumeChapterId = useMemo(() => String(location.state?.resumeChapterId || '').trim(), [location.state])
-    const resumePercent = useMemo(() => normalizeReadPercent(location.state?.resumePercent), [location.state])
+        const fromState = String(location.state?.browseTranslatedLang || '').trim().toLowerCase()
+        if (fromState === 'all' || fromState === 'en') return fromState
+        return 'en'
+    }, [location.state, searchParams])
+
+    const resumeChapterIdFromQuery = useMemo(
+        () => String(searchParams.get('resumeChapterId') || '').trim(),
+        [searchParams],
+    )
+    const resumeChapterIdFromState = useMemo(
+        () => String(location.state?.resumeChapterId || '').trim(),
+        [location.state],
+    )
+    const explicitResumeChapterId = resumeChapterIdFromQuery || resumeChapterIdFromState
+
+    const resumePercentFromQuery = useMemo(
+        () => normalizeReadPercent(searchParams.get('resumePercent')),
+        [searchParams],
+    )
+    const resumePercentFromState = useMemo(
+        () => normalizeReadPercent(location.state?.resumePercent),
+        [location.state],
+    )
+    const explicitResumePercent =
+        resumePercentFromQuery > 0 && resumePercentFromQuery < 100
+            ? resumePercentFromQuery
+            : resumePercentFromState > 0 && resumePercentFromState < 100
+                ? resumePercentFromState
+                : 0
+
+    const resumeChapterId = explicitResumeChapterId || fallbackResume.chapterId || ''
+    const resumePercent = (() => {
+        if (explicitResumeChapterId) {
+            if (explicitResumePercent > 0) return explicitResumePercent
+            if (fallbackResume.chapterId === explicitResumeChapterId && fallbackResume.percent > 0 && fallbackResume.percent < 100) {
+                return fallbackResume.percent
+            }
+            return 0
+        }
+        if (fallbackResume.percent > 0 && fallbackResume.percent < 100) return fallbackResume.percent
+        return 0
+    })()
 
     const [busy, setBusy] = useState(true)
     const [error, setError] = useState('')
@@ -112,7 +290,73 @@ export default function LifeSyncMangaRead() {
     const mdReadSyncTimer = useRef(null)
     const mdReadingStatusSent = useRef(new Set())
     const resumeRestoreKeyRef = useRef('')
-    const lastSavedPercentRef = useRef({ key: '', percent: 0 })
+    const latestProgressRef = useRef({ manga: null, chapter: null, percent: 0 })
+    const lastFlushedSignatureRef = useRef('')
+
+    const buildProgressPayload = useCallback((row) => {
+        const manga = row?.manga
+        const chapter = row?.chapter
+        if (!manga?.id || !chapter?.id) return null
+        const sourceName = manga.source === 'mangadistrict' ? 'mangadistrict' : 'mangadex'
+        return sanitizeProgressPayload({
+            source: sourceName,
+            mangaId: String(manga.id),
+            title: String(manga.title || ''),
+            coverUrl: String(manga.coverUrl || ''),
+            lastChapterId: String(chapter.id),
+            lastChapterLabel: formatChapterLabel(chapter),
+            lastVolume: chapter?.volume != null && chapter.volume !== '' ? String(chapter.volume) : '',
+            lastChapterNum: chapter?.chapter != null && chapter.chapter !== '' ? String(chapter.chapter) : '',
+            lastReadPercent: normalizeReadPercent(row?.percent),
+            ...(sourceName === 'mangadex' && manga?.contentRating ? { contentRating: String(manga.contentRating) } : {}),
+        })
+    }, [])
+
+    const persistCurrentProgressLocal = useCallback(() => {
+        const payload = buildProgressPayload(latestProgressRef.current)
+        if (!payload) return null
+
+        const key = queueKeyForPayload(payload)
+        if (!key || key === ':') return null
+        const queue = readProgressQueue()
+        queue[key] = { ...payload, savedAt: new Date().toISOString() }
+        writeProgressQueue(queue)
+        return payload
+    }, [buildProgressPayload])
+
+    const flushQueuedProgress = useCallback(async ({ keepalive = false, maxItems = MANGA_PROGRESS_FLUSH_BATCH } = {}) => {
+        if (!isLifeSyncConnected) return
+        const queue = readProgressQueue()
+        const entries = Object.entries(queue)
+            .map(([key, value]) => {
+                const payload = sanitizeProgressPayload(value)
+                if (!payload) return null
+                const savedAt = Date.parse(String(value?.savedAt || ''))
+                return { key, payload, savedAt: Number.isFinite(savedAt) ? savedAt : 0 }
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.savedAt - b.savedAt)
+
+        if (!entries.length) return
+
+        const remaining = { ...queue }
+        let attempts = 0
+        for (const row of entries) {
+            if (attempts >= maxItems) break
+            attempts += 1
+            try {
+                await lifesyncFetch('/api/v1/manga/reading', {
+                    method: 'PUT',
+                    json: row.payload,
+                    ...(keepalive ? { keepalive: true } : {}),
+                })
+                delete remaining[row.key]
+            } catch {
+                if (keepalive) break
+            }
+        }
+        writeProgressQueue(remaining)
+    }, [isLifeSyncConnected])
 
     useEffect(() => {
         if (!isLifeSyncConnected) return
@@ -123,34 +367,7 @@ export default function LifeSyncMangaRead() {
         return () => { cancelled = true }
     }, [isLifeSyncConnected])
 
-    const upsertReading = useCallback(async (manga, chapter, readPercent) => {
-        if (!manga?.id || !chapter?.id) return
-        const src =
-            manga.source === 'mangadistrict'
-                ? manga.source
-                : 'mangadex'
-        try {
-            await lifesyncFetch('/api/v1/manga/reading', {
-                method: 'PUT',
-                json: {
-                    source: src,
-                    mangaId: String(manga.id),
-                    title: manga.title || '',
-                    coverUrl: manga.coverUrl || '',
-                    lastChapterId: String(chapter.id),
-                    lastChapterLabel: formatChapterLabel(chapter),
-                    lastVolume: chapter.volume != null && chapter.volume !== '' ? String(chapter.volume) : '',
-                    lastChapterNum: chapter.chapter != null && chapter.chapter !== '' ? String(chapter.chapter) : '',
-                    lastReadPercent: normalizeReadPercent(readPercent),
-                    ...(src === 'mangadex' && manga.contentRating
-                        ? { contentRating: String(manga.contentRating) }
-                        : {}),
-                },
-            })
-        } catch {
-            /* offline */
-        }
-    }, [])
+
 
     const syncMangaDexReading = useCallback(async (manga, chapter) => {
         if (!manga?.id || !chapter?.id) return
@@ -186,6 +403,27 @@ export default function LifeSyncMangaRead() {
         }, 450)
     }, [dexAuthStatus?.connected])
 
+    const flushReadingProgress = useCallback(async ({ keepalive = false, queueFirst = true } = {}) => {
+        let payload = buildProgressPayload(latestProgressRef.current)
+        if (!payload) return false
+        if (queueFirst) {
+            payload = persistCurrentProgressLocal() || payload
+        }
+        const signature = `${payload.source}:${payload.mangaId}:${payload.lastChapterId}:${payload.lastReadPercent}`
+        if (lastFlushedSignatureRef.current === signature) return true
+        try {
+            await lifesyncFetch('/api/v1/manga/reading', { method: 'PUT', json: payload, keepalive })
+            lastFlushedSignatureRef.current = signature
+            const queue = readProgressQueue()
+            delete queue[queueKeyForPayload(payload)]
+            writeProgressQueue(queue)
+            return true
+        } catch {
+            persistCurrentProgressLocal()
+            return false
+        }
+    }, [buildProgressPayload, persistCurrentProgressLocal])
+
     useEffect(
         () => () => {
             if (mdReadSyncTimer.current) clearTimeout(mdReadSyncTimer.current)
@@ -204,7 +442,7 @@ export default function LifeSyncMangaRead() {
                     const detail = await lifesyncFetch(`/api/v1/manga/details/${encodeURIComponent(mangaId)}?view=full`)
                     const langParam = browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang
                     const feed = await lifesyncFetch(
-                        `/api/v1/manga/chapters/${encodeURIComponent(mangaId)}?limit=500&lang=${encodeURIComponent(langParam)}&order=asc`
+                        `/api/v1/manga/chapters/${encodeURIComponent(mangaId)}?limit=200&lang=${encodeURIComponent(langParam)}&order=asc`
                         + '&view=full'
                     )
                     const list = [...(feed?.data || [])]
@@ -239,15 +477,66 @@ export default function LifeSyncMangaRead() {
 
     useEffect(() => {
         if (!manga?.id || !chapter?.id) return
-        const key = `${manga.source || source}:${String(manga.id)}:${String(chapter.id)}`
-        const initialPercent =
-            resumeChapterId && String(chapter.id) === resumeChapterId && resumePercent > 0
-                ? resumePercent
-                : 0
-        lastSavedPercentRef.current = { key, percent: initialPercent }
-        void upsertReading(manga, chapter, initialPercent)
         void syncMangaDexReading(manga, chapter)
-    }, [chapter, manga, resumeChapterId, resumePercent, source, syncMangaDexReading, upsertReading])
+    }, [chapter, manga, syncMangaDexReading])
+
+    useEffect(() => {
+        if (!isLifeSyncConnected) return
+        void flushQueuedProgress()
+    }, [flushQueuedProgress, isLifeSyncConnected])
+
+    useEffect(() => {
+        if (!isLifeSyncConnected || !mangaId) return
+        let cancelled = false
+
+        const queuedCandidate = pickQueuedResumeCandidate(mangaId, sourceHint)
+        if (queuedCandidate) {
+            setFallbackResume({
+                source: queuedCandidate.source,
+                chapterId: queuedCandidate.chapterId,
+                percent: queuedCandidate.percent,
+            })
+        } else {
+            setFallbackResume({ source: '', chapterId: '', percent: 0 })
+        }
+
+        ;(async () => {
+            try {
+                const params = new URLSearchParams({
+                    view: 'standard',
+                    sortBy: 'updatedAt',
+                    order: 'desc',
+                    page: '1',
+                    limit: '50',
+                })
+                if (sourceHint) params.set('source', sourceHint)
+
+                const data = await lifesyncFetch(`/api/v1/manga/reading?${params.toString()}`)
+                if (cancelled) return
+
+                const rows = Array.isArray(data) ? data : (Array.isArray(data?.entries) ? data.entries : [])
+                const remoteCandidate = pickReadingResumeCandidate(rows, mangaId, sourceHint)
+                if (!remoteCandidate) return
+
+                const queuedAt = queuedCandidate?.savedAt || 0
+                const remoteAt = remoteCandidate.savedAt || 0
+                const best = remoteAt >= queuedAt ? remoteCandidate : queuedCandidate
+                if (!best) return
+
+                setFallbackResume({
+                    source: best.source,
+                    chapterId: best.chapterId,
+                    percent: best.percent,
+                })
+            } catch {
+                // ignore: resume still works from navigation state and local queue
+            }
+        })()
+
+        return () => {
+            cancelled = true
+        }
+    }, [isLifeSyncConnected, mangaId, sourceHint])
 
     useEffect(() => {
         if (!manga?.id || !chapter?.id) return
@@ -284,8 +573,7 @@ export default function LifeSyncMangaRead() {
         const { scrollTop, scrollHeight, clientHeight } = el
         const max = scrollHeight - clientHeight
         const p = max <= 0 ? 1 : Math.min(1, Math.max(0, scrollTop / max))
-        // Avoid per-frame rerenders for tiny scroll deltas.
-        setChapterReadProgress((prev) => (Math.abs(prev - p) >= 0.005 ? p : prev))
+        setChapterReadProgress(p)
     }, [])
 
     const scheduleProgressUpdate = useCallback(() => {
@@ -356,19 +644,58 @@ export default function LifeSyncMangaRead() {
     ])
 
     useEffect(() => {
-        if (loadingPages) return
         if (!manga?.id || !chapter?.id) return
-        const chapterKey = `${manga.source || source}:${String(manga.id)}:${String(chapter.id)}`
-        const percent = normalizeReadPercent(chapterReadProgress * 100)
-        const prev = lastSavedPercentRef.current
-        if (prev.key === chapterKey && Math.abs(percent - prev.percent) < 1) return
+        let percent = normalizeReadPercent(chapterReadProgress * 100)
+        if (percent <= 0 && resumeChapterId && String(chapter.id) === resumeChapterId && resumePercent > 0) {
+            percent = resumePercent
+        }
+        latestProgressRef.current = { manga, chapter, percent }
+    }, [chapterReadProgress, chapter, manga, resumeChapterId, resumePercent])
 
-        const timer = setTimeout(() => {
-            lastSavedPercentRef.current = { key: chapterKey, percent }
-            void upsertReading(manga, chapter, percent)
-        }, 700)
-        return () => clearTimeout(timer)
-    }, [chapterReadProgress, chapter, chapter?.id, loadingPages, manga, source, upsertReading])
+    useEffect(() => {
+        if (!manga?.id || !chapter?.id) return
+        persistCurrentProgressLocal()
+        const id = window.setInterval(() => {
+            persistCurrentProgressLocal()
+        }, MANGA_PROGRESS_LOCAL_SAVE_MS)
+        return () => window.clearInterval(id)
+    }, [chapter?.id, manga?.id, persistCurrentProgressLocal])
+
+    useEffect(() => {
+        const onOnline = () => {
+            void flushQueuedProgress()
+        }
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') void flushQueuedProgress()
+        }
+        window.addEventListener('online', onOnline)
+        document.addEventListener('visibilitychange', onVisible)
+        return () => {
+            window.removeEventListener('online', onOnline)
+            document.removeEventListener('visibilitychange', onVisible)
+        }
+    }, [flushQueuedProgress])
+
+    useEffect(() => {
+        const onPageHide = () => {
+            persistCurrentProgressLocal()
+            void flushReadingProgress({ keepalive: true, queueFirst: true })
+            void flushQueuedProgress({ keepalive: true, maxItems: 4 })
+        }
+        const onBeforeUnload = () => {
+            persistCurrentProgressLocal()
+            void flushReadingProgress({ keepalive: true, queueFirst: true })
+        }
+        window.addEventListener('pagehide', onPageHide)
+        window.addEventListener('beforeunload', onBeforeUnload)
+        return () => {
+            window.removeEventListener('pagehide', onPageHide)
+            window.removeEventListener('beforeunload', onBeforeUnload)
+            persistCurrentProgressLocal()
+            void flushReadingProgress({ queueFirst: true })
+            void flushQueuedProgress({ maxItems: 6 })
+        }
+    }, [flushQueuedProgress, flushReadingProgress, persistCurrentProgressLocal])
 
     const safeIdx = useMemo(() => {
         if (!chapter?.id) return -1
@@ -379,12 +706,24 @@ export default function LifeSyncMangaRead() {
     const prevCh = safeIdx > 0 ? sortedChapters[safeIdx - 1] : null
     const nextCh = safeIdx >= 0 && safeIdx < sortedChapters.length - 1 ? sortedChapters[safeIdx + 1] : null
 
+    const readerSearch = useMemo(() => {
+        const params = new URLSearchParams(location.search || '')
+        params.set('source', source)
+        params.set('lang', browseTranslatedLang)
+        params.delete('resumeChapterId')
+        params.delete('resumePercent')
+        const query = params.toString()
+        return query ? `?${query}` : ''
+    }, [browseTranslatedLang, location.search, source])
+
     const goToChapter = useCallback((ch) => {
         if (!ch?.id) return
         if (navBusy) return
+        persistCurrentProgressLocal()
+        void flushReadingProgress({ queueFirst: true })
         setNavBusy(true)
         navigate(
-            `/dashboard/lifesync/anime/manga/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(ch.id))}${location.search || ''}`,
+            `/dashboard/lifesync/anime/manga/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(ch.id))}${readerSearch}`,
             {
                 replace: true,
                 state: {
@@ -395,7 +734,7 @@ export default function LifeSyncMangaRead() {
                 },
             },
         )
-    }, [browseTranslatedLang, closeTo, location.search, location.state, mangaId, navBusy, navigate, source])
+    }, [browseTranslatedLang, closeTo, flushReadingProgress, location.state, mangaId, navBusy, navigate, persistCurrentProgressLocal, readerSearch, source])
 
     useEffect(() => {
         // Unlock nav after the route-driven chapter switch has landed.
@@ -416,7 +755,12 @@ export default function LifeSyncMangaRead() {
                 <div className="mx-auto flex w-full max-w-5xl items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => navigate(closeTo)}
+                        onClick={() => {
+                            persistCurrentProgressLocal()
+                            void flushReadingProgress({ keepalive: true, queueFirst: true })
+                            void flushQueuedProgress({ maxItems: 6 })
+                            navigate(closeTo)
+                        }}
                         className="inline-flex items-center gap-2 rounded-lg border border-[#3a3a3c] bg-[#1c1c1e] px-2.5 py-2 text-[11px] font-semibold text-[#f5f5f7] hover:bg-[#2c2c2e]"
                         title="Back to list"
                     >
@@ -427,7 +771,7 @@ export default function LifeSyncMangaRead() {
                     </button>
 
                     <div className="min-w-0 flex-1">
-                        <p className="truncate text-[11px] font-semibold text-[#f5f5f7]">{manga?.title || 'Manga'}</p>
+                        <p className="truncate text-[11px] font-semibold text-[#f5f5f7]">{decodeHtmlEntities(manga?.title) || 'Manga'}</p>
                         <p className="truncate text-[10px] text-[#86868b]">{formatChapterLabel(chapter)}</p>
                     </div>
 

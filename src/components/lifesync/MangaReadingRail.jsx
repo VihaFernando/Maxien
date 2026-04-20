@@ -318,15 +318,27 @@ export function MangaReadingShelf({
 
 const MANGA_HUB_PATH = '/dashboard/lifesync/anime/manga'
 
+function resolveResumeChapter(entry) {
+    const lastChapterId = String(entry?.lastChapterId || '').trim()
+    const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
+    const chapterId = lastChapterId || latestChapterId
+    return {
+        chapterId,
+        resumeChapterId: chapterId,
+        resumePercent: Number(entry?.lastReadPercent || 0),
+    }
+}
+
 function hubMangaResumeTarget(entry) {
-    if (entry?.mangaId != null && entry?.source && entry?.lastChapterId != null) {
+    const { chapterId, resumeChapterId, resumePercent } = resolveResumeChapter(entry)
+    if (entry?.mangaId != null && entry?.source && chapterId) {
         return {
-            to: `${MANGA_HUB_PATH}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(String(entry.lastChapterId))}`,
+            to: `${MANGA_HUB_PATH}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(chapterId)}`,
             state: {
                 from: MANGA_HUB_PATH,
                 source: entry.source,
-                resumeChapterId: String(entry.lastChapterId),
-                resumePercent: Number(entry.lastReadPercent || 0),
+                resumeChapterId,
+                resumePercent,
             },
         }
     }

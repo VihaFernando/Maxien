@@ -5,60 +5,6 @@
 
 const CACHE_VERSION = 2
 const TTL_MS = 1000 * 60 * 60 * 24 * 14 // 14 days (same order as server AnimeData TTL)
-const KEY_PREFIX = `maxien_lifesync_stream_by_mal:v${CACHE_VERSION}:`
-const MAX_CACHE_ROWS = 120
-
-function pruneStreamCatalogCache() {
-  if (typeof localStorage === 'undefined') return
-  const now = Date.now()
-  /** @type {{ key: string, savedAt: number }[]} */
-  const live = []
-  /** @type {string[]} */
-  const keys = []
-  try {
-    for (let i = 0; i < localStorage.length; i += 1) {
-      const k = localStorage.key(i)
-      if (k && k.startsWith(KEY_PREFIX)) keys.push(k)
-    }
-  } catch {
-    return
-  }
-
-  for (const key of keys) {
-    try {
-      const raw = localStorage.getItem(key)
-      if (!raw) {
-        localStorage.removeItem(key)
-        continue
-      }
-      const row = JSON.parse(raw)
-      const savedAt = Number(row?.savedAt)
-      if (!Number.isFinite(savedAt) || now - savedAt > TTL_MS) {
-        localStorage.removeItem(key)
-        continue
-      }
-      live.push({ key, savedAt })
-    } catch {
-      try {
-        localStorage.removeItem(key)
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-
-  if (live.length <= MAX_CACHE_ROWS) return
-  live
-    .sort((a, b) => a.savedAt - b.savedAt)
-    .slice(0, live.length - MAX_CACHE_ROWS)
-    .forEach((row) => {
-      try {
-        localStorage.removeItem(row.key)
-      } catch {
-        /* ignore */
-      }
-    })
-}
 
 /** @param {string} malId @param {string} [mirror] */
 function storageKey(malId, mirror = '') {
@@ -88,8 +34,6 @@ function normalizeMirror(mirror) {
 export function readLifesyncStreamCatalogByMal(malId, mirror = '') {
   const id = normalizeMalId(malId)
   if (!id || typeof localStorage === 'undefined') return null
-  // Opportunistic maintenance so stale entries do not accumulate forever.
-  if (Math.random() < 0.03) pruneStreamCatalogCache()
   const m = normalizeMirror(mirror)
   let raw = ''
   try {
@@ -138,7 +82,6 @@ export function writeLifesyncStreamCatalogByMal(malId, apiResponse, mirror = '')
       body: { data: apiResponse.data, ...(apiResponse.cached != null ? { cached: apiResponse.cached } : {}) },
     })
     localStorage.setItem(storageKey(id, m), payload)
-    pruneStreamCatalogCache()
   } catch {
     /* quota or private mode */
   }

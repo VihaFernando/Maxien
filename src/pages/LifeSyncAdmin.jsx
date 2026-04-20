@@ -134,6 +134,7 @@ export default function LifeSyncAdmin() {
     const [broadcastText, setBroadcastText] = useState('')
     const [broadcastBusy, setBroadcastBusy] = useState(false)
     const [broadcastMsg, setBroadcastMsg] = useState('')
+    const [adminFeed, setAdminFeed] = useState([])
 
     const [activityAnime, setActivityAnime] = useState(null)
     const [activityManga, setActivityManga] = useState(null)
@@ -244,6 +245,23 @@ export default function LifeSyncAdmin() {
             setBroadcastBusy(false)
         }
     }
+
+    useEffect(() => {
+        if (!allowed || !hasToken) return undefined
+        const onBroadcast = (e) => {
+            const b = e?.detail
+            if (!b || typeof b !== 'object') return
+            setAdminFeed((prev) => {
+                const row = {
+                    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                    payload: b,
+                }
+                return [row, ...prev].slice(0, 40)
+            })
+        }
+        window.addEventListener('maxien:lifesync-broadcast', onBroadcast)
+        return () => window.removeEventListener('maxien:lifesync-broadcast', onBroadcast)
+    }, [allowed, hasToken])
 
     useEffect(() => {
         if (lifeSyncLoading) return
@@ -634,7 +652,7 @@ export default function LifeSyncAdmin() {
 
                     <Panel>
                         <SectionIntro title="Broadcast to all users">
-                            Sends a dismissible banner to currently connected sessions.
+                            Sends a dismissible banner to every connected LifeSync session (same channel as the dashboard notice). Operators still see copies in the feed below.
                         </SectionIntro>
                         <textarea
                             value={broadcastText}
@@ -656,9 +674,28 @@ export default function LifeSyncAdmin() {
                             <span className="text-[11px] text-apple-subtext">{broadcastText.length}/500</span>
                         </div>
                         {broadcastMsg ? <p className="mt-2 text-[12px] text-apple-text">{broadcastMsg}</p> : null}
-                        <p className="mt-3 text-[11px] text-apple-subtext">
-                            WebSocket broadcast feed is disabled in this client.
-                        </p>
+                        {adminFeed.length > 0 ? (
+                            <div className="mt-5 border-t border-[#f0f0f0] pt-4">
+                                <p className="text-[11px] font-bold uppercase tracking-widest text-apple-subtext">
+                                    Recent messages
+                                </p>
+                                <ul className="mt-2 max-h-52 space-y-2 overflow-y-auto text-[12px]">
+                                    {adminFeed.map((row) => (
+                                        <li key={row.id} className="rounded-lg bg-apple-bg px-3 py-2 text-apple-text">
+                                            <span className="font-mono text-[10px] text-apple-subtext">
+                                                {row.payload?.sentAt?.slice(11, 19) || '—'}
+                                            </span>{' '}
+                                            <span className="text-apple-subtext text-[11px]">
+                                                {row.payload?.fromUserId
+                                                    ? `· ${String(row.payload.fromUserId).slice(0, 8)}…`
+                                                    : ''}
+                                            </span>
+                                            <p className="mt-0.5 whitespace-pre-wrap">{row.payload?.message}</p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ) : null}
                     </Panel>
 
                     <Panel>

@@ -442,20 +442,43 @@ export function LifesyncHubMangaRailSkeleton({ count = 4 }) {
   )
 }
 
-/** One library shelf card: portrait + footer timeline + CTA bar (manga/anime history grids). */
+/** One library shelf card: portrait + reading status + chapter info + actions (manga library cards). */
 function LifesyncLibraryShelfCardSkeleton() {
   return (
-    <div className="flex min-w-0 flex-col overflow-hidden rounded-3xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.12)]">
-      <div className="relative aspect-[2/3] w-full overflow-hidden rounded-t-3xl bg-slate-100">
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-100">
         <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
       </div>
-      <div className="space-y-2 border-t border-slate-100/90 bg-[linear-gradient(180deg,#fafaf9_0%,#ffffff_100%)] px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-4">
-        <div className="space-y-2 pl-3">
-          <div className="h-2 w-[50%] rounded-md lifesync-skeleton-shimmer-light opacity-80" />
-          <div className="h-2.5 w-[72%] rounded-md lifesync-skeleton-shimmer-light" />
-          <div className="h-2 w-[38%] rounded-md lifesync-skeleton-shimmer-light opacity-60" />
+      <div className="flex flex-1 flex-col gap-2 border-t border-slate-100 px-3 pb-2 pt-3">
+        {/* Reading Status & Progress */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between gap-2 text-[10px]">
+            <div className="h-2 w-16 rounded-md lifesync-skeleton-shimmer-light opacity-70" />
+            <div className="h-2 w-8 rounded-md lifesync-skeleton-shimmer-light opacity-70" />
+          </div>
+          <div className="h-1.5 w-full rounded-full lifesync-skeleton-shimmer-light opacity-70" />
+          <div className="h-2 w-24 rounded-md lifesync-skeleton-shimmer-light opacity-50" />
         </div>
-        <div className="h-9 w-full rounded-2xl lifesync-skeleton-shimmer-light opacity-75 sm:h-10" />
+
+        {/* Chapter Info Compact */}
+        <div className="flex gap-2 text-[9px]">
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="h-2 w-12 rounded-md lifesync-skeleton-shimmer-light opacity-60" />
+            <div className="h-2 w-full rounded-md lifesync-skeleton-shimmer-light opacity-70" />
+            <div className="h-1.5 w-16 rounded-md lifesync-skeleton-shimmer-light opacity-50" />
+          </div>
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="h-2 w-10 rounded-md lifesync-skeleton-shimmer-light opacity-60" />
+            <div className="h-2 w-full rounded-md lifesync-skeleton-shimmer-light opacity-70" />
+            <div className="h-1.5 w-14 rounded-md lifesync-skeleton-shimmer-light opacity-50" />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="grid grid-cols-2 gap-1.5 pt-1">
+          <div className="h-8 rounded-lg lifesync-skeleton-shimmer-light opacity-75" />
+          <div className="h-8 rounded-lg lifesync-skeleton-shimmer-light opacity-70" />
+        </div>
       </div>
     </div>
   )
@@ -465,7 +488,7 @@ function LifesyncLibraryShelfCardSkeleton() {
  * Full library/history layout: sticky sidebar + optional spotlight band + 2–4 column grid.
  * Matches `LifeSyncMangaLibrary` / `LifeSyncAnimeHistory`.
  */
-export function LifesyncMediaLibraryPageSkeleton({ gridCount = 8, showSpotlight = true }) {
+export function LifesyncMediaLibraryPageSkeleton({ gridCount = 8, showSpotlight = true, spotlightHistoryRows = 2 }) {
   const n = Math.min(12, Math.max(4, gridCount))
   return (
     <div
@@ -526,8 +549,9 @@ export function LifesyncMediaLibraryPageSkeleton({ gridCount = 8, showSpotlight 
                 <div className="h-6 max-w-md rounded-md lifesync-skeleton-shimmer-light" />
                 <div className="h-3 w-36 rounded-md lifesync-skeleton-shimmer-light opacity-65" />
                 <div className="space-y-2.5 pl-3 pt-1">
-                  <div className="h-3 w-44 rounded-md lifesync-skeleton-shimmer-light" />
-                  <div className="h-3 w-52 rounded-md lifesync-skeleton-shimmer-light opacity-85" />
+                  {Array.from({ length: spotlightHistoryRows }).map((_, i) => (
+                    <div key={i} className="h-3 w-44 rounded-md lifesync-skeleton-shimmer-light" />
+                  ))}
                 </div>
                 <div className="flex flex-wrap gap-2 pt-2">
                   <div className="h-11 min-w-[140px] flex-1 rounded-2xl lifesync-skeleton-shimmer-light sm:max-w-[220px]" />

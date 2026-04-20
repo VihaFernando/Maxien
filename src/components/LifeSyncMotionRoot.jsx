@@ -1,30 +1,27 @@
 import { MotionConfig } from 'framer-motion'
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLifeSync } from '../context/LifeSyncContext'
 import {
     isLifeSyncReduceAnimationsEnabled,
     REDUCE_MOTION_PREFERENCE_CHANGED,
 } from '../lib/lifeSyncReduceMotion'
 
-function subscribeReduceMotionPreference(onStoreChange) {
-    if (typeof window === 'undefined') return () => {}
-    window.addEventListener(REDUCE_MOTION_PREFERENCE_CHANGED, onStoreChange)
-    return () => window.removeEventListener(REDUCE_MOTION_PREFERENCE_CHANGED, onStoreChange)
-}
-
-function getServerSnapshot() {
-    return false
-}
-
 /**
  * Global Framer Motion policy + `html` class for CSS. Wrap app content inside `LifeSyncProvider`.
  */
 export function LifeSyncMotionRoot({ children }) {
     const { lifeSyncUser } = useLifeSync()
-    const reduce = useSyncExternalStore(
-        subscribeReduceMotionPreference,
+    const [tick, setTick] = useState(0)
+
+    useEffect(() => {
+        const on = () => setTick((t) => t + 1)
+        window.addEventListener(REDUCE_MOTION_PREFERENCE_CHANGED, on)
+        return () => window.removeEventListener(REDUCE_MOTION_PREFERENCE_CHANGED, on)
+    }, [])
+
+    const reduce = useMemo(
         () => isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences),
-        getServerSnapshot,
+        [lifeSyncUser?.preferences, tick],
     )
 
     useEffect(() => {
