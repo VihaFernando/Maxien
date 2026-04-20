@@ -222,6 +222,26 @@ export default function LifeSyncAdmin() {
     }
 
     const runLookup = async () => {
+        const q = lookupEmail.trim()
+        if (!q) {
+            setLookupResult({ error: 'Enter an email address.' })
+            return
+        }
+        setLookupBusy(true)
+        setLookupResult(null)
+        try {
+            const data = await lifesyncFetch(`/api/v1/admin/users/lookup?email=${encodeURIComponent(q)}`, {
+                method: 'GET',
+            })
+            setLookupResult(data)
+        } catch (e) {
+            setLookupResult({ error: e?.message || 'Lookup failed.' })
+        } finally {
+            setLookupBusy(false)
+        }
+    }
+
+    const runLookupById = async () => {
         const id = lookupUserId.trim()
         if (!id) {
             setLookupIdResult({ error: 'Paste a 24-character user id from the tables above.' })
