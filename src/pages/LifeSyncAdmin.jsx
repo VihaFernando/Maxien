@@ -7,7 +7,7 @@ import { LifeSyncSectionNav } from '../components/lifesync/LifeSyncSectionNav'
 
 const ADMIN_TABS = [
     { id: 'overview', label: 'Overview', title: 'Growth, usage, and quick snapshot' },
-    { id: 'live', label: 'Live & ops', title: 'Real-time process, health, integrations, broadcast' },
+    { id: 'health', label: 'Health & ops', title: 'Database, integrations, and system status' },
     { id: 'activity', label: 'Activity', title: 'Latest anime & manga progress across users' },
     { id: 'users', label: 'Users', title: 'Signups, lookup, and support tools' },
 ]
@@ -131,10 +131,6 @@ export default function LifeSyncAdmin() {
     const [capabilities, setCapabilities] = useState(null)
     const [health, setHealth] = useState(null)
     const [healthBusy, setHealthBusy] = useState(false)
-    const [broadcastText, setBroadcastText] = useState('')
-    const [broadcastBusy, setBroadcastBusy] = useState(false)
-    const [broadcastMsg, setBroadcastMsg] = useState('')
-    const [adminFeed, setAdminFeed] = useState([])
 
     const [activityAnime, setActivityAnime] = useState(null)
     const [activityManga, setActivityManga] = useState(null)
@@ -225,79 +221,7 @@ export default function LifeSyncAdmin() {
         }
     }
 
-    const sendBroadcast = async () => {
-        const msg = broadcastText.trim()
-        if (!msg) return
-        setBroadcastBusy(true)
-        setBroadcastMsg('')
-        try {
-            const r = await lifesyncFetch('/api/v1/admin/broadcast', {
-                method: 'POST',
-                json: { message: msg },
-            })
-            setBroadcastMsg(
-                `Sent to ${r?.deliveredToUserListeners ?? 0} connected LifeSync session(s) on the broadcast channel. Open admin dashboards (ops stream): ${r?.deliveredToAdminListeners ?? 0}.`,
-            )
-            setBroadcastText('')
-        } catch (e) {
-            setBroadcastMsg(e?.message || 'Broadcast failed.')
-        } finally {
-            setBroadcastBusy(false)
-        }
-    }
-
-    useEffect(() => {
-        if (!allowed || !hasToken) return undefined
-        const onBroadcast = (e) => {
-            const b = e?.detail
-            if (!b || typeof b !== 'object') return
-            setAdminFeed((prev) => {
-                const row = {
-                    id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-                    payload: b,
-                }
-                return [row, ...prev].slice(0, 40)
-            })
-        }
-        window.addEventListener('maxien:lifesync-broadcast', onBroadcast)
-        return () => window.removeEventListener('maxien:lifesync-broadcast', onBroadcast)
-    }, [allowed, hasToken])
-
-    useEffect(() => {
-        if (lifeSyncLoading) return
-        if (!hasToken) return
-        if (!allowed) return
-        if (V1_ADMIN_MODE) return
-        load()
-    }, [lifeSyncLoading, hasToken, allowed, load])
-
-    useEffect(() => {
-        if (V1_ADMIN_MODE) return
-        if (!allowed || tab !== 'activity') return
-        loadActivity()
-    }, [allowed, tab, loadActivity])
-
     const runLookup = async () => {
-        const q = lookupEmail.trim()
-        if (!q) {
-            setLookupResult({ error: 'Enter an email address.' })
-            return
-        }
-        setLookupBusy(true)
-        setLookupResult(null)
-        try {
-            const data = await lifesyncFetch(`/api/v1/admin/users/lookup?email=${encodeURIComponent(q)}`, {
-                method: 'GET',
-            })
-            setLookupResult(data)
-        } catch (e) {
-            setLookupResult({ error: e?.message || 'Lookup failed.' })
-        } finally {
-            setLookupBusy(false)
-        }
-    }
-
-    const runLookupById = async () => {
         const id = lookupUserId.trim()
         if (!id) {
             setLookupIdResult({ error: 'Paste a 24-character user id from the tables above.' })
@@ -337,6 +261,20 @@ export default function LifeSyncAdmin() {
         if (!t) return
         await copyText(t)
     }
+
+    useEffect(() => {
+        if (lifeSyncLoading) return
+        if (!hasToken) return
+        if (!allowed) return
+        if (V1_ADMIN_MODE) return
+        load()
+    }, [lifeSyncLoading, hasToken, allowed, load])
+
+    useEffect(() => {
+        if (V1_ADMIN_MODE) return
+        if (!allowed || tab !== 'activity') return
+        loadActivity()
+    }, [allowed, tab, loadActivity])
 
     const tabMeta = ADMIN_TABS.find((t) => t.id === tab) || ADMIN_TABS[0]
 
@@ -564,18 +502,14 @@ export default function LifeSyncAdmin() {
                 </div>
             )}
 
-            {/* ——— Live & ops ——— */}
-            {tab === 'live' && (
+            {/* ——— Health & ops ——— */}
+            {tab === 'health' && (
                 <div className="space-y-8">
                     <Panel>
-                        <SectionIntro title="Live process stream (WebSocket)">
-                            Frontend live socket updates are disabled. This panel now reflects static values from the
-                            latest overview refresh.
+                        <SectionIntro title="Process status">
+                            Server snapshot from the last refresh, including uptime and resource usage.
                         </SectionIntro>
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <BoolPill ok={false} label="Disabled" />
-                        </div>
-                        <dl className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
+                        <dl className="grid gap-3 text-[12px] sm:grid-cols-2">
                             <div>
                                 <dt className="text-apple-subtext">Server time</dt>
                                 <dd className="mt-0.5 font-mono text-[11px]">{overview?.serverTime ?? '—'}</dd>
@@ -597,14 +531,6 @@ export default function LifeSyncAdmin() {
                                 <dd className="mt-0.5 tabular-nums">
                                     {s?.memoryRssMb ?? '—'} MB / {s?.memoryHeapUsedMb ?? '—'} MB
                                 </dd>
-                            </div>
-                            <div>
-                                <dt className="text-apple-subtext">Admin sockets</dt>
-                                <dd className="mt-0.5 tabular-nums">{s?.connectedAdminSockets ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-apple-subtext">User broadcast sockets</dt>
-                                <dd className="mt-0.5 tabular-nums">{s?.connectedUserBroadcastSockets ?? '—'}</dd>
                             </div>
                         </dl>
                     </Panel>
@@ -651,54 +577,6 @@ export default function LifeSyncAdmin() {
                     </Panel>
 
                     <Panel>
-                        <SectionIntro title="Broadcast to all users">
-                            Sends a dismissible banner to every connected LifeSync session (same channel as the dashboard notice). Operators still see copies in the feed below.
-                        </SectionIntro>
-                        <textarea
-                            value={broadcastText}
-                            onChange={(e) => setBroadcastText(e.target.value)}
-                            rows={3}
-                            maxLength={500}
-                            placeholder="e.g. Deploying API v2 at 22:00 UTC — ~2 min downtime."
-                            className="mt-2 w-full resize-y rounded-xl border border-[#e5e5ea] bg-apple-bg px-3 py-2 text-[13px] text-apple-text"
-                        />
-                        <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <button
-                                type="button"
-                                disabled={broadcastBusy || !broadcastText.trim()}
-                                onClick={sendBroadcast}
-                                className="rounded-xl bg-primary px-4 py-2.5 text-[13px] font-semibold text-apple-text disabled:opacity-50"
-                            >
-                                {broadcastBusy ? 'Sending…' : 'Send broadcast'}
-                            </button>
-                            <span className="text-[11px] text-apple-subtext">{broadcastText.length}/500</span>
-                        </div>
-                        {broadcastMsg ? <p className="mt-2 text-[12px] text-apple-text">{broadcastMsg}</p> : null}
-                        {adminFeed.length > 0 ? (
-                            <div className="mt-5 border-t border-[#f0f0f0] pt-4">
-                                <p className="text-[11px] font-bold uppercase tracking-widest text-apple-subtext">
-                                    Recent messages
-                                </p>
-                                <ul className="mt-2 max-h-52 space-y-2 overflow-y-auto text-[12px]">
-                                    {adminFeed.map((row) => (
-                                        <li key={row.id} className="rounded-lg bg-apple-bg px-3 py-2 text-apple-text">
-                                            <span className="font-mono text-[10px] text-apple-subtext">
-                                                {row.payload?.sentAt?.slice(11, 19) || '—'}
-                                            </span>{' '}
-                                            <span className="text-apple-subtext text-[11px]">
-                                                {row.payload?.fromUserId
-                                                    ? `· ${String(row.payload.fromUserId).slice(0, 8)}…`
-                                                    : ''}
-                                            </span>
-                                            <p className="mt-0.5 whitespace-pre-wrap">{row.payload?.message}</p>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        ) : null}
-                    </Panel>
-
-                    <Panel>
                         <SectionIntro title="API & deployment">Static flags from the last overview request.</SectionIntro>
                         <div className="flex flex-wrap gap-2">
                             <BoolPill ok={s?.mongoReady} label={s?.mongoReady ? 'Mongo ready' : 'Mongo not ready'} />
@@ -716,14 +594,6 @@ export default function LifeSyncAdmin() {
                             <div>
                                 <dt className="text-apple-subtext">Database name</dt>
                                 <dd className="font-mono text-[12px] text-apple-text">{s?.databaseName ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-apple-subtext">Admin sockets (overview)</dt>
-                                <dd className="font-medium text-apple-text">{s?.connectedAdminSockets ?? '—'}</dd>
-                            </div>
-                            <div>
-                                <dt className="text-apple-subtext">User broadcast sockets</dt>
-                                <dd className="font-medium text-apple-text">{s?.connectedUserBroadcastSockets ?? '—'}</dd>
                             </div>
                             <div className="sm:col-span-2">
                                 <dt className="text-apple-subtext">Client origin (CORS)</dt>
