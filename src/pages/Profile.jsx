@@ -647,7 +647,7 @@ export default function Profile() {
             <div className={`flex min-h-0 flex-1 flex-col gap-5 sm:gap-6 md:flex-row md:items-stretch ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
 
                 {/* Left sidebar nav */}
-                <div className="hidden md:block w-full md:w-[200px] lg:w-[220px] flex-shrink-0 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm p-3">
+                <div className="hidden md:block w-full md:w-[200px] lg:w-[220px] flex-shrink-0 bg-white rounded-[20px] shadow-sm p-3">
                     <p className="text-[10px] font-bold text-[#86868b] uppercase tracking-widest px-3 pt-1 pb-2">Account</p>
                     <div className="space-y-0.5">
                         {NAV.map(n => (
@@ -656,7 +656,7 @@ export default function Profile() {
                                 onClick={() => setActiveTab(n.id)}
                                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all duration-150 ${activeTab === n.id
                                     ? "bg-[#f5f5f7] text-[#1d1d1f] font-semibold"
-                                    : "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f] font-medium"
+                                    : "text-[#86868b] hover:text-[#1d1d1f] font-medium"
                                     }`}
                             >
                                 <svg className={`w-4 h-4 flex-shrink-0 ${activeTab === n.id ? "text-[#1d1d1f]" : "text-[#86868b]"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
@@ -749,7 +749,7 @@ export default function Profile() {
                                                         value={firstName}
                                                         onChange={(e) => setFullName(e.target.value + (lastName ? " " + lastName : ""))}
                                                         placeholder="First name"
-                                                        className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                                        className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
                                                     />
                                                 </div>
                                                 <div>
@@ -759,7 +759,7 @@ export default function Profile() {
                                                         value={lastName}
                                                         onChange={(e) => setFullName((firstName ? firstName + " " : "") + e.target.value)}
                                                         placeholder="Last name"
-                                                        className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                                        className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
                                                     />
                                                 </div>
                                             </div>
@@ -772,7 +772,7 @@ export default function Profile() {
                                                     value={username}
                                                     onChange={(e) => setUsername(e.target.value)}
                                                     placeholder="username"
-                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
                                                 />
                                             </div>
 
@@ -796,7 +796,7 @@ export default function Profile() {
                                                     value={phone}
                                                     onChange={(e) => setPhone(e.target.value)}
                                                     placeholder="+1 000 000 0000"
-                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
+                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200"
                                                 />
                                             </div>
 
@@ -808,7 +808,7 @@ export default function Profile() {
                                                     onChange={(e) => setBio(e.target.value)}
                                                     rows={2}
                                                     placeholder="Tell us about yourself"
-                                                    className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200 resize-none"
+                                                    className="w-full px-3.5 py-2.5 bg-[#f5f5f7] border border-transparent   focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none transition-all duration-200 resize-none"
                                                 />
                                             </div>
 

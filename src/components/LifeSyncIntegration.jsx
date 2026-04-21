@@ -304,7 +304,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                             <div className="flex min-w-0 items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <div className="w-9 h-9 rounded-xl flex bg-[#171a21] items-center justify-center flex-shrink-0">
                                     <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 10.95l6.432 2.658a3.387 3.387 0 011.912-.588c.064 0 .126.002.189.005l2.861-4.142V8.83a4.524 4.524 0 014.519-4.519 4.524 4.524 0 014.519 4.519 4.524 4.524 0 01-4.519 4.519h-.105l-4.076 2.911c0 .052.004.105.004.159a3.393 3.393 0 01-3.39 3.39 3.403 3.403 0 01-3.35-2.858L.453 15.16A11.98 11.98 0 0011.979 24c6.627 0 12-5.373 12-12S18.605 0 11.979 0z" /></svg>
                                 </div>
                                 <div className="min-w-0">

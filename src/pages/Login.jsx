@@ -66,7 +66,7 @@ export default function Login() {
     }
 
     return (
-        <div className="min-h-screen bg-[#F5F5F7] flex items-center justify-center font-sans p-4 sm:p-8 selection:bg-[#C6FF00] selection:text-[#1d1d1f]">
+        <div className="auth-login-page min-h-screen flex items-center justify-center font-sans p-4 sm:p-8 selection:bg-[#C6FF00] selection:text-[#1d1d1f]">
             <div className="w-full max-w-[400px]">
 
                 {/* Header Section */}
@@ -75,15 +75,15 @@ export default function Login() {
                         <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                     </div>
                     <h1 className="text-2xl sm:text-[28px] font-semibold text-[#1D1D1F] tracking-tight text-center mb-2">
-                        Sign in to Maxien
+                        Welcome back
                     </h1>
                     <p className="text-[#86868B] text-[15px] text-center leading-relaxed">
-                        Experience a secure and minimalist dashboard.
+                        Sign in to continue to your workspace, LifeSync hubs, and daily dashboard.
                     </p>
                 </div>
 
                 {/* Main Card */}
-                <div className="bg-white/70 backdrop-blur-2xl rounded-4xl shadow-[0_10px_40px_rgba(0,0,0,0.04)] border border-white/60 p-6 sm:p-10">
+                <div className="auth-login-card rounded-4xl p-6 sm:p-10">
 
                     {error && (
                         <div className="bg-red-50 text-red-600 text-[13px] font-medium px-4 py-3 rounded-xl mb-6 flex items-center gap-2 border border-red-100/50">
@@ -105,7 +105,7 @@ export default function Login() {
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="name@example.com"
                                 required
-                                className="w-full px-4 py-3.5 bg-black/[0.03] border border-black/[0.05] rounded-xl text-[15px] text-[#1D1D1F] placeholder-[#86868B] focus:bg-white focus:outline-none focus:border-[#C6FF00] focus:ring-4 focus:ring-[#C6FF00]/20 transition-all duration-300"
+                                className="auth-login-input w-full rounded-xl px-4 py-3.5 text-[15px] text-[#1D1D1F] placeholder-[#86868B] transition-all duration-300 focus:outline-none focus:border-[#C6FF00] focus:ring-4 focus:ring-[#C6FF00]/20"
                             />
                         </div>
 
@@ -115,7 +115,7 @@ export default function Login() {
                                     Password
                                 </label>
                                 <a href="#" className="text-[12px] font-medium text-[#86b300] hover:text-[#749c00] transition-colors">
-                                    Forgot password?
+                                    Need help signing in?
                                 </a>
                             </div>
                             <input
@@ -124,7 +124,7 @@ export default function Login() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 required
-                                className="w-full px-4 py-3.5 bg-black/[0.03] border border-black/[0.05] rounded-xl text-[15px] text-[#1D1D1F] placeholder-[#86868B] focus:bg-white focus:outline-none focus:border-[#C6FF00] focus:ring-4 focus:ring-[#C6FF00]/20 transition-all duration-300"
+                                className="auth-login-input w-full rounded-xl px-4 py-3.5 text-[15px] text-[#1D1D1F] placeholder-[#86868B] transition-all duration-300 focus:outline-none focus:border-[#C6FF00] focus:ring-4 focus:ring-[#C6FF00]/20"
                             />
                         </div>
 
@@ -140,16 +140,16 @@ export default function Login() {
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                 ) : (
-                                    "Continue"
+                                    "Sign in"
                                 )}
                             </button>
                         </div>
                     </form>
 
                     <div className="my-6 flex items-center gap-4">
-                        <div className="flex-1 h-px bg-black/[0.06]"></div>
+                        <div className="auth-login-separator flex-1 h-px bg-black/[0.06]"></div>
                         <span className="text-[#86868B] text-[12px] font-medium">or</span>
-                        <div className="flex-1 h-px bg-black/[0.06]"></div>
+                        <div className="auth-login-separator flex-1 h-px bg-black/[0.06]"></div>
                     </div>
 
                     <button
@@ -169,9 +169,9 @@ export default function Login() {
                 </div>
 
                 <p className="text-center text-[#86868B] text-[14px] mt-8">
-                    New to Maxien?{" "}
+                    Don&apos;t have an account yet?{" "}
                     <Link to="/signup" className="text-[#86b300] hover:text-[#749c00] font-medium transition-colors">
-                        Create a free account
+                        Create account
                     </Link>
                 </p>
 

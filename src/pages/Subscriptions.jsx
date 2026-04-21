@@ -429,7 +429,7 @@ export default function Subscriptions() {
                         value={form.name}
                         onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                         placeholder="Spotify, Notion, Netflix"
-                        className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:border-[#C6FF00] focus:bg-white"
+                        className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:bg-white"
                     />
                 </div>
 
@@ -443,7 +443,7 @@ export default function Subscriptions() {
                             min="0"
                             step="0.01"
                             placeholder="0.00"
-                            className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:border-[#C6FF00] focus:bg-white"
+                            className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none  focus:bg-white"
                         />
                     </div>
                     <div>
@@ -451,7 +451,7 @@ export default function Subscriptions() {
                         <select
                             value={form.currency}
                             onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
-                            className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:border-[#C6FF00] focus:bg-white"
+                            className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:bg-white"
                         >
                             {currencyOptions.map((code) => (
                                 <option key={code} value={code}>{code}</option>
@@ -466,7 +466,7 @@ export default function Subscriptions() {
                         value={form.renewalDate}
                         onChange={(e) => setForm((prev) => ({ ...prev, renewalDate: e.target.value }))}
                         type="date"
-                        className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:border-[#C6FF00] focus:bg-white"
+                        className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:bg-white"
                     />
                     <p className="mt-1.5 text-[10px] text-[#86868b]">Repeats monthly on the same day.</p>
                 </div>
@@ -494,7 +494,7 @@ export default function Subscriptions() {
                                 resetForm()
                                 if (isMobileViewport()) closeMobileOverlay()
                             }}
-                            className="inline-flex items-center justify-center rounded-lg border border-[#d2d2d7] bg-white px-4 py-2 text-[12px] font-semibold text-[#1d1d1f] transition hover:border-[#C6FF00]"
+                            className="inline-flex items-center justify-center rounded-lg border border-[#d2d2d7] bg-white px-4 py-2 text-[12px] font-semibold text-[#1d1d1f]"
                         >
                             Cancel edit
                         </button>
@@ -543,7 +543,7 @@ export default function Subscriptions() {
                         <button
                             type="button"
                             onClick={openFormForCreate}
-                            className="inline-flex items-center gap-2 rounded-lg border border-[#d2d2d7] bg-[#f9f9fb] px-3.5 py-2 text-[12px] font-semibold text-[#1d1d1f] transition hover:border-[#C6FF00] hover:bg-white"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[#d2d2d7] bg-[#f9f9fb] px-3.5 py-2 text-[12px] font-semibold text-[#1d1d1f] transition hover:bg-white"
                         >
                             <FaPlus className="h-3.5 w-3.5" />
                             Add subscription
@@ -636,7 +636,7 @@ export default function Subscriptions() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleEdit(item)}
-                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2d2d7] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#1d1d1f] transition hover:border-[#C6FF00]"
+                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2d2d7] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#1d1d1f]"
                                                     >
                                                         <FaPencilAlt className="h-3 w-3" />
                                                         Edit

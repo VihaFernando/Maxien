@@ -520,7 +520,7 @@ export default function Tasks() {
 
                     <button
                         onClick={() => toggleComplete(task)}
-                        className={`rounded-md border px-2 py-1 text-[9px] font-semibold transition-colors sm:text-[10px] ${task.status === "Done" ? "border-[#22c55e] bg-[#22c55e] text-white" : "border-[#d1d5db] bg-white text-[#374151] hover:border-[#C6FF00]"}`}
+                        className={`rounded-md border px-2 py-1 text-[9px] font-semibold transition-colors sm:text-[10px] ${task.status === "Done" ? "border-[#22c55e] bg-[#22c55e] text-white" : "border-[#d1d5db] bg-white text-[#374151]"}`}
                     >
                         {task.status === "Done" ? "Completed" : "Mark done"}
                     </button>
@@ -608,7 +608,7 @@ export default function Tasks() {
                     </Link>
                     <button
                         onClick={(e) => { e.stopPropagation(); openCreate() }}
-                        className="inline-flex items-center gap-2 rounded-[10px] bg-[#C6FF00] px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors hover:bg-[#b8f000] sm:text-[13px]"
+                        className="inline-flex items-center gap-2 rounded-[10px] bg-[#C6FF00] px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors sm:text-[13px]"
                     >
                         <FaPlus className="h-3 w-3" />
                         New Task
@@ -641,7 +641,7 @@ export default function Tasks() {
                                 placeholder="Search tasks..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full rounded-lg border border-transparent bg-[#f5f7fa] py-2 pl-8.5 pr-3 text-[12px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[13px]"
+                                className="w-full rounded-lg border border-transparent bg-[#f5f7fa] py-2 pl-8.5 pr-3 text-[12px] text-[#111827] outline-none transition-all focus:bg-white sm:text-[13px]"
                                 onClick={e => e.stopPropagation()}
                             />
                         </div>

@@ -26,7 +26,7 @@ const openSpotlight = () => window.dispatchEvent(new CustomEvent("maxien:open-co
 
 const NAV_BASE = "flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
 const NAV_ACTIVE = "bg-[#C6FF00] text-black shadow-sm"
-const NAV_IDLE = "text-[var(--color-text-secondary)] hover:bg-[#f5f5f7] hover:text-[var(--color-text-primary)]"
+const NAV_IDLE = "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
 
 function SidebarLink({ to, icon: Icon, label, active, onClick }) {
     const iconNode = typeof Icon === "function" ? Icon({ className: "w-4 h-4" }) : null
@@ -235,7 +235,7 @@ export default function Dashboard() {
                 <button
                     type="button"
                     onClick={() => handleWorkspaceModeChange("personal")}
-                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${!isWorkplaceMode ? "bg-[#C6FF00] text-black" : "text-[var(--color-text-secondary)] hover:bg-[#f5f5f7]"
+                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${!isWorkplaceMode ? "bg-[#C6FF00] text-black" : "text-[var(--color-text-secondary)]"
                         }`}
                 >
                     Personal
@@ -243,7 +243,7 @@ export default function Dashboard() {
                 <button
                     type="button"
                     onClick={() => handleWorkspaceModeChange("workplace")}
-                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${isWorkplaceMode ? "bg-[#C6FF00] text-black" : "text-[var(--color-text-secondary)] hover:bg-[#f5f5f7]"
+                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${isWorkplaceMode ? "bg-[#C6FF00] text-black" : "text-[var(--color-text-secondary)] "
                         }`}
                 >
                     Workplace
@@ -433,7 +433,7 @@ export default function Dashboard() {
                         </div>
                         <button
                             onClick={() => setSidebarOpen(false)}
-                            className="p-1.5 hover:bg-[#f5f5f7] rounded-lg transition-colors"
+                            className="p-1.5 rounded-lg transition-colors"
                         >
                             <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -483,7 +483,7 @@ export default function Dashboard() {
 
                     <div className="mt-auto pt-5 border-t border-[#e5e5ea]">
                         <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} />
-                        <div className="bg-[#f5f5f7] rounded-2xl p-4">
+                        <div className="rounded-2xl p-4">
                             <button
                                 type="button"
                                 onClick={handleOpenProfile}
@@ -520,7 +520,7 @@ export default function Dashboard() {
                         </div>
                         <span className="text-[var(--color-text-primary)] font-bold text-[15px] tracking-tight">Maxien</span>
                     </div>
-                    <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-[#f5f5f7] rounded-xl transition-colors">
+                    <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl transition-colors">
                         {user?.user_metadata?.picture ? (
                             <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
                         ) : (
