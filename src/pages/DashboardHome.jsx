@@ -465,7 +465,10 @@ export default function DashboardHome() {
                                                 <Link
                                                     key={`${item.type}-${item.id}`}
                                                     to={isTask ? `/dashboard/tasks?task=${task.id}` : "/dashboard/subscriptions"}
-                                                    className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2.5 rounded-lg hover:bg-[#f5f5f7] transition-colors duration-200 group border border-[#d2d2d7]/30"
+                                                    className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2.5 rounded-lg transition-colors duration-200 group border border-[#d2d2d7]/30"
+                                                    style={{ backgroundColor: '#fafbfc' }}
+                                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f5f6fa'}
+                                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fafbfc'}
                                                 >
                                                     <div className="bg-[#f5f5f7] group-hover:bg-white rounded-lg flex flex-col items-center justify-center w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 transition-colors border border-[#d2d2d7]/40 text-[8px] sm:text-[10px]">
                                                         {hasDueDate ? (
