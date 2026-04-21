@@ -88,6 +88,9 @@ export default function Dashboard() {
     const lifeSyncGamesActive = location.pathname.startsWith("/dashboard/lifesync/games")
     const lifeSyncAnimeActive = location.pathname.startsWith("/dashboard/lifesync/anime")
     const isLifeSyncRoute = location.pathname.startsWith("/dashboard/lifesync")
+    const hideMobileSidebarChrome =
+        location.pathname.startsWith("/dashboard/lifesync/anime/anime/watch/") ||
+        location.pathname.startsWith("/dashboard/lifesync/anime/manga/read/")
     const showLifeSyncSidebar = isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
     const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
     const lifeSyncSidebarSceneClass = lifeSyncGamesActive || lifeSyncAnimeActive ? "dashboard-sidebar-scene" : ""
@@ -418,10 +421,11 @@ export default function Dashboard() {
                 </div>
             </aside>
 
-            {sidebarOpen && (
+            {sidebarOpen && !hideMobileSidebarChrome && (
                 <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
             )}
 
+            {!hideMobileSidebarChrome && (
             <aside className={`dashboard-sidebar-surface ${lifeSyncSidebarSceneClass} fixed left-0 top-0 h-full w-[240px] border-r z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 <div className="px-5 py-6 h-full flex flex-col overflow-y-auto hide-scrollbar">
                     <div className="flex items-center justify-between mb-5">
@@ -511,8 +515,10 @@ export default function Dashboard() {
                     </div>
                 </div>
             </aside>
+            )}
 
             <main className="relative isolate flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
+                {!hideMobileSidebarChrome && (
                 <header className="dashboard-mobile-topbar lg:hidden backdrop-blur-md border-b px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 flex-shrink-0">
@@ -530,6 +536,7 @@ export default function Dashboard() {
                         )}
                     </button>
                 </header>
+                )}
 
                 <div className={contentWrapClass}>
                     {lifeSyncNotice && (

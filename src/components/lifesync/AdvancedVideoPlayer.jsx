@@ -183,10 +183,24 @@ export default function AdvancedVideoPlayer({
     }, [src, isSeeking, onEnded, onError, resetIdle])
 
     useEffect(() => {
-        const onFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement))
+        const onFsChange = () => {
+            const v = videoRef.current
+            const nativeFs = Boolean(document.fullscreenElement)
+            const webkitFs = Boolean(v && v.webkitDisplayingFullscreen)
+            setIsFullscreen(nativeFs || webkitFs)
+        }
+        const v = videoRef.current
         document.addEventListener('fullscreenchange', onFsChange)
-        return () => document.removeEventListener('fullscreenchange', onFsChange)
-    }, [])
+        document.addEventListener('webkitfullscreenchange', onFsChange)
+        v?.addEventListener?.('webkitbeginfullscreen', onFsChange)
+        v?.addEventListener?.('webkitendfullscreen', onFsChange)
+        return () => {
+            document.removeEventListener('fullscreenchange', onFsChange)
+            document.removeEventListener('webkitfullscreenchange', onFsChange)
+            v?.removeEventListener?.('webkitbeginfullscreen', onFsChange)
+            v?.removeEventListener?.('webkitendfullscreen', onFsChange)
+        }
+    }, [src])
 
     useEffect(() => {
         const v = videoRef.current
@@ -244,11 +258,24 @@ export default function AdvancedVideoPlayer({
 
     const toggleFullscreen = useCallback(() => {
         const el = wrapRef.current
-        if (!el) return
+        const v = videoRef.current
+        if (!el && !v) return
         if (!document.fullscreenElement) {
-            el.requestFullscreen?.().catch(() => {})
+            if (el?.requestFullscreen) {
+                el.requestFullscreen().catch(() => {})
+                return
+            }
+            if (v?.webkitEnterFullscreen) {
+                try { v.webkitEnterFullscreen() } catch { /* ignore */ }
+            }
         } else {
-            document.exitFullscreen?.().catch(() => {})
+            if (document.exitFullscreen) {
+                document.exitFullscreen().catch(() => {})
+                return
+            }
+            if (v?.webkitExitFullscreen) {
+                try { v.webkitExitFullscreen() } catch { /* ignore */ }
+            }
         }
     }, [])
 
