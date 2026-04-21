@@ -361,16 +361,24 @@ export default function DashboardHome() {
                                             </div>
                                             {cols.map((col, i) => (
                                                 <div key={i} className="flex flex-col gap-[2px] flex-1 h-full">
-                                                    {col.map((level, j) => (
-                                                        <div
-                                                            key={`${i}-${j}`}
-                                                            className={`w-full flex-1 rounded-[2px] ${level === 0 ? "bg-[#f0f0f0]" :
-                                                                level === 1 ? "bg-[#dff5a0]" :
-                                                                    level === 2 ? "bg-[#c8ef52]" :
-                                                                        level === 3 ? "bg-[#b8e616]" : "bg-[#C6FF00]"
-                                                                }`}
-                                                        ></div>
-                                                    ))}
+                                                    {col.map((level, j) => {
+                                                        // Map level to exact color
+                                                        const levelColors = [
+                                                            "#f0f0f0", // 0
+                                                            "#dff5a0", // 1
+                                                            "#c8ef52", // 2
+                                                            "#b8e616", // 3
+                                                            "#C6FF00"  // 4+
+                                                        ];
+                                                        const bgColor = levelColors[level] || levelColors[4];
+                                                        return (
+                                                            <div
+                                                                key={`${i}-${j}`}
+                                                                className="w-full flex-1 rounded-[2px]"
+                                                                style={{ backgroundColor: bgColor }}
+                                                            ></div>
+                                                        );
+                                                    })}
                                                 </div>
                                             ))}
                                         </div>
@@ -378,8 +386,10 @@ export default function DashboardHome() {
                                     {/* Legend */}
                                     <div className="flex items-center gap-1.5 mt-3">
                                         <span className="text-[10px] text-[#86868b] font-medium mr-0.5">Less</span>
-                                        {["bg-[#f0f0f0]", "bg-[#dff5a0]", "bg-[#c8ef52]", "bg-[#b8e616]", "bg-[#C6FF00]"].map((c, i) => (
-                                            <div key={i} className={`w-[10px] h-[10px] rounded-[2px] ${c}`}></div>
+                                        {[
+                                            "#f0f0f0", "#dff5a0", "#c8ef52", "#b8e616", "#C6FF00"
+                                        ].map((color, i) => (
+                                            <div key={i} className="w-[10px] h-[10px] rounded-[2px]" style={{ backgroundColor: color }}></div>
                                         ))}
                                         <span className="text-[10px] text-[#86868b] font-medium ml-0.5">More</span>
                                     </div>
