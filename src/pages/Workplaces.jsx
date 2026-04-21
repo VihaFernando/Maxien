@@ -116,7 +116,7 @@ export default function Workplaces() {
   }
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-[1200px] mx-auto pb-10">
+    <div className="workplace-theme-surface animate-in fade-in duration-500 max-w-[1200px] mx-auto pb-10">
       <div className="flex items-end justify-between gap-3 mb-6">
         <div>
           <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest mb-1">
@@ -241,7 +241,7 @@ export default function Workplaces() {
         >
           <div className="flex min-h-full items-start sm:items-center justify-center pt-[80px] sm:pt-0 p-4">
             <div
-              className="bg-white w-full max-w-lg rounded-[24px] shadow-xl overflow-hidden"
+              className="bg-white w-full max-w-lg rounded-[24px] border border-[#d2d2d7]/50 shadow-xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0f0f0]">
@@ -317,4 +317,3 @@ export default function Workplaces() {
     </div>
   )
 }
-

@@ -57,6 +57,8 @@ const LifeSyncIcon = ({ className }) => (
 
 function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, setMessage, togglePlugin, refreshLifeSyncMe, updatePreferences }) {
     const [oauthMsg, setOauthMsg] = useState('')
+    const [steamIdInput, setSteamIdInput] = useState('')
+    const [steamBusy, setSteamBusy] = useState(false)
     const [mangadexStatus, setMangadexStatus] = useState(null)
     const [mangadexUser, setMangadexUser] = useState('')
     const [mangadexPassword, setMangadexPassword] = useState('')
@@ -104,6 +106,10 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
     useEffect(() => {
         setXboxGamertagInput(prefs?.xboxGamertag || '')
     }, [prefs?.xboxGamertag])
+
+    useEffect(() => {
+        setSteamIdInput(typeof integrations?.steamId === 'string' ? integrations.steamId : '')
+    }, [integrations?.steamId])
 
     async function linkMangaDex(e) {
         e.preventDefault()
@@ -158,6 +164,48 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
             setError(e.message || `Could not disconnect ${provider}`)
         } finally {
             setUnlinkBusy('')
+        }
+    }
+
+    async function linkSteamId(e) {
+        e?.preventDefault?.()
+        const steamId = steamIdInput.trim()
+        if (!/^\d{17}$/.test(steamId)) {
+            setError('SteamID64 must be 17 numeric digits.')
+            setMessage('')
+            return
+        }
+
+        setSteamBusy(true)
+        setError('')
+        setMessage('')
+        try {
+            await lifesyncFetch('/api/v1/steam/link', {
+                method: 'PUT',
+                json: { steamId },
+            })
+            await refreshLifeSyncMe()
+            setMessage('Steam ID saved.')
+        } catch (err) {
+            setError(err?.message || 'Could not save Steam ID')
+        } finally {
+            setSteamBusy(false)
+        }
+    }
+
+    async function unlinkSteamId() {
+        setSteamBusy(true)
+        setError('')
+        setMessage('')
+        try {
+            await lifesyncFetch('/api/v1/steam/link', { method: 'DELETE' })
+            await refreshLifeSyncMe()
+            setSteamIdInput('')
+            setMessage('Steam disconnected.')
+        } catch (err) {
+            setError(err?.message || 'Could not disconnect Steam')
+        } finally {
+            setSteamBusy(false)
         }
     }
 
@@ -239,9 +287,9 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-stretch lg:gap-5">
                 {/* Service connections */}
-                <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                <div className="lifesync-soft-borders bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
                     <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-[#f0f0f0] flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-xl bg-[#C6FF00]/25 flex items-center justify-center flex-shrink-0">
+                        <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0">
                             <svg className="w-3.5 h-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                             </svg>
@@ -251,37 +299,61 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                             <p className="text-[10px] text-[#86868b]">Link third-party accounts to unlock features</p>
                         </div>
                     </div>
-                    <ul className="divide-y divide-[#f5f5f7]">
+                    <ul className="">
                     {/* Steam */}
-                    <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                    <li className="px-5 sm:px-6 py-4">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                             <div className="flex min-w-0 items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[#171a21] flex items-center justify-center flex-shrink-0">
+                                <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0">
                                     <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 10.95l6.432 2.658a3.387 3.387 0 011.912-.588c.064 0 .126.002.189.005l2.861-4.142V8.83a4.524 4.524 0 014.519-4.519 4.524 4.524 0 014.519 4.519 4.524 4.524 0 01-4.519 4.519h-.105l-4.076 2.911c0 .052.004.105.004.159a3.393 3.393 0 01-3.39 3.39 3.403 3.403 0 01-3.35-2.858L.453 15.16A11.98 11.98 0 0011.979 24c6.627 0 12-5.373 12-12S18.605 0 11.979 0z" /></svg>
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-[13px] font-semibold text-[#1d1d1f]">Steam</p>
                                     {steamLinked ? (
-                                        <p className="text-[11px] text-emerald-600 font-medium">Connected</p>
+                                        <p className="text-[11px] text-emerald-600 font-medium">
+                                            Connected{integrations?.steamId ? ` • ${integrations.steamId}` : ''}
+                                        </p>
                                     ) : (
-                                        <p className="text-[11px] text-[#86868b]">Link via OpenID to sync your library</p>
+                                        <p className="text-[11px] text-[#86868b]">
+                                            Set your SteamID64 to import wishlist titles and connect Steam-aware modules.
+                                        </p>
                                     )}
                                 </div>
                             </div>
                             {steamLinked ? (
-                                <span className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] px-3 py-1.5 rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] sm:ml-auto">
-                                    Connected
-                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => void unlinkSteamId()}
+                                    disabled={steamBusy || busy}
+                                    className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
+                                >
+                                    {steamBusy ? 'Disconnecting…' : 'Disconnect'}
+                                </button>
                             ) : (
-                                <a href={lifesyncOAuthStartUrl('steam') || '#'} className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[#1d1d1f] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('steam') ? 'opacity-50 pointer-events-none' : ''}`}>
-                                    Link Steam
-                                </a>
+                                <form onSubmit={linkSteamId} className="flex w-full max-w-full shrink-0 flex-col gap-2 md:max-w-[290px]">
+                                    <input
+                                        type="text"
+                                        autoComplete="off"
+                                        value={steamIdInput}
+                                        onChange={(e) => setSteamIdInput(e.target.value.replace(/[^\d]/g, '').slice(0, 17))}
+                                        placeholder="SteamID64 (17 digits)"
+                                        disabled={steamBusy || busy}
+                                        className="w-full px-3 py-2 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#171a21]/50 disabled:opacity-50"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={steamBusy || busy || steamIdInput.trim().length !== 17}
+                                        className="text-[11px] font-semibold text-white bg-[#171a21] hover:bg-black px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        {steamBusy ? 'Saving…' : 'Save Steam ID'}
+                                    </button>
+                                </form>
                             )}
                         </div>
                     </li>
 
                     {/* MyAnimeList */}
-                    <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
+                    <li className="px-5 sm:px-6 py-4 ">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                             <div className="flex min-w-0 items-center gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#2E51A2] flex items-center justify-center flex-shrink-0">
@@ -311,10 +383,10 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     </li>
 
                     {/* AnimeSchedule */}
-                    <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
+                    <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                             <div className="flex min-w-0 items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[#0f172a] flex items-center justify-center flex-shrink-0">
+                                <div className="w-9 h-9 rounded-xl bg-[#151418] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-[9px] font-black leading-none">ASN</span>
                                 </div>
                                 <div className="min-w-0">
@@ -335,7 +407,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                             ) : (
                                 <a
                                     href={lifesyncOAuthStartUrl('animeschedule') || '#'}
-                                    className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[#0f172a] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('animeschedule') ? 'opacity-50 pointer-events-none' : ''}`}
+                                    className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[#151418] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('animeschedule') ? 'opacity-50 pointer-events-none' : ''}`}
                                 >
                                     Connect AnimeSchedule
                                 </a>
@@ -344,7 +416,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     </li>
 
                     {/* MangaDex (password grant via server personal client) */}
-                    <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
+                    <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                             <div className="flex min-w-0 items-start gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#FF6740] flex items-center justify-center flex-shrink-0">
@@ -407,7 +479,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     </li>
 
                     {/* Xbox (gamertag via OpenXBL — same as main app Settings) */}
-                    <li className="px-5 sm:px-6 py-4 hover:bg-[#fafafa] transition-colors">
+                    <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                             <div className="flex min-w-0 items-start gap-3">
                                 <div className="w-9 h-9 rounded-xl bg-[#107C10] flex items-center justify-center flex-shrink-0">
@@ -468,7 +540,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                 </div>
 
                 {/* Content plugins */}
-                <div className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
+                <div className="lifesync-soft-borders flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
                     <div className="flex items-center gap-2.5 border-b border-[#f0f0f0] px-5 pb-4 pt-5 sm:px-6">
                         <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-[#C6FF00]/25">
                             <svg className="h-3.5 w-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -484,10 +556,14 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                             </p>
                         </div>
                     </div>
-                    <ul className="divide-y divide-[#f5f5f7]">
+                    <ul className="">
                         {[
                             { key: 'pluginAnimeEnabled', label: 'Anime', desc: 'LifeSync Anime hub, rankings, and in-app playback.' },
                             { key: 'pluginMangaEnabled', label: 'Manga', desc: 'LifeSync Manga hub and reading list features.' },
+                            ...(prefs?.nsfwContentEnabled
+                                ? [{ key: 'pluginHManhwaEnabled', label: 'H manhwa', desc: 'Adult manhwa lane inside the anime media hub.' }]
+                                : []),
+                            { key: 'pluginCrackGamesEnabled', label: 'Crack games', desc: 'Crack status lane in the games hub and shortcuts.' },
                             ...(prefs?.nsfwContentEnabled
                                 ? [{ key: 'pluginHentaiEnabled', label: 'Hentai Ocean', desc: 'Adult catalog areas (requires NSFW content enabled).' }]
                                 : []),
@@ -498,7 +574,11 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                     ? 'LifeSync Anime hub, rankings, and in-app playback.'
                                     : key === 'pluginMangaEnabled'
                                       ? 'LifeSync Manga hub and reading list features.'
-                                      : 'Adult catalog areas (requires NSFW content enabled).'
+                                      : key === 'pluginHManhwaEnabled'
+                                          ? 'Adult manhwa lane inside the anime media hub.'
+                                          : key === 'pluginCrackGamesEnabled'
+                                              ? 'Crack status lane in the games hub and shortcuts.'
+                                              : 'Adult catalog areas (requires NSFW content enabled).'
                             return (
                                 <li key={key}>
                                     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">

@@ -23,10 +23,26 @@ const CAPABILITY_LABELS = {
     animeScheduleOAuth: 'AnimeSchedule OAuth',
     supabasePasswordless: 'Supabase passwordless',
     openXbl: 'OpenXBL',
-    crackwatch: 'Crackwatch',
-    hentaiOcean: 'HentaiOcean RSS',
+    gameSearch: 'GameSearch',
+    gameRantNews: 'GameRant news',
+    cheapShark: 'CheapShark',
+    watchHentai: 'WatchHentai',
     anitakuFallback: 'Anitaku fallback',
     mangaDistrict: 'Manga District',
+    hentaiFox: 'HentaiFox NSFW',
+}
+
+const HEALTH_CHECK_LABELS = {
+    mongoConnected: 'Mongo connected',
+    mongoPingOk: 'Mongo ping ok',
+    adminAllowlistConfigured: 'Admin allowlist configured',
+    supabasePasswordlessConfigured: 'Supabase passwordless configured',
+    steamWebApiConfigured: 'Steam Web API configured',
+    openXblConfigured: 'OpenXBL configured',
+    gameSearchEnabled: 'GameSearch enabled',
+    mangaDistrictEnabled: 'Manga District enabled',
+    hentaiFoxEnabled: 'HentaiFox enabled',
+    anitakuFallbackEnabled: 'Anitaku fallback enabled',
 }
 
 const V1_ADMIN_MODE = false
@@ -62,6 +78,11 @@ function formatUptime(totalSeconds) {
     if (d > 0) return `${d}d ${h}h ${m}m`
     if (h > 0) return `${h}h ${m}m`
     return `${m}m`
+}
+
+function formatBoolean(value) {
+    if (typeof value !== 'boolean') return '—'
+    return value ? 'true' : 'false'
 }
 
 function LinkPill({ label, active }) {
@@ -379,7 +400,7 @@ export default function LifeSyncAdmin() {
 
     return (
         <div className="mx-auto max-w-6xl px-2 pb-12 sm:px-0">
-            <div className="mb-6 rounded-2xl border border-[#e5e5ea] bg-linear-to-br from-white to-apple-bg/80 p-6 shadow-sm sm:p-8">
+            <div className="mb-6 rounded-2xl border border-[#e5e5ea] p-6 shadow-sm sm:p-8">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">Operator</p>
@@ -515,6 +536,8 @@ export default function LifeSyncAdmin() {
                             <MetricCard label="AnimeSchedule" value={m?.usersAnimeScheduleLinked} />
                             <MetricCard label="Tips opt-in" value={m?.engagementOptInUsers} />
                             <MetricCard label="NSFW pref on" value={m?.usersNsfwEnabled} />
+                            <MetricCard label="H manhwa plugin" value={m?.usersHManhwaPluginEnabled} />
+                            <MetricCard label="Crack plugin" value={m?.usersCrackGamesPluginEnabled} />
                             <MetricCard label="Users w/ anime rows" value={m?.usersWithAnimeWatchProgress} />
                             <MetricCard label="Users w/ manga rows" value={m?.usersWithMangaReadingProgress} />
                         </div>
@@ -543,8 +566,8 @@ export default function LifeSyncAdmin() {
                                 <dd className="mt-0.5">{s?.uptimeSeconds != null ? formatUptime(s.uptimeSeconds) : '—'}</dd>
                             </div>
                             <div>
-                                <dt className="text-apple-subtext">Mongo state</dt>
-                                <dd className="mt-0.5 font-mono">{health?.mongoReadyState ?? '—'}</dd>
+                                <dt className="text-apple-subtext">Mongo connected</dt>
+                                <dd className="mt-0.5 font-mono">{formatBoolean(health?.mongoConnected)}</dd>
                             </div>
                             <div>
                                 <dt className="text-apple-subtext">RSS / heap</dt>
@@ -563,7 +586,9 @@ export default function LifeSyncAdmin() {
                                     {health?.dbPingMs != null ? `${health.dbPingMs} ms` : '—'}
                                 </p>
                                 <p className="mt-1 text-[12px] text-apple-subtext">
-                                    Ready state <span className="font-mono">{health?.mongoReadyState ?? '—'}</span>
+                                    Mongo connected <span className="font-mono">{formatBoolean(health?.mongoConnected)}</span>
+                                    {' · '}
+                                    Ping ok <span className="font-mono">{formatBoolean(health?.mongoPingOk)}</span>
                                 </p>
                             </div>
                             <button
@@ -575,6 +600,24 @@ export default function LifeSyncAdmin() {
                                 {healthBusy ? 'Pinging…' : 'Run ping'}
                             </button>
                         </div>
+                    </Panel>
+
+                    <Panel>
+                        <SectionIntro title="Health checks">
+                            Boolean status checks from the health endpoint. Values are explicit true/false.
+                        </SectionIntro>
+                        {health?.checks && typeof health.checks === 'object' ? (
+                            <dl className="grid gap-3 text-[12px] sm:grid-cols-2">
+                                {Object.entries(health.checks).map(([key, value]) => (
+                                    <div key={key}>
+                                        <dt className="text-apple-subtext">{HEALTH_CHECK_LABELS[key] || key}</dt>
+                                        <dd className="mt-0.5 font-mono">{formatBoolean(value)}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        ) : (
+                            <p className="text-[12px] text-apple-subtext">Refresh health to load checks.</p>
+                        )}
                     </Panel>
 
                     <Panel>
@@ -662,7 +705,7 @@ export default function LifeSyncAdmin() {
                                         <th className="px-3 py-2">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[#f0f0f0] text-apple-text">
+                                <tbody className=" text-apple-text">
                                     {activityBusy && animeRows.length === 0 ? (
                                         <tr>
                                             <td colSpan={5} className="px-3 py-8 text-center text-apple-subtext">
@@ -757,7 +800,7 @@ export default function LifeSyncAdmin() {
                                         <th className="px-3 py-2">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[#f0f0f0] text-apple-text">
+                                <tbody className=" text-apple-text">
                                     {activityBusy && mangaRows.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="px-3 py-8 text-center text-apple-subtext">
@@ -937,7 +980,7 @@ export default function LifeSyncAdmin() {
                                         <th className="px-2 py-2" />
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-[#f0f0f0] text-apple-text">
+                                <tbody className=" text-apple-text">
                                     {recent.length === 0 ? (
                                         <tr>
                                             <td colSpan={6} className="px-3 py-8 text-center text-apple-subtext">

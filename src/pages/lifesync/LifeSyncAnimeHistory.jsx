@@ -260,23 +260,23 @@ export default function LifeSyncAnimeHistory() {
 
     return (
         <MotionDiv
-            className="relative min-w-0"
+            className="relative min-w-0 lifesync-anime-history"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={lifeSyncPageTransition}
         >
             <div
-                className="pointer-events-none absolute -left-32 top-0 h-[28rem] w-[28rem] rounded-full bg-gradient-to-br from-amber-200/35 via-lime-100/20 to-transparent blur-3xl"
+                className="lifesync-history-glow-a pointer-events-none absolute -left-32 top-0 h-[28rem] w-[28rem] rounded-full bg-gradient-to-br from-amber-200/35 via-lime-100/20 to-transparent blur-3xl"
                 aria-hidden
             />
             <div
-                className="pointer-events-none absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-gradient-to-tl from-lime-200/20 via-amber-100/20 to-transparent blur-3xl"
+                className="lifesync-history-glow-b pointer-events-none absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-gradient-to-tl from-lime-200/20 via-amber-100/20 to-transparent blur-3xl"
                 aria-hidden
             />
 
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
                 <aside className="lg:w-[min(100%,280px)] lg:shrink-0">
-                    <div className="sticky top-2 space-y-4 rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)] backdrop-blur-md ring-1 ring-white/60">
+                    <div className="lifesync-history-sidebar sticky top-2 space-y-4 rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-[0_8px_30px_-12px_rgba(21, 20, 24,0.12)] backdrop-blur-md ring-1 ring-white/60">
                         <div className="flex items-start gap-3">
                             <Link
                                 to="/dashboard/lifesync/anime"
@@ -301,19 +301,19 @@ export default function LifeSyncAnimeHistory() {
                         </p>
 
                         <div className="grid grid-cols-3 gap-2">
-                            <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white px-2 py-3 text-center ring-1 ring-slate-100">
+                            <div className="lifesync-history-stat-card lifesync-history-stat-neutral rounded-2xl bg-gradient-to-br from-slate-50 to-white px-2 py-3 text-center ring-1 ring-slate-100">
                                 <p className="text-[20px] font-black tabular-nums text-slate-900">
                                     {loading ? '…' : stats.total}
                                 </p>
                                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Saved</p>
                             </div>
-                            <div className="rounded-2xl bg-gradient-to-br from-lime-50 to-[#ecfccb] px-2 py-3 text-center ring-1 ring-lime-200/60">
+                            <div className="lifesync-history-stat-card lifesync-history-stat-active rounded-2xl bg-gradient-to-br from-lime-50 to-[#ecfccb] px-2 py-3 text-center ring-1 ring-lime-200/60">
                                 <p className="text-[20px] font-black tabular-nums text-slate-900">
                                     {loading ? '…' : stats.inProgress}
                                 </p>
                                 <p className="text-[9px] font-bold uppercase tracking-wide text-lime-900/70">Active</p>
                             </div>
-                            <div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/80 px-2 py-3 text-center ring-1 ring-emerald-200/50">
+                            <div className="lifesync-history-stat-card lifesync-history-stat-done rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/80 px-2 py-3 text-center ring-1 ring-emerald-200/50">
                                 <p className="text-[20px] font-black tabular-nums text-slate-900">
                                     {loading ? '…' : stats.complete}
                                 </p>
@@ -531,7 +531,7 @@ function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, slideVariants, tra
     return (
         <MotionDiv
             layout
-            className="relative overflow-visible rounded-3xl border border-amber-200/90 bg-white shadow-[0_12px_40px_-14px_rgba(180,140,60,0.18)] ring-1 ring-amber-100/60"
+            className="lifesync-history-spotlight relative overflow-visible rounded-3xl border border-amber-200/90 bg-white shadow-[0_12px_40px_-14px_rgba(180,140,60,0.18)] ring-1 ring-amber-100/60"
             variants={slideVariants}
             initial="initial"
             animate="animate"
@@ -672,7 +672,7 @@ function AnimeHistoryCard({ entry, onRemove, removeBusyKey }) {
     return (
         <MotionLi
             variants={lifeSyncStaggerItemFade}
-            className="group relative flex min-w-0 flex-col overflow-visible rounded-3xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.15)]"
+            className="lifesync-history-card group relative flex min-w-0 flex-col overflow-visible rounded-3xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-8px_rgba(21, 20, 24,0.15)]"
             whileHover={{ y: -4, transition: { type: 'tween', duration: 0.2, ease: lifeSyncEaseOut } }}
         >
             <div className="relative w-full">
@@ -725,7 +725,7 @@ function AnimeHistoryCard({ entry, onRemove, removeBusyKey }) {
             </div>
 
             <div
-                className={`relative flex flex-1 flex-col gap-1 border-t border-slate-100/90 bg-[linear-gradient(180deg,#fafaf9_0%,#ffffff_100%)] px-3 pb-3 pt-3 sm:gap-1.5 sm:px-4 sm:pb-4 sm:pt-4 ${complete ? 'pt-5 sm:pt-6' : ''}`}
+                className={`lifesync-history-card-body relative flex flex-1 flex-col gap-1 border-t border-slate-100/90 bg-[linear-gradient(180deg,#fafaf9_0%,#ffffff_100%)] px-3 pb-3 pt-3 sm:gap-1.5 sm:px-4 sm:pb-4 sm:pt-4 ${complete ? 'pt-5 sm:pt-6' : ''}`}
             >
                 <div className="relative pl-4">
                     <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-amber-400/80 via-slate-200 to-slate-200" />

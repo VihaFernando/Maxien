@@ -591,7 +591,7 @@ export default function Tasks() {
     const totalVisible = filteredTasks.length
 
     return (
-        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
+        <div className="lifesync-soft-borders mx-auto max-w-[1320px] animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
 
             <div className="mb-4 flex flex-col gap-2.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -776,7 +776,7 @@ export default function Tasks() {
             </div>
             {/* ── Create / Edit Modal ── */}
             {showTaskModal && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0f172a]/45 backdrop-blur-[3px]" onClick={() => { setShowTaskModal(false); setEditing(null) }}>
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#151418]/45 backdrop-blur-[3px]" onClick={() => { setShowTaskModal(false); setEditing(null) }}>
                     <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
                         <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
@@ -865,7 +865,7 @@ export default function Tasks() {
 
             {/* ── Task Details Modal ── */}
             {selectedTask && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0f172a]/45 backdrop-blur-[3px]" onClick={() => setSelectedTask(null)}>
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#151418]/45 backdrop-blur-[3px]" onClick={() => setSelectedTask(null)}>
                     <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
                         <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">

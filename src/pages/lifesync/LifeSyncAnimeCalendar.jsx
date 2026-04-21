@@ -671,7 +671,7 @@ export default function LifeSyncAnimeCalendar() {
 
     return (
       <MotionDiv
-        className="fixed inset-0 z-50 flex items-end justify-center bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.38),rgba(15,23,42,0.72))] backdrop-blur-sm sm:items-center sm:p-4"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-[radial-gradient(circle_at_top,rgba(21, 20, 24,0.38),rgba(21, 20, 24,0.72))] backdrop-blur-sm sm:items-center sm:p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -695,7 +695,7 @@ export default function LifeSyncAnimeCalendar() {
             <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#64748b]">
               Anime day schedule
             </p>
-            <h3 className="mt-1 pr-10 text-[19px] font-black tracking-tight text-[#0f172a] sm:text-[23px]">
+            <h3 className="mt-1 pr-10 text-[19px] font-black tracking-tight text-[#151418] sm:text-[23px]">
               {title}
             </h3>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
@@ -752,7 +752,7 @@ export default function LifeSyncAnimeCalendar() {
                 <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
                   Selected
                 </p>
-                <p className="mt-1 text-[13px] font-bold text-[#0f172a]">
+                <p className="mt-1 text-[13px] font-bold text-[#151418]">
                   {selectedDate.toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -762,11 +762,11 @@ export default function LifeSyncAnimeCalendar() {
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
                   <div className="rounded-xl bg-[#f8fafc] px-3 py-2 ring-1 ring-[#e2e8f0]">
                     <p className="text-[#64748b]">Episodes</p>
-                    <p className="mt-0.5 text-[17px] font-black text-[#0f172a]">{total}</p>
+                    <p className="mt-0.5 text-[17px] font-black text-[#151418]">{total}</p>
                   </div>
                   <div className="rounded-xl bg-[#f8fafc] px-3 py-2 ring-1 ring-[#e2e8f0]">
                     <p className="text-[#64748b]">Pinned</p>
-                    <p className="mt-0.5 text-[17px] font-black text-[#0f172a]">{pinnedTotal}</p>
+                    <p className="mt-0.5 text-[17px] font-black text-[#151418]">{pinnedTotal}</p>
                   </div>
                 </div>
               </div>
@@ -781,7 +781,7 @@ export default function LifeSyncAnimeCalendar() {
                     onClick={() => setFilterMode("all")}
                     className={`rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-colors ${
                       filterMode === "all"
-                        ? "bg-[#0f172a] text-white"
+                        ? "bg-[#151418] text-white"
                         : "bg-white text-[#334155] ring-1 ring-[#dbe4ef] hover:bg-[#f8fafc]"
                     }`}
                   >
@@ -835,7 +835,7 @@ export default function LifeSyncAnimeCalendar() {
                         className="rounded-xl border border-[#dbe4ef] bg-white px-3 py-2"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-[11px] font-semibold text-[#0f172a]">{it.title}</p>
+                          <p className="truncate text-[11px] font-semibold text-[#151418]">{it.title}</p>
                           <span className="rounded-full bg-[#C6FF00]/30 px-2 py-0.5 text-[10px] font-bold text-[#1e293b]">
                             P{it._priority}
                           </span>
@@ -877,7 +877,7 @@ export default function LifeSyncAnimeCalendar() {
                             onClick={() => setActiveKey(it._rowKey)}
                             className={`w-full rounded-2xl border p-4 text-left transition-all sm:p-5 ${
                               selected
-                                ? "border-[#0f172a]/20 bg-white shadow-md ring-2 ring-[#C6FF00]/40"
+                                ? "border-[#151418]/20 bg-white shadow-md ring-2 ring-[#C6FF00]/40"
                                 : it._isPinned
                                   ? "border-[#C6FF00]/50 bg-[linear-gradient(115deg,rgba(198,255,0,0.15),rgba(255,255,255,0.75))] hover:shadow-sm"
                                   : "border-[#dbe4ef] bg-white hover:shadow-sm"
@@ -898,7 +898,7 @@ export default function LifeSyncAnimeCalendar() {
                               </div>
 
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-[14px] font-black tracking-tight text-[#0f172a]">
+                                <p className="truncate text-[14px] font-black tracking-tight text-[#151418]">
                                   {it.title}
                                 </p>
 
@@ -971,7 +971,7 @@ export default function LifeSyncAnimeCalendar() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[14px] font-black tracking-tight text-[#0f172a] line-clamp-2">
+                        <p className="text-[14px] font-black tracking-tight text-[#151418] line-clamp-2">
                           {activeItem.title}
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
@@ -1013,7 +1013,7 @@ export default function LifeSyncAnimeCalendar() {
                           }
                           className={`inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition-colors ${
                             activeItem._isPinned
-                              ? "border-[#0f172a] bg-[#0f172a] text-white"
+                              ? "border-[#151418] bg-[#151418] text-white"
                               : "border-[#dbe4ef] bg-white text-[#334155] hover:bg-[#f8fafc]"
                           }`}
                         >

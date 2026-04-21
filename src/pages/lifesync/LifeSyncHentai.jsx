@@ -541,6 +541,9 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
         episodes,
         episodeCount: episodes.length,
     }
+    const isDarkTheme =
+        typeof document !== 'undefined' &&
+        document.documentElement?.dataset?.maxienTheme === 'dark'
 
     const node = (
         <MotionDiv
@@ -562,7 +565,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
             <MotionDiv
                 layout="size"
                 layoutRoot
-                className="relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+                className="lifesync-hentai-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
                 onClick={e => e.stopPropagation()}
                 initial={lifeSyncDetailSheetEnterInitial}
                 animate={lifeSyncDetailSheetEnterAnimate}
@@ -583,10 +586,10 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                                     className="w-full h-full object-cover opacity-65"
                                 />
                             </div>
-                            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white" />
+                            <div className="absolute inset-0 lifesync-detail-hero-fade" />
                         </>
                     )}
-                    {!heroBackground && <div className="absolute inset-0 bg-gradient-to-b from-[#1d1d1f] to-white" />}
+                    {!heroBackground && <div className="absolute inset-0 lifesync-detail-hero-fallback" />}
 
                     <button
                         type="button"
@@ -661,7 +664,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                     {(detailBusy || description) && (
                         <div className="px-5 sm:px-6 py-3 border-b border-[#f0f0f0]">
                             {detailBusy && !description ? (
-                                <LifesyncTextLinesSkeleton lines={4} />
+                                <LifesyncTextLinesSkeleton lines={4} dark={isDarkTheme} />
                             ) : (
                                 <>
                                     <p className={`text-[12px] leading-relaxed text-[#424245] ${descExpanded ? '' : 'line-clamp-3'}`}>
@@ -688,7 +691,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                             — tap to watch
                         </p>
                         {detailBusy ? (
-                            <LifesyncHentaiEpisodeGridSkeleton count={episodeSkeletonCount} />
+                            <LifesyncHentaiEpisodeGridSkeleton count={episodeSkeletonCount} dark={isDarkTheme} />
                         ) : (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {episodes.map((ep, i) => {

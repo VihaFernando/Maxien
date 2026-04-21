@@ -25,8 +25,8 @@ const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-ch
 const openSpotlight = () => window.dispatchEvent(new CustomEvent("maxien:open-command-palette"))
 
 const NAV_BASE = "flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
-const NAV_ACTIVE = "bg-[#C6FF00] text-[#1d1d1f] shadow-sm"
-const NAV_IDLE = "text-[#86868b] hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+const NAV_ACTIVE = "bg-[#C6FF00] text-black shadow-sm"
+const NAV_IDLE = "text-[var(--color-text-secondary)] hover:bg-[#f5f5f7] hover:text-[var(--color-text-primary)]"
 
 function SidebarLink({ to, icon: Icon, label, active, onClick }) {
     const iconNode = typeof Icon === "function" ? Icon({ className: "w-4 h-4" }) : null
@@ -90,6 +90,7 @@ export default function Dashboard() {
     const isLifeSyncRoute = location.pathname.startsWith("/dashboard/lifesync")
     const showLifeSyncSidebar = isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
     const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
+    const lifeSyncSidebarSceneClass = lifeSyncGamesActive || lifeSyncAnimeActive ? "dashboard-sidebar-scene" : ""
 
     const isProfileRoute = location.pathname === "/dashboard/profile"
 
@@ -105,6 +106,7 @@ export default function Dashboard() {
 
     const workplaceId = location.pathname.match(/\/workplaces\/([^/?]+)/)?.[1] || ""
     const currentTab = new URLSearchParams(location.search).get("tab") || "profile"
+    const isWorkplaceRoute = location.pathname.startsWith("/dashboard/workplaces")
     /** URL is source of truth on `/workplaces/:id`; avoid effect-driven setState sync. */
     // `workplaceId` can come from route params; fall back to last selection.
     // Kept inline where needed to avoid unused-var lint failures.
@@ -228,12 +230,12 @@ export default function Dashboard() {
 
     const renderWorkspaceSwitcher = () => (
         <div className="mb-4 rounded-2xl border border-[#e5e5ea] bg-[#fafafc] p-3">
-            <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2">Workspace</p>
+            <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">Workspace</p>
             <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-white p-1 border border-[#ececf1]">
                 <button
                     type="button"
                     onClick={() => handleWorkspaceModeChange("personal")}
-                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${!isWorkplaceMode ? "bg-[#C6FF00] text-[#1d1d1f]" : "text-[#86868b] hover:bg-[#f5f5f7]"
+                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${!isWorkplaceMode ? "bg-[#C6FF00] text-black" : "text-[var(--color-text-secondary)] hover:bg-[#f5f5f7]"
                         }`}
                 >
                     Personal
@@ -241,7 +243,7 @@ export default function Dashboard() {
                 <button
                     type="button"
                     onClick={() => handleWorkspaceModeChange("workplace")}
-                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${isWorkplaceMode ? "bg-[#C6FF00] text-[#1d1d1f]" : "text-[#86868b] hover:bg-[#f5f5f7]"
+                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${isWorkplaceMode ? "bg-[#C6FF00] text-black" : "text-[var(--color-text-secondary)] hover:bg-[#f5f5f7]"
                         }`}
                 >
                     Workplace
@@ -253,7 +255,7 @@ export default function Dashboard() {
                     <select
                         value={selectedWorkplaceId}
                         onChange={(e) => handleWorkplaceSelection(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5ea] rounded-xl px-3 py-2 text-[12px] font-semibold text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50"
+                        className="w-full bg-white border border-[#e5e5ea] rounded-xl px-3 py-2 text-[12px] font-semibold text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50"
                     >
                         {!workplaces.length && <option value="">No workplace yet</option>}
                         {workplaces.map((workplace) => (
@@ -262,7 +264,7 @@ export default function Dashboard() {
                     </select>
                     <Link
                         to="/dashboard/workplaces"
-                        className="text-[11px] font-semibold text-[#5f6368] hover:text-[#1d1d1f]"
+                        className="text-[11px] font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                     >
                         Manage workplaces
                     </Link>
@@ -348,28 +350,28 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f5f5f7] flex font-sans">
-            <aside className="w-[240px] hidden lg:flex flex-col bg-white border-r border-[#e5e5ea] sticky top-0 h-screen">
+        <div className={`min-h-screen flex font-sans ${isWorkplaceMode || isWorkplaceRoute ? "workplace-theme-surface" : ""}`}>
+            <aside className={`dashboard-sidebar-surface ${lifeSyncSidebarSceneClass} z-20 w-[240px] hidden lg:flex flex-col border-r sticky top-0 h-screen`}>
                 <div className="px-5 py-6 overflow-y-auto hide-scrollbar">
                     <div className="flex items-center gap-2.5 mb-5">
                         <div className="w-8 h-8 flex-shrink-0">
                             <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                         </div>
-                        <span className="text-[#1d1d1f] font-bold text-[16px] tracking-tight">Maxien</span>
+                        <span className="text-[var(--color-text-primary)] font-bold text-[16px] tracking-tight">Maxien</span>
                     </div>
 
                     {renderWorkspaceSwitcher()}
 
-                    <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">
+                    <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2 px-2">
                         {isWorkplaceMode ? "Workplace" : "Platform"}
                     </p>
                     {renderPlatformNav()}
 
                     {!isWorkplaceMode && showLifeSyncSidebar && (
                         <div className="mt-3">
-                            <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">LifeSync</p>
+                            <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2 px-2">LifeSync</p>
                             <nav className="space-y-0.5">
-                                {/* <SidebarLink to="/dashboard/lifesync/games" icon={FaGamepad} label="Games" active={lifeSyncGamesActive} /> */}
+                                <SidebarLink to="/dashboard/lifesync/games" icon={FaGamepad} label="Games" active={lifeSyncGamesActive} />
                                 {showLifeSyncAnimeLink && (
                                     <SidebarLink to="/dashboard/lifesync/anime" icon={FaFilm} label="Anime" active={lifeSyncAnimeActive} />
                                 )}
@@ -397,13 +399,13 @@ export default function Dashboard() {
                             {user?.user_metadata?.picture ? (
                                 <img src={user.user_metadata.picture} alt="Avatar" className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5" />
                             ) : (
-                                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[#1d1d1f] font-bold text-sm ring-1 ring-black/5">
+                                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[var(--color-text-primary)] font-bold text-sm ring-1 ring-black/5">
                                     {initials}
                                 </div>
                             )}
                             <div className="min-w-0">
-                                <p className="text-[12px] font-bold text-[#1d1d1f] truncate">{profileName}</p>
-                                <p className="text-[10px] font-medium text-[#86868b] truncate">{user?.email}</p>
+                                <p className="text-[12px] font-bold text-[var(--color-text-primary)] truncate">{profileName}</p>
+                                <p className="text-[10px] font-medium text-[var(--color-text-secondary)] truncate">{user?.email}</p>
                             </div>
                         </button>
                         <button
@@ -420,20 +422,20 @@ export default function Dashboard() {
                 <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
             )}
 
-            <aside className={`fixed left-0 top-0 h-full w-[240px] bg-white border-r border-[#e5e5ea] z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+            <aside className={`dashboard-sidebar-surface ${lifeSyncSidebarSceneClass} fixed left-0 top-0 h-full w-[240px] border-r z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 <div className="px-5 py-6 h-full flex flex-col overflow-y-auto hide-scrollbar">
                     <div className="flex items-center justify-between mb-5">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8">
                                 <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                             </div>
-                            <span className="text-[#1d1d1f] font-bold text-[16px] tracking-tight">Maxien</span>
+                            <span className="text-[var(--color-text-primary)] font-bold text-[16px] tracking-tight">Maxien</span>
                         </div>
                         <button
                             onClick={() => setSidebarOpen(false)}
                             className="p-1.5 hover:bg-[#f5f5f7] rounded-lg transition-colors"
                         >
-                            <svg className="w-5 h-5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
@@ -441,22 +443,22 @@ export default function Dashboard() {
 
                     {renderWorkspaceSwitcher()}
 
-                    <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">
+                    <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2 px-2">
                         {isWorkplaceMode ? "Workplace" : "Platform"}
                     </p>
                     <div className="flex-1">{renderPlatformNav(() => setSidebarOpen(false))}</div>
 
                     {!isWorkplaceMode && showLifeSyncSidebar && (
                         <div className="mt-3">
-                            <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2 px-2">LifeSync</p>
+                            <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2 px-2">LifeSync</p>
                             <nav className="space-y-0.5">
-                                {/* <SidebarLink
+                                <SidebarLink
                                     to="/dashboard/lifesync/games"
                                     icon={FaGamepad}
                                     label="Games"
                                     active={lifeSyncGamesActive}
                                     onClick={() => setSidebarOpen(false)}
-                                /> */}
+                                />
                                 {showLifeSyncAnimeLink && (
                                     <SidebarLink
                                         to="/dashboard/lifesync/anime"
@@ -490,13 +492,13 @@ export default function Dashboard() {
                                 {user?.user_metadata?.picture ? (
                                     <img src={user.user_metadata.picture} alt="Avatar" className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5" />
                                 ) : (
-                                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[#1d1d1f] font-bold text-sm ring-1 ring-black/5">
+                                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[var(--color-text-primary)] font-bold text-sm ring-1 ring-black/5">
                                         {initials}
                                     </div>
                                 )}
                                 <div className="min-w-0">
-                                    <p className="text-[12px] font-bold text-[#1d1d1f] truncate">{profileName}</p>
-                                    <p className="text-[10px] font-medium text-[#86868b] truncate">{user?.email}</p>
+                                    <p className="text-[12px] font-bold text-[var(--color-text-primary)] truncate">{profileName}</p>
+                                    <p className="text-[10px] font-medium text-[var(--color-text-secondary)] truncate">{user?.email}</p>
                                 </div>
                             </button>
                             <button
@@ -510,19 +512,19 @@ export default function Dashboard() {
                 </div>
             </aside>
 
-            <main className="flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
-                <header className="lg:hidden bg-white/90 backdrop-blur-md border-b border-[#d2d2d7] px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
+            <main className="relative isolate flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
+                <header className="dashboard-mobile-topbar lg:hidden backdrop-blur-md border-b px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 flex-shrink-0">
                             <img src="/logo.svg" alt="Maxien" className="w-full h-full" />
                         </div>
-                        <span className="text-[#1d1d1f] font-bold text-[15px] tracking-tight">Maxien</span>
+                        <span className="text-[var(--color-text-primary)] font-bold text-[15px] tracking-tight">Maxien</span>
                     </div>
                     <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-[#f5f5f7] rounded-xl transition-colors">
                         {user?.user_metadata?.picture ? (
                             <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
                         ) : (
-                            <div className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[#1d1d1f] font-bold text-xs ring-1 ring-black/5">
+                            <div className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-xs ring-1 ring-black/5">
                                 {initials}
                             </div>
                         )}

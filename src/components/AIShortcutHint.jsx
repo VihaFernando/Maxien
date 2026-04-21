@@ -74,7 +74,7 @@ export default function AIShortcutHint({ onOpen, onOpenSpotlight, onOpenLifeSync
 
     return (
         <div className="mb-3">
-            <div className="rounded-2xl bg-gradient-to-b from-white to-[#f0f4ff] border border-[#e2e8f5] shadow-sm p-4 text-center">
+            <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[linear-gradient(180deg,var(--color-surface)_0%,var(--color-surface-muted)_100%)] shadow-sm p-4 text-center">
 
                 <div className="relative min-h-[82px] overflow-hidden">
                     {hints.map((hint, index) => (
@@ -82,19 +82,19 @@ export default function AIShortcutHint({ onOpen, onOpenSpotlight, onOpenLifeSync
                             key={hint.id}
                             className={`absolute inset-0 transition-all duration-500 ${activeIndex === index ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1 pointer-events-none"}`}
                         >
-                            <p className="text-[13px] font-bold text-[#1a1f36] leading-snug mb-1.5">{hint.title}</p>
-                            <p className="text-[11px] text-[#6b7280] leading-relaxed mb-4">{hint.description}</p>
+                            <p className="mb-1.5 text-[13px] font-bold text-[var(--color-text-primary)] leading-snug">{hint.title}</p>
+                            <p className="mb-4 text-[11px] text-[var(--color-text-secondary)] leading-relaxed">{hint.description}</p>
                         </div>
                     ))}
                 </div>
 
                 <button
                     onClick={activeHint.onClick}
-                    className="w-full flex items-center justify-between bg-white hover:bg-[#f8faff] border border-[#dde3f0] hover:border-[#b8c4e8] rounded-full pl-1.5 pr-2.5 py-2 transition-all active:scale-[0.98] shadow-sm group"
+                    className="group flex w-full items-center justify-between rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface)] py-2 pl-1.5 pr-2.5 shadow-sm transition-all active:scale-[0.98] hover:bg-[var(--color-surface-muted)]"
                 >
                     <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                        <ActiveIcon className="w-3.5 h-3.5 text-[#9ca3af] group-hover:text-[#4f5882] transition-colors flex-shrink-0" />
-                        <span className="truncate text-[11px] font-semibold text-[#4f5882] group-hover:text-[#1a1f36] transition-colors">
+                        <ActiveIcon className="h-3.5 w-3.5 flex-shrink-0 text-[var(--color-text-secondary)] transition-colors group-hover:text-[var(--color-text-primary)]" />
+                        <span className="truncate text-[11px] font-semibold text-[var(--color-text-primary)] transition-colors">
                             {activeHint.actionLabel}
                         </span>
                     </div>
@@ -103,11 +103,11 @@ export default function AIShortcutHint({ onOpen, onOpenSpotlight, onOpenLifeSync
                         <div className="ml-2 flex shrink-0 items-center gap-0.5">
                             {activeHint.shortcutParts.map((key, i) => (
                                 <span key={i} className="flex items-center">
-                                    <kbd className="inline-flex items-center justify-center h-[17px] min-w-[17px] px-1 bg-[#eef1f8] border border-[#d2d8ea] rounded-[4px] text-[9px] font-bold text-[#4f5882] shadow-[0_1px_0_#c8cedf] leading-none">
+                                    <kbd className="inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[4px] border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] px-1 text-[9px] font-bold leading-none text-[var(--color-text-primary)] shadow-[0_1px_0_var(--color-border-soft)]">
                                         {key}
                                     </kbd>
                                     {i < activeHint.shortcutParts.length - 1 && (
-                                        <span className="text-[9px] text-[#9ca3af] mx-0.5 font-medium">+</span>
+                                        <span className="mx-0.5 text-[9px] font-medium text-[var(--color-text-secondary)]">+</span>
                                     )}
                                 </span>
                             ))}

@@ -22,6 +22,12 @@ import GithubCallback from './pages/GithubCallback'
 import Github from './pages/Github'
 import LifeSyncOAuthCallback from './pages/lifesync/LifeSyncOAuthCallback'
 import LifeSyncSteam from './pages/lifesync/LifeSyncSteam'
+import LifeSyncGameRant from './pages/lifesync/LifeSyncGameRant'
+import LifeSyncGameDeals from './pages/lifesync/LifeSyncGameDeals'
+import LifeSyncGameRantArticle from './pages/lifesync/LifeSyncGameRantArticle'
+import LifeSyncGameSearch from './pages/lifesync/LifeSyncGameSearch'
+import LifeSyncGameReleases from './pages/lifesync/LifeSyncGameReleases'
+import LifeSyncGameCrackStatus from './pages/lifesync/LifeSyncGameCrackStatus'
 import LifeSyncWishlist from './pages/lifesync/LifeSyncWishlist'
 import LifeSyncXbox from './pages/lifesync/LifeSyncXbox'
 import LifeSyncAnime from './pages/lifesync/LifeSyncAnime'
@@ -66,6 +72,12 @@ function App() {
             <Route path="github" element={<Github />} />
             <Route path="lifesync/games" element={<LifeSyncGamesHub />} />
             <Route path="lifesync/games/steam/*" element={<LifeSyncSteam />} />
+            <Route path="lifesync/games/gamerant" element={<LifeSyncGameRant />} />
+            <Route path="lifesync/games/deals" element={<LifeSyncGameDeals />} />
+            <Route path="lifesync/games/gamerant/news/:slug" element={<LifeSyncGameRantArticle />} />
+            <Route path="lifesync/games/search" element={<LifeSyncGameSearch />} />
+            <Route path="lifesync/games/releases" element={<LifeSyncGameReleases />} />
+            <Route path="lifesync/games/crack-status" element={<LifeSyncGameCrackStatus />} />
             <Route path="lifesync/games/wishlist/*" element={<LifeSyncWishlist />} />
             <Route path="lifesync/games/xbox/*" element={<LifeSyncXbox />} />
             <Route path="lifesync/anime" element={<LifeSyncAnimeMediaLayout />}>

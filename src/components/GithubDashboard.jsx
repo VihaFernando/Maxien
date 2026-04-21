@@ -437,9 +437,9 @@ export default function GithubDashboard() {
                                             </a>
                                         )}
                                     </div>
-                                    <div className="divide-y divide-[#f5f5f7] overflow-y-auto" style={{ maxHeight: "272px" }}>
+                                    <div className=" overflow-y-auto" style={{ maxHeight: "272px" }}>
                                         {ghRepos.map(repo => (
-                                            <div key={repo.id} className="px-5 sm:px-6 py-3.5 hover:bg-[#fafafa] transition-colors">
+                                            <div key={repo.id} className="px-5 sm:px-6 py-3.5 transition-colors">
                                                 <div className="flex items-start gap-2">
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -511,12 +511,12 @@ export default function GithubDashboard() {
                                             </div>
                                         </div>
                                     ) : (
-                                        <div className="divide-y divide-[#f5f5f7] lg:flex-1 lg:overflow-y-auto">
+                                        <div className="lg:flex-1 lg:overflow-y-auto">
                                             {filteredIssues.map(issue => (
                                                 <a
                                                     key={issue.id}
                                                     href={issue.html_url} target="_blank" rel="noreferrer"
-                                                    className="px-5 sm:px-6 py-3.5 flex items-start gap-3 hover:bg-[#fafafa] transition-colors group"
+                                                    className="px-5 sm:px-6 py-3.5 flex items-start gap-3 transition-colors group"
                                                 >
                                                     <div className="w-5 h-5 rounded-full border-2 border-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
                                                         <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -584,12 +584,12 @@ export default function GithubDashboard() {
                                         <p className="text-[11px] text-[#d2d2d7] mt-1">Try selecting a different repository</p>
                                     </div>
                                 ) : (
-                                    <div className="divide-y divide-[#f5f5f7]">
+                                    <div className="">
                                         {filteredCommits.slice(0, 8).map((c, i) => (
                                             <a
                                                 key={`${c.sha}-${i}`}
                                                 href={c.html_url} target="_blank" rel="noreferrer"
-                                                className="px-5 sm:px-6 py-3.5 flex items-start gap-3 hover:bg-[#fafafa] transition-colors group"
+                                                className="px-5 sm:px-6 py-3.5 flex items-start gap-3 transition-colors group"
                                             >
                                                 <div className="w-7 h-7 rounded-full bg-[#f5f5f7] border border-[#e5e5ea] overflow-hidden flex-shrink-0 mt-0.5">
                                                     {c.author?.avatar_url

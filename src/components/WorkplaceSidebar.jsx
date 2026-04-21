@@ -15,7 +15,7 @@ export default function WorkplaceSidebar({ workplaceName, activeTab, setActiveTa
         <aside className="lg:sticky lg:top-20 lg:h-fit">
             <div>
                 <div className="mb-2 px-1">
-                    <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest">{workplaceName || "Workplace"}</p>
+                    <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest">{workplaceName || "Workplace"}</p>
                 </div>
                 <div className="overflow-x-auto pb-1 -mx-1 px-1 lg:mx-0 lg:px-0">
                     <div className="inline-flex min-w-full gap-2 lg:flex lg:flex-col lg:min-w-0">
@@ -28,8 +28,8 @@ export default function WorkplaceSidebar({ workplaceName, activeTab, setActiveTa
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap border transition-colors ${isActive
-                                        ? "bg-[#C6FF00] border-[#c3f700] text-[#1d1d1f]"
-                                        : "bg-white border-[#e5e5ea] text-[#4b4b4f]"
+                                        ? "bg-[#C6FF00] border-[#c3f700] text-black"
+                                        : "bg-white border-[#e5e5ea] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                                         }`}
                                 >
                                     <Icon className="w-3.5 h-3.5" />

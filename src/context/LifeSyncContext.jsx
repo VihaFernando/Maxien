@@ -4,12 +4,14 @@ import {
     useContext,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './AuthContext'
 import {
     getLifesyncToken,
+    lifesyncFetch,
     lifesyncGetMe,
     lifesyncLogin as apiLogin,
     lifesyncLoginWithSupabase,
@@ -22,11 +24,16 @@ import {
     notifyReduceMotionPreferenceChanged,
     writeStoredReduceAnimationsSetting,
 } from '../lib/lifeSyncReduceMotion'
+import {
+    notifyAppThemePreferenceChanged,
+    writeStoredAppThemePreference,
+} from '../lib/appTheme'
 import { lifeSyncQueryKeys } from '../lib/lifeSyncQueryKeys'
 import { connectLifeSyncUserBroadcastSocket } from '../lib/lifeSyncUserBroadcastSocket'
 
 const LifeSyncContext = createContext(null)
 const LIFESYNC_USER_SNAPSHOT_KEY = 'maxien_lifesync_user_snapshot_v1'
+const STEAM_STATUS_CACHE_TTL_MS = 8 * 60_000
 
 function readLifeSyncUserSnapshot() {
     try {
@@ -63,6 +70,22 @@ export function LifeSyncProvider({ children }) {
     const [lifeSyncTokenClears, setLifeSyncTokenClears] = useState(0)
     /** Server broadcast (operators → all connected LifeSync clients). */
     const [lifeSyncBroadcast, setLifeSyncBroadcast] = useState(null)
+    /** Shared Steam status snapshot for game pages (cached + de-duped in context). */
+    const [lifeSyncSteamProfile, setLifeSyncSteamProfile] = useState(null)
+    const steamStatusCacheRef = useRef({
+        fetchedAtMs: 0,
+        data: null,
+        promise: null,
+    })
+
+    const clearSteamStatusCache = useCallback(() => {
+        steamStatusCacheRef.current = {
+            fetchedAtMs: 0,
+            data: null,
+            promise: null,
+        }
+        setLifeSyncSteamProfile(null)
+    }, [])
 
     const clearLifeSyncQueries = useCallback(() => {
         queryClient.removeQueries({ queryKey: lifeSyncQueryKeys.root })
@@ -95,6 +118,7 @@ export function LifeSyncProvider({ children }) {
         const token = getLifesyncToken()
         if (!token) {
             setLifeSyncUser(null)
+            clearSteamStatusCache()
             syncLifeSyncUserQuery(null)
             clearLifeSyncQueries()
             setLoading(false)
@@ -116,6 +140,7 @@ export function LifeSyncProvider({ children }) {
             if (e.status === 401 || e.status === 404) {
                 setLifesyncToken(null)
                 setLifeSyncUser(null)
+                clearSteamStatusCache()
                 syncLifeSyncUserQuery(null)
                 clearLifeSyncQueries()
                 setLifeSyncTokenClears((n) => n + 1)
@@ -125,11 +150,75 @@ export function LifeSyncProvider({ children }) {
         } finally {
             setLoading(false)
         }
-    }, [clearLifeSyncQueries, syncLifeSyncUserQuery])
+    }, [clearLifeSyncQueries, clearSteamStatusCache, syncLifeSyncUserQuery])
+
+    const refreshSteamProfile = useCallback(async ({ force = false } = {}) => {
+        const token = getLifesyncToken()
+        if (!token) {
+            clearSteamStatusCache()
+            return null
+        }
+
+        const now = Date.now()
+        const cached = steamStatusCacheRef.current
+        if (!force && cached.data && now - cached.fetchedAtMs < STEAM_STATUS_CACHE_TTL_MS) {
+            setLifeSyncSteamProfile(cached.data)
+            return cached.data
+        }
+
+        if (!force && cached.promise) {
+            return cached.promise
+        }
+
+        const request = lifesyncFetch('/api/v1/steam/status?view=compact', { method: 'GET' })
+            .then((status) => {
+                const normalized = status && typeof status === 'object'
+                    ? {
+                        steamLinked: Boolean(status.steamLinked || status?.profile?.steamId),
+                        steamWebApiConfigured: Boolean(status.steamWebApiConfigured),
+                        profile: status?.profile && typeof status.profile === 'object' ? status.profile : null,
+                    }
+                    : {
+                        steamLinked: false,
+                        steamWebApiConfigured: false,
+                        profile: null,
+                    }
+
+                steamStatusCacheRef.current = {
+                    fetchedAtMs: Date.now(),
+                    data: normalized,
+                    promise: null,
+                }
+                setLifeSyncSteamProfile(normalized)
+                return normalized
+            })
+            .catch((error) => {
+                steamStatusCacheRef.current.promise = null
+                throw error
+            })
+
+        steamStatusCacheRef.current.promise = request
+        return request
+    }, [clearSteamStatusCache])
 
     useEffect(() => {
         writeLifeSyncUserSnapshot(lifeSyncUser)
     }, [lifeSyncUser])
+
+    useEffect(() => {
+        const hasSteamLinked = Boolean(lifeSyncUser?.integrations?.steam || lifeSyncUser?.integrations?.steamId)
+        if (!lifeSyncUser?.id || !hasSteamLinked) {
+            clearSteamStatusCache()
+            return
+        }
+        void refreshSteamProfile().catch(() => {})
+    }, [
+        lifeSyncUser?.id,
+        lifeSyncUser?.integrations?.steam,
+        lifeSyncUser?.integrations?.steamId,
+        clearSteamStatusCache,
+        refreshSteamProfile,
+    ])
 
     /** Hydrate from a LifeSync JWT already in storage (mount only). */
     useEffect(() => {
@@ -289,12 +378,13 @@ export function LifeSyncProvider({ children }) {
     const logout = useCallback(() => {
         setLifesyncToken(null)
         setLifeSyncUser(null)
+        clearSteamStatusCache()
         syncLifeSyncUserQuery(null)
         clearLifeSyncQueries()
         setLastError(null)
         setLifeSyncBroadcast(null)
         setLifeSyncTokenClears((n) => n + 1)
-    }, [clearLifeSyncQueries, syncLifeSyncUserQuery])
+    }, [clearLifeSyncQueries, clearSteamStatusCache, syncLifeSyncUserQuery])
 
     const dismissLifeSyncBroadcast = useCallback(() => {
         setLifeSyncBroadcast(null)
@@ -355,6 +445,10 @@ export function LifeSyncProvider({ children }) {
             writeStoredReduceAnimationsSetting(partial.reduceAnimations)
             notifyReduceMotionPreferenceChanged()
         }
+        if (typeof partial.appTheme === 'string') {
+            writeStoredAppThemePreference(partial.appTheme)
+            notifyAppThemePreferenceChanged()
+        }
         try {
             const data = await lifesyncPatchPreferences(partial)
             await refreshMe()
@@ -386,6 +480,8 @@ export function LifeSyncProvider({ children }) {
             lifeSyncLogout: logout,
             lifeSyncUpdatePlugins: updatePlugins,
             lifeSyncUpdatePreferences: updatePreferences,
+            lifeSyncSteamProfile,
+            refreshLifeSyncSteamProfile: refreshSteamProfile,
             isLifeSyncConnected: Boolean(lifeSyncUser),
             lifeSyncBroadcast,
             dismissLifeSyncBroadcast,
@@ -403,6 +499,8 @@ export function LifeSyncProvider({ children }) {
             logout,
             updatePlugins,
             updatePreferences,
+            lifeSyncSteamProfile,
+            refreshSteamProfile,
             lifeSyncBroadcast,
             dismissLifeSyncBroadcast,
         ]

@@ -572,10 +572,10 @@ export default function WorkplaceTasks({
                         <option value="assigned">Assigned to me</option>
                     </select>
                     <div className="flex items-center gap-1 bg-[#f5f5f7] rounded-lg p-1">
-                        <button onClick={() => setViewMode("list")} className={`px-3 py-2 rounded transition-colors text-[13px] font-medium ${viewMode === "list" ? "bg-white text-[#1d1d1f] shadow-sm" : "text-[#86868b] hover:text-[#1d1d1f]"}`} title="List view">
+                        <button onClick={() => setViewMode("list")} className={`px-3 py-2 rounded-lg transition-colors text-[13px] font-medium ${viewMode === "list" ? "bg-white text-[#1d1d1f] shadow-sm" : "text-[#86868b] hover:text-[#1d1d1f]"}`} title="List view">
                             List
                         </button>
-                        <button onClick={() => setViewMode("board")} className={`px-3 py-2 rounded transition-colors text-[13px] font-medium ${viewMode === "board" ? "bg-white text-[#1d1d1f] shadow-sm" : "text-[#86868b] hover:text-[#1d1d1f]"}`} title="Board view">
+                        <button onClick={() => setViewMode("board")} className={`px-3 py-2 rounded-lg transition-colors text-[13px] font-medium ${viewMode === "board" ? "bg-white text-[#1d1d1f] shadow-sm" : "text-[#86868b] hover:text-[#1d1d1f]"}`} title="Board view">
                             Board
                         </button>
                     </div>

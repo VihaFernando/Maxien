@@ -116,13 +116,15 @@ function buildReadingQuery(filters) {
     return params.toString()
 }
 
-export function filterMangaReadingByNsfw(entries, nsfwEnabled) {
-    if (nsfwEnabled) return entries
+export function filterMangaReadingByNsfw(entries, nsfwEnabled, hManhwaEnabled = true) {
+    if (nsfwEnabled && hManhwaEnabled) return entries
     return entries.filter((entry) => {
-        if (entry.source === 'mangadistrict') return false
+        if (entry.source === 'mangadistrict') return Boolean(nsfwEnabled && hManhwaEnabled)
         if (entry.source === 'mangadex') {
-            const cr = entry.contentRating
-            if (cr && MD_NSFW_RATINGS.has(String(cr))) return false
+            if (!nsfwEnabled) {
+                const cr = entry.contentRating
+                if (cr && MD_NSFW_RATINGS.has(String(cr))) return false
+            }
             return true
         }
         return true
@@ -147,6 +149,7 @@ function applyLocalPatch(entry, patch) {
  * @param {{
  *   enabled: boolean,
  *   nsfwEnabled: boolean,
+ *   hManhwaEnabled?: boolean,
  *   filters: {
  *     q?: string, source?: string, status?: string, updateState?: string,
  *     sortBy?: string, order?: 'asc'|'desc', page?: number, limit?: number,
@@ -154,7 +157,7 @@ function applyLocalPatch(entry, patch) {
  *   }
  * }} opts
  */
-export function useMangaReadingList({ enabled, nsfwEnabled, filters }) {
+export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = true, filters }) {
     const [entries, setEntries] = useState([])
     const [summary, setSummary] = useState(EMPTY_SUMMARY)
     const [totalSummary, setTotalSummary] = useState(EMPTY_SUMMARY)
@@ -292,7 +295,10 @@ export function useMangaReadingList({ enabled, nsfwEnabled, filters }) {
         [refresh],
     )
 
-    const visibleEntries = useMemo(() => filterMangaReadingByNsfw(entries, nsfwEnabled), [entries, nsfwEnabled])
+    const visibleEntries = useMemo(
+        () => filterMangaReadingByNsfw(entries, nsfwEnabled, hManhwaEnabled),
+        [entries, hManhwaEnabled, nsfwEnabled],
+    )
     const visibleSummary = useMemo(() => summarizeEntries(visibleEntries), [visibleEntries])
 
     return {

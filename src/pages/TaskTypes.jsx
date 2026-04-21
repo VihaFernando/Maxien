@@ -260,7 +260,7 @@ export default function TaskTypes() {
             </div>
 
             {showForm && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#0f172a]/45 backdrop-blur-[3px]" onClick={() => { resetForm(); setShowForm(false) }}>
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#151418]/45 backdrop-blur-[3px]" onClick={() => { resetForm(); setShowForm(false) }}>
                     <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
                         <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">

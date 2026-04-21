@@ -2,7 +2,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { lifesyncFetch } from '../../lib/lifesyncApi'
+import { isLifeSyncHManhwaVisible, lifesyncFetch } from '../../lib/lifesyncApi'
 import {
     LifesyncChapterPagesSkeleton,
     LifesyncEpisodeThumbnail,
@@ -779,6 +779,12 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
     const ratingNum = rating != null ? Number(rating) : null
     const showRating = ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0
     const cleanDesc = d.description ? String(d.description).replace(/<[^>]*>/g, '') : ''
+    const isDarkTheme =
+        typeof document !== 'undefined' &&
+        document.documentElement?.dataset?.maxienTheme === 'dark'
+    const heroFadeClass = blurDetailHero
+        ? 'absolute inset-0 lifesync-detail-hero-fade-soft'
+        : 'absolute inset-0 lifesync-detail-hero-fade-strong'
 
     return createPortal(
         <MotionDiv
@@ -801,7 +807,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
             <MotionDiv
                 layout="size"
                 layoutRoot
-                className="relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
+                className="lifesync-manga-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
                 onClick={e => e.stopPropagation()}
                 initial={lifeSyncDetailSheetEnterInitial}
                 animate={lifeSyncDetailSheetEnterAnimate}
@@ -825,15 +831,11 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                 />
                             </div>
                             <div
-                                className={
-                                    blurDetailHero
-                                        ? 'absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white'
-                                        : 'absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-white'
-                                }
+                                className={heroFadeClass}
                             />
                         </>
                     )}
-                    {!heroBackdropUrl && <div className="absolute inset-0 bg-gradient-to-b from-[#ddd6fe]/35 to-white" />}
+                    {!heroBackdropUrl && <div className="absolute inset-0 lifesync-detail-hero-fallback" />}
 
                     {/* Close button */}
                     <button
@@ -1006,7 +1008,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                         {/* Description */}
                         {cleanDesc && (
                             <div>
-                                <p className={`text-[13px] text-[#3a3a3c] leading-relaxed ${descExpanded ? '' : 'line-clamp-3'}`}>
+                                <p className={`text-[13px] leading-relaxed ${descExpanded ? '' : 'line-clamp-3'}`}>
                                     {cleanDesc}
                                 </p>
                                 {cleanDesc.length > 200 && (
@@ -1026,7 +1028,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                         <select
                                             value={chapterLang}
                                             onChange={e => setChapterLang(e.target.value)}
-                                            className="max-w-[200px] rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1 text-[11px] font-medium text-[#1d1d1f]"
+                                            className="max-w-[200px] rounded-lg px-2 py-1 text-[11px] font-medium text-[#1d1d1f]"
                                         >
                                             {chapterLangOptions.map(o => (
                                                 <option key={o.value} value={o.value}>{o.label}</option>
@@ -1034,7 +1036,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                         </select>
                                     )}
                                     <div
-                                        className="flex rounded-lg border border-[#e5e5ea] bg-[#fafafa] p-0.5"
+                                        className="flex rounded-lg p-0.5"
                                         role="group"
                                         aria-label="Chapter list order"
                                     >
@@ -1043,8 +1045,8 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                             onClick={() => setChapterOrder('asc')}
                                             className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
                                                 chapterOrder === 'asc'
-                                                    ? 'bg-white text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea]'
-                                                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                                                    ? 'bg-white text-[#1d1d1f] shadow-sm'
+                                                    : 'text-[#86868b]'
                                             }`}
                                         >
                                             First → last
@@ -1054,8 +1056,8 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                             onClick={() => setChapterOrder('desc')}
                                             className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
                                                 chapterOrder === 'desc'
-                                                    ? 'bg-white text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea]'
-                                                    : 'text-[#86868b] hover:text-[#1d1d1f]'
+                                                    ? 'bg-white text-[#1d1d1f] shadow-sm'
+                                                    : 'text-[#86868b] '
                                             }`}
                                         >
                                             Last → first
@@ -1098,7 +1100,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                 )}
                             </div>
                             {chapBusy ? (
-                                <LifesyncMangaChapterListSkeleton rows={8} />
+                                <LifesyncMangaChapterListSkeleton rows={8} dark={isDarkTheme} />
                             ) : chaptersInSeriesOrder.length === 0 ? (
                                 <div className="rounded-xl bg-[#f5f5f7] px-4 py-6 text-center">
                                     <p className="text-[12px] text-[#86868b]">
@@ -1108,16 +1110,16 @@ function MangaDetail({ manga, onClose, source, onStartRead, mangadexConnected, b
                                     </p>
                                 </div>
                             ) : (
-                                <div className="overflow-hidden rounded-xl border border-[#e5e5ea]">
-                                    <ul className="max-h-80 divide-y divide-[#f0f0f0] overflow-y-auto">
+                                <div className="overflow-hidden rounded-xl">
+                                    <ul className="max-h-80 overflow-y-auto">
                                         {displayChapters.map(ch => (
                                             <li key={ch.id}>
                                                 <button
                                                     type="button"
                                                     onClick={() => onStartRead(mergedManga, ch)}
-                                                    className="group flex w-full items-center gap-3 px-3.5 py-2.5 text-left transition-colors hover:bg-[#f5f5f7]"
+                                                    className="group flex w-full items-center gap-3 px-3.5 py-2.5 text-left"
                                                 >
-                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#f5f5f7] text-[10px] font-bold text-[#86868b] transition-colors group-hover:bg-[#C6FF00]/20 group-hover:text-[#1d1d1f]">
+                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-[#86868b] transition-colors group-hover:bg-[#C6FF00]/20 group-hover:text-[#1d1d1f]">
                                                         {chapterSeriesIndex(ch) || '—'}
                                                     </span>
                                                     <span className="flex-1 min-w-0">
@@ -1181,6 +1183,7 @@ export default function LifeSyncManga() {
     const { isLifeSyncConnected, lifeSyncLoading, lifeSyncUser, lifeSyncUpdatePreferences } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
     const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
+    const hManhwaEnabled = isLifeSyncHManhwaVisible(prefs)
     /** Synced from LifeSync viewing preferences (default on when unset). */
     const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false
 
@@ -1211,11 +1214,11 @@ export default function LifeSyncManga() {
         s => {
             const next = String(s || '').trim()
             const src =
-                next === 'mangadistrict' ? next : 'mangadex'
+                next === 'mangadistrict' && hManhwaEnabled ? next : 'mangadex'
             const t = src === 'mangadex' ? 'popular' : 'latest'
             navigate(`${basePath}/${src}/${t}/page/1${location.search || ''}`)
         },
-        [basePath, location.search, navigate]
+        [basePath, hManhwaEnabled, location.search, navigate]
     )
 
     const goToTab = useCallback(
@@ -1451,10 +1454,10 @@ export default function LifeSyncManga() {
             const preferredResumePercent = openLatest ? 0 : Number(entry?.lastReadPercent || 0)
 
             if (
-                !nsfwEnabled &&
+                !hManhwaEnabled &&
                 entry.source === 'mangadistrict'
             ) {
-                setError('Enable NSFW content in LifeSync preferences to open this title.')
+                setError('Enable NSFW content and the H manhwa plugin in LifeSync preferences to open this title.')
                 return
             }
             if (
@@ -1511,7 +1514,7 @@ export default function LifeSyncManga() {
         } catch (e) {
             setError(e.message || 'Could not resume reading')
         }
-    }, [goToRead, nsfwEnabled])
+    }, [goToRead, hManhwaEnabled, nsfwEnabled])
 
     useEffect(() => {
         if (source === 'mangadex' && tab === 'reading') setTab('popular')
@@ -1539,9 +1542,12 @@ export default function LifeSyncManga() {
     }, [isLifeSyncConnected])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || !nsfwEnabled) return
+        if (!isLifeSyncConnected || !hManhwaEnabled) {
+            setMdStatus(null)
+            return
+        }
         lifesyncFetch('/api/v1/manga/mangadistrict/status?view=compact').then(setMdStatus).catch(() => setMdStatus({ configured: false }))
-    }, [isLifeSyncConnected, nsfwEnabled])
+    }, [hManhwaEnabled, isLifeSyncConnected])
 
     useEffect(() => {
         if (source !== 'mangadex' || (tab !== 'following' && tab !== 'library')) return
@@ -1551,24 +1557,24 @@ export default function LifeSyncManga() {
     /** Keep URL and NSFW policy aligned. Only `setSource` caused a fight with route sync on hard refresh (URL still MD → sync set MD again → repeat). */
     useEffect(() => {
         if (lifeSyncLoading || !isLifeSyncConnected) return
-        if (nsfwEnabled) return
+        if (hManhwaEnabled) return
         if (route.src !== 'mangadistrict') return
         navigate(`${basePath}/mangadex/popular/page/1${location.search || ''}`, { replace: true })
     }, [
         basePath,
+        hManhwaEnabled,
         isLifeSyncConnected,
         lifeSyncLoading,
         location.search,
         navigate,
-        nsfwEnabled,
         route.src,
     ])
 
     useEffect(() => {
-        if (nsfwEnabled) return
+        if (hManhwaEnabled) return
         const nsfwSrc = m => m?.source === 'mangadistrict'
         if (selectedManga && nsfwSrc(selectedManga)) setSelectedManga(null)
-    }, [nsfwEnabled, selectedManga])
+    }, [hManhwaEnabled, selectedManga])
 
     useEffect(() => {
         if (nsfwEnabled) return
@@ -1815,7 +1821,7 @@ export default function LifeSyncManga() {
     // Manga District latest — single effect + generation guard so order-by / section / page changes never apply stale responses
     useEffect(() => {
         if (!isLifeSyncConnected || lifeSyncLoading) return
-        if (source !== 'mangadistrict') return
+        if (!hManhwaEnabled || source !== 'mangadistrict') return
         if (mdFilter.trim()) {
             mdLatestFetchGenRef.current += 1
             return
@@ -1841,6 +1847,7 @@ export default function LifeSyncManga() {
         })()
     }, [
         isLifeSyncConnected,
+        hManhwaEnabled,
         lifeSyncLoading,
         source,
         mdFilter,
@@ -1853,7 +1860,7 @@ export default function LifeSyncManga() {
 
     useEffect(() => {
         if (!isLifeSyncConnected || lifeSyncLoading) return
-        if (source !== 'mangadistrict') return
+        if (!hManhwaEnabled || source !== 'mangadistrict') return
         const q = mdFilter.trim()
         if (!q) {
             mdSearchFetchGenRef.current += 1
@@ -1879,7 +1886,7 @@ export default function LifeSyncManga() {
         return () => {
             clearTimeout(t)
         }
-    }, [isLifeSyncConnected, lifeSyncLoading, source, mdFilter])
+    }, [isLifeSyncConnected, hManhwaEnabled, lifeSyncLoading, source, mdFilter])
 
     function handleDexSearch(e) {
         e.preventDefault()
@@ -1906,7 +1913,7 @@ export default function LifeSyncManga() {
             const src = srcParam || source
             if (!id) return
             const gen = ++mangaDetailEnrichGenRef.current
-            if (!nsfwEnabled && src === 'mangadistrict') return
+            if (!hManhwaEnabled && src === 'mangadistrict') return
             setError('')
             try {
                 if (src === 'mangadistrict') {
@@ -1935,7 +1942,7 @@ export default function LifeSyncManga() {
                 setError(e.message || 'Could not open manga')
             }
         },
-        [nsfwEnabled, source]
+        [hManhwaEnabled, source]
     )
 
     const routeDetailKey = useRef(null)
@@ -1976,10 +1983,6 @@ export default function LifeSyncManga() {
             setSelectedManga(null)
         }
     }, [enrichSelectedManga, location.state?.mangaDetailPreview, route.detailMangaId, route.src])
-
-    function switchSource(s) {
-        goToSource(s)
-    }
 
     function handleStartRead(mergedManga, chapter) {
         if (!mergedManga?.id || !chapter?.id) return
@@ -2067,7 +2070,6 @@ export default function LifeSyncManga() {
         dexContentRatings,
     ])
 
-    const sourceChoices = useMemo(() => SOURCES.filter(s => !s.nsfw || nsfwEnabled), [nsfwEnabled])
 
     const currentItems = useMemo(() => {
         if (source === 'mangadex') {
@@ -2200,7 +2202,7 @@ export default function LifeSyncManga() {
             {error && <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{error}</div>}
 
             {/* Source selector — NSFW sources omitted entirely when NSFW is disabled in LifeSync preferences */}
-            {sourceChoices.length > 1 && (
+            {/* {sourceChoices.length > 1 && (
                 <LifeSyncSectionNav
                     ariaLabel="Manga source"
                     layoutId="lifesync-manga-source"
@@ -2211,7 +2213,7 @@ export default function LifeSyncManga() {
                     activeId={source}
                     onSelect={(id) => switchSource(id)}
                 />
-            )}
+            )} */}
 
             {/* Search & filters toolbar (shared layout across sources) */}
             {source === 'mangadex' && (
@@ -2242,7 +2244,7 @@ export default function LifeSyncManga() {
                             <button
                                 type="button"
                                 onClick={() => resetDexFilters()}
-                                className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[#e5e5ea] bg-white px-3 py-2.5 text-[13px] font-semibold text-[#86868b] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[#e5e5ea] bg-white px-3 py-2.5 text-[13px] font-semibold text-[#86868b] hover:text-[#1d1d1f]"
                             >
                                 Reset
                             </button>
@@ -2262,7 +2264,7 @@ export default function LifeSyncManga() {
                                     key={`cr-${id}`}
                                     type="button"
                                     onClick={() => toggleDexContentRating(id)}
-                                    className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea] transition hover:bg-[#f5f5f7]"
+                                    className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea] transition "
                                     title="Toggle content rating filter"
                                 >
                                     {id}
@@ -2273,7 +2275,7 @@ export default function LifeSyncManga() {
                                 <button
                                     type="button"
                                     onClick={() => setDexYear('')}
-                                    className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea] transition hover:bg-[#f5f5f7]"
+                                    className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea] transition"
                                 >
                                     Year: {String(dexYear).trim()} <span className="text-[#86868b]">×</span>
                                 </button>
@@ -2282,7 +2284,7 @@ export default function LifeSyncManga() {
                                 <button
                                     type="button"
                                     onClick={() => void lifeSyncUpdatePreferences({ mangaEnglishReleasesOnly: true }).then(() => setDexTranslatedLang('en'))}
-                                    className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea] transition hover:bg-[#f5f5f7]"
+                                    className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1d1d1f] shadow-sm ring-1 ring-[#e5e5ea] transition "
                                 >
                                     Any translation <span className="text-[#86868b]">×</span>
                                 </button>
@@ -2319,7 +2321,7 @@ export default function LifeSyncManga() {
                                                 <button
                                                     type="button"
                                                     onClick={() => resetDexFilters()}
-                                                    className="inline-flex items-center justify-center rounded-xl border border-[#e5e5ea] bg-white px-3 py-2 text-[12px] font-semibold text-[#86868b] transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+                                                    className="inline-flex items-center justify-center rounded-xl border border-[#e5e5ea] bg-white px-3 py-2 text-[12px] font-semibold text-[#86868b] transition-colors hover:text-[#1d1d1f]"
                                                 >
                                                     Reset
                                                 </button>

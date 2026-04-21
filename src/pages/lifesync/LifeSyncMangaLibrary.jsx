@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { FaBookOpen, FaChevronLeft, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTrashAlt } from 'react-icons/fa'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
+import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
 import { mangadexImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 import { LifesyncEpisodeThumbnail, LifesyncMediaLibraryPageSkeleton } from '../../components/lifesync/EpisodeLoadingSkeletons'
@@ -372,6 +372,7 @@ export default function LifeSyncMangaLibrary() {
     const prefs = lifeSyncUser?.preferences
     const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
     const mangaPluginOn = isPluginEnabled(prefs, 'pluginMangaEnabled')
+    const hManhwaEnabled = isLifeSyncHManhwaVisible(prefs)
     const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false
     const browseTranslatedLang = mangaEnglishReleasesOnly ? 'en' : 'all'
 
@@ -393,6 +394,11 @@ export default function LifeSyncMangaLibrary() {
 
     const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, entry: null })
 
+    const sourceOptions = useMemo(() => {
+        if (hManhwaEnabled) return SOURCE_OPTIONS
+        return SOURCE_OPTIONS.filter((opt) => opt.id !== 'mangadistrict')
+    }, [hManhwaEnabled])
+
     useEffect(() => {
         if (!isLifeSyncConnected) {
             navigate('/dashboard/profile?tab=integrations', { replace: true })
@@ -407,6 +413,12 @@ export default function LifeSyncMangaLibrary() {
     useEffect(() => {
         setPage(1)
     }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, limit])
+
+    useEffect(() => {
+        if (!hManhwaEnabled && sourceFilter === 'mangadistrict') {
+            setSourceFilter('all')
+        }
+    }, [hManhwaEnabled, sourceFilter])
 
     const listFilters = useMemo(
         () => ({
@@ -438,6 +450,7 @@ export default function LifeSyncMangaLibrary() {
     } = useMangaReadingList({
         enabled: isLifeSyncConnected && mangaPluginOn,
         nsfwEnabled,
+        hManhwaEnabled,
         filters: listFilters,
     })
 
@@ -471,7 +484,7 @@ export default function LifeSyncMangaLibrary() {
         [selectedKeys, selectableEntries],
     )
 
-    const nsfwHiddenCount = Math.max(0, listEntries.length - visibleEntries.length)
+    const hiddenByPreferencesCount = Math.max(0, listEntries.length - visibleEntries.length)
 
     const anyRefreshing = refreshing
 
@@ -718,7 +731,7 @@ export default function LifeSyncMangaLibrary() {
                         onChange={(event) => setSourceFilter(event.target.value)}
                         className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
                     >
-                        {SOURCE_OPTIONS.map((opt) => (
+                        {sourceOptions.map((opt) => (
                             <option key={opt.id} value={opt.id}>
                                 {opt.label}
                             </option>
@@ -777,9 +790,9 @@ export default function LifeSyncMangaLibrary() {
                         <option value="36">36 per page</option>
                         <option value="48">48 per page</option>
                     </select>
-                    {nsfwHiddenCount > 0 ? (
+                    {hiddenByPreferencesCount > 0 ? (
                         <span className="ml-auto rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-800">
-                            {nsfwHiddenCount} NSFW hidden
+                            {hiddenByPreferencesCount} hidden by preferences
                         </span>
                     ) : null}
                 </div>

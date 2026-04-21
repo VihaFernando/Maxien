@@ -8,7 +8,7 @@ const CANCELED_STATUSES = new Set(["canceled", "cancelled"])
 
 function StatCard({ label, value, accent = "#1d1d1f" }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[#e8e8ed] bg-gradient-to-br from-white via-white to-[#f8fafc] p-4 shadow-[0_8px_30px_rgba(15,23,42,0.05)]">
+    <div className="relative overflow-hidden rounded-2xl border border-[#e8e8ed] bg-gradient-to-br from-white via-white to-[#f8fafc] p-4 shadow-[0_8px_30px_rgba(21, 20, 24,0.05)]">
       <div className="pointer-events-none absolute -right-7 -top-7 h-20 w-20 rounded-full opacity-15" style={{ backgroundColor: accent }} />
       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#86868b]">{label}</p>
       <p className="mt-1.5 text-[26px] font-bold leading-none" style={{ color: accent }}>{value}</p>
@@ -182,7 +182,7 @@ export default function WorkplaceAnalytics({
 
   return (
     <div className="animate-in fade-in duration-500">
-      <div className="mb-6 rounded-[26px] border border-[#e8e8ed] bg-[radial-gradient(120%_120%_at_100%_0%,#eef4ff_0%,#ffffff_45%,#ffffff_100%)] p-5 sm:p-6 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+      <div className="mb-6 rounded-[26px] border border-[#e8e8ed] bg-[radial-gradient(120%_120%_at_100%_0%,#eef4ff_0%,#ffffff_45%,#ffffff_100%)] p-5 sm:p-6 shadow-[0_14px_36px_rgba(21, 20, 24,0.05)]">
         <p className="text-[10px] font-bold text-[#7a8392] uppercase tracking-[0.2em] mb-3">Workplace Intelligence</p>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
@@ -223,7 +223,7 @@ export default function WorkplaceAnalytics({
         <StatCard label="Overdue" value={baseSummary.overdue} accent="#ef4444" />
       </div>
 
-      <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 mb-6 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+      <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 mb-6 shadow-[0_8px_24px_rgba(21, 20, 24,0.04)]">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[13px] font-bold text-[#1d1d1f] inline-flex items-center gap-2.5">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#eef2ff] text-[#4f46e5]">
@@ -237,12 +237,12 @@ export default function WorkplaceAnalytics({
       </div>
 
       {loading ? (
-        <div className="rounded-2xl border border-[#e8e8ed] bg-white p-10 text-center text-[13px] text-[#7a8392] shadow-[0_8px_24px_rgba(15,23,42,0.04)]">Loading analytics...</div>
+        <div className="rounded-2xl border border-[#e8e8ed] bg-white p-10 text-center text-[13px] text-[#7a8392] shadow-[0_8px_24px_rgba(21, 20, 24,0.04)]">Loading analytics...</div>
       ) : (
         <>
           {isAdmin && scope === "company" && (
             <>
-              <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 mb-6 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+              <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 mb-6 shadow-[0_8px_24px_rgba(21, 20, 24,0.04)]">
                 <h3 className="text-[14px] font-bold text-[#1d1d1f] mb-4 inline-flex items-center gap-2.5">
                   <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#ecfeff] text-[#0f766e]">
                     <FaUsers className="w-3.5 h-3.5" />
@@ -272,7 +272,7 @@ export default function WorkplaceAnalytics({
               </div>
 
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">
-                <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 shadow-[0_8px_24px_rgba(21, 20, 24,0.04)]">
                   <h3 className="text-[14px] font-bold text-[#1d1d1f] mb-4 inline-flex items-center gap-2.5">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#eff6ff] text-[#1d4ed8]">
                       <FaFolderOpen className="w-3.5 h-3.5" />
@@ -293,7 +293,7 @@ export default function WorkplaceAnalytics({
                   )}
                 </div>
 
-                <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 shadow-[0_8px_24px_rgba(21, 20, 24,0.04)]">
                   <h3 className="text-[14px] font-bold text-[#1d1d1f] mb-4 inline-flex items-center gap-2.5">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#f0fdf4] text-[#15803d]">
                       <FaBuilding className="w-3.5 h-3.5" />
@@ -320,7 +320,7 @@ export default function WorkplaceAnalytics({
             </>
           )}
 
-          <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+          <div className="rounded-2xl border border-[#e8e8ed] bg-white p-5 shadow-[0_8px_24px_rgba(21, 20, 24,0.04)]">
             <h3 className="text-[14px] font-bold text-[#1d1d1f] mb-4 inline-flex items-center gap-2.5">
               <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[#fff7ed] text-[#c2410c]">
                 <FaClock className="w-3.5 h-3.5" />

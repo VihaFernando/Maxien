@@ -107,17 +107,42 @@ function remapToV1Path(path) {
     }
 
     // Steam v1 routes
-    if (pathname === '/api/steam/sync-games') {
-        return '/api/v1/steam/sync' + suffix
-    }
     if (
         pathname === '/api/steam/status' ||
-        pathname === '/api/steam/games' ||
         pathname === '/api/steam/store' ||
         pathname === '/api/steam/news' ||
-        pathname === '/api/steam/sync'
+        pathname === '/api/steam/link'
     ) {
         return pathname.replace('/api/steam', '/api/v1/steam') + suffix
+    }
+
+    // GameRant v1 routes
+    if (
+        pathname === '/api/gamerant/gaming-news' ||
+        pathname.startsWith('/api/gamerant/gaming-news/')
+    ) {
+        return pathname.replace('/api/gamerant', '/api/v1/gamerant') + suffix
+    }
+
+    // CheapShark v1 routes
+    if (
+        pathname === '/api/cheapshark/stores' ||
+        pathname === '/api/cheapshark/deals'
+    ) {
+        return pathname.replace('/api/cheapshark', '/api/v1/cheapshark') + suffix
+    }
+
+    // GameSearch v1 routes
+    if (pathname.startsWith('/api/gamesearch/')) {
+        return pathname.replace('/api/gamesearch', '/api/v1/gamesearch') + suffix
+    }
+
+    // Wishlist v1 routes
+    if (
+        pathname === '/api/wishlist' ||
+        pathname.startsWith('/api/wishlist/')
+    ) {
+        return pathname.replace('/api/wishlist', '/api/v1/wishlist') + suffix
     }
 
     return path
@@ -141,7 +166,7 @@ export function setLifesyncToken(token) {
 }
 
 /**
- * @param {'steam'|'mal'|'animeschedule'} provider
+ * @param {'mal'|'animeschedule'} provider
  * @returns {string|null} URL or null if not logged in to LifeSync
  */
 export function lifesyncOAuthStartUrl(provider) {
@@ -277,11 +302,22 @@ export function isLifeSyncHentaiHubVisible(prefs) {
     return isPluginEnabled(prefs, 'pluginHentaiEnabled') && Boolean(prefs?.nsfwContentEnabled)
 }
 
+/** H manhwa visibility inside anime/manga hubs requires NSFW + plugin enabled. */
+export function isLifeSyncHManhwaVisible(prefs) {
+    return isPluginEnabled(prefs, 'pluginHManhwaEnabled') && Boolean(prefs?.nsfwContentEnabled)
+}
+
+/** Crack games plugin controls crack search/status lanes. */
+export function isLifeSyncCrackGamesVisible(prefs) {
+    return isPluginEnabled(prefs, 'pluginCrackGamesEnabled')
+}
+
 /** Any anime hub destination (sidebar / hub tiles) should appear. */
 export function isLifeSyncAnimeNavVisible(prefs) {
     return (
         isPluginEnabled(prefs, 'pluginAnimeEnabled') ||
         isPluginEnabled(prefs, 'pluginMangaEnabled') ||
+        isLifeSyncHManhwaVisible(prefs) ||
         isLifeSyncHentaiHubVisible(prefs)
     )
 }

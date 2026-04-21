@@ -109,7 +109,7 @@ export default function WorkplaceDetail() {
 
   if (!workplace && !loading && !error) {
     return (
-      <div className="max-w-[1200px] mx-auto">
+      <div className="workplace-theme-surface max-w-[1200px] mx-auto">
         <div className="bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-6">
           <p className="text-[14px] font-bold text-[#1d1d1f]">Workplace not available</p>
           <p className="text-[12px] text-[#86868b] mt-1">
@@ -121,7 +121,7 @@ export default function WorkplaceDetail() {
   }
 
   return (
-    <div className="animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-10">
+    <div className="workplace-theme-surface animate-in fade-in duration-500 max-w-[1400px] mx-auto pb-10">
       {/* Top Error/Message Alerts */}
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-xl text-[13px]">
@@ -256,4 +256,3 @@ export default function WorkplaceDetail() {
     </div>
   )
 }
-

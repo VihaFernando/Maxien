@@ -6,8 +6,6 @@ import { LifeSyncHubPageShell } from '../../components/lifesync/LifeSyncHubPageS
 import { lifeSyncPageTransition, MotionDiv } from '../../lib/lifesyncMotion'
 
 const OAUTH_MESSAGES = {
-    steam_ok: { type: 'success', text: 'Steam linked successfully!', redirect: '/dashboard/lifesync/games/steam' },
-    steam_error: { type: 'error', text: 'Steam OAuth failed. Check server configuration and try again.', redirect: '/dashboard/lifesync/games/steam' },
     mal_ok: { type: 'success', text: 'MyAnimeList linked successfully!', redirect: '/dashboard/lifesync/anime/anime' },
     mal_error: { type: 'error', text: 'MyAnimeList OAuth failed. Make sure MAL_CLIENT_ID is configured.', redirect: '/dashboard/lifesync/anime/anime' },
     animeschedule_ok: { type: 'success', text: 'AnimeSchedule linked successfully!', redirect: '/dashboard/profile?tab=integrations' },

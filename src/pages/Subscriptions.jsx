@@ -509,7 +509,7 @@ export default function Subscriptions() {
             <div className="fixed inset-0 z-[130] bg-black/35 backdrop-blur-sm p-2 sm:p-4 lg:hidden" onClick={closeMobileOverlay}>
                 <div className="flex min-h-full items-center justify-center">
                     <div
-                        className="w-full max-w-[440px] max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-2xl border border-[#d2d2d7]/60 bg-white p-3.5 shadow-[0_18px_48px_rgba(17,24,39,0.2)] sm:max-h-[calc(100dvh-2rem)]"
+                        className="lifesync-soft-borders w-full max-w-[440px] max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-2xl border border-[#d2d2d7]/60 bg-white p-3.5 shadow-[0_18px_48px_rgba(17,24,39,0.2)] sm:max-h-[calc(100dvh-2rem)]"
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className="mb-2.5 flex items-center justify-between">
@@ -532,7 +532,7 @@ export default function Subscriptions() {
         : null
 
     return (
-        <div className="animate-in fade-in duration-500 w-full">
+        <div className="lifesync-soft-borders animate-in fade-in duration-500 w-full">
             <div className="mx-auto max-w-[1160px] space-y-4 px-0.5 sm:space-y-5">
                 <div className="rounded-2xl border border-[#e7e7ec] bg-white px-4 py-3.5 shadow-sm sm:px-5 sm:py-4.5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

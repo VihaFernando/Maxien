@@ -8,6 +8,10 @@ const MANGA_PROGRESS_QUEUE_KEY = 'lifesync:manga-progress-queue:v1'
 const MANGA_PROGRESS_LOCAL_SAVE_MS = 8000
 const MANGA_PROGRESS_FLUSH_BATCH = 16
 const MANGA_PROGRESS_SOURCES = new Set(['mangadex', 'mangadistrict', 'hentaifox'])
+const MANGA_READER_INITIAL_PAGE_BURST = 4
+const MANGA_READER_PRELOAD_BEFORE = 2
+const MANGA_READER_PRELOAD_AFTER = 4
+const MANGA_READER_DEFAULT_PAGE_ASPECT = 0.68
 
 function compareChapters(a, b) {
     const av = a?.volume != null && a.volume !== '' ? Number(a.volume) : null
@@ -195,6 +199,17 @@ function LifesyncChapterPagesSkeleton() {
     )
 }
 
+function addPageWindow(windowSet, centerIndex, total, before = MANGA_READER_PRELOAD_BEFORE, after = MANGA_READER_PRELOAD_AFTER) {
+    if (!(total > 0)) return
+    const center = Number(centerIndex)
+    if (!Number.isFinite(center)) return
+    const start = Math.max(0, Math.floor(center) - Math.max(0, Number(before) || 0))
+    const end = Math.min(total - 1, Math.floor(center) + Math.max(0, Number(after) || 0))
+    for (let i = start; i <= end; i += 1) {
+        windowSet.add(i)
+    }
+}
+
 export default function LifeSyncMangaRead() {
     const { mangaId: mangaIdParam, chapterId: chapterIdParam } = useParams()
     const location = useLocation()
@@ -284,9 +299,12 @@ export default function LifeSyncMangaRead() {
 
     const scrollRef = useRef(null)
     const pagesInnerRef = useRef(null)
+    const pageSlotRefs = useRef([])
     const scrollRafRef = useRef(null)
 
     const [dexAuthStatus, setDexAuthStatus] = useState(null)
+    const [activatedPageIndexes, setActivatedPageIndexes] = useState(() => new Set())
+    const [pageAspectRatio, setPageAspectRatio] = useState(MANGA_READER_DEFAULT_PAGE_ASPECT)
     const mdReadSyncTimer = useRef(null)
     const mdReadingStatusSent = useRef(new Set())
     const resumeRestoreKeyRef = useRef('')
@@ -598,6 +616,90 @@ export default function LifeSyncMangaRead() {
     const urls = useMemo(() => (pack?.pages?.length ? pack.pages : []), [pack])
     const zoomScale = useMemo(() => Math.min(2, Math.max(0.5, Number(zoomPct) / 100)), [zoomPct])
 
+    const resumeTargetPageIndex = useMemo(() => {
+        if (!urls.length || !resumeChapterId || String(chapter?.id || '') !== resumeChapterId) return 0
+        if (!(resumePercent > 0 && resumePercent < 100)) return 0
+        const maxIdx = Math.max(0, urls.length - 1)
+        const idx = Math.round((resumePercent / 100) * maxIdx)
+        return Math.min(maxIdx, Math.max(0, idx))
+    }, [chapter?.id, resumeChapterId, resumePercent, urls.length])
+
+    useEffect(() => {
+        pageSlotRefs.current = []
+    }, [chapter?.id, urls.length])
+
+    useEffect(() => {
+        if (!urls.length) {
+            setActivatedPageIndexes(new Set())
+            return
+        }
+        const next = new Set()
+        for (let i = 0; i < Math.min(urls.length, MANGA_READER_INITIAL_PAGE_BURST); i += 1) {
+            next.add(i)
+        }
+        addPageWindow(next, resumeTargetPageIndex, urls.length)
+        setActivatedPageIndexes(next)
+    }, [chapter?.id, resumeTargetPageIndex, urls.length])
+
+    useEffect(() => {
+        if (loadingPages || !urls.length) return
+        const root = scrollRef.current
+        if (!root) return
+        if (typeof IntersectionObserver === 'undefined') {
+            const all = new Set()
+            for (let i = 0; i < urls.length; i += 1) {
+                all.add(i)
+            }
+            setActivatedPageIndexes(all)
+            return
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                setActivatedPageIndexes(prev => {
+                    const next = new Set(prev)
+                    let changed = false
+                    for (const entry of entries) {
+                        if (!entry.isIntersecting) continue
+                        const idx = Number(entry.target.getAttribute('data-page-index'))
+                        if (!Number.isFinite(idx)) continue
+                        const beforeCount = next.size
+                        addPageWindow(next, idx, urls.length)
+                        if (next.size !== beforeCount) changed = true
+                    }
+                    return changed ? next : prev
+                })
+            },
+            {
+                root,
+                rootMargin: '180% 0px 180% 0px',
+                threshold: 0.01,
+            },
+        )
+
+        for (const el of pageSlotRefs.current) {
+            if (el) observer.observe(el)
+        }
+
+        return () => {
+            observer.disconnect()
+        }
+    }, [chapter?.id, loadingPages, urls.length])
+
+    const onPageImageLoad = useCallback((event) => {
+        scheduleProgressUpdate()
+        const img = event?.currentTarget
+        const w = Number(img?.naturalWidth || 0)
+        const h = Number(img?.naturalHeight || 0)
+        if (!(w > 0 && h > 0)) return
+        const ratio = Math.min(1.2, Math.max(0.45, w / h))
+        setPageAspectRatio(prev => {
+            const base = Number(prev)
+            if (!Number.isFinite(base) || base <= 0) return ratio
+            return Math.round((base * 0.85 + ratio * 0.15) * 1000) / 1000
+        })
+    }, [scheduleProgressUpdate])
+
     useEffect(() => {
         if (loadingPages) return
         scheduleProgressUpdate()
@@ -863,18 +965,33 @@ export default function LifeSyncMangaRead() {
                     style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top center' }}
                 >
                     {urls.map((src, i) => (
-                        <img
+                        <div
                             key={`${chapter?.id || 'ch'}-${i}`}
-                            src={src}
-                            alt={`Page ${i + 1}`}
-                            className="w-full bg-black"
-                            loading="eager"
-                            decoding="async"
-                            onLoad={() => {
-                                scheduleProgressUpdate()
+                            ref={(el) => {
+                                pageSlotRefs.current[i] = el || null
                             }}
-                            {...mangadexImageProps(src)}
-                        />
+                            data-page-index={i}
+                            className="w-full bg-black"
+                        >
+                            {activatedPageIndexes.has(i) ? (
+                                <img
+                                    src={src}
+                                    alt={`Page ${i + 1}`}
+                                    className="w-full bg-black"
+                                    loading={i < MANGA_READER_INITIAL_PAGE_BURST ? 'eager' : 'lazy'}
+                                    fetchPriority={i < MANGA_READER_INITIAL_PAGE_BURST ? 'high' : 'low'}
+                                    decoding="async"
+                                    onLoad={onPageImageLoad}
+                                    {...mangadexImageProps(src)}
+                                />
+                            ) : (
+                                <div
+                                    className="w-full animate-pulse bg-white/5"
+                                    style={{ aspectRatio: String(pageAspectRatio) }}
+                                    aria-hidden
+                                />
+                            )}
+                        </div>
                     ))}
                 </div>
             </div>

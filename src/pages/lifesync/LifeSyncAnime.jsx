@@ -1,7 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { DetailWatchGridSkeleton } from "../../components/lifesync/EpisodeLoadingSkeletons";
+import {
+  DetailWatchGridSkeleton,
+  LifesyncTextLinesSkeleton,
+} from "../../components/lifesync/EpisodeLoadingSkeletons";
 import { LifeSyncSectionNav } from "../../components/lifesync/LifeSyncSectionNav";
 import { useLifeSync } from "../../context/LifeSyncContext";
 import {
@@ -462,9 +465,12 @@ function DetailWatchSection({
 
   const episodeGridClass =
     "grid grid-cols-2 gap-2 sm:grid-cols-3";
+  const isDarkTheme =
+    typeof document !== "undefined" &&
+    document.documentElement?.dataset?.maxienTheme === "dark";
 
   return (
-    <div className="border-t border-[#e5e5ea] pt-4 space-y-3">
+    <div className=" pt-4 space-y-3">
       <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b]">
         Watch
       </p>
@@ -477,7 +483,7 @@ function DetailWatchSection({
             exit={{ opacity: 0, y: -8 }}
             transition={lifeSyncEpisodeBlockPresenceTransition}
           >
-            <DetailWatchGridSkeleton count={6} />
+            <DetailWatchGridSkeleton count={6} dark={isDarkTheme} />
           </MotionDiv>
         ) : (
           <MotionDiv
@@ -735,6 +741,9 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
   const genres = Array.isArray(data?.genres) ? data.genres : [];
   const showPreviewMeta = busy && preview && !data;
   const malUrl = animeId ? `https://myanimelist.net/anime/${encodeURIComponent(String(animeId))}` : null;
+  const isDarkTheme =
+    typeof document !== "undefined" &&
+    document.documentElement?.dataset?.maxienTheme === "dark";
 
   const node = (
     <MotionDiv
@@ -756,7 +765,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
       <MotionDiv
         layout="size"
         layoutRoot
-        className="relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+        className="lifesync-anime-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         initial={lifeSyncDetailSheetEnterInitial}
         animate={lifeSyncDetailSheetEnterAnimate}
@@ -774,10 +783,10 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                   className="h-full w-full object-cover"
                 />
               </div>
-              <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-white" />
+              <div className="absolute inset-0 lifesync-detail-hero-fade" />
             </>
           ) : (
-            <div className="absolute inset-0 bg-gradient-to-b from-[#1d1d1f]/30 via-[#f5f5f7]/35 to-white" />
+            <div className="absolute inset-0 lifesync-detail-hero-fallback" />
           )}
 
           <button
@@ -1012,7 +1021,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
             </MotionDiv>
           ) : !busy && !data ? (
             <div className="px-5 py-8 sm:px-6">
-              <div className="rounded-2xl border border-[#e5e5ea] bg-[#fafafa] px-4 py-5 text-center">
+              <div className="lifesync-detail-status-card rounded-2xl  bg-[#fafafa] px-4 py-5 text-center">
                 <p className="text-[13px] font-semibold text-[#1d1d1f]">
                   Couldn’t load this title
                 </p>
@@ -1023,7 +1032,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                   <button
                     type="button"
                     onClick={triggerReload}
-                    className="min-h-[40px] rounded-xl bg-[#C6FF00] px-4 text-[12px] font-bold text-[#1a1628] shadow-sm ring-1 ring-black/10 transition hover:brightness-95"
+                    className="min-h-[40px] rounded-xl bg-[#C6FF00] px-4 text-[12px] font-bold text-[#1a1628] shadow-sm"
                   >
                     Try again
                   </button>
@@ -1042,17 +1051,15 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
             </div>
           ) : busy ? (
             <div className="px-5 py-6 sm:px-6">
-              <div className="rounded-2xl border border-[#e5e5ea] bg-white px-4 py-5">
+              <div className="lifesync-detail-status-card rounded-2xl bg-white px-4 py-5">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-[#86868b]">
                   Loading details
                 </p>
-                <div className="mt-3 space-y-2">
-                  <div className="h-3 w-3/4 animate-pulse rounded bg-[#ebebed]" />
-                  <div className="h-3 w-full animate-pulse rounded bg-[#ebebed]" />
-                  <div className="h-3 w-5/6 animate-pulse rounded bg-[#ebebed]" />
+                <div className="mt-3">
+                  <LifesyncTextLinesSkeleton lines={3} dark={isDarkTheme} />
                 </div>
                 <div className="mt-4">
-                  <DetailWatchGridSkeleton count={6} />
+                  <DetailWatchGridSkeleton count={6} dark={isDarkTheme} />
                 </div>
               </div>
             </div>
@@ -1851,7 +1858,7 @@ export default function LifeSyncAnime() {
                 key={opt.id}
                 type="button"
                 onClick={() => setSeasonalSeason(opt.id)}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${
+                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
                   seasonalSeason === opt.id
                     ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
                     : "bg-white text-[#86868b] border-[#e5e5ea] hover:text-[#1d1d1f] hover:border-[#d2d2d7]"

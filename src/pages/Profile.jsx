@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "../context/AuthContext"
 import { useLifeSync } from "../context/LifeSyncContext"
 import { supabase } from "../lib/supabase"
@@ -10,6 +10,28 @@ import {
     notifyReduceMotionPreferenceChanged,
     writeStoredReduceAnimationsSetting,
 } from "../lib/lifeSyncReduceMotion"
+import {
+    getAppThemePreference,
+    normalizeAppThemePreference,
+    notifyAppThemePreferenceChanged,
+    resolveAppTheme,
+    writeStoredAppThemePreference,
+} from "../lib/appTheme"
+import {
+    ANIME_BACKGROUND_MODES,
+    ANIME_STOCK_IMAGE_POOL,
+    ANIME_STOCK_VIDEO_POOL,
+    DEFAULT_BACKGROUND_POSITION,
+    GAMES_BACKGROUND_MODES,
+    GAMES_STOCK_IMAGE_POOL,
+    GAMES_STOCK_VIDEO_POOL,
+    normalizeBackgroundPosition,
+    normalizeAnimeBackgroundMode,
+    normalizeGamesBackgroundMode,
+    pickDeterministicFromPool,
+    resolveBackgroundVideoSource,
+    sanitizeBackgroundUrl,
+} from "../lib/lifeSyncBackgroundPrefs"
 import {
     engagementNotificationsSupported,
     readPwaEngagementNotificationsEnabled,
@@ -50,9 +72,190 @@ const LANG_COLORS = {
     Shell: "#89e051", Vue: "#41b883", default: "#8b8b8b"
 }
 
+const GAMES_BG_MODE_LABELS = {
+    none: "Off",
+    steam: "Steam",
+    stock_image: "Stock image",
+    stock_video: "Stock video",
+    custom_image: "Custom image URL",
+    custom_video: "Custom video URL",
+}
+
+const ANIME_BG_MODE_LABELS = {
+    none: "Off",
+    stock_image: "Stock image",
+    stock_video: "Stock video",
+    custom_image: "Custom image URL",
+    custom_video: "Custom video URL",
+}
+
+const GAMES_BG_MODE_DESCRIPTIONS = {
+    none: "Disable page background",
+    steam: "Use Steam profile theme",
+    stock_image: "Curated static art",
+    stock_video: "Curated motion scene",
+    custom_image: "Use your own image URL",
+    custom_video: "MP4/WEBM or YouTube link",
+}
+
+const ANIME_BG_MODE_DESCRIPTIONS = {
+    none: "Disable page background",
+    stock_image: "Curated static anime art",
+    stock_video: "Curated motion scene",
+    custom_image: "Use your own image URL",
+    custom_video: "MP4/WEBM or YouTube link",
+}
+
+function ModePreviewMedia({ preview, className = "" }) {
+    const hasVideo = Boolean(preview?.kind === "video" && (preview?.videoMp4Url || preview?.videoWebmUrl))
+    const hasImage = Boolean(preview?.imageUrl)
+    return (
+        <div className={`relative overflow-hidden rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] ${className}`}>
+            {hasVideo ? (
+                <video
+                    className="absolute inset-0 h-full w-full object-cover"
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    poster={preview?.posterUrl || undefined}
+                >
+                    {preview?.videoWebmUrl ? <source src={preview.videoWebmUrl} type="video/webm" /> : null}
+                    {preview?.videoMp4Url ? <source src={preview.videoMp4Url} type="video/mp4" /> : null}
+                </video>
+            ) : hasImage ? (
+                <img
+                    src={preview.imageUrl}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                />
+            ) : (
+                <div className="absolute inset-0 grid place-items-center text-[11px] font-semibold text-[#86868b]">
+                    {preview?.placeholder || "No preview"}
+                </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/10 to-transparent" />
+            {preview?.badge ? (
+                <span className="absolute left-2 top-2 inline-flex items-center rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
+                    {preview.badge}
+                </span>
+            ) : null}
+        </div>
+    )
+}
+
+function YouTubePreviewFrame({ embedUrl }) {
+    if (!embedUrl) return null
+    return (
+        <div className="relative aspect-video overflow-hidden rounded-xl border border-[#e5e5ea] bg-black">
+            <iframe
+                title="YouTube background preview"
+                src={embedUrl}
+                className="absolute left-1/2 top-1/2 h-[56.25vw] min-h-full w-[177.78vh] min-w-full -translate-x-1/2 -translate-y-1/2"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                referrerPolicy="strict-origin-when-cross-origin"
+            />
+            <span className="absolute left-2 top-2 inline-flex items-center rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-semibold text-white">
+                YouTube
+            </span>
+        </div>
+    )
+}
+
+function BackgroundModeCard({
+    active,
+    disabled,
+    label,
+    description,
+    preview,
+    onClick,
+}) {
+    return (
+        <button
+            type="button"
+            disabled={disabled}
+            onClick={onClick}
+            className={`group flex items-center gap-3 overflow-hidden rounded-xl border p-2 text-left transition-all ${
+                active
+                    ? "border-[#1d1d1f] bg-[#f8f8fb] shadow-sm"
+                    : "border-[#e5e5ea] bg-white hover:border-[#c9c9cf] hover:shadow-sm"
+            } disabled:opacity-50`}
+        >
+            <ModePreviewMedia preview={preview} className="h-14 w-24 shrink-0 rounded-lg border-[#d2d2d7]" />
+            <div className="min-w-0">
+                <p className="text-[12px] font-semibold text-[#1d1d1f]">{label}</p>
+                <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[#86868b]">{description}</p>
+            </div>
+        </button>
+    )
+}
+
+function BackgroundPositionControls({
+    title,
+    xValue,
+    yValue,
+    disabled,
+    onXChange,
+    onYChange,
+    onSave,
+}) {
+    return (
+        <div className="rounded-2xl border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+            <p className="text-[12px] font-semibold text-[#1d1d1f]">{title}</p>
+            <p className="mt-1 text-[11px] text-[#86868b]">Adjust where the background is focused.</p>
+            <div className="mt-3 grid gap-3">
+                <label className="grid gap-1">
+                    <span className="text-[11px] font-semibold text-[#86868b]">Horizontal ({Math.round(xValue)}%)</span>
+                    <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={xValue}
+                        onChange={(e) => onXChange(e.target.value)}
+                        disabled={disabled}
+                        className="w-full accent-[#C6FF00]"
+                    />
+                </label>
+                <label className="grid gap-1">
+                    <span className="text-[11px] font-semibold text-[#86868b]">Vertical ({Math.round(yValue)}%)</span>
+                    <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        step="1"
+                        value={yValue}
+                        onChange={(e) => onYChange(e.target.value)}
+                        disabled={disabled}
+                        className="w-full accent-[#C6FF00]"
+                    />
+                </label>
+            </div>
+            <div className="mt-3 flex justify-end">
+                <button
+                    type="button"
+                    onClick={onSave}
+                    disabled={disabled}
+                    className="h-9 rounded-xl border border-[#e5e5ea] bg-white px-3 text-[12px] font-semibold text-[#1d1d1f] transition hover:border-[#0071e3] disabled:opacity-50"
+                >
+                    Save Position
+                </button>
+            </div>
+        </div>
+    )
+}
+
 export default function Profile() {
     const { user } = useAuth()
-    const { lifeSyncUser, lifeSyncUpdatePreferences, refreshLifeSyncPreferencesFromDb } = useLifeSync()
+    const {
+        lifeSyncUser,
+        lifeSyncSteamProfile,
+        lifeSyncUpdatePreferences,
+        refreshLifeSyncPreferencesFromDb,
+        refreshLifeSyncSteamProfile,
+    } = useLifeSync()
     const [searchParams] = useSearchParams()
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile")
     const [loading, setLoading] = useState(false)
@@ -60,10 +263,20 @@ export default function Profile() {
     const [error, setError] = useState("")
     const [imgError, setImgError] = useState(false)
     const [prefMotionBusy, setPrefMotionBusy] = useState(false)
+    const [appThemeBusy, setAppThemeBusy] = useState(false)
     const [prefsBusy, setPrefsBusy] = useState(false)
+    const [backgroundPrefsBusy, setBackgroundPrefsBusy] = useState(false)
     const [engageNotifs, setEngageNotifs] = useState(() => readPwaEngagementNotificationsEnabled())
     const [engageBusy, setEngageBusy] = useState(false)
     const { registerTimeout } = useTimeoutRegistry()
+    const [gamesCustomImageUrlInput, setGamesCustomImageUrlInput] = useState("")
+    const [gamesCustomVideoUrlInput, setGamesCustomVideoUrlInput] = useState("")
+    const [gamesPositionXInput, setGamesPositionXInput] = useState(DEFAULT_BACKGROUND_POSITION)
+    const [gamesPositionYInput, setGamesPositionYInput] = useState(DEFAULT_BACKGROUND_POSITION)
+    const [animeCustomImageUrlInput, setAnimeCustomImageUrlInput] = useState("")
+    const [animeCustomVideoUrlInput, setAnimeCustomVideoUrlInput] = useState("")
+    const [animePositionXInput, setAnimePositionXInput] = useState(DEFAULT_BACKGROUND_POSITION)
+    const [animePositionYInput, setAnimePositionYInput] = useState(DEFAULT_BACKGROUND_POSITION)
 
     const [fullName, setFullName] = useState("")
     const [username, setUsername] = useState("")
@@ -105,6 +318,69 @@ export default function Profile() {
         refreshLifeSyncPreferencesFromDb().catch(() => {})
     }, [refreshLifeSyncPreferencesFromDb])
 
+    useEffect(() => {
+        if (!lifeSyncUser?.integrations?.steam) return
+        void refreshLifeSyncSteamProfile().catch(() => {})
+    }, [lifeSyncUser?.integrations?.steam, refreshLifeSyncSteamProfile])
+
+    const appThemePreference = getAppThemePreference(lifeSyncUser?.preferences)
+    const resolvedAppTheme = resolveAppTheme(appThemePreference)
+    const gamesBackgroundMode = normalizeGamesBackgroundMode(
+        lifeSyncUser?.preferences?.gamesBackgroundMode,
+        Boolean(lifeSyncUser?.preferences?.gamesUseSteamProfileBackground),
+    )
+    const animeBackgroundMode = normalizeAnimeBackgroundMode(
+        lifeSyncUser?.preferences?.animeBackgroundMode,
+    )
+    const gamesBackgroundPositionX = normalizeBackgroundPosition(
+        lifeSyncUser?.preferences?.gamesBackgroundPositionX,
+        DEFAULT_BACKGROUND_POSITION,
+    )
+    const gamesBackgroundPositionY = normalizeBackgroundPosition(
+        lifeSyncUser?.preferences?.gamesBackgroundPositionY,
+        DEFAULT_BACKGROUND_POSITION,
+    )
+    const animeBackgroundPositionX = normalizeBackgroundPosition(
+        lifeSyncUser?.preferences?.animeBackgroundPositionX,
+        DEFAULT_BACKGROUND_POSITION,
+    )
+    const animeBackgroundPositionY = normalizeBackgroundPosition(
+        lifeSyncUser?.preferences?.animeBackgroundPositionY,
+        DEFAULT_BACKGROUND_POSITION,
+    )
+
+    useEffect(() => {
+        setGamesCustomImageUrlInput(String(lifeSyncUser?.preferences?.gamesBackgroundCustomImageUrl || ""))
+        setGamesCustomVideoUrlInput(String(lifeSyncUser?.preferences?.gamesBackgroundCustomVideoUrl || ""))
+        setGamesPositionXInput(normalizeBackgroundPosition(
+            lifeSyncUser?.preferences?.gamesBackgroundPositionX,
+            DEFAULT_BACKGROUND_POSITION,
+        ))
+        setGamesPositionYInput(normalizeBackgroundPosition(
+            lifeSyncUser?.preferences?.gamesBackgroundPositionY,
+            DEFAULT_BACKGROUND_POSITION,
+        ))
+        setAnimeCustomImageUrlInput(String(lifeSyncUser?.preferences?.animeBackgroundCustomImageUrl || ""))
+        setAnimeCustomVideoUrlInput(String(lifeSyncUser?.preferences?.animeBackgroundCustomVideoUrl || ""))
+        setAnimePositionXInput(normalizeBackgroundPosition(
+            lifeSyncUser?.preferences?.animeBackgroundPositionX,
+            DEFAULT_BACKGROUND_POSITION,
+        ))
+        setAnimePositionYInput(normalizeBackgroundPosition(
+            lifeSyncUser?.preferences?.animeBackgroundPositionY,
+            DEFAULT_BACKGROUND_POSITION,
+        ))
+    }, [
+        lifeSyncUser?.preferences?.gamesBackgroundCustomImageUrl,
+        lifeSyncUser?.preferences?.gamesBackgroundCustomVideoUrl,
+        lifeSyncUser?.preferences?.gamesBackgroundPositionX,
+        lifeSyncUser?.preferences?.gamesBackgroundPositionY,
+        lifeSyncUser?.preferences?.animeBackgroundCustomImageUrl,
+        lifeSyncUser?.preferences?.animeBackgroundCustomVideoUrl,
+        lifeSyncUser?.preferences?.animeBackgroundPositionX,
+        lifeSyncUser?.preferences?.animeBackgroundPositionY,
+    ])
+
     /** If another device enabled tips in LifeSync, mirror locally. */
     useEffect(() => {
         if (lifeSyncUser?.preferences?.pwaEngagementNotifications === true) {
@@ -112,6 +388,153 @@ export default function Profile() {
             setEngageNotifs(true)
         }
     }, [lifeSyncUser?.preferences?.pwaEngagementNotifications])
+
+    const steamTheme = lifeSyncSteamProfile?.profile?.theme && typeof lifeSyncSteamProfile.profile.theme === "object"
+        ? lifeSyncSteamProfile.profile.theme
+        : null
+
+    const gamesStockImagePreview = useMemo(
+        () => sanitizeBackgroundUrl(
+            pickDeterministicFromPool(
+                GAMES_STOCK_IMAGE_POOL,
+                `${lifeSyncUser?.id || "anon"}:games:preferences:stock-image`,
+            ) || GAMES_STOCK_IMAGE_POOL[0],
+        ),
+        [lifeSyncUser?.id],
+    )
+    const animeStockImagePreview = useMemo(
+        () => sanitizeBackgroundUrl(
+            pickDeterministicFromPool(
+                ANIME_STOCK_IMAGE_POOL,
+                `${lifeSyncUser?.id || "anon"}:anime:preferences:stock-image`,
+            ) || ANIME_STOCK_IMAGE_POOL[0],
+        ),
+        [lifeSyncUser?.id],
+    )
+
+    const gamesStockVideoPreview = useMemo(
+        () => pickDeterministicFromPool(
+            GAMES_STOCK_VIDEO_POOL,
+            `${lifeSyncUser?.id || "anon"}:games:preferences:stock-video`,
+        ) || GAMES_STOCK_VIDEO_POOL[0],
+        [lifeSyncUser?.id],
+    )
+    const animeStockVideoPreview = useMemo(
+        () => pickDeterministicFromPool(
+            ANIME_STOCK_VIDEO_POOL,
+            `${lifeSyncUser?.id || "anon"}:anime:preferences:stock-video`,
+        ) || ANIME_STOCK_VIDEO_POOL[0],
+        [lifeSyncUser?.id],
+    )
+
+    const gamesCustomImageValue = sanitizeBackgroundUrl(
+        gamesCustomImageUrlInput || lifeSyncUser?.preferences?.gamesBackgroundCustomImageUrl,
+    )
+    const animeCustomImageValue = sanitizeBackgroundUrl(
+        animeCustomImageUrlInput || lifeSyncUser?.preferences?.animeBackgroundCustomImageUrl,
+    )
+    const gamesCustomVideoSource = resolveBackgroundVideoSource(
+        gamesCustomVideoUrlInput || lifeSyncUser?.preferences?.gamesBackgroundCustomVideoUrl,
+    )
+    const animeCustomVideoSource = resolveBackgroundVideoSource(
+        animeCustomVideoUrlInput || lifeSyncUser?.preferences?.animeBackgroundCustomVideoUrl,
+    )
+
+    const steamPreviewMedia = useMemo(() => {
+        const steamVideoWebm = sanitizeBackgroundUrl(steamTheme?.backgroundVideoWebmUrl)
+        const steamVideoMp4 = sanitizeBackgroundUrl(steamTheme?.backgroundVideoMp4Url)
+        const steamPoster = sanitizeBackgroundUrl(
+            steamTheme?.backgroundVideoPosterUrl || steamTheme?.backgroundImageUrl,
+        )
+        const steamImage = sanitizeBackgroundUrl(steamTheme?.backgroundImageUrl)
+        if (steamVideoWebm || steamVideoMp4) {
+            return {
+                kind: "video",
+                videoWebmUrl: steamVideoWebm,
+                videoMp4Url: steamVideoMp4,
+                posterUrl: steamPoster || steamImage,
+                badge: "Steam",
+            }
+        }
+        if (steamImage) {
+            return {
+                kind: "image",
+                imageUrl: steamImage,
+                badge: "Steam",
+            }
+        }
+        return {
+            kind: "none",
+            placeholder: "Steam preview unavailable",
+            badge: "Steam",
+        }
+    }, [
+        steamTheme?.backgroundVideoWebmUrl,
+        steamTheme?.backgroundVideoMp4Url,
+        steamTheme?.backgroundVideoPosterUrl,
+        steamTheme?.backgroundImageUrl,
+    ])
+
+    const gamesModePreviewMap = {
+        none: { kind: "none", placeholder: "Background disabled" },
+        steam: steamPreviewMedia,
+        stock_image: { kind: "image", imageUrl: gamesStockImagePreview, badge: "Stock" },
+        stock_video: {
+            kind: "video",
+            videoWebmUrl: sanitizeBackgroundUrl(gamesStockVideoPreview?.webm),
+            videoMp4Url: sanitizeBackgroundUrl(gamesStockVideoPreview?.mp4),
+            posterUrl: sanitizeBackgroundUrl(gamesStockVideoPreview?.poster),
+            badge: "Stock",
+        },
+        custom_image: gamesCustomImageValue
+            ? { kind: "image", imageUrl: gamesCustomImageValue, badge: "Custom" }
+            : { kind: "none", placeholder: "Set custom image URL", badge: "Custom" },
+        custom_video: gamesCustomVideoSource
+            ? (gamesCustomVideoSource.kind === "youtube"
+                ? {
+                    kind: "image",
+                    imageUrl: gamesCustomVideoSource.posterUrl,
+                    badge: "YouTube",
+                }
+                : {
+                    kind: "video",
+                    videoWebmUrl: gamesCustomVideoSource.videoWebmUrl,
+                    videoMp4Url: gamesCustomVideoSource.videoMp4Url,
+                    posterUrl: gamesCustomVideoSource.posterUrl,
+                    badge: "Custom",
+                })
+            : { kind: "none", placeholder: "Set custom video URL", badge: "Custom" },
+    }
+
+    const animeModePreviewMap = {
+        none: { kind: "none", placeholder: "Background disabled" },
+        stock_image: { kind: "image", imageUrl: animeStockImagePreview, badge: "Stock" },
+        stock_video: {
+            kind: "video",
+            videoWebmUrl: sanitizeBackgroundUrl(animeStockVideoPreview?.webm),
+            videoMp4Url: sanitizeBackgroundUrl(animeStockVideoPreview?.mp4),
+            posterUrl: sanitizeBackgroundUrl(animeStockVideoPreview?.poster),
+            badge: "Stock",
+        },
+        custom_image: animeCustomImageValue
+            ? { kind: "image", imageUrl: animeCustomImageValue, badge: "Custom" }
+            : { kind: "none", placeholder: "Set custom image URL", badge: "Custom" },
+        custom_video: animeCustomVideoSource
+            ? (animeCustomVideoSource.kind === "youtube"
+                ? {
+                    kind: "image",
+                    imageUrl: animeCustomVideoSource.posterUrl,
+                    badge: "YouTube",
+                }
+                : {
+                    kind: "video",
+                    videoWebmUrl: animeCustomVideoSource.videoWebmUrl,
+                    videoMp4Url: animeCustomVideoSource.videoMp4Url,
+                    posterUrl: animeCustomVideoSource.posterUrl,
+                    badge: "Custom",
+                })
+            : { kind: "none", placeholder: "Set custom video URL", badge: "Custom" },
+    }
 
     const handleSave = async (e) => {
         e.preventDefault()
@@ -151,6 +574,38 @@ export default function Profile() {
         const ua = navigator.userAgent || ""
         return /Macintosh|iPhone|iPad|iPod/i.test(ua)
     })()
+
+    const updateLifeSyncBackgroundPreferences = async (partial) => {
+        if (!lifeSyncUser) return
+        setBackgroundPrefsBusy(true)
+        setError("")
+        try {
+            await lifeSyncUpdatePreferences(partial)
+        } catch (e) {
+            setError(e?.message || "Could not save background preference")
+        } finally {
+            setBackgroundPrefsBusy(false)
+        }
+    }
+
+    const saveBackgroundUrlPreference = async (key, rawValue) => {
+        if (!lifeSyncUser) return
+        const trimmed = String(rawValue || "").trim()
+        const cleaned = sanitizeBackgroundUrl(trimmed)
+        if (trimmed && !cleaned) {
+            setError("Background URL must start with http:// or https://")
+            return
+        }
+        await updateLifeSyncBackgroundPreferences({ [key]: cleaned })
+    }
+
+    const saveBackgroundPositionPreference = async (xKey, yKey, xRaw, yRaw) => {
+        if (!lifeSyncUser) return
+        await updateLifeSyncBackgroundPreferences({
+            [xKey]: normalizeBackgroundPosition(xRaw, DEFAULT_BACKGROUND_POSITION),
+            [yKey]: normalizeBackgroundPosition(yRaw, DEFAULT_BACKGROUND_POSITION),
+        })
+    }
 
     return (
         <div className={`animate-in fade-in duration-500 flex min-h-0 w-full flex-1 flex-col ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
@@ -390,7 +845,7 @@ export default function Profile() {
 
                         {activeTab === "preferences" && (
                             <div className="space-y-5 sm:space-y-6">
-                                <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                                <div className="lifesync-soft-borders bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
                                     <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0]">
                                         <h2 className="text-[16px] font-bold text-[#1d1d1f]">Preferences</h2>
                                         <p className="mt-0.5 text-[12px] text-[#86868b]">
@@ -435,6 +890,64 @@ export default function Profile() {
                                                     className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
                                                 />
                                             </button>
+                                        </div>
+
+                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[#f5f5f7] pt-6">
+                                            <div className="min-w-0">
+                                                <p className="text-[13px] font-semibold text-[#1d1d1f]">Appearance theme</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                    Choose Light, Dark, or follow your system setting.
+                                                </p>
+                                                <p className="mt-1 text-[11px] text-[#9b9ba1]">
+                                                    Active: {resolvedAppTheme === 'dark' ? 'Dark' : 'Light'}
+                                                </p>
+                                            </div>
+                                            <div
+                                                className="inline-flex shrink-0 self-end rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] p-0.5 sm:self-auto"
+                                                role="group"
+                                                aria-label="App theme preference"
+                                            >
+                                                {(["system", "light", "dark"]).map((mode) => {
+                                                    const active = appThemePreference === mode
+                                                    const disabled = appThemeBusy
+                                                    const label = mode === 'system'
+                                                        ? 'System'
+                                                        : (mode === 'light' ? 'Light' : 'Dark')
+                                                    return (
+                                                        <button
+                                                            key={mode}
+                                                            type="button"
+                                                            disabled={disabled}
+                                                            onClick={async () => {
+                                                                const next = normalizeAppThemePreference(mode) || 'system'
+                                                                if (active) return
+                                                                setError('')
+
+                                                                if (!lifeSyncUser) {
+                                                                    writeStoredAppThemePreference(next)
+                                                                    notifyAppThemePreferenceChanged()
+                                                                    return
+                                                                }
+
+                                                                setAppThemeBusy(true)
+                                                                try {
+                                                                    await lifeSyncUpdatePreferences({ appTheme: next })
+                                                                } catch (e) {
+                                                                    setError(e?.message || "Could not save theme preference")
+                                                                } finally {
+                                                                    setAppThemeBusy(false)
+                                                                }
+                                                            }}
+                                                            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${active
+                                                                ? "bg-white text-[#1d1d1f] shadow-sm"
+                                                                : "text-[#86868b] hover:text-[#1d1d1f]"
+                                                                } disabled:opacity-50`}
+                                                        >
+                                                            {label}
+                                                        </button>
+                                                    )
+                                                })}
+                                            </div>
                                         </div>
 
                                         <div className="mt-6 flex items-start justify-between gap-4 border-t border-[#f5f5f7] pt-6">
@@ -526,7 +1039,7 @@ export default function Profile() {
                                     </div>
                                 </div>
 
-                                <div className="bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                                <div className="lifesync-soft-borders bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
                                     <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[#f0f0f0] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="min-w-0">
                                             <p className="text-[12px] font-bold text-[#86868b] uppercase tracking-widest">LifeSync</p>
@@ -558,7 +1071,7 @@ export default function Profile() {
                                         </div>
                                     </div>
 
-                                    <ul className="divide-y divide-[#f5f5f7]">
+                                    <ul className="">
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="min-w-0">
@@ -674,6 +1187,210 @@ export default function Profile() {
                                                         )
                                                     })}
                                                 </div>
+                                            </div>
+                                        </li>
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">Games page background</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                        Pick a visual style with live previews. Custom video accepts MP4/WEBM and YouTube links.
+                                                    </p>
+                                                    {!lifeSyncUser?.integrations?.steam && (
+                                                        <p className="mt-1 text-[11px] text-[#9ca3af]">
+                                                            Steam mode requires linking Steam in Integrations.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                                    {GAMES_BACKGROUND_MODES.map((mode) => {
+                                                        const active = gamesBackgroundMode === mode
+                                                        const isSteamMode = mode === "steam"
+                                                        const disabled = backgroundPrefsBusy || !lifeSyncUser || (isSteamMode && !lifeSyncUser?.integrations?.steam)
+                                                        return (
+                                                            <BackgroundModeCard
+                                                                key={mode}
+                                                                active={active}
+                                                                disabled={disabled}
+                                                                label={GAMES_BG_MODE_LABELS[mode] || mode}
+                                                                description={GAMES_BG_MODE_DESCRIPTIONS[mode] || "Background mode"}
+                                                                preview={gamesModePreviewMap[mode]}
+                                                                onClick={() => {
+                                                                    if (active || !lifeSyncUser) return
+                                                                    void updateLifeSyncBackgroundPreferences({
+                                                                        gamesBackgroundMode: mode,
+                                                                        gamesUseSteamProfileBackground: mode === "steam",
+                                                                    })
+                                                                }}
+                                                            />
+                                                        )
+                                                    })}
+                                                </div>
+                                                {(gamesBackgroundMode === "custom_image" || gamesBackgroundMode === "custom_video") && (
+                                                    <div className="rounded-2xl border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+                                                        {gamesBackgroundMode === "custom_video" && gamesCustomVideoSource?.kind === "youtube" ? (
+                                                            <YouTubePreviewFrame embedUrl={gamesCustomVideoSource.embedUrl} />
+                                                        ) : (
+                                                            <ModePreviewMedia
+                                                                preview={gamesModePreviewMap[gamesBackgroundMode]}
+                                                                className="aspect-video"
+                                                            />
+                                                        )}
+                                                        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+                                                            <input
+                                                                type="url"
+                                                                value={gamesBackgroundMode === "custom_image" ? gamesCustomImageUrlInput : gamesCustomVideoUrlInput}
+                                                                onChange={(e) => {
+                                                                    const v = e.target.value
+                                                                    if (gamesBackgroundMode === "custom_image") setGamesCustomImageUrlInput(v)
+                                                                    else setGamesCustomVideoUrlInput(v)
+                                                                }}
+                                                                placeholder={gamesBackgroundMode === "custom_image" ? "https://example.com/background.jpg" : "https://youtube.com/watch?v=... or https://example.com/background.mp4"}
+                                                                className="h-10 rounded-xl border border-[#e5e5ea] bg-white px-3 text-[12px] text-[#1d1d1f] outline-none focus:border-[#0071e3]/60"
+                                                                disabled={backgroundPrefsBusy || !lifeSyncUser}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                disabled={backgroundPrefsBusy || !lifeSyncUser}
+                                                                onClick={() => {
+                                                                    void saveBackgroundUrlPreference(
+                                                                        gamesBackgroundMode === "custom_image"
+                                                                            ? "gamesBackgroundCustomImageUrl"
+                                                                            : "gamesBackgroundCustomVideoUrl",
+                                                                        gamesBackgroundMode === "custom_image"
+                                                                            ? gamesCustomImageUrlInput
+                                                                            : gamesCustomVideoUrlInput,
+                                                                    )
+                                                                }}
+                                                                className="h-10 rounded-xl border border-[#e5e5ea] bg-white px-3 text-[12px] font-semibold text-[#1d1d1f] transition hover:border-[#0071e3] disabled:opacity-50"
+                                                            >
+                                                                Save URL
+                                                            </button>
+                                                        </div>
+                                                        {gamesBackgroundMode === "custom_video" ? (
+                                                            <p className="mt-2 text-[11px] text-[#86868b]">
+                                                                YouTube links are extracted and embedded as muted looping background video.
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                                {gamesBackgroundMode !== "none" && (
+                                                    <BackgroundPositionControls
+                                                        title="Games background position"
+                                                        xValue={gamesPositionXInput}
+                                                        yValue={gamesPositionYInput}
+                                                        disabled={backgroundPrefsBusy || !lifeSyncUser}
+                                                        onXChange={(v) => setGamesPositionXInput(normalizeBackgroundPosition(v, gamesBackgroundPositionX))}
+                                                        onYChange={(v) => setGamesPositionYInput(normalizeBackgroundPosition(v, gamesBackgroundPositionY))}
+                                                        onSave={() => {
+                                                            void saveBackgroundPositionPreference(
+                                                                "gamesBackgroundPositionX",
+                                                                "gamesBackgroundPositionY",
+                                                                gamesPositionXInput,
+                                                                gamesPositionYInput,
+                                                            )
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                        </li>
+
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">Anime page background</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[#86868b]">
+                                                        Applied to anime pages except dedicated Anime Watch, Manga Read, and hentai watch routes.
+                                                    </p>
+                                                </div>
+                                                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                                    {ANIME_BACKGROUND_MODES.map((mode) => {
+                                                        const active = animeBackgroundMode === mode
+                                                        const disabled = backgroundPrefsBusy || !lifeSyncUser
+                                                        return (
+                                                            <BackgroundModeCard
+                                                                key={mode}
+                                                                active={active}
+                                                                disabled={disabled}
+                                                                label={ANIME_BG_MODE_LABELS[mode] || mode}
+                                                                description={ANIME_BG_MODE_DESCRIPTIONS[mode] || "Background mode"}
+                                                                preview={animeModePreviewMap[mode]}
+                                                                onClick={() => {
+                                                                    if (active || !lifeSyncUser) return
+                                                                    void updateLifeSyncBackgroundPreferences({
+                                                                        animeBackgroundMode: mode,
+                                                                    })
+                                                                }}
+                                                            />
+                                                        )
+                                                    })}
+                                                </div>
+                                                {(animeBackgroundMode === "custom_image" || animeBackgroundMode === "custom_video") && (
+                                                    <div className="rounded-2xl border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+                                                        {animeBackgroundMode === "custom_video" && animeCustomVideoSource?.kind === "youtube" ? (
+                                                            <YouTubePreviewFrame embedUrl={animeCustomVideoSource.embedUrl} />
+                                                        ) : (
+                                                            <ModePreviewMedia
+                                                                preview={animeModePreviewMap[animeBackgroundMode]}
+                                                                className="aspect-video"
+                                                            />
+                                                        )}
+                                                        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+                                                            <input
+                                                                type="url"
+                                                                value={animeBackgroundMode === "custom_image" ? animeCustomImageUrlInput : animeCustomVideoUrlInput}
+                                                                onChange={(e) => {
+                                                                    const v = e.target.value
+                                                                    if (animeBackgroundMode === "custom_image") setAnimeCustomImageUrlInput(v)
+                                                                    else setAnimeCustomVideoUrlInput(v)
+                                                                }}
+                                                                placeholder={animeBackgroundMode === "custom_image" ? "https://example.com/anime-bg.jpg" : "https://youtube.com/watch?v=... or https://example.com/anime-bg.mp4"}
+                                                                className="h-10 rounded-xl border border-[#e5e5ea] bg-white px-3 text-[12px] text-[#1d1d1f] outline-none focus:border-[#0071e3]/60"
+                                                                disabled={backgroundPrefsBusy || !lifeSyncUser}
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                disabled={backgroundPrefsBusy || !lifeSyncUser}
+                                                                onClick={() => {
+                                                                    void saveBackgroundUrlPreference(
+                                                                        animeBackgroundMode === "custom_image"
+                                                                            ? "animeBackgroundCustomImageUrl"
+                                                                            : "animeBackgroundCustomVideoUrl",
+                                                                        animeBackgroundMode === "custom_image"
+                                                                            ? animeCustomImageUrlInput
+                                                                            : animeCustomVideoUrlInput,
+                                                                    )
+                                                                }}
+                                                                className="h-10 rounded-xl border border-[#e5e5ea] bg-white px-3 text-[12px] font-semibold text-[#1d1d1f] transition hover:border-[#0071e3] disabled:opacity-50"
+                                                            >
+                                                                Save URL
+                                                            </button>
+                                                        </div>
+                                                        {animeBackgroundMode === "custom_video" ? (
+                                                            <p className="mt-2 text-[11px] text-[#86868b]">
+                                                                YouTube links are extracted and embedded as muted looping background video.
+                                                            </p>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                                {animeBackgroundMode !== "none" && (
+                                                    <BackgroundPositionControls
+                                                        title="Anime background position"
+                                                        xValue={animePositionXInput}
+                                                        yValue={animePositionYInput}
+                                                        disabled={backgroundPrefsBusy || !lifeSyncUser}
+                                                        onXChange={(v) => setAnimePositionXInput(normalizeBackgroundPosition(v, animeBackgroundPositionX))}
+                                                        onYChange={(v) => setAnimePositionYInput(normalizeBackgroundPosition(v, animeBackgroundPositionY))}
+                                                        onSave={() => {
+                                                            void saveBackgroundPositionPreference(
+                                                                "animeBackgroundPositionX",
+                                                                "animeBackgroundPositionY",
+                                                                animePositionXInput,
+                                                                animePositionYInput,
+                                                            )
+                                                        }}
+                                                    />
+                                                )}
                                             </div>
                                         </li>
                                     </ul>

@@ -1,7 +1,12 @@
 import { useCallback, useState } from 'react'
 
-/** Light-theme grid matching `DetailWatchSection` episode cards. */
-export function DetailWatchGridSkeleton({ count = 6 }) {
+/** Theme-aware grid matching `DetailWatchSection` episode cards. */
+export function DetailWatchGridSkeleton({ count = 6, dark = false }) {
+  const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
+  const cardClass = dark
+    ? 'overflow-hidden rounded-[14px] border border-white/12 bg-white/[0.04] shadow-[0_12px_36px_rgba(0,0,0,0.35)]'
+    : 'overflow-hidden rounded-[14px] border border-[#e5e5ea] bg-[#fafafa] shadow-sm'
+
   return (
     <div
       className="grid grid-cols-2 gap-2 sm:grid-cols-3"
@@ -14,13 +19,14 @@ export function DetailWatchGridSkeleton({ count = 6 }) {
           className="lifesync-ep-grid-enter opacity-0"
           style={{ animationDelay: `${Math.min(i, 12) * 42}ms` }}
         >
-          <div className="overflow-hidden rounded-[14px] border border-[#e5e5ea] bg-[#fafafa] shadow-sm">
+          <div className={cardClass}>
             <div className="relative aspect-video w-full overflow-hidden">
-              <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
+              <div className={`${shimmer} absolute inset-0`} />
             </div>
             <div className="space-y-2 px-2 py-2.5">
-              <div className="h-2.5 w-[82%] rounded-md lifesync-skeleton-shimmer-light" />
-              <div className="h-2.5 w-[48%] rounded-md lifesync-skeleton-shimmer-light" />
+              <div className={`h-2.5 w-[82%] rounded-md ${shimmer}`} />
+              <div className={`h-2.5 w-[48%] rounded-md ${shimmer} opacity-85`} />
+              <div className={`h-2 w-[34%] rounded-md ${shimmer} opacity-65`} />
             </div>
           </div>
         </div>
@@ -30,26 +36,34 @@ export function DetailWatchGridSkeleton({ count = 6 }) {
 }
 
 /** Manga detail modal — chapter list rows (matches `MangaDetail` list layout). */
-export function LifesyncMangaChapterListSkeleton({ rows = 8 }) {
+export function LifesyncMangaChapterListSkeleton({ rows = 8, dark = false }) {
+  const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
+  const shellClass = dark
+    ? 'overflow-hidden rounded-xl border border-white/12 bg-white/[0.03]'
+    : 'overflow-hidden rounded-xl border border-[#e5e5ea]'
+  const listClass = dark
+    ? 'max-h-80 divide-y divide-white/10 overflow-hidden'
+    : 'max-h-80 divide-y divide-[#f0f0f0] overflow-hidden'
+
   return (
     <div
-      className="overflow-hidden rounded-xl border border-[#e5e5ea]"
+      className={shellClass}
       aria-busy="true"
       aria-label="Loading chapters"
     >
-      <ul className="max-h-80 divide-y divide-[#f0f0f0] overflow-hidden">
+      <ul className={listClass}>
         {Array.from({ length: rows }).map((_, i) => (
           <li
             key={i}
             className="flex items-center gap-3 px-3.5 py-2.5 lifesync-ep-grid-enter opacity-0"
             style={{ animationDelay: `${i * 38}ms` }}
           >
-            <div className="h-7 w-7 shrink-0 rounded-lg lifesync-skeleton-shimmer-light" />
+            <div className={`h-7 w-7 shrink-0 rounded-lg ${shimmer}`} />
             <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="h-3 w-[min(220px,72%)] rounded-md lifesync-skeleton-shimmer-light" />
-              <div className="h-2.5 w-[min(160px,48%)] rounded-md lifesync-skeleton-shimmer-light opacity-80" />
+              <div className={`h-3 w-[min(220px,72%)] rounded-md ${shimmer}`} />
+              <div className={`h-2.5 w-[min(160px,48%)] rounded-md ${shimmer} opacity-80`} />
             </div>
-            <div className="h-3.5 w-3.5 shrink-0 rounded-sm lifesync-skeleton-shimmer-light opacity-50" />
+            <div className={`h-3.5 w-3.5 shrink-0 rounded-sm ${shimmer} opacity-50`} />
           </li>
         ))}
       </ul>
@@ -58,8 +72,16 @@ export function LifesyncMangaChapterListSkeleton({ rows = 8 }) {
 }
 
 /** Hentai Ocean detail — episode picker grid (16:9 cards). */
-export function LifesyncHentaiEpisodeGridSkeleton({ count = 6 }) {
+export function LifesyncHentaiEpisodeGridSkeleton({ count = 6, dark = false }) {
   const n = Math.min(12, Math.max(1, count))
+  const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
+  const cardClass = dark
+    ? 'overflow-hidden rounded-[14px] border border-white/12 bg-white/[0.05] shadow-[0_12px_34px_rgba(0,0,0,0.34)]'
+    : 'overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-white shadow-sm'
+  const mediaClass = dark
+    ? 'relative aspect-video w-full overflow-hidden bg-black/35'
+    : 'relative aspect-video w-full overflow-hidden bg-[#fafafa]'
+
   return (
     <div
       className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
@@ -69,15 +91,16 @@ export function LifesyncHentaiEpisodeGridSkeleton({ count = 6 }) {
       {Array.from({ length: n }).map((_, i) => (
         <div
           key={i}
-          className="overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-white shadow-sm lifesync-ep-grid-enter opacity-0"
+          className={`${cardClass} lifesync-ep-grid-enter opacity-0`}
           style={{ animationDelay: `${i * 44}ms` }}
         >
-          <div className="relative aspect-video w-full overflow-hidden bg-[#fafafa]">
-            <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
+          <div className={mediaClass}>
+            <div className={`${shimmer} absolute inset-0`} />
           </div>
           <div className="space-y-2 px-2 py-2.5">
-            <div className="h-2.5 w-[78%] rounded-md lifesync-skeleton-shimmer-light" />
-            <div className="h-2.5 w-[42%] rounded-md lifesync-skeleton-shimmer-light opacity-80" />
+            <div className={`h-2.5 w-[78%] rounded-md ${shimmer}`} />
+            <div className={`h-2.5 w-[42%] rounded-md ${shimmer} opacity-80`} />
+            <div className={`h-2 w-[28%] rounded-md ${shimmer} opacity-65`} />
           </div>
         </div>
       ))}
@@ -497,7 +520,7 @@ export function LifesyncMediaLibraryPageSkeleton({ gridCount = 8, showSpotlight 
       aria-label="Loading shelf"
     >
       <aside className="w-full lg:w-[min(100%,280px)] lg:shrink-0">
-        <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-[0_8px_30px_-12px_rgba(15,23,42,0.12)] ring-1 ring-white/60">
+        <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-[0_8px_30px_-12px_rgba(21, 20, 24,0.12)] ring-1 ring-white/60">
           <div className="flex items-start gap-3">
             <div className="h-11 w-11 shrink-0 rounded-2xl lifesync-skeleton-shimmer-light" />
             <div className="min-w-0 flex-1 space-y-2 pt-0.5">
@@ -632,15 +655,16 @@ export function LifesyncMyListGridSkeleton({ count = 6 }) {
   )
 }
 
-/** Light-theme description lines (modal / detail). */
-export function LifesyncTextLinesSkeleton({ lines = 3 }) {
+/** Theme-aware description lines (modal / detail). */
+export function LifesyncTextLinesSkeleton({ lines = 3, dark = false }) {
   const widths = ['100%', '95%', '72%']
+  const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
   return (
     <div className="space-y-2 py-1" aria-hidden>
       {Array.from({ length: lines }).map((_, i) => (
         <div
           key={i}
-          className="h-2.5 rounded-md lifesync-skeleton-shimmer-light"
+          className={`h-2.5 rounded-md ${shimmer}`}
           style={{ width: widths[i] || '60%' }}
         />
       ))}

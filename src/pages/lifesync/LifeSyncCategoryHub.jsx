@@ -1,7 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { FaCalendarAlt, FaGamepad, FaFilm, FaArrowRight, FaChevronRight, FaStar } from 'react-icons/fa'
+import {
+    FaArrowRight,
+    FaBolt,
+    FaCalendarAlt,
+    FaChevronRight,
+    FaClock,
+    FaFilm,
+    FaGamepad,
+    FaGift,
+    FaNewspaper,
+    FaSearch,
+    FaShieldAlt,
+    FaStar,
+    FaTags,
+} from 'react-icons/fa'
 import { LifeSyncHubMangaReading } from '../../components/lifesync/MangaReadingRail'
 import { LifeSyncHubAnimeWatching } from '../../components/lifesync/AnimeHubWatchingRail'
 import { useLifeSync } from '../../context/LifeSyncContext'
@@ -9,6 +23,8 @@ import { useBatchContentLists } from '../../hooks/useBatchContentLists'
 import { filterMangaReadingByNsfw } from '../../hooks/useMangaReadingList'
 import {
     isLifeSyncAnimeNavVisible,
+    isLifeSyncCrackGamesVisible,
+    isLifeSyncHManhwaVisible,
     isLifeSyncHentaiHubVisible,
     isPluginEnabled,
 } from '../../lib/lifesyncApi'
@@ -94,7 +110,6 @@ function useDailyValidatedPool(namespace, urls, { maxValidate = 18 } = {}) {
                     const i = idx++
                     if (i >= target.length) return
                     const u = target[i]
-                    // eslint-disable-next-line no-await-in-loop
                     const good = await validateImageUrl(u)
                     if (cancelled) return
                     if (good) ok.push(u)
@@ -129,6 +144,11 @@ const POOL = {
     steam: [1245620, 1091500, 1174180, 1086940, 271590, 730, 570, 292030, 440, 814380, 578080].map(id => `${SC}/${id}/header.jpg`),
     wishlist: [367520, 892970, 1145360, 601150, 105600, 413150].map(id => `${SC}/${id}/header.jpg`),
     xbox: [1240440, 1716740, 976730, 359550, 493520, 1238810].map(id => `${SC}/${id}/header.jpg`),
+    gamerant: [570630, 1172620, 1438720, 1174180, 813820, 1651210, 1466560, 1328730, 1313860, 1086940].map(id => `${SC}/${id}/header.jpg`),
+    deals: [1091500, 1245620, 413150, 1145360, 1174180, 1599340, 2050650, 1364780, 1657630, 2215430].map(id => `${SC}/${id}/header.jpg`),
+    gamesearch: [1245620, 1091500, 990080, 1888930, 1817070, 1623730, 2050650, 367520].map(id => `${SC}/${id}/header.jpg`),
+    releases: [990080, 1888930, 1716740, 1517290, 1174180, 2050650, 1086940, 1245620].map(id => `${SC}/${id}/header.jpg`),
+    crackstatus: [1245620, 1091500, 990080, 1174180, 1888930, 1599340, 2050650, 1086940].map(id => `${SC}/${id}/header.jpg`),
     anime: [
         'https://cdn.myanimelist.net/images/anime/1286/99889.jpg',
         'https://cdn.myanimelist.net/images/anime/1000/110531.jpg',
@@ -143,25 +163,41 @@ const POOL = {
         'https://cdn.myanimelist.net/images/anime/1223/96541.jpg',
     ],
     manga: [
-        'https://cdn.myanimelist.net/images/manga/2/253146.jpg',
-        'https://cdn.myanimelist.net/images/manga/1/157897.jpg',
-        'https://cdn.myanimelist.net/images/manga/3/216464.jpg',
-        'https://cdn.myanimelist.net/images/manga/1/210681.jpg',
-        'https://cdn.myanimelist.net/images/manga/2/258236.jpg',
-        'https://cdn.myanimelist.net/images/manga/3/249658.jpg',
+        'https://uploads.mangadex.org/covers/32d76d19-8a05-4db0-9fc2-e0b0648fe9d0/e90bdc47-c8b9-4df7-b2c0-17641b645ee1.jpg.256.jpg',
+        'https://uploads.mangadex.org/covers/557615b9-6fec-4ab7-a512-03cbde39815f/d83b55f6-2120-4a03-8cbf-8141241de22e.jpg.256.jpg',
+        'https://uploads.mangadex.org/covers/25e1d17b-6a4d-4698-a4f6-bf53460c10af/0fc34ab4-a172-4db0-9cbc-893380685a58.jpg.256.jpg',
+        'https://uploads.mangadex.org/covers/c4238215-3a0e-47f8-be4a-504089d38742/e2338437-78c0-4526-990a-5aefe0e2b6d2.jpg.256.jpg',
+        'https://uploads.mangadex.org/covers/c52b2ce3-7f95-469c-96b0-479524fb7a1a/7dc752c3-8c90-468e-8c75-6903e38d7c7f.jpg.256.jpg',
+        'https://uploads.mangadex.org/covers/e18fe8c6-f6dc-4f05-8462-7b2083ff9a6c/07752bfc-2c12-46a5-afaf-68ec1888cba1.jpg.256.jpg'    
     ],
     hentai: [
-        'https://cdn.myanimelist.net/images/anime/12/76049.jpg',
-        'https://cdn.myanimelist.net/images/anime/7/75199.jpg',
-        'https://cdn.myanimelist.net/images/anime/1935/127974.jpg',
-        'https://cdn.myanimelist.net/images/anime/1377/93406.jpg',
-        'https://cdn.myanimelist.net/images/anime/1491/109402.jpg',
+        'https://watchhentai.net/uploads/2022/11/boy-meets-harem-the-animation/poster.jpg',
+        'https://watchhentai.net/uploads/2022/12/shinshou-genmukan/poster.jpg',
+        'https://watchhentai.net/uploads/2023/8/kono-koi-ni-kiduite/poster.jpg',
+        'https://watchhentai.net/uploads/2022/10/oppai-no-ouja-48/poster.jpg',
+        'https://watchhentai.net/uploads/2024/gomu-o-tsukete-iimashita-yo-ne/poster.jpg',
+        'https://watchhentai.net/uploads/2022/12/takarasagashi-no-natsuyasumi/poster.jpg',
+        'https://watchhentai.net/uploads/2026/meijyou/3.jpg',
+        'https://watchhentai.net/uploads/2026/anal-mania-otaku-to-ananii-daisuki-na-ojou-sama/1.jpg',
+        'https://watchhentai.net/uploads/2025/reika-wa-karei-na-boku-no-joou-the-animation/poster.jpg',
+        'https://watchhentai.net/uploads/2025/natsu-to-hako/poster.jpg'
     ],
+    manhwa: [
+        'https://mangadistrict.com/wp-content/uploads/2026/01/Everyones-Man-Uncensored-Edit-2.png',
+        'https://cdn.mangadistrict.com/thumbnail/snapping-into-love-uncensored-2.webp',
+        'https://cdn.mangadistrict.com/thumbnail/dont-tell-anyone-at-school-uncensored-official.webp',
+        'https://mangadistrict.com/wp-content/uploads/2025/11/Troublesome-Employee-Warning-Uncensored-Edited.png',
+        'https://cdn.mangadistrict.com/thumbnail/im-the-only-man-in-this-clan-official.webp',
+        'https://cdn.mangadistrict.com/thumbnail/daddys-girl-carcass-official.webp',
+        'https://cdn.mangadistrict.com/thumbnail/the-double-life-of-a-public-official-official.webp',
+        'https://cdn.mangadistrict.com/thumbnail/only-with-consent.webp',
+        'https://cdn.mangadistrict.com/thumbnail/secret-class.webp'
+    ]
 }
 
 function Thumb({ src }) {
     const [ok, setOk] = useState(true)
-    if (!ok) return <div className="h-full w-full bg-gradient-to-br from-[#e8e4f0] to-[#dce8e4]" />
+    if (!ok) return <div className="h-full w-full" />
     return (
         <LifesyncEpisodeThumbnail
             src={src}
@@ -182,7 +218,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
     return (
         <MotionLink
             to={to}
-            className={`group relative block overflow-hidden rounded-[22px] bg-white shadow-[0_10px_34px_-18px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-26px_rgba(15,23,42,0.35)] sm:rounded-[26px] ${focusRing} ${className}`}
+            className={`group relative block overflow-hidden rounded-[22px] bg-white shadow-[0_10px_34px_-18px_rgba(21, 20, 24,0.35)] ring-1 ring-slate-200/80 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-26px_rgba(21, 20, 24,0.35)] sm:rounded-[26px] ${focusRing} ${className}`}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.99 }}
             transition={{ type: 'spring', stiffness: 420, damping: 28 }}
@@ -268,12 +304,80 @@ function MobileExploreRow({ to, pool, title, subtitle, badge, badgeClass }) {
     )
 }
 
-/** Bento cards in the Explore aside — content-sized so the hub page can scroll (no flex-1 height trap). */
-const EXPLORE_SIDEBAR_BENTO = 'min-h-[168px] w-full lg:flex lg:flex-col'
+/** Anime explore lane card with portrait poster strip (no oversized hero art). */
+function AnimeExploreLaneCard({ tile, compact = false, className = '' }) {
+    const posters = useMemo(() => {
+        const pool = Array.isArray(tile?.pool) ? tile.pool : []
+        return shuffle(pool).slice(0, compact ? 4 : 6)
+    }, [tile, compact])
 
-/** Hero-style anime tile when Explore is full width (no progress column). */
-const EXPLORE_FULL_ANIME_HERO =
-    'min-h-[220px] w-full sm:min-h-[260px] lg:col-span-7 xl:col-span-8 lg:min-h-[min(460px,calc(100dvh-200px))]'
+    return (
+        <MotionLink
+            to={tile?.to || '#'}
+            className={`group block overflow-hidden rounded-[22px] border border-slate-200/85 p-3.5 shadow-[0_14px_34px_-24px_rgba(21, 20, 24,0.36)] ring-1 ring-white/70 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_56px_-30px_rgba(21, 20, 24,0.42)] sm:p-4 ${focusRing} ${className}`}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.995 }}
+            transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+        >
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <h3 className="truncate text-[18px] font-black tracking-tight text-slate-900 sm:text-[20px]">
+                        {tile?.title || 'Destination'}
+                    </h3>
+                    <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-slate-600 sm:text-[13px]">
+                        {tile?.subtitle || ''}
+                    </p>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                    {tile?.badge ? (
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] ${tile.badgeClass || 'bg-slate-100 text-slate-700'}`}>
+                            {tile.badge}
+                        </span>
+                    ) : null}
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition group-hover:bg-slate-700">
+                        <FaArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    </span>
+                </div>
+            </div>
+
+            <div className={`mt-3 grid gap-2 ${compact ? 'grid-cols-4' : 'grid-cols-6'}`}>
+                {posters.map((src, i) => (
+                    <div key={`${tile?.id || 't'}-poster-${i}`} className="overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100 shadow-sm">
+                        <LifesyncEpisodeThumbnail
+                            src={src}
+                            className={compact ? 'aspect-[2/3] w-full' : 'h-[156px] w-full xl:h-[182px]'}
+                            imgClassName="h-full w-full object-cover"
+                            imgProps={{ referrerPolicy: 'no-referrer' }}
+                        />
+                    </div>
+                ))}
+            </div>
+        </MotionLink>
+    )
+}
+
+function GameHubFastTravelTile({ to, icon, title, subtitle }) {
+    const IconComponent = icon
+
+    return (
+        <Link
+            to={to}
+            className={`group relative overflow-hidden rounded-2xl px-3.5 py-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:px-4 sm:py-4 ${focusRing}`}
+        >
+            <div className="pointer-events-none absolute inset-0" aria-hidden />
+            <div className="relative flex items-start gap-3">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white ring-1 ring-slate-200/80">
+                    <IconComponent className="h-4.5 w-4.5" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-[13px] font-black tracking-tight text-slate-900">{title}</span>
+                    <span className="mt-1 block text-[11px] leading-snug text-slate-600">{subtitle}</span>
+                </span>
+                <FaChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition group-hover:text-slate-900" aria-hidden />
+            </div>
+        </Link>
+    )
+}
 
 function HubConnectPrompt({ title, body, embedded = false }) {
     const inner = (
@@ -312,7 +416,8 @@ function SectionLabel({ id, children }) {
 }
 
 export function LifeSyncGamesHub() {
-    const { isLifeSyncConnected } = useLifeSync()
+    const { isLifeSyncConnected, lifeSyncUser } = useLifeSync()
+    const crackGamesPluginOn = isLifeSyncCrackGamesVisible(lifeSyncUser?.preferences)
 
     if (!isLifeSyncConnected) {
         return (
@@ -323,71 +428,351 @@ export function LifeSyncGamesHub() {
         )
     }
 
-    const gamesHeroMinH = 'lg:min-h-[min(460px,calc(100dvh-200px))]'
+    const gamesHeroMinH = 'lg:min-h-[min(470px,calc(100dvh-190px))]'
+    const connectedRouteCount = crackGamesPluginOn ? 8 : 6
+    const intelLaneCount = crackGamesPluginOn ? 4 : 2
+
+    const mainDeckTiles = [
+        {
+            id: 'wishlist',
+            to: '/dashboard/lifesync/games/wishlist',
+            pool: POOL.wishlist,
+            title: 'Wishlist',
+            subtitle: 'Your saved targets and reminders',
+            gradient: 'bg-gradient-to-t from-[#faf5ff] via-white/65 to-transparent',
+        },
+        {
+            id: 'xbox',
+            to: '/dashboard/lifesync/games/xbox',
+            pool: POOL.xbox,
+            title: 'Xbox',
+            subtitle: 'Store highlights and platform offers',
+            gradient: 'bg-gradient-to-t from-[#ecfdf5] via-white/60 to-transparent',
+        },
+        {
+            id: 'deals',
+            to: '/dashboard/lifesync/games/deals',
+            pool: POOL.deals,
+            title: 'Deal radar',
+            subtitle: 'CheapShark price drops and bundle spikes',
+            gradient: 'bg-gradient-to-t from-[#f0fdf4] via-white/60 to-transparent',
+        },
+    ]
+
+    const discoveryTiles = [
+        {
+            id: 'news',
+            to: '/dashboard/lifesync/games/gamerant',
+            pool: POOL.gamerant,
+            title: 'Gaming news',
+            subtitle: 'Headline sweep for quick context before you play',
+            gradient: 'bg-gradient-to-t from-[#fef2f2] via-white/60 to-transparent',
+        },
+        ...(crackGamesPluginOn
+            ? [{
+                id: 'search',
+                to: '/dashboard/lifesync/games/search',
+                pool: POOL.gamesearch,
+                title: 'Game search',
+                subtitle: 'Cross-provider links and crack metadata lookup',
+                gradient: 'bg-gradient-to-t from-[#eef2ff] via-white/60 to-transparent',
+            }]
+            : []),
+        {
+            id: 'releases',
+            to: '/dashboard/lifesync/games/releases',
+            pool: POOL.releases,
+            title: 'Release calendar',
+            subtitle: 'Upcoming launches grouped by day and window',
+            gradient: 'bg-gradient-to-t from-[#ecfeff] via-white/60 to-transparent',
+        },
+        ...(crackGamesPluginOn
+            ? [{
+                id: 'crack-status',
+                to: '/dashboard/lifesync/games/crack-status',
+                pool: POOL.crackstatus,
+                title: 'Crack status',
+                subtitle: 'Protection history, timeline, and release notes',
+                gradient: 'bg-gradient-to-t from-[#fff7ed] via-white/60 to-transparent',
+            }]
+            : []),
+    ]
+
+    const fastTravelTiles = [
+        {
+            id: 'steam',
+            to: '/dashboard/lifesync/games/steam',
+            icon: FaBolt,
+            title: 'Launch Steam hub',
+            subtitle: 'Library, profile, and current storefront state.',
+            accent: 'from-cyan-50 to-indigo-50',
+        },
+        {
+            id: 'deals',
+            to: '/dashboard/lifesync/games/deals',
+            icon: FaTags,
+            title: 'Track live deals',
+            subtitle: 'Jump straight to active pricing changes.',
+            accent: 'from-emerald-50 to-lime-50',
+        },
+        {
+            id: 'news',
+            to: '/dashboard/lifesync/games/gamerant',
+            icon: FaNewspaper,
+            title: 'Read news pulse',
+            subtitle: 'Open current gaming headlines and updates.',
+            accent: 'from-rose-50 to-orange-50',
+        },
+        ...(crackGamesPluginOn
+            ? [{
+                id: 'search',
+                to: '/dashboard/lifesync/games/search',
+                icon: FaSearch,
+                title: 'Run game lookup',
+                subtitle: 'Search by title and compare provider links.',
+                accent: 'from-violet-50 to-fuchsia-50',
+            }]
+            : []),
+        {
+            id: 'releases',
+            to: '/dashboard/lifesync/games/releases',
+            icon: FaClock,
+            title: 'Watch launch dates',
+            subtitle: 'See what is dropping next across your list.',
+            accent: 'from-sky-50 to-cyan-50',
+        },
+        ...(crackGamesPluginOn
+            ? [{
+                id: 'status',
+                to: '/dashboard/lifesync/games/crack-status',
+                icon: FaShieldAlt,
+                title: 'Open status intel',
+                subtitle: 'Review crack/protection timelines in one view.',
+                accent: 'from-amber-50 to-yellow-50',
+            }]
+            : []),
+        {
+            id: 'wishlist',
+            to: '/dashboard/lifesync/games/wishlist',
+            icon: FaGift,
+            title: 'Review wishlist',
+            subtitle: 'Your saved titles and pending grabs.',
+            accent: 'from-pink-50 to-rose-50',
+        },
+        {
+            id: 'xbox',
+            to: '/dashboard/lifesync/games/xbox',
+            icon: FaGamepad,
+            title: 'Switch to Xbox',
+            subtitle: 'Platform deals and console store picks.',
+            accent: 'from-emerald-50 to-teal-50',
+        },
+    ]
+    const fastTravelRouteCount = fastTravelTiles.length
 
     return (
         <HubShell>
-            <header className="relative mb-6 sm:mb-7 lg:mb-8">
-                <div className="absolute -left-2 top-0 hidden h-full w-1 rounded-full bg-gradient-to-b from-[#C6FF00] via-[#38bdf8] to-[#a78bfa] sm:block lg:-left-3" aria-hidden />
-                <div className="flex flex-col gap-1 pl-0 sm:pl-4 lg:pl-5">
-                    <div className="flex items-start gap-3 sm:items-center">
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#C6FF00] to-[#9fe870] text-[#1a1628] shadow-md sm:h-12 sm:w-12">
-                            <FaGamepad className="h-5 w-5 sm:h-6 sm:w-6" />
+            <div className="lifesync-category-borderless">
+            <header className="relative mb-7 sm:mb-8 lg:mb-10">
+                <div className="overflow-hidden rounded-[30px] border border-slate-200/85 p-4 shadow-[0_30px_70px_-34px_rgba(21, 20, 24,0.28)] sm:p-6 lg:p-7">
+                    <div className="pointer-events-none absolute -right-14 -top-20 h-56 w-56 rounded-full bg-sky-300/30 blur-3xl" aria-hidden />
+                    <div className="pointer-events-none absolute -left-10 bottom-0 h-44 w-44 rounded-full bg-[#C6FF00]/25 blur-3xl" aria-hidden />
+
+                    <div className="relative grid gap-6 lg:grid-cols-12 lg:items-center">
+                        <div className="lg:col-span-8">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 ring-1 ring-slate-200/80">
+                                <FaBolt className="h-3 w-3 text-slate-900" aria-hidden />
+                                Game Hub
+                            </div>
+
+                            <div className="mt-3 flex items-start gap-3 sm:gap-4">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#C6FF00] text-slate-900 shadow-lg shadow-[#C6FF00]/30 sm:h-14 sm:w-14">
+                                    <FaGamepad className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden />
+                                </div>
+                                <div className="min-w-0 pt-0.5">
+                                    <h1 className="text-[27px] font-black leading-tight tracking-tight text-slate-900 sm:text-[33px] lg:text-[36px]">
+                                        Player command center
+                                    </h1>
+                                    <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-slate-600 sm:text-[14px]">
+                                        {crackGamesPluginOn
+                                            ? 'Run your game stack from one hub: storefronts, deals, news, release timing, and status checks. Steam anchors the deck while tactical modules stay one click away.'
+                                            : 'Run your game stack from one hub: storefronts, deals, news, and release timing. Steam anchors the deck while tactical modules stay one click away.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2.5">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-sky-100">
+                                    <FaBolt className="h-3 w-3" aria-hidden />
+                                    Steam first
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-emerald-100">
+                                    <FaTags className="h-3 w-3" aria-hidden />
+                                    Deal aware
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-amber-100">
+                                    <FaCalendarAlt className="h-3 w-3" aria-hidden />
+                                    Launch tracking
+                                </span>
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2.5 sm:gap-3">
+                                <Link
+                                    to="/dashboard/lifesync/games/steam"
+                                    className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 text-[12px] font-semibold text-white shadow-sm transition hover:bg-slate-800 ${focusRing}`}
+                                >
+                                    Open Steam
+                                    <FaArrowRight className="h-3.5 w-3.5" aria-hidden />
+                                </Link>
+                                <Link
+                                    to="/dashboard/lifesync/games/deals"
+                                    className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-[#C6FF00] px-4 text-[12px] font-semibold text-slate-900 shadow-sm transition hover:brightness-95 ${focusRing}`}
+                                >
+                                    View live deals
+                                    <FaChevronRight className="h-3.5 w-3.5" aria-hidden />
+                                </Link>
+                            </div>
                         </div>
-                        <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#7c7794]">LifeSync</p>
-                            <h1 className="text-[24px] font-bold leading-tight tracking-tight text-[#1a1628] sm:text-[28px] lg:text-[30px]">Games</h1>
-                            <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670] lg:mt-2 lg:text-[14px]">
-                                Steam is the main hub; wishlist and Xbox sit alongside on large screens — quick jumps on any device.
-                            </p>
+
+                        <div className="grid grid-cols-2 gap-3 sm:gap-3.5 lg:col-span-4">
+                            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Modules</p>
+                                <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-slate-900">{connectedRouteCount}</p>
+                                <p className="mt-1 text-[10px] text-slate-600">Connected routes</p>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Intel lanes</p>
+                                <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-slate-900">{intelLaneCount}</p>
+                                <p className="mt-1 text-[10px] text-slate-600">{crackGamesPluginOn ? 'News + search + status' : 'News + releases'}</p>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Storefronts</p>
+                                <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-slate-900">2</p>
+                                <p className="mt-1 text-[10px] text-slate-600">Steam and Xbox</p>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Daily mode</p>
+                                <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-slate-900">Live</p>
+                                <p className="mt-1 text-[10px] text-slate-600">Deals and releases</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </header>
 
-            <section aria-labelledby="lifesync-games-explore-label">
-                <SectionLabel id="lifesync-games-explore-label">Explore</SectionLabel>
+            <section aria-labelledby="lifesync-games-maindeck-label">
+                <SectionLabel id="lifesync-games-maindeck-label">Main Deck</SectionLabel>
                 <p className="mt-1 mb-4 text-[12px] text-[#5b5670] lg:mb-5 lg:text-[13px]">
-                    <span className="lg:hidden">Steam first, then wishlist and Xbox in a row.</span>
-                    <span className="hidden lg:inline">Steam fills the primary column; the other two stack on the right.</span>
+                    <span className="lg:hidden">Steam drives the front slot. Wishlist, Xbox, and deal radar stay stacked for quick tactical jumps.</span>
+                    <span className="hidden lg:inline">Steam occupies the command lane; wishlist, Xbox, and deal radar fill the tactical stack on the right.</span>
                 </p>
 
-                {/* Mobile / tablet: Steam hero, then two-up. Desktop: 12-col — Steam ~⅔, wishlist + Xbox stacked ~⅓ (no empty grid cells). */}
                 <div className="flex flex-col gap-4 lg:grid lg:grid-cols-12 lg:items-stretch lg:gap-6 xl:gap-8">
                     <BentoCard
                         to="/dashboard/lifesync/games/steam"
                         pool={POOL.steam}
                         cols={3}
                         rows={3}
-                        title="Steam"
-                        subtitle="Library, store deals & account linking"
-                        gradient="bg-gradient-to-t from-[#f0f9ff] via-white/70 to-transparent"
-                        className={`min-h-[220px] w-full shrink-0 sm:min-h-[260px] lg:col-span-7 xl:col-span-8 ${gamesHeroMinH}`}
+                        title="Steam command"
+                        subtitle="Library pulse, storefront momentum, and account sync in one launcher."
+                        gradient="bg-gradient-to-t from-[#e0f2fe] via-white/70 to-transparent"
+                        className={`min-h-[240px] w-full shrink-0 sm:min-h-[280px] lg:col-span-8 xl:col-span-8 ${gamesHeroMinH}`}
                     />
-                    <div className="grid grid-cols-2 gap-3 lg:col-span-5 lg:flex lg:flex-col lg:gap-5 xl:col-span-4 xl:gap-6">
-                        <BentoCard
-                            to="/dashboard/lifesync/games/wishlist"
-                            pool={POOL.wishlist}
-                            cols={2}
-                            rows={2}
-                            title="Wishlist"
-                            subtitle="Games you want"
-                            gradient="bg-gradient-to-t from-[#faf5ff] via-white/65 to-transparent"
-                            className="min-h-[168px] w-full lg:flex lg:flex-col"
-                        />
-                        <BentoCard
-                            to="/dashboard/lifesync/games/xbox"
-                            pool={POOL.xbox}
-                            cols={2}
-                            rows={2}
-                            title="Xbox"
-                            subtitle="Deals & store picks"
-                            gradient="bg-gradient-to-t from-[#ecfdf5] via-white/60 to-transparent"
-                            className="min-h-[168px] w-full lg:flex lg:flex-col"
-                        />
+                    <div className="grid grid-cols-1 gap-3.5 lg:col-span-4 lg:grid-cols-1 lg:gap-5 xl:col-span-4 xl:gap-6">
+                        {mainDeckTiles.map((tile) => (
+                            <BentoCard
+                                key={tile.id}
+                                to={tile.to}
+                                pool={tile.pool}
+                                cols={2}
+                                rows={2}
+                                title={tile.title}
+                                subtitle={tile.subtitle}
+                                gradient={tile.gradient}
+                                className="min-h-[168px] w-full lg:flex lg:flex-col"
+                            />
+                        ))}
                     </div>
                 </div>
             </section>
+
+            <section aria-labelledby="lifesync-games-discovery-label" className="mt-8 sm:mt-10">
+                <SectionLabel id="lifesync-games-discovery-label">Discovery Lanes</SectionLabel>
+                <p className="mt-1 mb-4 text-[12px] text-[#5b5670] lg:mb-5 lg:text-[13px]">
+                    <span className="lg:hidden">
+                        {crackGamesPluginOn
+                            ? 'News, search, launch timeline, and status intel stay grouped for rapid recon.'
+                            : 'News and launch timeline stay grouped while crack tools remain hidden.'}
+                    </span>
+                    <span className="hidden lg:inline">
+                        {crackGamesPluginOn
+                            ? 'Dedicated intelligence lanes for news, cross-store search, release timing, and crack-status verification.'
+                            : 'Dedicated intelligence lanes for news and release timing while crack intelligence remains hidden.'}
+                    </span>
+                </p>
+
+                <div className="flex flex-col gap-3.5 lg:hidden">
+                    {discoveryTiles.map((tile) => (
+                        <MobileExploreRow
+                            key={tile.id}
+                            to={tile.to}
+                            pool={tile.pool}
+                            title={tile.title}
+                            subtitle={tile.subtitle}
+                        />
+                    ))}
+                </div>
+
+                <div className="hidden lg:grid lg:grid-cols-12 lg:gap-5 xl:gap-6">
+                    {discoveryTiles.map((tile) => (
+                        <BentoCard
+                            key={tile.id}
+                            to={tile.to}
+                            pool={tile.pool}
+                            cols={2}
+                            rows={2}
+                            title={tile.title}
+                            subtitle={tile.subtitle}
+                            gradient={tile.gradient}
+                            className="min-h-[190px] lg:col-span-6"
+                        />
+                    ))}
+                </div>
+            </section>
+
+            <section className="mt-8 sm:mt-10 lg:mt-12" aria-labelledby="lifesync-games-fasttravel-label">
+                <div className="rounded-[28px] border border-slate-200/80 p-4 shadow-[0_22px_58px_-28px_rgba(21, 20, 24,0.2)] sm:p-5 lg:p-6">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                            <h2
+                                id="lifesync-games-fasttravel-label"
+                                className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 sm:text-xs"
+                            >
+                                Fast Travel
+                            </h2>
+                            <p className="mt-1 text-[12px] leading-relaxed text-slate-600 sm:text-[13px]">
+                                Shortcut grid for direct jumps into each game lane.
+                            </p>
+                        </div>
+                        <span className="inline-flex w-fit items-center rounded-full bg-[#C6FF00]/30 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-900 ring-1 ring-[#C6FF00]/45">
+                            {fastTravelRouteCount} routes
+                        </span>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        {fastTravelTiles.map((tile) => (
+                            <GameHubFastTravelTile
+                                key={tile.id}
+                                to={tile.to}
+                                icon={tile.icon}
+                                title={tile.title}
+                                subtitle={tile.subtitle}
+                            />
+                        ))}
+                    </div>
+                </div>
+            </section>
+            </div>
         </HubShell>
     )
 }
@@ -446,13 +831,14 @@ const ANIME_HUB_PATHS = {
     seasonal: '/dashboard/lifesync/anime/anime/seasonal/page/1',
     calendar: '/dashboard/lifesync/anime/anime/calendar',
     mangaHome: '/dashboard/lifesync/anime/manga/mangadex/popular/page/1',
+    hManhwaHome: '/dashboard/lifesync/anime/manga/mangadistrict/latest/page/1',
     hentaiHome: '/dashboard/lifesync/anime/hentai',
 }
 
 /**
  * Ordered destinations for the anime area hub (Games-style bento + mobile rows).
  */
-function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hentaiVisible }) {
+function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, hentaiVisible }) {
     const tiles = []
     if (animePluginOn) {
         tiles.push({
@@ -461,21 +847,10 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hentaiVisible })
             pool: POOL.anime,
             cols: 3,
             rows: 3,
-            title: 'Seasonal & charts',
+            title: 'Anime',
             subtitle: 'MAL seasonal lineups, rankings, search, and your list.',
             gradient: 'bg-gradient-to-t from-[#e0f2fe] via-white/70 to-transparent',
             hero: true,
-        })
-        tiles.push({
-            id: 'calendar',
-            to: ANIME_HUB_PATHS.calendar,
-            pool: POOL.anime,
-            cols: 2,
-            rows: 2,
-            title: 'Calendar',
-            subtitle: 'Weekly broadcast preview and a full month view with pins.',
-            gradient: 'bg-gradient-to-t from-[#ecfeff] via-white/65 to-transparent',
-            hero: false,
         })
     }
     if (mangaPluginOn) {
@@ -491,6 +866,21 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hentaiVisible })
             hero: !animePluginOn && tiles.length === 0,
         })
     }
+    if (hManhwaVisible) {
+        tiles.push({
+            id: 'h-manhwa',
+            to: ANIME_HUB_PATHS.hManhwaHome,
+            pool: POOL.manhwa,
+            cols: 2,
+            rows: 2,
+            title: 'H manhwa',
+            subtitle: 'Manga District in a separate destination.',
+            badge: '18+',
+            badgeClass: 'bg-rose-100 text-rose-800',
+            gradient: 'bg-gradient-to-t from-[#ffe4e6] via-white/60 to-transparent',
+            hero: !animePluginOn && tiles.length === 0,
+        })
+    }
     if (hentaiVisible) {
         tiles.push({
             id: 'hentai',
@@ -498,7 +888,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hentaiVisible })
             pool: POOL.hentai,
             cols: 2,
             rows: 2,
-            title: 'Hentai Ocean',
+            title: 'Hentai',
             subtitle: 'Adults-only catalog with its own controls.',
             badge: '18+',
             badgeClass: 'bg-rose-100 text-rose-800',
@@ -510,18 +900,20 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hentaiVisible })
 }
 
 function AnimeHubExploreSection({ tiles }) {
-    const primary = tiles.find((t) => t.hero) ?? tiles[0]
-    const rest = primary ? tiles.filter((t) => t.id !== primary.id) : []
-    const animeHeroMinH = 'lg:min-h-[min(460px,calc(100dvh-200px))]'
-
     if (!tiles.length) return null
+    const desktopSpanClass = (index, count) => {
+        if (count <= 1) return 'lg:col-span-12'
+        if (count === 2) return 'lg:col-span-6'
+        if (count === 3) return index === 0 ? 'lg:col-span-6' : 'lg:col-span-3'
+        return 'lg:col-span-6'
+    }
 
     return (
         <section
             aria-labelledby="lifesync-anime-explore-label"
-            className="rounded-[28px] border border-slate-200/70 bg-gradient-to-b from-white/90 to-slate-50/40 p-4 shadow-[0_20px_50px_-28px_rgba(15,23,42,0.18)] ring-1 ring-white/80 backdrop-blur-sm sm:p-5 lg:p-6"
+            className="rounded-[30px] p-4 shadow-[0_26px_60px_-30px_rgba(21, 20, 24,0.24)] backdrop-blur-md sm:p-6 lg:p-7"
         >
-            <div className="mb-4 flex flex-col gap-1 sm:mb-5 sm:flex-row sm:items-end sm:justify-between">
+            <div className="mb-4 flex flex-col gap-2 sm:mb-5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h2
                         id="lifesync-anime-explore-label"
@@ -530,76 +922,29 @@ function AnimeHubExploreSection({ tiles }) {
                         Explore
                     </h2>
                     <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-slate-600 sm:text-[13px]">
-                        <span className="lg:hidden">Jump into seasonal anime, manga, or 18+ from the cards below.</span>
-                        <span className="hidden lg:inline">Hero tile for the main catalog; secondary tiles stack beside it on wide screens.</span>
+                        <span className="lg:hidden">Jump into seasonal anime, manga, H manhwa, or 18+ from the cards below.</span>
+                        <span className="hidden lg:inline">Primary lane on the left, with adaptive destination cards on the right for faster routing.</span>
                     </p>
                 </div>
-                <span className="mt-2 inline-flex w-fit items-center rounded-full bg-[#C6FF00]/25 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-800 ring-1 ring-[#C6FF00]/40 sm:mt-0">
+                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-[#C6FF00]/25 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-800 ring-1 ring-[#C6FF00]/40 sm:mt-0">
                     {tiles.length} destinations
                 </span>
             </div>
 
-            <div className="flex flex-col gap-3.5 max-lg:pb-0.5 lg:hidden">
+            <div className="grid gap-4 lg:hidden">
                 {tiles.map((tile) => (
-                    <MobileExploreRow
-                        key={tile.id}
-                        to={tile.to}
-                        pool={tile.pool}
-                        title={tile.title}
-                        subtitle={tile.subtitle}
-                        badge={tile.badge}
-                        badgeClass={tile.badgeClass}
-                    />
+                    <AnimeExploreLaneCard key={`mobile-lane-${tile.id}`} tile={tile} compact />
                 ))}
             </div>
 
-            <div className="hidden lg:grid lg:grid-cols-12 lg:items-stretch lg:gap-6 xl:gap-8">
-                {rest.length === 0 ? (
-                    <BentoCard
-                        to={primary.to}
-                        pool={primary.pool}
-                        cols={primary.cols}
-                        rows={primary.rows}
-                        title={primary.title}
-                        subtitle={primary.subtitle}
-                        badge={primary.badge}
-                        badgeClass={primary.badgeClass}
-                        gradient={primary.gradient}
-                        className={`w-full ${EXPLORE_FULL_ANIME_HERO} ${animeHeroMinH}`}
+            <div className="hidden lg:grid lg:grid-cols-12 lg:gap-5 xl:gap-6">
+                {tiles.map((tile, index) => (
+                    <AnimeExploreLaneCard
+                        key={`desktop-lane-${tile.id}`}
+                        tile={tile}
+                        className={desktopSpanClass(index, tiles.length)}
                     />
-                ) : (
-                    <>
-                        <BentoCard
-                            to={primary.to}
-                            pool={primary.pool}
-                            cols={primary.cols}
-                            rows={primary.rows}
-                            title={primary.title}
-                            subtitle={primary.subtitle}
-                            badge={primary.badge}
-                            badgeClass={primary.badgeClass}
-                            gradient={primary.gradient}
-                            className={`lg:col-span-7 xl:col-span-8 ${EXPLORE_FULL_ANIME_HERO} ${animeHeroMinH}`}
-                        />
-                        <div className="flex flex-col gap-5 lg:col-span-5 xl:col-span-4">
-                            {rest.map((tile) => (
-                                <BentoCard
-                                    key={tile.id}
-                                    to={tile.to}
-                                    pool={tile.pool}
-                                    cols={tile.cols}
-                                    rows={tile.rows}
-                                    title={tile.title}
-                                    subtitle={tile.subtitle}
-                                    badge={tile.badge}
-                                    badgeClass={tile.badgeClass}
-                                    gradient={tile.gradient}
-                                    className={EXPLORE_SIDEBAR_BENTO}
-                                />
-                            ))}
-                        </div>
-                    </>
-                )}
+                ))}
             </div>
         </section>
     )
@@ -636,7 +981,7 @@ function AnimeHubBroadcastWeekSection({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
         >
-            <div className="rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-slate-50/30 to-indigo-50/20 p-3.5 shadow-[0_24px_60px_-30px_rgba(30,27,75,0.2)] backdrop-blur-md sm:p-5 lg:p-6">
+            <div className="rounded-[28px] border border-slate-200/80 p-3.5 shadow-[0_24px_60px_-30px_rgba(30,27,75,0.2)] backdrop-blur-md sm:p-5 lg:p-6">
                 {weekError ? (
                     <motion.div
                         className="mb-4 rounded-2xl border border-red-200 bg-red-50/85 px-4 py-3 text-[12px] font-medium text-red-700 xl:mb-6"
@@ -657,7 +1002,7 @@ function AnimeHubBroadcastWeekSection({
                 ) : null}
 
                 <div className="flex flex-col gap-6 xl:grid xl:grid-cols-12 xl:items-start xl:gap-8">
-                    <div className="space-y-4 rounded-2xl bg-white/70 p-4 ring-1 ring-slate-200/60 xl:col-span-4 xl:pr-2 xl:ring-0">
+                    <div className="space-y-4 rounded-2xl p-4 ring-1 ring-slate-200/60 xl:col-span-4 xl:pr-2 xl:ring-0">
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">This week</p>
                             <h2 className="mt-0.5 text-[19px] font-black leading-tight tracking-tight text-slate-900 sm:mt-1 sm:text-[22px]">Broadcast</h2>
@@ -717,8 +1062,8 @@ function AnimeHubBroadcastWeekSection({
                                         type="button"
                                         onClick={() => setSelectedKey(k)}
                                         className={`
-                                            shrink-0 rounded-2xl px-3 py-2 text-left shadow-sm ring-1 transition
-                                            ${isSel ? 'bg-slate-900 text-white ring-slate-900/10' : 'bg-white text-slate-900 ring-slate-200/80 hover:bg-slate-50'}
+                                            shrink-0 rounded-2xl px-3 py-2 text-left shadow-sm transition
+                                            ${isSel ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}
                                             ${focusRing}
                                         `}
                                         aria-pressed={isSel}
@@ -739,7 +1084,7 @@ function AnimeHubBroadcastWeekSection({
                         </div>
 
                         {/* Selected day preview */}
-                        <div className="mt-4 rounded-2xl bg-white p-3 ring-1 ring-slate-200/80 sm:p-4">
+                        <div className="mt-4 rounded-2x p-3 sm:p-4">
                             <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                                 <div>
                                     <p className="text-[11px] font-black tracking-tight text-slate-900">
@@ -820,7 +1165,7 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
         <motion.article
             role="listitem"
             className={`
-                flex gap-3 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-sm
+                flex gap-3 rounded-2xl border border-slate-200/90 p-3 shadow-sm
                 xl:h-full xl:min-h-[min(280px,42vh)] xl:flex-col xl:gap-0 xl:rounded-none xl:border-0 xl:border-r xl:border-slate-200/90 xl:bg-transparent xl:p-0 xl:shadow-none
                 xl:last:border-r-0
                 ${isToday ? 'ring-2 ring-[#C6FF00]/45 ring-offset-2 ring-offset-white xl:ring-0 xl:ring-offset-0 xl:bg-[#f7fee7]/40' : ''}
@@ -923,6 +1268,7 @@ export function LifeSyncAnimeHub() {
     const prefs = lifeSyncUser?.preferences
     const animePluginOn = isPluginEnabled(prefs, 'pluginAnimeEnabled')
     const mangaPluginOn = isPluginEnabled(prefs, 'pluginMangaEnabled')
+    const hManhwaVisible = isLifeSyncHManhwaVisible(prefs)
     const hentaiVisible = isLifeSyncHentaiHubVisible(prefs)
     const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
 
@@ -947,9 +1293,40 @@ export function LifeSyncAnimeHub() {
     }), [animeHistory, batchLoading])
 
     const { visibleEntries: mangaReadingVisible, loading: mangaReadingLoading } = useMemo(() => ({
-        visibleEntries: filterMangaReadingByNsfw(mangaReading, nsfwEnabled),
+        visibleEntries: filterMangaReadingByNsfw(mangaReading, nsfwEnabled, hManhwaVisible),
         loading: batchLoading,
-    }), [mangaReading, nsfwEnabled, batchLoading])
+    }), [mangaReading, nsfwEnabled, hManhwaVisible, batchLoading])
+    const resumeMobileTabs = useMemo(() => {
+        const tabs = []
+        if (animePluginOn) {
+            tabs.push({
+                id: 'anime',
+                label: 'Anime',
+                count: animeWatchEntries.length,
+                loading: animeWatchLoading,
+            })
+        }
+        if (mangaPluginOn) {
+            tabs.push({
+                id: 'manga',
+                label: 'Manga',
+                count: mangaReadingVisible.length,
+                loading: mangaReadingLoading,
+            })
+        }
+        return tabs
+    }, [
+        animePluginOn,
+        animeWatchEntries.length,
+        animeWatchLoading,
+        mangaPluginOn,
+        mangaReadingVisible.length,
+        mangaReadingLoading,
+    ])
+    const [resumeMobileTab, setResumeMobileTab] = useState('anime')
+    const activeResumeMobileTab = resumeMobileTabs.some((tab) => tab.id === resumeMobileTab)
+        ? resumeMobileTab
+        : (resumeMobileTabs[0]?.id || 'anime')
 
     
 
@@ -1027,21 +1404,23 @@ export function LifeSyncAnimeHub() {
         return { scheduled, pinned }
     }, [weekDays, weekList])
 
-    const animePool = useDailyValidatedPool('anime', POOL.anime)
-    const mangaPool = useDailyValidatedPool('manga', POOL.manga)
-    const hentaiPool = useDailyValidatedPool('hentai', POOL.hentai)
+    const animePool = useDailyValidatedPool('anime-hub-anime-v3', POOL.anime)
+    const mangaPool = useDailyValidatedPool('anime-hub-manga-v3', POOL.manga)
+    const hManhwaPool = useDailyValidatedPool('anime-hub-hmanhwa-v3', POOL.manhwa)
+    const hentaiPool = useDailyValidatedPool('anime-hub-hentai-v3', POOL.hentai)
 
     const exploreTiles = useMemo(
         () => {
-            const tiles = buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hentaiVisible })
+            const tiles = buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, hentaiVisible })
             return tiles.map((t) => {
                 if (t.id === 'seasonal') return { ...t, pool: animePool }
                 if (t.id === 'manga') return { ...t, pool: mangaPool }
+                if (t.id === 'h-manhwa') return { ...t, pool: hManhwaPool }
                 if (t.id === 'hentai') return { ...t, pool: hentaiPool }
                 return t
             })
         },
-        [animePluginOn, hentaiVisible, mangaPluginOn, animePool, mangaPool, hentaiPool]
+        [animePluginOn, hentaiVisible, hManhwaVisible, mangaPluginOn, animePool, mangaPool, hManhwaPool, hentaiPool]
     )
 
     const weekCardsLoading = weekBusy && !weekError && weeklyStats.scheduled === 0
@@ -1072,14 +1451,14 @@ export function LifeSyncAnimeHub() {
         (mangaPluginOn && (mangaReadingLoading || mangaReadingVisible.length > 0))
 
     return (
-        <div className="relative">
+        <div className="relative lifesync-category-borderless">
             <header className="relative mb-6 sm:mb-8">
-                <div className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-gradient-to-br from-white via-[#f8fafc] to-indigo-50/60 p-5 text-slate-900 shadow-[0_28px_60px_-32px_rgba(15,23,42,0.18)] sm:p-6 lg:p-7">
+                <div className="overflow-hidden rounded-[28px] backdrop-blur-md p-5 text-slate-900 shadow-[0_28px_60px_-32px_rgba(21, 20, 24,0.18)] sm:p-6 lg:p-7">
                     <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#C6FF00]/20 blur-3xl" aria-hidden />
                     <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-indigo-300/25 blur-3xl" aria-hidden />
                     <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#C6FF00] text-slate-900 shadow-lg shadow-[#C6FF00]/25 sm:h-14 sm:w-14">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-900 shadow-lg shadow-[#C6FF00]/25 sm:h-14 sm:w-14">
                                 <FaFilm className="h-6 w-6 sm:h-7 sm:w-7" />
                             </div>
                             <div className="min-w-0 pt-0.5">
@@ -1093,51 +1472,6 @@ export function LifeSyncAnimeHub() {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex flex-col gap-3 sm:shrink-0 sm:items-end">
-                            <div className="flex flex-wrap gap-2 sm:justify-end">
-                            <span className="rounded-full bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-slate-200/80">
-                                {animePluginOn ? 'Anime on' : 'Anime off'}
-                            </span>
-                            <span className="rounded-full bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-700 ring-1 ring-slate-200/80">
-                                {mangaPluginOn ? 'Manga on' : 'Manga off'}
-                            </span>
-                            </div>
-
-                            <div className="flex flex-wrap gap-2">
-                                {animePluginOn ? (
-                                    <>
-                                        <Link
-                                            to={ANIME_HUB_PATHS.seasonal}
-                                            className={`inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-white px-4 text-[12px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 ${focusRing}`}
-                                        >
-                                            Seasonal
-                                        </Link>
-                                        <Link
-                                            to={ANIME_HUB_PATHS.calendar}
-                                            className={`inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-[#C6FF00] px-4 text-[12px] font-semibold text-slate-900 shadow-sm shadow-[#C6FF00]/20 transition hover:brightness-95 ${focusRing}`}
-                                        >
-                                            Calendar
-                                        </Link>
-                                    </>
-                                ) : null}
-                                {mangaPluginOn ? (
-                                    <Link
-                                        to={ANIME_HUB_PATHS.mangaHome}
-                                        className={`inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-white px-4 text-[12px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 ${focusRing}`}
-                                    >
-                                        Manga
-                                    </Link>
-                                ) : null}
-                                {!animePluginOn && !mangaPluginOn ? (
-                                    <Link
-                                        to="/dashboard/profile?tab=integrations"
-                                        className={`inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-white px-4 text-[12px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 ${focusRing}`}
-                                    >
-                                        Turn on features
-                                    </Link>
-                                ) : null}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </header>
@@ -1149,23 +1483,85 @@ export function LifeSyncAnimeHub() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.42, delay: 0.06, type: 'spring', stiffness: 220, damping: 26 }}
                     >
-                        <section className="rounded-[28px] border border-slate-200/80 bg-white p-4 shadow-[0_22px_55px_-28px_rgba(15,23,42,0.2)] sm:p-5 lg:p-6">
+                        <section className="rounded-[28px] shadow-[0_26px_60px_-30px_rgba(21, 20, 24,0.24)] backdrop-blur-md sm:p-5 lg:p-6">
                             <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                                 <div className="min-w-0">
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Continue</p>
                                     <h2 className="mt-1 text-[20px] font-black leading-tight tracking-tight text-slate-900 sm:text-[22px]">Resume deck</h2>
-                                    <p className="mt-1 text-[12px] text-slate-600">Pick up streams and chapters without hunting through menus.</p>
+                                    <p className="mt-1 text-[12px] text-slate-600">
+                                        <span className="lg:hidden">Mobile-first quick resume. Switch lanes and jump back in.</span>
+                                        <span className="hidden lg:inline">Pick up streams and chapters without hunting through menus.</span>
+                                    </p>
                                 </div>
                                 <span className="w-fit rounded-full bg-[#C6FF00]/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-900 ring-1 ring-[#C6FF00]/50">
                                     Live sync
                                 </span>
                             </div>
 
+                            {resumeMobileTabs.length > 1 ? (
+                                <div className="mb-4 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-1.5 lg:hidden">
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                        {resumeMobileTabs.map((tab) => {
+                                            const active = tab.id === activeResumeMobileTab
+                                            return (
+                                                <button
+                                                    key={`resume-mobile-tab-${tab.id}`}
+                                                    type="button"
+                                                    onClick={() => setResumeMobileTab(tab.id)}
+                                                    className={`flex min-h-[44px] items-center justify-between rounded-xl px-3 py-2 text-[12px] font-semibold transition ${
+                                                        active
+                                                            ? 'bg-slate-900 text-white shadow-[0_10px_22px_-16px_rgba(21, 20, 24,0.8)]'
+                                                            : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+                                                    }`}
+                                                >
+                                                    <span>{tab.label}</span>
+                                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${active ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                                        {tab.loading ? '…' : tab.count}
+                                                    </span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ) : null}
+
+                            <div className="lg:hidden">
+                                {animePluginOn && activeResumeMobileTab === 'anime' ? (
+                                    <motion.div
+                                        className="min-w-0"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.28, delay: 0.04 }}
+                                    >
+                                        <LifeSyncHubAnimeWatching
+                                            entries={animeWatchEntries}
+                                            loading={animeWatchLoading}
+                                            className="mb-0"
+                                        />
+                                    </motion.div>
+                                ) : null}
+
+                                {mangaPluginOn && activeResumeMobileTab === 'manga' ? (
+                                    <motion.div
+                                        className="min-w-0"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.28, delay: 0.04 }}
+                                    >
+                                        <LifeSyncHubMangaReading
+                                            entries={mangaReadingVisible}
+                                            loading={mangaReadingLoading}
+                                            className="mb-0"
+                                        />
+                                    </motion.div>
+                                ) : null}
+                            </div>
+
                             <div
                                 className={
                                     animePluginOn && mangaPluginOn
-                                        ? 'grid gap-6 lg:grid-cols-2 lg:gap-0 lg:divide-x lg:divide-slate-100'
-                                        : 'space-y-0'
+                                        ? 'hidden lg:grid gap-6 lg:grid-cols-2 lg:gap-0 lg:divide-x lg:divide-slate-100'
+                                        : 'hidden lg:block'
                                 }
                             >
                                 {animePluginOn ? (
@@ -1185,7 +1581,7 @@ export function LifeSyncAnimeHub() {
 
                                 {mangaPluginOn ? (
                                     <motion.div
-                                        className={`min-w-0 ${animePluginOn && mangaPluginOn ? 'border-t border-slate-100 pt-6 lg:border-t-0 lg:pt-0 lg:pl-6' : ''}`}
+                                        className={`min-w-0 ${animePluginOn && mangaPluginOn ? 'lg:pl-6' : ''}`}
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.35, delay: 0.16 }}
