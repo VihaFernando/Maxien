@@ -103,17 +103,22 @@ export function invalidateLifesyncStreamCatalogByMal(malId, mirror) {
  * @param {string|number} malId
  * @param {(path: string, init?: RequestInit) => Promise<unknown>} fetcher — e.g. lifesyncFetch
  * @param {RequestInit} [init]
- * @param {{ mirror?: string }} [opts]
+ * @param {{ mirror?: string, forceRefresh?: boolean, fromResumeDeck?: boolean }} [opts]
  * @returns {Promise<{ data?: unknown, cached?: boolean } | null>}
  */
 export async function fetchStreamInfoByMalWithCache(malId, fetcher, init, opts = {}) {
   const id = normalizeMalId(malId)
   if (!id) return null
   const mirror = normalizeMirror(opts.mirror)
-  const hit = readLifesyncStreamCatalogByMal(id, mirror)
-  if (hit) return hit
+  const forceRefresh = opts?.forceRefresh === true
+  const fromResumeDeck = opts?.fromResumeDeck === true
+  if (!forceRefresh) {
+    const hit = readLifesyncStreamCatalogByMal(id, mirror)
+    if (hit) return hit
+  }
   const qs = new URLSearchParams({ view: 'full' })
   if (mirror === 'kickassanime') qs.set('mirror', 'kickassanime')
+  if (fromResumeDeck) qs.set('fromResumeDeck', '1')
   const res = await fetcher(`/api/v1/anime/stream/info/by-mal/${encodeURIComponent(id)}?${qs.toString()}`, init).catch(() => null)
   const body = res && typeof res === 'object' ? res : null
   if (body?.data != null) writeLifesyncStreamCatalogByMal(id, body, mirror)

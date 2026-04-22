@@ -122,6 +122,11 @@ export default function LifeSyncAnimeWatch() {
         typeof from === 'string' && from.startsWith('/dashboard/lifesync/anime/anime')
             ? from
             : '/dashboard/lifesync/anime/anime/seasonal/page/1'
+    const fromResumeDeckState = location.state?.fromResumeDeck
+    const fromResumeDeck =
+        fromResumeDeckState === true ||
+        fromResumeDeckState === '1' ||
+        fromResumeDeckState === 'true'
 
     const [episodes, setEpisodes] = useState([])
     const [busy, setBusy] = useState(true)
@@ -147,6 +152,7 @@ export default function LifeSyncAnimeWatch() {
         const m = location.state?.streamCatalogMirror
         return typeof m === 'string' && m.toLowerCase() === 'kickassanime' ? 'kickassanime' : ''
     })
+    const shouldForceCatalogRefreshRef = useRef(fromResumeDeck)
 
     const bumpWatchHistory = useCallback(() => {
         try {
@@ -367,12 +373,13 @@ export default function LifeSyncAnimeWatch() {
             skipStreamResolveOnceRef.current = false
             handoffHydratedRef.current = false
             setVideoPreload('metadata')
+            shouldForceCatalogRefreshRef.current = fromResumeDeck
             const m = location.state?.streamCatalogMirror
             setStreamCatalogMirror(
                 typeof m === 'string' && m.toLowerCase() === 'kickassanime' ? 'kickassanime' : '',
             )
         }
-    }, [location.state?.streamCatalogMirror, malId])
+    }, [fromResumeDeck, location.state?.streamCatalogMirror, malId])
 
     useEffect(() => {
         if (!isLifeSyncConnected) return
@@ -387,6 +394,7 @@ export default function LifeSyncAnimeWatch() {
         ;(async () => {
             try {
                 const audio = streamAudioType === 'dub' ? 'dub' : 'sub'
+                const forceCatalogRefresh = shouldForceCatalogRefreshRef.current
                 const [detail, streamInfo, thumbs] = await Promise.all([
                     lifesyncFetch(
                         `/api/v1/anime/details/${encodeURIComponent(malId)}?fields=related_anime,my_list_status&view=full`,
@@ -394,6 +402,7 @@ export default function LifeSyncAnimeWatch() {
                     ).catch(() => null),
                     fetchStreamInfoByMalWithCache(malId, lifesyncFetch, { signal: ac.signal }, {
                         mirror: streamCatalogMirror === 'kickassanime' ? 'kickassanime' : '',
+                        ...(forceCatalogRefresh ? { forceRefresh: true, fromResumeDeck: true } : {}),
                     }).catch(() => null),
                     lifesyncFetch(
                         `/api/v1/anime/mal-episode-thumbnails/${encodeURIComponent(malId)}?audio=${audio}&view=compact`,
@@ -422,6 +431,7 @@ export default function LifeSyncAnimeWatch() {
                 if (!ac.signal.aborted) {
                     setBusy(false)
                     seedCatalogQuietRef.current = false
+                    shouldForceCatalogRefreshRef.current = false
                 }
             }
         })()

@@ -50,6 +50,7 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
                         <Link
                             key={entry.malId}
                             to={watchPath(entry.malId, entry.lastEpisodeNumber)}
+                            state={{ from: ANIME_HUB_PATH, fromResumeDeck: true }}
                             className={`group w-[112px] shrink-0 snap-start sm:w-[118px] ${focusRing} rounded-2xl outline-none`}
                         >
                             <div className="overflow-hidden rounded-2xl bg-slate-100 shadow-sm ring-1 ring-slate-200/80 transition duration-300 group-active:scale-[0.98] group-hover:shadow-md group-hover:ring-slate-300">
