@@ -320,14 +320,14 @@ export default function Projects() {
             {/* Top Header */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 px-0">
                 <div>
-                    <p className="text-[10px] sm:text-[11px] font-semibold text-[#86868b] uppercase tracking-widest mb-1">Projects</p>
-                    <h1 className="text-[18px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight">
+                    <p className="text-[10px] sm:text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest mb-1">Projects</p>
+                    <h1 className="text-[18px] sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-tight">
                         Organize Your Work
                     </h1>
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-[#C6FF00] text-[#1d1d1f] rounded-xl font-semibold text-[13px] hover:bg-[#b3e600] transition-colors shadow-sm flex-shrink-0"
+                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1d1d1f)] rounded-xl font-semibold text-[13px] hover:bg-[var(--mx-color-b3e600)] transition-colors shadow-sm flex-shrink-0"
                 >
                     <FaPlus className="w-3.5 h-3.5" />
                     New Project
@@ -338,19 +338,19 @@ export default function Projects() {
             <div className="flex flex-col gap-3 mb-5 sm:mb-6">
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-3">
                     <div className="flex-1 relative">
-                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b] w-4 h-4" />
+                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mx-color-86868b)] w-4 h-4" />
                         <input
                             type="text"
                             placeholder="Search projects..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2.5 sm:py-2 border border-[#d2d2d7]/50 rounded-xl text-[13px] placeholder:text-[#86868b] focus:outline-none focus:border-[#86868b] focus:ring-1 focus:ring-[#C6FF00]/50"
+                            className="w-full pl-9 pr-4 py-2.5 sm:py-2 border border-[var(--mx-color-d2d2d7)]/50 rounded-xl text-[13px] placeholder:text-[var(--mx-color-86868b)] focus:outline-none focus:border-[var(--mx-color-86868b)] focus:ring-1 focus:ring-[var(--mx-color-c6ff00)]/50"
                         />
                     </div>
                     <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 border border-[#d2d2d7]/50 rounded-xl text-[13px] bg-white text-[#1d1d1f] font-medium focus:outline-none focus:border-[#86868b] focus:ring-1 focus:ring-[#C6FF00]/50"
+                        className="w-full sm:w-auto px-3 sm:px-4 py-2.5 sm:py-2 border border-[var(--mx-color-d2d2d7)]/50 rounded-xl text-[13px] bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] font-medium focus:outline-none focus:border-[var(--mx-color-86868b)] focus:ring-1 focus:ring-[var(--mx-color-c6ff00)]/50"
                     >
                         <option value="">All Statuses</option>
                         {statusOptions.map(s => (
@@ -377,14 +377,14 @@ export default function Projects() {
             {/* Projects Grid */}
             {loading ? (
                 <div className="flex items-center justify-center h-48">
-                    <div className="w-8 h-8 border-4 border-[#C6FF00] border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-[var(--mx-color-c6ff00)] border-t-transparent rounded-full animate-spin"></div>
                 </div>
             ) : filteredProjects.length === 0 ? (
                 <div className="text-center py-12">
-                    <p className="text-[#86868b] text-[13px] mb-3">No projects yet</p>
+                    <p className="text-[var(--mx-color-86868b)] text-[13px] mb-3">No projects yet</p>
                     <button
                         onClick={() => setShowForm(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#f5f5f7] text-[#1d1d1f] rounded-xl font-semibold text-[13px] hover:bg-[#e8e8ed] transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)] rounded-xl font-semibold text-[13px] hover:bg-[var(--mx-color-e8e8ed)] transition-colors"
                     >
                         <FaPlus className="w-3.5 h-3.5" />
                         Create Your First Project
@@ -400,13 +400,13 @@ export default function Projects() {
                         return (
                             <div
                                 key={project.id}
-                                className={`bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden transition-all ${project.status === "Archived" ? "opacity-50 hover:shadow-sm" : "hover:shadow-md"}`}
+                                className={`bg-[var(--color-surface)] rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden transition-all ${project.status === "Archived" ? "opacity-50 hover:shadow-sm" : "hover:shadow-md"}`}
                             >
                                 {/* Header */}
-                                <div className="p-4 sm:p-5 md:p-6 border-b border-[#f0f0f0]">
+                                <div className="p-4 sm:p-5 md:p-6 border-b border-[var(--mx-color-f0f0f0)]">
                                     <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-[14px] sm:text-[15px] font-bold text-[#1d1d1f] tracking-tight mb-2 truncate">
+                                            <h3 className="text-[14px] sm:text-[15px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight mb-2 truncate">
                                                 {project.name}
                                             </h3>
                                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -414,7 +414,7 @@ export default function Projects() {
                                                     {project.status}
                                                 </span>
                                                 {typeInfo && (
-                                                    <span className="inline-block px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-[#f5f5f7] text-[#1d1d1f] truncate">
+                                                    <span className="inline-block px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)] truncate">
                                                         {typeInfo.name}
                                                     </span>
                                                 )}
@@ -426,7 +426,7 @@ export default function Projects() {
                                                     fetchProjectTasks(project.id)
                                                     setSelectedProjectTasks(project)
                                                 }}
-                                                className="p-1.5 hover:bg-[#f5f5f7] rounded-lg text-[#86868b] hover:text-[#1d1d1f] transition-colors"
+                                                className="p-1.5 hover:bg-[var(--mx-color-f5f5f7)] rounded-lg text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] transition-colors"
                                                 title="View Tasks"
                                             >
                                                 <FaCheckSquare className="w-3.5 h-3.5" />
@@ -434,28 +434,28 @@ export default function Projects() {
                                             <div className="relative">
                                                 <button
                                                     onClick={() => setActionMenu(actionMenu === project.id ? null : project.id)}
-                                                    className="p-1.5 hover:bg-[#f5f5f7] rounded-lg text-[#86868b] hover:text-[#1d1d1f] transition-colors"
+                                                    className="p-1.5 hover:bg-[var(--mx-color-f5f5f7)] rounded-lg text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] transition-colors"
                                                 >
                                                     <FaEllipsisH className="w-4 h-4" />
                                                 </button>
                                                 {actionMenu === project.id && (
-                                                    <div className="absolute top-10 right-0 bg-white border border-[#d2d2d7]/50 rounded-xl shadow-lg z-20 min-w-[160px]">
+                                                    <div className="absolute top-10 right-0 bg-[var(--color-surface)] border border-[var(--mx-color-d2d2d7)]/50 rounded-xl shadow-lg z-20 min-w-[160px]">
                                                         <button
                                                             onClick={() => startEdit(project)}
-                                                            className="w-full text-left px-4 py-2 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] border-b border-[#f0f0f0]"
+                                                            className="w-full text-left px-4 py-2 text-[13px] font-medium text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)] border-b border-[var(--mx-color-f0f0f0)]"
                                                         >
                                                             Edit
                                                         </button>
                                                         <button
                                                             onClick={() => setSelectedProject(project)}
-                                                            className="w-full text-left px-4 py-2 text-[13px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7] border-b border-[#f0f0f0]"
+                                                            className="w-full text-left px-4 py-2 text-[13px] font-medium text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)] border-b border-[var(--mx-color-f0f0f0)]"
                                                         >
                                                             View Details
                                                         </button>
                                                         {project.status !== "Archived" && (
                                                             <button
                                                                 onClick={() => updateProjectStatus(project.id, "Archived")}
-                                                                className="w-full text-left px-4 py-2 text-[13px] font-medium text-[#86868b] hover:bg-[#f5f5f7] border-b border-[#f0f0f0] flex items-center gap-2"
+                                                                className="w-full text-left px-4 py-2 text-[13px] font-medium text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-f5f5f7)] border-b border-[var(--mx-color-f0f0f0)] flex items-center gap-2"
                                                             >
                                                                 <FaArchive className="w-3 h-3" />
                                                                 Archive
@@ -464,7 +464,7 @@ export default function Projects() {
                                                         {project.status === "Archived" && (
                                                             <button
                                                                 onClick={() => updateProjectStatus(project.id, "Active")}
-                                                                className="w-full text-left px-4 py-2 text-[13px] font-medium text-[#86868b] hover:bg-[#f5f5f7] border-b border-[#f0f0f0] flex items-center gap-2"
+                                                                className="w-full text-left px-4 py-2 text-[13px] font-medium text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-f5f5f7)] border-b border-[var(--mx-color-f0f0f0)] flex items-center gap-2"
                                                             >
                                                                 <FaSync className="w-3 h-3" />
                                                                 Restore
@@ -483,43 +483,43 @@ export default function Projects() {
                                     </div>
 
                                     {project.description && (
-                                        <p className="text-[12px] sm:text-[13px] text-[#86868b] line-clamp-2 mb-3 leading-relaxed">
+                                        <p className="text-[12px] sm:text-[13px] text-[var(--mx-color-86868b)] line-clamp-2 mb-3 leading-relaxed">
                                             {project.description}
                                         </p>
                                     )}
                                 </div>
 
                                 {/* Progress */}
-                                <div className="px-4 sm:px-5 md:px-6 py-3 border-b border-[#f0f0f0]">
+                                <div className="px-4 sm:px-5 md:px-6 py-3 border-b border-[var(--mx-color-f0f0f0)]">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] sm:text-[11px] font-semibold text-[#86868b] uppercase tracking-wide">Progress</span>
-                                        <span className="text-[12px] sm:text-[13px] font-semibold text-[#1d1d1f]">{progress}%</span>
+                                        <span className="text-[10px] sm:text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide">Progress</span>
+                                        <span className="text-[12px] sm:text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">{progress}%</span>
                                     </div>
-                                    <div className="w-full h-2 bg-[#f5f5f7] rounded-full overflow-hidden">
+                                    <div className="w-full h-2 bg-[var(--mx-color-f5f5f7)] rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-[#C6FF00] transition-all duration-300"
+                                            className="h-full bg-[var(--mx-color-c6ff00)] transition-all duration-300"
                                             style={{ width: `${progress}%` }}
                                         ></div>
                                     </div>
-                                    <p className="text-[10px] sm:text-[11px] text-[#86868b] mt-2">
+                                    <p className="text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] mt-2">
                                         {stats.completed} of {stats.total} task{stats.total !== 1 ? 's' : ''} completed
                                     </p>
                                 </div>
 
                                 {/* Dates */}
                                 {(project.start_date || project.target_end_date) && (
-                                    <div className="px-4 sm:px-5 md:px-6 py-3 border-b border-[#f0f0f0]">
+                                    <div className="px-4 sm:px-5 md:px-6 py-3 border-b border-[var(--mx-color-f0f0f0)]">
                                         <div className="space-y-1.5">
                                             {project.start_date && (
                                                 <div className="flex justify-between items-center text-[12px] sm:text-[13px]">
-                                                    <span className="text-[#86868b]">Start:</span>
-                                                    <span className="text-[#1d1d1f] font-medium">{formatDate(project.start_date)}</span>
+                                                    <span className="text-[var(--mx-color-86868b)]">Start:</span>
+                                                    <span className="text-[var(--mx-color-1d1d1f)] font-medium">{formatDate(project.start_date)}</span>
                                                 </div>
                                             )}
                                             {project.target_end_date && (
                                                 <div className="flex justify-between items-center text-[12px] sm:text-[13px]">
-                                                    <span className="text-[#86868b]">Target:</span>
-                                                    <span className="text-[#1d1d1f] font-medium">{formatDate(project.target_end_date)}</span>
+                                                    <span className="text-[var(--mx-color-86868b)]">Target:</span>
+                                                    <span className="text-[var(--mx-color-1d1d1f)] font-medium">{formatDate(project.target_end_date)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -527,7 +527,7 @@ export default function Projects() {
                                 )}
 
                                 {/* Timestamps */}
-                                <div className="px-4 sm:px-5 md:px-6 py-2.5 bg-[#f9f9fb] text-[10px] sm:text-[11px] text-[#86868b] space-y-0.5">
+                                <div className="px-4 sm:px-5 md:px-6 py-2.5 bg-[var(--mx-color-f9f9fb)] text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] space-y-0.5">
                                     <div className="flex justify-between">
                                         <span>Created:</span>
                                         <span>{formatTimestamp(project.created_at)}</span>
@@ -547,39 +547,39 @@ export default function Projects() {
 
             {/* Create/Edit Project Modal */}
             {showForm && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#151418]/45 backdrop-blur-[3px]" onClick={cancelEdit}>
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[var(--mx-color-151418)]/45 backdrop-blur-[3px]" onClick={cancelEdit}>
                     <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
-                        <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
+                        <div className="w-full overflow-hidden rounded-t-3xl border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between border-b border-[var(--mx-color-eef2f7)] bg-[var(--mx-color-f8fafc)] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
                                 <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Project editor</p>
-                                    <h3 className="mt-0.5 text-[15px] font-bold text-[#111827] sm:text-[17px]">{editing ? "Edit Project" : "New Project"}</h3>
-                                    <p className="mt-0.5 text-[11px] text-[#64748b]">{editing ? "Update project details" : "Create a new project in your workspace"}</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Project editor</p>
+                                    <h3 className="mt-0.5 text-[15px] font-bold text-[var(--mx-color-111827)] sm:text-[17px]">{editing ? "Edit Project" : "New Project"}</h3>
+                                    <p className="mt-0.5 text-[11px] text-[var(--mx-color-64748b)]">{editing ? "Update project details" : "Create a new project in your workspace"}</p>
                                 </div>
-                                <button onClick={cancelEdit} className="rounded-full border border-[#e2e8f0] bg-white p-1.5 transition-colors hover:bg-[#f8fafc]">
-                                    <FaTimes className="h-4 w-4 text-[#64748b]" />
+                                <button onClick={cancelEdit} className="rounded-full border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] p-1.5 transition-colors hover:bg-[var(--mx-color-f8fafc)]">
+                                    <FaTimes className="h-4 w-4 text-[var(--mx-color-64748b)]" />
                                 </button>
                             </div>
 
                             <form onSubmit={createProject} className="max-h-[76vh] space-y-3.5 overflow-y-auto px-4.5 py-4 sm:max-h-[80vh] sm:px-5 sm:py-4.5">
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                     <div className="md:col-span-2">
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Project Name *</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Project Name *</label>
                                         <input
                                             type="text"
                                             value={form.name}
                                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                                             placeholder="Enter project name"
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Type *</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Type *</label>
                                         <select
                                             value={form.type_id}
                                             onChange={(e) => setForm({ ...form, type_id: e.target.value })}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
                                         >
                                             <option value="">Select a type</option>
                                             {types.map(t => (
@@ -589,11 +589,11 @@ export default function Projects() {
                                     </div>
 
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Status</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Status</label>
                                         <select
                                             value={form.status}
                                             onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
                                         >
                                             {statusOptions.map(s => (
                                                 <option key={s} value={s}>{s}</option>
@@ -602,33 +602,33 @@ export default function Projects() {
                                     </div>
 
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Start Date</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Start Date</label>
                                         <input
                                             type="date"
                                             value={form.start_date}
                                             onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Target End Date</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Target End Date</label>
                                         <input
                                             type="date"
                                             value={form.target_end_date}
                                             onChange={(e) => setForm({ ...form, target_end_date: e.target.value })}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
                                         />
                                     </div>
 
                                     <div className="md:col-span-2">
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Description</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Description</label>
                                         <textarea
                                             value={form.description}
                                             onChange={(e) => setForm({ ...form, description: e.target.value })}
                                             placeholder="Add project description (optional)"
                                             rows="3"
-                                            className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white"
+                                            className="w-full resize-none rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
                                         />
                                     </div>
                                 </div>
@@ -645,18 +645,18 @@ export default function Projects() {
                                     </p>
                                 )}
 
-                                <div className="flex gap-2 border-t border-[#eef2f7] pt-3">
+                                <div className="flex gap-2 border-t border-[var(--mx-color-eef2f7)] pt-3">
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="flex-1 rounded-lg bg-[#C6FF00] py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#b8f000] disabled:opacity-60"
+                                        className="flex-1 rounded-lg bg-[var(--mx-color-c6ff00)] py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60"
                                     >
                                         {loading ? (editing ? "Saving..." : "Creating...") : (editing ? "Update Project" : "Create Project")}
                                     </button>
                                     <button
                                         type="button"
                                         onClick={cancelEdit}
-                                        className="rounded-lg border border-[#d2d2d7] bg-[#f5f7fa] px-4 py-2.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-white"
+                                        className="rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f7fa)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-334155)] transition-colors hover:bg-[var(--color-surface)]"
                                     >
                                         Cancel
                                     </button>
@@ -671,14 +671,14 @@ export default function Projects() {
             {selectedProject && (
                 <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-40 overflow-y-auto animate-in fade-in duration-200">
                     <div className="flex min-h-full items-start sm:items-center justify-center pt-[80px] sm:pt-0 p-4 sm:p-6">
-                        <div className="bg-white rounded-[24px] shadow-xl max-w-[600px] w-full overflow-hidden animate-in zoom-in duration-200">
+                        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-xl max-w-[600px] w-full overflow-hidden animate-in zoom-in duration-200">
 
                             {/* Modal Header */}
-                            <div className="bg-white border-b border-[#f0f0f0] px-4 sm:px-6 py-4 flex items-center justify-between">
-                                <h2 className="text-[16px] sm:text-[18px] font-bold text-[#1d1d1f]">Project Details</h2>
+                            <div className="bg-[var(--color-surface)] border-b border-[var(--mx-color-f0f0f0)] px-4 sm:px-6 py-4 flex items-center justify-between">
+                                <h2 className="text-[16px] sm:text-[18px] font-bold text-[var(--mx-color-1d1d1f)]">Project Details</h2>
                                 <button
                                     onClick={() => setSelectedProject(null)}
-                                    className="p-1 hover:bg-[#f5f5f7] rounded-lg text-[#86868b] transition-colors flex-shrink-0"
+                                    className="p-1 hover:bg-[var(--mx-color-f5f5f7)] rounded-lg text-[var(--mx-color-86868b)] transition-colors flex-shrink-0"
                                 >
                                     <FaTimes className="w-4 h-4" />
                                 </button>
@@ -688,13 +688,13 @@ export default function Projects() {
                             <div className="p-4 sm:p-6 space-y-6">
                                 {/* Name and Status */}
                                 <div>
-                                    <h3 className="text-[16px] sm:text-[18px] font-bold text-[#1d1d1f] mb-2">{selectedProject.name}</h3>
+                                    <h3 className="text-[16px] sm:text-[18px] font-bold text-[var(--mx-color-1d1d1f)] mb-2">{selectedProject.name}</h3>
                                     <div className="flex flex-wrap items-center gap-2">
                                         <span className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border ${statusColors[selectedProject.status]}`}>
                                             {selectedProject.status}
                                         </span>
                                         {getTypeInfo(selectedProject.type_id) && (
-                                            <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#f5f5f7] text-[#1d1d1f]">
+                                            <span className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]">
                                                 {getTypeInfo(selectedProject.type_id).name}
                                             </span>
                                         )}
@@ -704,8 +704,8 @@ export default function Projects() {
                                 {/* Description */}
                                 {selectedProject.description && (
                                     <div>
-                                        <p className="text-[11px] sm:text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-2">Description</p>
-                                        <p className="text-[13px] sm:text-[14px] text-[#1d1d1f] leading-relaxed">
+                                        <p className="text-[11px] sm:text-[12px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide mb-2">Description</p>
+                                        <p className="text-[13px] sm:text-[14px] text-[var(--mx-color-1d1d1f)] leading-relaxed">
                                             {selectedProject.description}
                                         </p>
                                     </div>
@@ -714,18 +714,18 @@ export default function Projects() {
                                 {/* Dates */}
                                 {(selectedProject.start_date || selectedProject.target_end_date) && (
                                     <div>
-                                        <p className="text-[11px] sm:text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-2">Timeline</p>
+                                        <p className="text-[11px] sm:text-[12px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide mb-2">Timeline</p>
                                         <div className="space-y-1.5">
                                             {selectedProject.start_date && (
                                                 <div className="flex justify-between items-center text-[12px] sm:text-[13px]">
-                                                    <span className="text-[#86868b]">Start Date:</span>
-                                                    <span className="text-[#1d1d1f] font-medium">{formatDate(selectedProject.start_date)}</span>
+                                                    <span className="text-[var(--mx-color-86868b)]">Start Date:</span>
+                                                    <span className="text-[var(--mx-color-1d1d1f)] font-medium">{formatDate(selectedProject.start_date)}</span>
                                                 </div>
                                             )}
                                             {selectedProject.target_end_date && (
                                                 <div className="flex justify-between items-center text-[12px] sm:text-[13px]">
-                                                    <span className="text-[#86868b]">Target End:</span>
-                                                    <span className="text-[#1d1d1f] font-medium">{formatDate(selectedProject.target_end_date)}</span>
+                                                    <span className="text-[var(--mx-color-86868b)]">Target End:</span>
+                                                    <span className="text-[var(--mx-color-1d1d1f)] font-medium">{formatDate(selectedProject.target_end_date)}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -735,20 +735,20 @@ export default function Projects() {
                                 {/* Progress */}
                                 {getProjectStats(selectedProject).total > 0 && (
                                     <div>
-                                        <p className="text-[11px] sm:text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-2">Task Progress</p>
+                                        <p className="text-[11px] sm:text-[12px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide mb-2">Task Progress</p>
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2">
-                                                <div className="flex-1 h-2 bg-[#f5f5f7] rounded-full overflow-hidden">
+                                                <div className="flex-1 h-2 bg-[var(--mx-color-f5f5f7)] rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-[#C6FF00]"
+                                                        className="h-full bg-[var(--mx-color-c6ff00)]"
                                                         style={{ width: `${Math.round((getProjectStats(selectedProject).completed / getProjectStats(selectedProject).total) * 100)}%` }}
                                                     ></div>
                                                 </div>
-                                                <span className="text-[12px] sm:text-[13px] font-semibold text-[#1d1d1f] w-12 text-right">
+                                                <span className="text-[12px] sm:text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] w-12 text-right">
                                                     {Math.round((getProjectStats(selectedProject).completed / getProjectStats(selectedProject).total) * 100)}%
                                                 </span>
                                             </div>
-                                            <p className="text-[10px] sm:text-[11px] text-[#86868b]">
+                                            <p className="text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)]">
                                                 {getProjectStats(selectedProject).completed} of {getProjectStats(selectedProject).total} tasks completed
                                             </p>
                                         </div>
@@ -756,9 +756,9 @@ export default function Projects() {
                                 )}
 
                                 {/* Timestamps */}
-                                <div className="pt-4 border-t border-[#f0f0f0]">
-                                    <p className="text-[11px] sm:text-[12px] font-semibold text-[#86868b] uppercase tracking-wide mb-3">Timeline</p>
-                                    <div className="space-y-1.5 text-[11px] sm:text-[12px] text-[#86868b]">
+                                <div className="pt-4 border-t border-[var(--mx-color-f0f0f0)]">
+                                    <p className="text-[11px] sm:text-[12px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide mb-3">Timeline</p>
+                                    <div className="space-y-1.5 text-[11px] sm:text-[12px] text-[var(--mx-color-86868b)]">
                                         <div className="flex justify-between">
                                             <span>Created:</span>
                                             <span>{formatTimestamp(selectedProject.created_at)}</span>
@@ -776,13 +776,13 @@ export default function Projects() {
                                 <div className="flex flex-col sm:flex-row gap-2 pt-4">
                                     <button
                                         onClick={() => startEdit(selectedProject)}
-                                        className="flex-1 px-4 py-2.5 sm:py-2 bg-[#C6FF00] text-[#1d1d1f] rounded-xl font-semibold text-[13px] hover:bg-[#b3e600] transition-colors"
+                                        className="flex-1 px-4 py-2.5 sm:py-2 bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1d1d1f)] rounded-xl font-semibold text-[13px] hover:bg-[var(--mx-color-b3e600)] transition-colors"
                                     >
                                         Edit Project
                                     </button>
                                     <button
                                         onClick={() => setSelectedProject(null)}
-                                        className="flex-1 px-4 py-2.5 sm:py-2 border border-[#d2d2d7]/50 text-[#1d1d1f] rounded-xl font-semibold text-[13px] hover:bg-[#f5f5f7] transition-colors"
+                                        className="flex-1 px-4 py-2.5 sm:py-2 border border-[var(--mx-color-d2d2d7)]/50 text-[var(--mx-color-1d1d1f)] rounded-xl font-semibold text-[13px] hover:bg-[var(--mx-color-f5f5f7)] transition-colors"
                                     >
                                         Close
                                     </button>
@@ -797,17 +797,17 @@ export default function Projects() {
             {selectedProjectTasks && (
                 <div className="fixed inset-0 bg-black/25 backdrop-blur-sm z-40 overflow-y-auto animate-in fade-in duration-200">
                     <div className="flex min-h-full items-start sm:items-center justify-center pt-[80px] sm:pt-0 p-4 sm:p-6">
-                        <div className="bg-white rounded-[24px] shadow-xl max-w-[700px] w-full overflow-hidden animate-in zoom-in duration-200">
+                        <div className="bg-[var(--color-surface)] rounded-[24px] shadow-xl max-w-[700px] w-full overflow-hidden animate-in zoom-in duration-200">
 
                             {/* Modal Header */}
-                            <div className="bg-white border-b border-[#f0f0f0] px-4 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="bg-[var(--color-surface)] border-b border-[var(--mx-color-f0f0f0)] px-4 sm:px-6 py-4 flex items-center justify-between">
                                 <div className="min-w-0">
-                                    <h2 className="text-[16px] sm:text-[18px] font-bold text-[#1d1d1f] truncate">{selectedProjectTasks.name}</h2>
-                                    <p className="text-[11px] sm:text-[12px] text-[#86868b] mt-0.5">Tasks ({projectTasksData.length})</p>
+                                    <h2 className="text-[16px] sm:text-[18px] font-bold text-[var(--mx-color-1d1d1f)] truncate">{selectedProjectTasks.name}</h2>
+                                    <p className="text-[11px] sm:text-[12px] text-[var(--mx-color-86868b)] mt-0.5">Tasks ({projectTasksData.length})</p>
                                 </div>
                                 <button
                                     onClick={() => setSelectedProjectTasks(null)}
-                                    className="p-1 hover:bg-[#f5f5f7] rounded-lg text-[#86868b] transition-colors flex-shrink-0 ml-4"
+                                    className="p-1 hover:bg-[var(--mx-color-f5f5f7)] rounded-lg text-[var(--mx-color-86868b)] transition-colors flex-shrink-0 ml-4"
                                 >
                                     <FaTimes className="w-4 h-4" />
                                 </button>
@@ -817,11 +817,11 @@ export default function Projects() {
                             <div className="p-4 sm:p-6">
                                 {taskLoading ? (
                                     <div className="flex items-center justify-center py-8">
-                                        <div className="w-6 h-6 border-3 border-[#C6FF00] border-t-transparent rounded-full animate-spin"></div>
+                                        <div className="w-6 h-6 border-3 border-[var(--mx-color-c6ff00)] border-t-transparent rounded-full animate-spin"></div>
                                     </div>
                                 ) : projectTasksData.length === 0 ? (
                                     <div className="text-center py-10">
-                                        <p className="text-[#86868b] text-[12px] sm:text-[13px]">No tasks linked to this project yet</p>
+                                        <p className="text-[var(--mx-color-86868b)] text-[12px] sm:text-[13px]">No tasks linked to this project yet</p>
                                     </div>
                                 ) : (
                                     <div className="space-y-2">
@@ -829,16 +829,16 @@ export default function Projects() {
                                             <div
                                                 key={task.id}
                                                 className={`p-3 sm:p-4 rounded-[14px] border flex items-start justify-between gap-3 ${task.status === "Done"
-                                                    ? "bg-[#f5f5f7] border-[#d2d2d7]/30 opacity-60"
-                                                    : "bg-white border-[#d2d2d7]/50 hover:border-[#C6FF00]/50"
+                                                    ? "bg-[var(--mx-color-f5f5f7)] border-[var(--mx-color-d2d2d7)]/30 opacity-60"
+                                                    : "bg-[var(--color-surface)] border-[var(--mx-color-d2d2d7)]/50 hover:border-[var(--mx-color-c6ff00)]/50"
                                                     } transition-all relative`}
                                             >
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <div
                                                             className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${task.status === "Done"
-                                                                ? "bg-[#22c55e]"
-                                                                : "border-2 border-[#C6FF00]"
+                                                                ? "bg-[var(--mx-color-22c55e)]"
+                                                                : "border-2 border-[var(--mx-color-c6ff00)]"
                                                                 }`}
                                                         >
                                                             {task.status === "Done" && (
@@ -847,11 +847,11 @@ export default function Projects() {
                                                                 </svg>
                                                             )}
                                                         </div>
-                                                        <h4 className={`text-[12px] sm:text-[13px] font-semibold truncate ${task.status === "Done" ? "line-through text-[#86868b]" : "text-[#1d1d1f]"}`}>
+                                                        <h4 className={`text-[12px] sm:text-[13px] font-semibold truncate ${task.status === "Done" ? "line-through text-[var(--mx-color-86868b)]" : "text-[var(--mx-color-1d1d1f)]"}`}>
                                                             {task.title}
                                                         </h4>
                                                         {task.due_at && (
-                                                            <span className="text-[10px] sm:text-[11px] text-[#86868b] ml-2">
+                                                            <span className="text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] ml-2">
                                                                 {new Date(task.due_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {new Date(task.due_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
                                                             </span>
                                                         )}
@@ -860,9 +860,9 @@ export default function Projects() {
                                                         )}
                                                     </div>
                                                     {task.description && (
-                                                        <p className="text-[10px] sm:text-[11px] text-[#86868b] ml-7 truncate">{task.description}</p>
+                                                        <p className="text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] ml-7 truncate">{task.description}</p>
                                                     )}
-                                                    <div className="text-[10px] sm:text-[11px] text-[#86868b] ml-7 mt-1">
+                                                    <div className="text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] ml-7 mt-1">
                                                         {task.status === "Done" ? "✓ Completed" : task.status}
                                                     </div>
                                                 </div>
@@ -872,10 +872,10 @@ export default function Projects() {
                                 )}
 
                                 {/* Actions */}
-                                <div className="flex gap-2 pt-6 mt-6 border-t border-[#f0f0f0]">
+                                <div className="flex gap-2 pt-6 mt-6 border-t border-[var(--mx-color-f0f0f0)]">
                                     <button
                                         onClick={() => setSelectedProjectTasks(null)}
-                                        className="flex-1 px-4 py-2.5 sm:py-2 bg-[#C6FF00] text-[#1d1d1f] rounded-xl font-semibold text-[13px] hover:bg-[#b3e600] transition-colors"
+                                        className="flex-1 px-4 py-2.5 sm:py-2 bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1d1d1f)] rounded-xl font-semibold text-[13px] hover:bg-[var(--mx-color-b3e600)] transition-colors"
                                     >
                                         Close
                                     </button>

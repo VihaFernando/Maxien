@@ -14,11 +14,11 @@ function StoreCard({ item }) {
             href={item.storeUrl}
             target="_blank"
             rel="noreferrer"
-            className="lifesync-games-glass group bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden hover:shadow-md transition-all"
+            className="lifesync-games-glass group bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden hover:shadow-md transition-all"
         >
-            <div className="relative aspect-video w-full overflow-hidden bg-[#f5f5f7]">
+            <div className="relative aspect-video w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
                 {item.discountPercent > 0 && (
-                    <span className="absolute right-2 top-2 z-[3] rounded-lg bg-[#C6FF00] px-2 py-0.5 text-[11px] font-bold text-[#1d1d1f] shadow-sm">
+                    <span className="absolute right-2 top-2 z-[3] rounded-lg bg-[var(--mx-color-c6ff00)] px-2 py-0.5 text-[11px] font-bold text-[var(--mx-color-1d1d1f)] shadow-sm">
                         −{item.discountPercent}%
                     </span>
                 )}
@@ -30,14 +30,14 @@ function StoreCard({ item }) {
                         imgProps={{ onError: () => setImgErr(true) }}
                     />
                 ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                    <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M14.25 6.087c0-.355.186-.676.401-.959.221-.29.349-.634.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .369.128.713.349 1.003.215.283.401.604.401.959v0a.64.64 0 01-.657.643 48.491 48.491 0 01-4.163-.3c.186 1.613.96 3.073 2.062 4.063C9.442 11.56 10.652 12 12 12s2.558-.44 3.555-1.338a8.37 8.37 0 002.062-4.062 48.366 48.366 0 01-4.163.3.64.64 0 01-.657-.643v0z" /></svg>
                     </div>
                 )}
             </div>
             <div className="p-3">
-                <p className="text-[13px] font-semibold text-[#1d1d1f] line-clamp-2">{item.name}</p>
-                {item.priceText && <p className="mt-0.5 text-[12px] text-[#C6FF00] font-medium">{item.priceText}</p>}
+                <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] line-clamp-2">{item.name}</p>
+                {item.priceText && <p className="mt-0.5 text-[12px] text-[var(--mx-color-c6ff00)] font-medium">{item.priceText}</p>}
             </div>
         </a>
     )
@@ -48,7 +48,7 @@ function StoreSection({ title, items }) {
 
     return (
         <div>
-            <h3 className="text-[15px] font-bold text-[#1d1d1f] mb-3">{title}</h3>
+            <h3 className="text-[15px] font-bold text-[var(--mx-color-1d1d1f)] mb-3">{title}</h3>
             <MotionDiv
                 className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                 variants={lifeSyncStaggerContainer}
@@ -107,11 +107,11 @@ export default function LifeSyncSteam() {
         return (
             <LifeSyncHubPageShell>
                 <div className="max-w-4xl mx-auto">
-                    <h1 className="text-[28px] font-bold text-[#1a1628] tracking-tight mb-2">Steam</h1>
-                    <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
-                        <p className="text-[15px] font-bold text-[#1a1628] mb-2">LifeSync Not Connected</p>
-                        <p className="text-[13px] text-[#5b5670] mb-4">Connect LifeSync in your profile to access Steam deals.</p>
-                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
+                    <h1 className="text-[28px] font-bold text-[var(--mx-color-1a1628)] tracking-tight mb-2">Steam</h1>
+                    <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
+                        <p className="text-[15px] font-bold text-[var(--mx-color-1a1628)] mb-2">LifeSync Not Connected</p>
+                        <p className="text-[13px] text-[var(--mx-color-5b5670)] mb-4">Connect LifeSync in your profile to access Steam deals.</p>
+                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
                             Go to Integrations
                         </Link>
                     </div>
@@ -131,17 +131,17 @@ export default function LifeSyncSteam() {
             <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">LifeSync / Games</p>
-                        <h1 className="text-[28px] font-bold text-[#1a1628] tracking-tight">Steam Deals</h1>
+                        <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync / Games</p>
+                        <h1 className="text-[28px] font-bold text-[var(--mx-color-1a1628)] tracking-tight">Steam Deals</h1>
                     </div>
                     <div className="flex items-center gap-2">
                         <Link
                             to="/dashboard/lifesync/games/wishlist"
-                            className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors"
+                            className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors"
                         >
                             Wishlist
                         </Link>
-                        <button onClick={() => void load({ forceSteamStatus: true, refreshStore: true })} disabled={busy} className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50">
+                        <button onClick={() => void load({ forceSteamStatus: true, refreshStore: true })} disabled={busy} className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50">
                             {busy ? 'Loading...' : 'Refresh'}
                         </button>
                     </div>
@@ -152,7 +152,7 @@ export default function LifeSyncSteam() {
                 )}
 
                 {profile ? (
-                    <div className="lifesync-games-glass relative overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 shadow-sm">
+                    <div className="lifesync-games-glass relative overflow-hidden rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm">
                         {hasBackgroundVideo ? (
                             <video
                                 className="absolute inset-0 h-full w-full object-cover"
@@ -181,31 +181,31 @@ export default function LifeSyncSteam() {
                             <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/45 to-black/70" />
                         )}
 
-                        <div className={`relative p-5 ${hasBackgroundVideo || hasBackgroundImage ? 'text-white' : 'bg-white text-[#1d1d1f]'} `}>
+                        <div className={`relative p-5 ${hasBackgroundVideo || hasBackgroundImage ? 'text-white' : 'bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)]'} `}>
                             <div className="flex flex-col sm:flex-row items-center gap-5">
                                 {profile.avatarUrl ? (
-                                    <img src={profile.avatarUrl} alt="" className="w-20 h-20 rounded-2xl object-cover ring-1 ring-white/40" />
+                                    <img src={profile.avatarUrl} alt="" className="w-20 h-20 rounded-2xl object-cover ring-1 ring-[var(--color-border-strong)]/40" />
                                 ) : (
-                                    <div className="w-20 h-20 rounded-2xl bg-[#f5f5f7] flex items-center justify-center text-[#86868b] text-2xl font-bold">S</div>
+                                    <div className="w-20 h-20 rounded-2xl bg-[var(--mx-color-f5f5f7)] flex items-center justify-center text-[var(--mx-color-86868b)] text-2xl font-bold">S</div>
                                 )}
                                 <div className="text-center sm:text-left">
                                     <p className="text-[17px] font-bold">{profile.personaName || 'Steam Player'}</p>
-                                    <p className={`text-[11px] font-mono mt-0.5 ${hasBackgroundVideo || hasBackgroundImage ? 'text-white/80' : 'text-[#86868b]'}`}>
+                                    <p className={`text-[11px] font-mono mt-0.5 ${hasBackgroundVideo || hasBackgroundImage ? 'text-white/80' : 'text-[var(--mx-color-86868b)]'}`}>
                                         SteamID {profile.steamId}
                                     </p>
                                     <div className="mt-2 flex flex-wrap items-center gap-2">
                                         {Number.isFinite(Number(profile?.steamLevel)) && (
-                                            <span className="rounded-full bg-[#C6FF00] px-2.5 py-1 text-[11px] font-bold text-[#1a1628]">
+                                            <span className="rounded-full bg-[var(--mx-color-c6ff00)] px-2.5 py-1 text-[11px] font-bold text-[var(--mx-color-1a1628)]">
                                                 Level {profile.steamLevel}
                                             </span>
                                         )}
                                         {Number.isFinite(Number(profile?.badges?.count)) && (
-                                            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${hasBackgroundVideo || hasBackgroundImage ? 'border-white/30 bg-white/10 text-white' : 'border-[#d2d2d7] bg-[#f5f5f7] text-[#1d1d1f]'}`}>
+                                            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${hasBackgroundVideo || hasBackgroundImage ? 'border-[var(--color-border-strong)]/30 bg-[var(--color-surface)]/10 text-white' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]'}`}>
                                                 {profile.badges.count} badges
                                             </span>
                                         )}
                                     </div>
-                                    <p className={`mt-2 text-[11px] ${hasBackgroundVideo || hasBackgroundImage ? 'text-white/75' : 'text-[#86868b]'}`}>
+                                    <p className={`mt-2 text-[11px] ${hasBackgroundVideo || hasBackgroundImage ? 'text-white/75' : 'text-[var(--mx-color-86868b)]'}`}>
                                         Steam library sync was removed. Use Wishlist import by SteamID from the Wishlist page.
                                     </p>
                                 </div>
@@ -219,12 +219,12 @@ export default function LifeSyncSteam() {
                                             href={badge?.badgeUrl || profile?.profileUrl}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className={`group flex items-center gap-2 rounded-lg border px-2 py-1.5 transition ${hasBackgroundVideo || hasBackgroundImage ? 'border-white/20 bg-white/10 hover:bg-white/15' : 'border-[#e5e5ea] bg-white hover:bg-[#f9fafb]'}`}
+                                            className={`group flex items-center gap-2 rounded-lg border px-2 py-1.5 transition ${hasBackgroundVideo || hasBackgroundImage ? 'border-[var(--color-border-strong)]/20 bg-[var(--color-surface)]/10 hover:bg-[var(--color-surface)]/15' : 'border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] hover:bg-[var(--mx-color-f9fafb)]'}`}
                                         >
                                             {badge?.imageUrl ? (
                                                 <img src={badge.imageUrl} alt="" className="h-6 w-6 rounded object-cover" />
                                             ) : (
-                                                <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold ${hasBackgroundVideo || hasBackgroundImage ? 'bg-white/15 text-white' : 'bg-[#f3f4f6] text-[#6b7280]'}`}>
+                                                <span className={`inline-flex h-6 w-6 items-center justify-center rounded text-[10px] font-bold ${hasBackgroundVideo || hasBackgroundImage ? 'bg-[var(--color-surface)]/15 text-white' : 'bg-[var(--mx-color-f3f4f6)] text-[var(--mx-color-6b7280)]'}`}>
                                                     B
                                                 </span>
                                             )}
@@ -245,7 +245,7 @@ export default function LifeSyncSteam() {
 
                 {busy && !storePack && (
                     <div className="space-y-6">
-                        <h2 className="text-[17px] font-bold text-[#1d1d1f]">Store Highlights</h2>
+                        <h2 className="text-[17px] font-bold text-[var(--mx-color-1d1d1f)]">Store Highlights</h2>
                         <MotionDiv
                             className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
                             variants={lifeSyncStaggerContainer}
@@ -263,11 +263,11 @@ export default function LifeSyncSteam() {
 
                 {storePack && (
                     <div className="space-y-6">
-                        <h2 className="text-[17px] font-bold text-[#1d1d1f]">Store Highlights</h2>
+                        <h2 className="text-[17px] font-bold text-[var(--mx-color-1d1d1f)]">Store Highlights</h2>
                         {storePack.dailyDeal && (
-                            <a href={storePack.dailyDeal.storeUrl} target="_blank" rel="noreferrer" className="lifesync-games-glass block bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden hover:shadow-md transition-all group">
+                            <a href={storePack.dailyDeal.storeUrl} target="_blank" rel="noreferrer" className="lifesync-games-glass block bg-[var(--color-surface)] rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden hover:shadow-md transition-all group">
                                 <div className="grid sm:grid-cols-2">
-                                    <div className="relative aspect-video overflow-hidden bg-[#f5f5f7] sm:aspect-auto sm:min-h-[180px]">
+                                    <div className="relative aspect-video overflow-hidden bg-[var(--mx-color-f5f5f7)] sm:aspect-auto sm:min-h-[180px]">
                                         {storePack.dailyDeal.imageUrl ? (
                                             <LifesyncEpisodeThumbnail
                                                 src={storePack.dailyDeal.imageUrl}
@@ -277,10 +277,10 @@ export default function LifeSyncSteam() {
                                         ) : null}
                                     </div>
                                     <div className="p-5 flex flex-col justify-center">
-                                        <span className="text-[10px] font-bold text-[#C6FF00] uppercase tracking-widest">Daily Deal</span>
-                                        <p className="text-[17px] font-bold text-[#1d1d1f] mt-1">{storePack.dailyDeal.name}</p>
-                                        {storePack.dailyDeal.priceText && <p className="text-[14px] text-[#C6FF00] font-semibold mt-1">{storePack.dailyDeal.priceText}</p>}
-                                        {storePack.dailyDeal.discountPercent > 0 && <span className="inline-flex w-fit mt-2 bg-[#C6FF00] text-[#1d1d1f] text-[11px] font-bold px-2 py-0.5 rounded-lg">−{storePack.dailyDeal.discountPercent}%</span>}
+                                        <span className="text-[10px] font-bold text-[var(--mx-color-c6ff00)] uppercase tracking-widest">Daily Deal</span>
+                                        <p className="text-[17px] font-bold text-[var(--mx-color-1d1d1f)] mt-1">{storePack.dailyDeal.name}</p>
+                                        {storePack.dailyDeal.priceText && <p className="text-[14px] text-[var(--mx-color-c6ff00)] font-semibold mt-1">{storePack.dailyDeal.priceText}</p>}
+                                        {storePack.dailyDeal.discountPercent > 0 && <span className="inline-flex w-fit mt-2 bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1d1d1f)] text-[11px] font-bold px-2 py-0.5 rounded-lg">−{storePack.dailyDeal.discountPercent}%</span>}
                                     </div>
                                 </div>
                             </a>

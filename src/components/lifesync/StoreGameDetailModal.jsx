@@ -57,7 +57,7 @@ function StoreGameDetailPanel({ detail }) {
     const fullDesc = detail.description ? stripHtml(detail.description) : ''
 
     return (
-        <div className="overflow-hidden rounded-2xl border border-white/10 bg-black shadow-2xl ring-1 ring-black/40">
+        <div className="overflow-hidden rounded-2xl border border-[var(--color-border-strong)]/10 bg-black shadow-2xl ring-1 ring-black/40">
             <div className="relative isolate min-h-[240px] sm:min-h-[280px]">
                 {backdrop ? (
                     <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -69,8 +69,8 @@ function StoreGameDetailPanel({ detail }) {
                         />
                     </div>
                 ) : null}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#2a0a12]/95 via-slate-950/92 to-black" />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-[#1f0508]/50" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[var(--mx-color-2a0a12)]/95 via-slate-950/92 to-black" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-[var(--mx-color-1f0508)]/50" />
 
                 <div className="relative z-10 p-5 sm:p-7 lg:p-10">
                     <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:gap-10">
@@ -79,7 +79,7 @@ function StoreGameDetailPanel({ detail }) {
                                 <img
                                     src={poster}
                                     alt=""
-                                    className="aspect-[2/3] w-full rounded-md object-cover shadow-2xl ring-1 ring-white/15"
+                                    className="aspect-[2/3] w-full rounded-md object-cover shadow-2xl ring-1 ring-[var(--color-border-strong)]/15"
                                     loading="lazy"
                                 />
                             </div>
@@ -121,13 +121,13 @@ function StoreGameDetailPanel({ detail }) {
                                 {detail.features?.map((f) => (
                                     <span
                                         key={f}
-                                        className="inline-flex shrink-0 rounded-full border border-white/18 bg-black/35 px-2.5 py-1 text-[11px] font-medium text-slate-100"
+                                        className="inline-flex shrink-0 rounded-full border border-[var(--color-border-strong)]/18 bg-black/35 px-2.5 py-1 text-[11px] font-medium text-slate-100"
                                     >
                                         {f}
                                     </span>
                                 ))}
                                 {langCount > 0 ? (
-                                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/18 bg-black/35 px-2.5 py-1 text-[11px] font-medium text-slate-100">
+                                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-[var(--color-border-strong)]/18 bg-black/35 px-2.5 py-1 text-[11px] font-medium text-slate-100">
                                         {langCount} supported languages
                                     </span>
                                 ) : null}
@@ -138,7 +138,7 @@ function StoreGameDetailPanel({ detail }) {
                                     href={XBOX_GAME_PASS_URL}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="inline-flex min-w-[12rem] flex-col items-center justify-center rounded-sm bg-[#107c10] px-5 py-3 text-center font-bold uppercase tracking-wide text-white shadow-lg transition-colors hover:bg-[#0e6b0e]"
+                                    className="inline-flex min-w-[12rem] flex-col items-center justify-center rounded-sm bg-[var(--mx-color-107c10)] px-5 py-3 text-center font-bold uppercase tracking-wide text-white shadow-lg transition-colors hover:bg-[var(--mx-color-0e6b0e)]"
                                 >
                                     <span className="text-sm sm:text-base">Get Game Pass</span>
                                     <span className="mt-0.5 text-[11px] font-normal normal-case text-white/90">{gamePassLine}</span>
@@ -149,7 +149,7 @@ function StoreGameDetailPanel({ detail }) {
                                         href={detail.storeUrl}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="inline-flex min-w-[11rem] flex-col items-stretch justify-center rounded-sm border border-white/18 bg-white/[0.08] px-5 py-2.5 text-left shadow-inner backdrop-blur-sm transition-colors hover:bg-white/[0.12]"
+                                        className="inline-flex min-w-[11rem] flex-col items-stretch justify-center rounded-sm border border-[var(--color-border-strong)]/18 bg-[var(--color-surface)]/[0.08] px-5 py-2.5 text-left shadow-inner backdrop-blur-sm transition-colors hover:bg-[var(--color-surface)]/[0.12]"
                                     >
                                         <span className="text-[10px] font-bold uppercase tracking-wider text-white/55">
                                             {detail.listPrice === 0 ? 'Get' : 'Buy'}
@@ -176,7 +176,7 @@ function StoreGameDetailPanel({ detail }) {
                 </div>
             </div>
 
-            <div className="space-y-4 border-t border-white/10 bg-black/55 px-5 py-5 sm:px-8 lg:px-10">
+            <div className="space-y-4 border-t border-[var(--color-border-strong)]/10 bg-black/55 px-5 py-5 sm:px-8 lg:px-10">
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
                     {detail.releaseDateLabel ? (
                         <span className="inline-flex items-center gap-1">Released {detail.releaseDateLabel}</span>
@@ -203,7 +203,7 @@ function StoreGameDetailPanel({ detail }) {
                 ) : null}
 
                 {hasHardware ? (
-                    <div className="space-y-2 rounded-xl border border-white/[0.08] bg-white/[0.03] p-4">
+                    <div className="space-y-2 rounded-xl border border-[var(--color-border-strong)]/[0.08] bg-[var(--color-surface)]/[0.03] p-4">
                         <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">System requirements (PC)</p>
                         <dl className="grid gap-x-4 gap-y-2 text-xs text-slate-400 sm:grid-cols-2 lg:grid-cols-3">
                             {hw.minProcessor ? (
@@ -247,7 +247,7 @@ function StoreGameDetailPanel({ detail }) {
                                 href={detail.trailer.playUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="group relative block shrink-0 overflow-hidden rounded-lg ring-1 ring-white/10"
+                                className="group relative block shrink-0 overflow-hidden rounded-lg ring-1 ring-[var(--color-border-strong)]/10"
                             >
                                 <img
                                     src={detail.trailer.previewImage}
@@ -295,7 +295,7 @@ function StoreGameDetailPanel({ detail }) {
                             {detail.screenshots.slice(0, 18).map((src, i) => (
                                 <div
                                     key={i}
-                                    className="aspect-video overflow-hidden rounded-lg ring-1 ring-white/10"
+                                    className="aspect-video overflow-hidden rounded-lg ring-1 ring-[var(--color-border-strong)]/10"
                                 >
                                     <img
                                         src={src}
@@ -314,11 +314,11 @@ function StoreGameDetailPanel({ detail }) {
                 ) : null}
             </div>
 
-            <div className="flex flex-col gap-4 border-t border-white/10 bg-[#0a0a0a] px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-8 lg:px-10">
+            <div className="flex flex-col gap-4 border-t border-[var(--color-border-strong)]/10 bg-[var(--mx-color-0a0a0a)] px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-8 lg:px-10">
                 {esrb?.letter ? (
                     <div className="flex max-w-xl items-start gap-3">
                         <div
-                            className="flex h-14 w-14 shrink-0 items-center justify-center rounded border-2 border-white text-lg font-black text-white"
+                            className="flex h-14 w-14 shrink-0 items-center justify-center rounded border-2 border-[var(--color-border-strong)] text-lg font-black text-white"
                             aria-hidden
                         >
                             {esrb.letter}
@@ -372,7 +372,7 @@ export function StoreGameDetailModal({ open, detail, busy, onClose }) {
                 if (e.target === e.currentTarget) onClose()
             }}
         >
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-black/55 px-4 py-3 sm:px-6">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border-strong)]/10 bg-black/55 px-4 py-3 sm:px-6">
                 <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400/80">Game details</p>
                     <p className="truncate text-sm font-semibold text-slate-100">{detail?.title || 'Selected game'}</p>
@@ -380,7 +380,7 @@ export function StoreGameDetailModal({ open, detail, busy, onClose }) {
                 <button
                     type="button"
                     onClick={onClose}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-white/[0.1]"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/[0.06] px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-[var(--color-surface)]/[0.1]"
                 >
                     <FaXmark className="h-3.5 w-3.5" aria-hidden />
                     Close
@@ -390,13 +390,13 @@ export function StoreGameDetailModal({ open, detail, busy, onClose }) {
             <div className="flex-1 overflow-y-auto p-3 sm:p-5 lg:p-8">
                 <div className="mx-auto w-full max-w-[90rem]">
                     {busy ? (
-                        <div className="rounded-2xl border border-white/10 bg-black/40 px-6 py-16 text-center text-sm text-slate-400">
+                        <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-black/40 px-6 py-16 text-center text-sm text-slate-400">
                             Loading game details…
                         </div>
                     ) : detail ? (
                         <StoreGameDetailPanel key={detail.productId || detail.title || 'detail'} detail={detail} />
                     ) : (
-                        <div className="rounded-2xl border border-white/10 bg-black/40 px-6 py-16 text-center text-sm text-slate-400">
+                        <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-black/40 px-6 py-16 text-center text-sm text-slate-400">
                             No extra details are available for this title.
                         </div>
                     )}

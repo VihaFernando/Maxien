@@ -105,7 +105,7 @@ function ContinueWatchingRibbon({ size = 'card' }) {
             aria-hidden
         >
             <motion.div
-                className={`absolute rotate-45 bg-gradient-to-b from-[#eeff77] via-[#C6FF00] to-[#b4e830] text-center font-black uppercase tracking-[0.22em] text-slate-900 shadow-[0_3px_14px_rgba(0,0,0,0.18)] ${wide ? 'right-[-38%] top-[18%] w-[130%] py-2 text-[8px] sm:text-[9px]' : 'right-[-42%] top-[16%] w-[140%] py-1.5 text-[7px] sm:text-[8px]'}`}
+                className={`absolute rotate-45 bg-gradient-to-b from-[var(--mx-color-eeff77)] via-[var(--mx-color-c6ff00)] to-[var(--mx-color-b4e830)] text-center font-black uppercase tracking-[0.22em] text-slate-900 shadow-[0_3px_14px_rgba(0,0,0,0.18)] ${wide ? 'right-[-38%] top-[18%] w-[130%] py-2 text-[8px] sm:text-[9px]' : 'right-[-42%] top-[16%] w-[140%] py-1.5 text-[7px] sm:text-[8px]'}`}
                 animate={{ filter: ['brightness(1)', 'brightness(1.09)', 'brightness(1)'] }}
                 transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
             >
@@ -234,7 +234,7 @@ export default function LifeSyncAnimeHistory() {
     if (!animePluginOn) {
         return (
             <MotionDiv
-                className="relative overflow-hidden rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-white to-lime-50/40 px-6 py-14 text-center shadow-lg sm:px-10"
+                className="relative overflow-hidden rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-[var(--color-surface)] to-lime-50/40 px-6 py-14 text-center shadow-lg sm:px-10"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={lifeSyncPageTransition}
@@ -276,11 +276,11 @@ export default function LifeSyncAnimeHistory() {
 
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
                 <aside className="lg:w-[min(100%,280px)] lg:shrink-0">
-                    <div className="lifesync-history-sidebar sticky top-2 space-y-4 rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-[0_8px_30px_-12px_rgba(21, 20, 24,0.12)] backdrop-blur-md ring-1 ring-white/60">
+                    <div className="lifesync-history-sidebar sticky top-2 space-y-4 rounded-3xl border border-slate-200/80 bg-[var(--color-surface)]/80 p-5 shadow-[0_8px_30px_-12px_rgba(21, 20, 24,0.12)] backdrop-blur-md ring-1 ring-[var(--color-border-strong)]/60">
                         <div className="flex items-start gap-3">
                             <Link
                                 to="/dashboard/lifesync/anime"
-                                className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-white hover:shadow-sm"
+                                className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-[var(--color-surface)] hover:shadow-sm"
                                 aria-label="Back to hub"
                             >
                                 <FaChevronLeft className="h-4 w-4" aria-hidden />
@@ -301,13 +301,13 @@ export default function LifeSyncAnimeHistory() {
                         </p>
 
                         <div className="grid grid-cols-3 gap-2">
-                            <div className="lifesync-history-stat-card lifesync-history-stat-neutral rounded-2xl bg-gradient-to-br from-slate-50 to-white px-2 py-3 text-center ring-1 ring-slate-100">
+                            <div className="lifesync-history-stat-card lifesync-history-stat-neutral rounded-2xl bg-gradient-to-br from-slate-50 to-[var(--color-surface)] px-2 py-3 text-center ring-1 ring-slate-100">
                                 <p className="text-[20px] font-black tabular-nums text-slate-900">
                                     {loading ? '…' : stats.total}
                                 </p>
                                 <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Saved</p>
                             </div>
-                            <div className="lifesync-history-stat-card lifesync-history-stat-active rounded-2xl bg-gradient-to-br from-lime-50 to-[#ecfccb] px-2 py-3 text-center ring-1 ring-lime-200/60">
+                            <div className="lifesync-history-stat-card lifesync-history-stat-active rounded-2xl bg-gradient-to-br from-lime-50 to-[var(--mx-color-ecfccb)] px-2 py-3 text-center ring-1 ring-lime-200/60">
                                 <p className="text-[20px] font-black tabular-nums text-slate-900">
                                     {loading ? '…' : stats.inProgress}
                                 </p>
@@ -326,7 +326,7 @@ export default function LifeSyncAnimeHistory() {
                                 type="button"
                                 onClick={() => void refresh()}
                                 disabled={loading}
-                                className="min-h-[42px] rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50"
+                                className="min-h-[42px] rounded-2xl border border-slate-200 bg-[var(--color-surface)] px-4 py-2.5 text-[12px] font-semibold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50"
                             >
                                 {loading ? 'Refreshing…' : 'Reload list'}
                             </button>
@@ -370,7 +370,7 @@ export default function LifeSyncAnimeHistory() {
                                     onClick={() => setSortBy('recent')}
                                     className={`flex-1 rounded-lg py-2 text-[11px] font-semibold transition ${
                                         sortBy === 'recent'
-                                            ? 'bg-white text-slate-900 shadow-sm'
+                                            ? 'bg-[var(--color-surface)] text-slate-900 shadow-sm'
                                             : 'text-slate-500 hover:text-slate-800'
                                     }`}
                                 >
@@ -381,7 +381,7 @@ export default function LifeSyncAnimeHistory() {
                                     onClick={() => setSortBy('title')}
                                     className={`flex-1 rounded-lg py-2 text-[11px] font-semibold transition ${
                                         sortBy === 'title'
-                                            ? 'bg-white text-slate-900 shadow-sm'
+                                            ? 'bg-[var(--color-surface)] text-slate-900 shadow-sm'
                                             : 'text-slate-500 hover:text-slate-800'
                                     }`}
                                 >
@@ -397,7 +397,7 @@ export default function LifeSyncAnimeHistory() {
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 placeholder="Search your queue…"
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-[#C6FF00]/70 focus:outline-none focus:ring-2 focus:ring-amber-200/80"
+                                className="w-full rounded-xl border border-slate-200 bg-[var(--color-surface)] px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-[var(--mx-color-c6ff00)]/70 focus:outline-none focus:ring-2 focus:ring-amber-200/80"
                             />
                         </label>
                     </div>
@@ -405,12 +405,12 @@ export default function LifeSyncAnimeHistory() {
 
                 <div className="min-w-0 flex-1 space-y-5">
                     {loading && entries.length === 0 ? (
-                        <div className="rounded-3xl border border-slate-100 bg-white/60 p-6">
+                        <div className="rounded-3xl border border-slate-100 bg-[var(--color-surface)]/60 p-6">
                             <LifesyncMediaLibraryPageSkeleton gridCount={8} showSpotlight />
                         </div>
                     ) : entries.length === 0 ? (
                         <MotionDiv
-                            className="relative overflow-hidden rounded-3xl border border-dashed border-amber-200/70 bg-gradient-to-br from-white via-amber-50/40 to-lime-50/25 px-6 py-16 text-center"
+                            className="relative overflow-hidden rounded-3xl border border-dashed border-amber-200/70 bg-gradient-to-br from-[var(--color-surface)] via-amber-50/40 to-lime-50/25 px-6 py-16 text-center"
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
                             transition={lifeSyncPageTransition}
@@ -468,7 +468,7 @@ export default function LifeSyncAnimeHistory() {
 
                             {filteredSorted.length === 0 ? (
                                 <MotionDiv
-                                    className="rounded-3xl border border-slate-200 bg-white/90 px-6 py-12 text-center"
+                                    className="rounded-3xl border border-slate-200 bg-[var(--color-surface)]/90 px-6 py-12 text-center"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={lifeSyncPageTransition}
@@ -531,7 +531,7 @@ function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, slideVariants, tra
     return (
         <MotionDiv
             layout
-            className="lifesync-history-spotlight relative overflow-visible rounded-3xl border border-amber-200/90 bg-white shadow-[0_12px_40px_-14px_rgba(180,140,60,0.18)] ring-1 ring-amber-100/60"
+            className="lifesync-history-spotlight relative overflow-visible rounded-3xl border border-amber-200/90 bg-[var(--color-surface)] shadow-[0_12px_40px_-14px_rgba(180,140,60,0.18)] ring-1 ring-amber-100/60"
             variants={slideVariants}
             initial="initial"
             animate="animate"
@@ -539,7 +539,7 @@ function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, slideVariants, tra
             transition={transition}
         >
             <div
-                className="pointer-events-none absolute -right-6 -top-10 h-40 w-40 rounded-full bg-[#C6FF00]/15 blur-3xl"
+                className="pointer-events-none absolute -right-6 -top-10 h-40 w-40 rounded-full bg-[var(--mx-color-c6ff00)]/15 blur-3xl"
                 aria-hidden
             />
             <div
@@ -590,7 +590,7 @@ function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, slideVariants, tra
                                 aria-hidden
                             >
                                 <div
-                                    className="h-full bg-gradient-to-r from-[#C6FF00] to-amber-400"
+                                    className="h-full bg-gradient-to-r from-[var(--mx-color-c6ff00)] to-amber-400"
                                     style={{ width: `${Math.round(frac * 100)}%` }}
                                 />
                             </div>
@@ -617,7 +617,7 @@ function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, slideVariants, tra
                         <div className="space-y-3">
                             <div className="relative">
                                 <span
-                                    className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-sm ring-1 ring-amber-300/60"
+                                    className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--color-border-strong)] bg-amber-500 shadow-sm ring-1 ring-amber-300/60"
                                     aria-hidden
                                 />
                                 <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
@@ -627,7 +627,7 @@ function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, slideVariants, tra
                             </div>
                             <div className="relative">
                                 <span
-                                    className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-slate-400 shadow-sm ring-1 ring-slate-300/50"
+                                    className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--color-border-strong)] bg-slate-400 shadow-sm ring-1 ring-slate-300/50"
                                     aria-hidden
                                 />
                                 <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
@@ -643,7 +643,7 @@ function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, slideVariants, tra
                         <Link
                             to={to}
                             state={state}
-                            className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-bold text-slate-900 shadow-sm ring-1 ring-slate-900/10 transition hover:brightness-95 sm:flex-none"
+                            className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-bold text-slate-900 shadow-sm ring-1 ring-slate-900/10 transition hover:brightness-95 sm:flex-none"
                         >
                             Resume episode
                         </Link>
@@ -651,7 +651,7 @@ function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, slideVariants, tra
                             type="button"
                             onClick={() => void onRemove(entry)}
                             disabled={busyRemove}
-                            className="min-h-[44px] rounded-2xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            className="min-h-[44px] rounded-2xl border border-slate-200 bg-[var(--color-surface)] px-4 py-2 text-[12px] font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                         >
                             {busyRemove ? '…' : 'Remove'}
                         </button>
@@ -672,7 +672,7 @@ function AnimeHistoryCard({ entry, onRemove, removeBusyKey }) {
     return (
         <MotionLi
             variants={lifeSyncStaggerItemFade}
-            className="lifesync-history-card group relative flex min-w-0 flex-col overflow-visible rounded-3xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-8px_rgba(21, 20, 24,0.15)]"
+            className="lifesync-history-card group relative flex min-w-0 flex-col overflow-visible rounded-3xl border border-slate-200/90 bg-[var(--color-surface)] shadow-[0_4px_24px_-8px_rgba(21, 20, 24,0.15)]"
             whileHover={{ y: -4, transition: { type: 'tween', duration: 0.2, ease: lifeSyncEaseOut } }}
         >
             <div className="relative w-full">
@@ -694,7 +694,7 @@ function AnimeHistoryCard({ entry, onRemove, removeBusyKey }) {
                         {frac != null ? (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30" aria-hidden>
                                 <div
-                                    className="h-full bg-gradient-to-r from-[#C6FF00] to-amber-400"
+                                    className="h-full bg-gradient-to-r from-[var(--mx-color-c6ff00)] to-amber-400"
                                     style={{ width: `${Math.round(frac * 100)}%` }}
                                 />
                             </div>
@@ -705,12 +705,12 @@ function AnimeHistoryCard({ entry, onRemove, removeBusyKey }) {
                         type="button"
                         onClick={() => void onRemove(entry)}
                         disabled={busyRemove}
-                        className="absolute right-2.5 top-2.5 z-30 rounded-full bg-white/95 p-2 text-[11px] font-bold text-slate-500 opacity-0 shadow-md ring-1 ring-slate-200/80 transition group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        className="absolute right-2.5 top-2.5 z-30 rounded-full bg-[var(--color-surface)]/95 p-2 text-[11px] font-bold text-slate-500 opacity-0 shadow-md ring-1 ring-slate-200/80 transition group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                         aria-label="Remove from history"
                     >
                         {busyRemove ? '…' : '✕'}
                     </button>
-                    <span className="absolute left-2 top-2 z-10 max-w-[calc(100%-1rem)] truncate rounded-md bg-white/90 px-1.5 py-0.5 font-mono text-[8px] font-bold tabular-nums uppercase tracking-wide text-slate-900 ring-1 ring-slate-200/80">
+                    <span className="absolute left-2 top-2 z-10 max-w-[calc(100%-1rem)] truncate rounded-md bg-[var(--color-surface)]/90 px-1.5 py-0.5 font-mono text-[8px] font-bold tabular-nums uppercase tracking-wide text-slate-900 ring-1 ring-slate-200/80">
                         EP {lastEpNum(entry)}
                     </span>
                     <div className={`absolute left-0 right-0 p-3 ${complete ? 'bottom-5' : 'bottom-0'}`}>
@@ -725,14 +725,14 @@ function AnimeHistoryCard({ entry, onRemove, removeBusyKey }) {
             </div>
 
             <div
-                className={`lifesync-history-card-body relative flex flex-1 flex-col gap-1 border-t border-slate-100/90 bg-[linear-gradient(180deg,#fafaf9_0%,#ffffff_100%)] px-3 pb-3 pt-3 sm:gap-1.5 sm:px-4 sm:pb-4 sm:pt-4 ${complete ? 'pt-5 sm:pt-6' : ''}`}
+                className={`lifesync-history-card-body relative flex flex-1 flex-col gap-1 border-t border-slate-100/90 bg-[linear-gradient(180deg,var(--mx-color-fafaf9)_0%,var(--mx-color-ffffff)_100%)] px-3 pb-3 pt-3 sm:gap-1.5 sm:px-4 sm:pb-4 sm:pt-4 ${complete ? 'pt-5 sm:pt-6' : ''}`}
             >
                 <div className="relative pl-4">
                     <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-amber-400/80 via-slate-200 to-slate-200" />
                     <div className="space-y-3.5">
                         <div className="relative">
                             <span
-                                className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-amber-500 shadow-sm ring-1 ring-amber-300/60"
+                                className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--color-border-strong)] bg-amber-500 shadow-sm ring-1 ring-amber-300/60"
                                 aria-hidden
                             />
                             <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">

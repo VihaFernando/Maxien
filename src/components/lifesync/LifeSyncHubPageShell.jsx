@@ -5,13 +5,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
+import { lifesyncResolveYouTubeLoopSource } from '../../lib/lifesyncApi'
 import {
     ANIME_STOCK_IMAGE_POOL,
     ANIME_STOCK_VIDEO_POOL,
-    DEFAULT_BACKGROUND_POSITION,
     GAMES_STOCK_IMAGE_POOL,
     GAMES_STOCK_VIDEO_POOL,
-    normalizeBackgroundPosition,
     normalizeAnimeBackgroundMode,
     normalizeGamesBackgroundMode,
     pickDeterministicFromPool,
@@ -58,22 +57,7 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
     const animeBackgroundMode = normalizeAnimeBackgroundMode(
         lifeSyncUser?.preferences?.animeBackgroundMode,
     )
-    const gamesBackgroundPositionX = normalizeBackgroundPosition(
-        lifeSyncUser?.preferences?.gamesBackgroundPositionX,
-        DEFAULT_BACKGROUND_POSITION,
-    )
-    const gamesBackgroundPositionY = normalizeBackgroundPosition(
-        lifeSyncUser?.preferences?.gamesBackgroundPositionY,
-        DEFAULT_BACKGROUND_POSITION,
-    )
-    const animeBackgroundPositionX = normalizeBackgroundPosition(
-        lifeSyncUser?.preferences?.animeBackgroundPositionX,
-        DEFAULT_BACKGROUND_POSITION,
-    )
-    const animeBackgroundPositionY = normalizeBackgroundPosition(
-        lifeSyncUser?.preferences?.animeBackgroundPositionY,
-        DEFAULT_BACKGROUND_POSITION,
-    )
+    const [youtubeLoopResolution, setYouTubeLoopResolution] = useState(null)
 
     const shouldUseSteamBackground = Boolean(
         activeArea === 'games' &&
@@ -99,6 +83,80 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
         })
         return () => observer.disconnect()
     }, [])
+
+    useEffect(() => {
+        const activeBackgroundMode = activeArea === 'games'
+            ? gamesBackgroundMode
+            : activeArea === 'anime'
+                ? animeBackgroundMode
+                : 'none'
+        const activeCustomVideoUrl = activeArea === 'games'
+            ? lifeSyncUser?.preferences?.gamesBackgroundCustomVideoUrl
+            : activeArea === 'anime'
+                ? lifeSyncUser?.preferences?.animeBackgroundCustomVideoUrl
+                : ''
+
+        if (!activeArea || activeBackgroundMode !== 'custom_video') {
+            setYouTubeLoopResolution(null)
+            return
+        }
+
+        const candidate = resolveBackgroundVideoSource(activeCustomVideoUrl)
+        if (!candidate || candidate.kind !== 'youtube' || !candidate.youtubeId) {
+            setYouTubeLoopResolution(null)
+            return
+        }
+
+        const resolutionKey = `${activeArea}:${candidate.youtubeId}`
+        setYouTubeLoopResolution((prev) => (
+            prev && prev.key === resolutionKey
+                ? prev
+                : {
+                    key: resolutionKey,
+                    loading: true,
+                    videoMp4Url: '',
+                    videoWebmUrl: '',
+                    posterUrl: sanitizeBackgroundUrl(candidate.posterUrl),
+                }
+        ))
+
+        let cancelled = false
+        void (async () => {
+            try {
+                const resolved = await lifesyncResolveYouTubeLoopSource({
+                    videoId: candidate.youtubeId,
+                })
+                if (cancelled) return
+
+                setYouTubeLoopResolution({
+                    key: resolutionKey,
+                    loading: false,
+                    videoMp4Url: sanitizeBackgroundUrl(resolved?.videoMp4Url),
+                    videoWebmUrl: sanitizeBackgroundUrl(resolved?.videoWebmUrl),
+                    posterUrl: sanitizeBackgroundUrl(resolved?.posterUrl || candidate.posterUrl),
+                })
+            } catch {
+                if (cancelled) return
+                setYouTubeLoopResolution({
+                    key: resolutionKey,
+                    loading: false,
+                    videoMp4Url: '',
+                    videoWebmUrl: '',
+                    posterUrl: sanitizeBackgroundUrl(candidate.posterUrl),
+                })
+            }
+        })()
+
+        return () => {
+            cancelled = true
+        }
+    }, [
+        activeArea,
+        animeBackgroundMode,
+        gamesBackgroundMode,
+        lifeSyncUser?.preferences?.animeBackgroundCustomVideoUrl,
+        lifeSyncUser?.preferences?.gamesBackgroundCustomVideoUrl,
+    ])
 
     const steamProfile = lifeSyncSteamProfile?.profile && typeof lifeSyncSteamProfile.profile === 'object'
         ? lifeSyncSteamProfile.profile
@@ -190,12 +248,39 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
                     lifeSyncUser?.preferences?.gamesBackgroundCustomVideoUrl,
                 )
                 if (!candidate) return null
+                if (candidate.kind === 'youtube') {
+                    const resolutionKey = `games:${candidate.youtubeId || ''}`
+                    const resolved = youtubeLoopResolution?.key === resolutionKey
+                        ? youtubeLoopResolution
+                        : null
+                    const resolvedWebm = sanitizeBackgroundUrl(resolved?.videoWebmUrl)
+                    const resolvedMp4 = sanitizeBackgroundUrl(resolved?.videoMp4Url)
+                    const poster = sanitizeBackgroundUrl(resolved?.posterUrl || candidate.posterUrl)
+                    if (resolvedWebm || resolvedMp4) {
+                        return {
+                            kind: 'video',
+                            videoWebmUrl: resolvedWebm,
+                            videoMp4Url: resolvedMp4,
+                            imageUrl: '',
+                            posterUrl: poster,
+                        }
+                    }
+                    if (poster) {
+                        return {
+                            kind: 'image',
+                            videoWebmUrl: '',
+                            videoMp4Url: '',
+                            imageUrl: poster,
+                            posterUrl: '',
+                        }
+                    }
+                    return null
+                }
                 return {
-                    kind: candidate.kind === 'youtube' ? 'youtube' : 'video',
+                    kind: 'video',
                     videoWebmUrl: candidate.videoWebmUrl,
                     videoMp4Url: candidate.videoMp4Url,
                     imageUrl: '',
-                    embedUrl: candidate.embedUrl || '',
                     posterUrl: candidate.posterUrl || '',
                 }
             }
@@ -257,12 +342,39 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
                     lifeSyncUser?.preferences?.animeBackgroundCustomVideoUrl,
                 )
                 if (!candidate) return null
+                if (candidate.kind === 'youtube') {
+                    const resolutionKey = `anime:${candidate.youtubeId || ''}`
+                    const resolved = youtubeLoopResolution?.key === resolutionKey
+                        ? youtubeLoopResolution
+                        : null
+                    const resolvedWebm = sanitizeBackgroundUrl(resolved?.videoWebmUrl)
+                    const resolvedMp4 = sanitizeBackgroundUrl(resolved?.videoMp4Url)
+                    const poster = sanitizeBackgroundUrl(resolved?.posterUrl || candidate.posterUrl)
+                    if (resolvedWebm || resolvedMp4) {
+                        return {
+                            kind: 'video',
+                            videoWebmUrl: resolvedWebm,
+                            videoMp4Url: resolvedMp4,
+                            imageUrl: '',
+                            posterUrl: poster,
+                        }
+                    }
+                    if (poster) {
+                        return {
+                            kind: 'image',
+                            videoWebmUrl: '',
+                            videoMp4Url: '',
+                            imageUrl: poster,
+                            posterUrl: '',
+                        }
+                    }
+                    return null
+                }
                 return {
-                    kind: candidate.kind === 'youtube' ? 'youtube' : 'video',
+                    kind: 'video',
                     videoWebmUrl: candidate.videoWebmUrl,
                     videoMp4Url: candidate.videoMp4Url,
                     imageUrl: '',
-                    embedUrl: candidate.embedUrl || '',
                     posterUrl: candidate.posterUrl || '',
                 }
             }
@@ -283,13 +395,13 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
         steamTheme?.backgroundVideoMp4Url,
         steamTheme?.backgroundVideoPosterUrl,
         steamTheme?.backgroundImageUrl,
+        youtubeLoopResolution,
     ])
 
     const hasBackgroundMedia = Boolean(
         backgroundMedia?.imageUrl ||
         backgroundMedia?.videoMp4Url ||
-        backgroundMedia?.videoWebmUrl ||
-        backgroundMedia?.embedUrl,
+        backgroundMedia?.videoWebmUrl,
     )
     const backgroundActive = isDarkTheme && hasBackgroundMedia
 
@@ -310,17 +422,6 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
     const innerStyle = identityChip
         ? { paddingTop: 'max(4.25rem, env(safe-area-inset-top))' }
         : undefined
-    const backgroundPositionX = activeArea === 'games' ? gamesBackgroundPositionX : animeBackgroundPositionX
-    const backgroundPositionY = activeArea === 'games' ? gamesBackgroundPositionY : animeBackgroundPositionY
-    const objectPositionStyle = {
-        objectPosition: `${backgroundPositionX}% ${backgroundPositionY}%`,
-    }
-    const youtubeFrameStyle = {
-        left: `${backgroundPositionX}%`,
-        top: `${backgroundPositionY}%`,
-        transform: `translate(-${backgroundPositionX}%, -${backgroundPositionY}%) scale(1.42)`,
-        transformOrigin: 'center center',
-    }
 
     return (
         <div
@@ -330,25 +431,14 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
         >
             {backgroundActive && (
                 <div className="pointer-events-none fixed inset-0 overflow-hidden">
-                    {backgroundMedia?.kind === 'youtube' && backgroundMedia?.embedUrl ? (
-                        <iframe
-                            title="LifeSync background video"
-                            className="absolute h-[56.25vw] min-h-full w-[177.78vh] min-w-full"
-                            src={backgroundMedia.embedUrl}
-                            allow="autoplay; encrypted-media; picture-in-picture"
-                            referrerPolicy="strict-origin-when-cross-origin"
-                            tabIndex={-1}
-                            style={youtubeFrameStyle}
-                        />
-                    ) : backgroundMedia?.kind === 'video' ? (
+                    {backgroundMedia?.kind === 'video' ? (
                         <video
-                            className="absolute inset-0 h-full w-full object-cover object-left"
+                            className="absolute inset-0 h-full w-full object-cover object-center"
                             autoPlay
                             muted
                             loop
                             playsInline
                             poster={backgroundMedia?.posterUrl || undefined}
-                            style={objectPositionStyle}
                         >
                             {backgroundMedia?.videoWebmUrl && (
                                 <source src={backgroundMedia.videoWebmUrl} type="video/webm" />
@@ -361,10 +451,9 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
                         <img
                             src={backgroundMedia?.imageUrl}
                             alt=""
-                            className="absolute inset-0 h-full w-full object-cover object-left"
+                            className="absolute inset-0 h-full w-full object-cover object-center"
                             loading="eager"
                             decoding="async"
-                            style={objectPositionStyle}
                         />
                     )}
                     <div className="absolute inset-0 bg-[linear-gradient(168deg,rgba(6,7,15,0.66)_0%,rgba(11,14,25,0.58)_36%,rgba(20,25,38,0.46)_100%)]" />
@@ -385,11 +474,11 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
                                 <img
                                     src={identityChip.avatarUrl}
                                     alt=""
-                                    className="h-8 w-8 rounded-lg object-cover ring-1 ring-white/45"
+                                    className="h-8 w-8 rounded-lg object-cover ring-1 ring-[var(--color-border-strong)]/45"
                                     loading="lazy"
                                 />
                             ) : (
-                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-[12px] font-bold">
+                                <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-surface)]/15 text-[12px] font-bold">
                                     S
                                 </span>
                             )}

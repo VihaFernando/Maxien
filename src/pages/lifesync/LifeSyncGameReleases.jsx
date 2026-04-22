@@ -95,14 +95,14 @@ function gameTitle(item) {
 
 function LifeSyncConnectPrompt() {
     return (
-        <div className="mx-auto max-w-4xl rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
-            <p className="text-[17px] font-bold text-[#1a1628]">LifeSync Not Connected</p>
-            <p className="mt-2 text-[14px] text-[#5b5670]">
+        <div className="mx-auto max-w-4xl rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
+            <p className="text-[17px] font-bold text-[var(--mx-color-1a1628)]">LifeSync Not Connected</p>
+            <p className="mt-2 text-[14px] text-[var(--mx-color-5b5670)]">
                 Connect LifeSync in your profile to browse game release calendar data.
             </p>
             <Link
                 to="/dashboard/profile?tab=integrations"
-                className="mt-5 inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+                className="mt-5 inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
             >
                 Go to Integrations
             </Link>
@@ -308,10 +308,10 @@ export default function LifeSyncGameReleases() {
                 variants={lifeSyncDollyPageVariants}
                 transition={lifeSyncDollyPageTransition}
             >
-                <header className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-white/95 p-5 shadow-sm">
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#6e6e73]">LifeSync • GameStatus</p>
+                <header className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-[var(--color-surface)]/95 p-5 shadow-sm">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-6e6e73)]">LifeSync • GameStatus</p>
                     <h1 className="mt-1 text-[30px] font-bold tracking-tight text-apple-text">Game Release Calendar</h1>
-                    <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-[#515154]">
+                    <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-[var(--mx-color-515154)]">
                         Anime-style monthly calendar view for upcoming and released games. Click a day to open game details and stores.
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -319,13 +319,13 @@ export default function LifeSyncGameReleases() {
                             <>
                                 <Link
                                     to="/dashboard/lifesync/games/search"
-                                    className="inline-flex items-center rounded-lg border border-apple-border bg-white px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[#0071e3]"
+                                    className="inline-flex items-center rounded-lg border border-apple-border bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)]"
                                 >
                                     Game Search
                                 </Link>
                                 <Link
                                     to="/dashboard/lifesync/games/crack-status"
-                                    className="inline-flex items-center rounded-lg border border-apple-border bg-white px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[#0071e3]"
+                                    className="inline-flex items-center rounded-lg border border-apple-border bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)]"
                                 >
                                     Crack Status
                                 </Link>
@@ -340,13 +340,13 @@ export default function LifeSyncGameReleases() {
                     </div>
                 )}
 
-                <section className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-white/95 p-4 shadow-sm sm:p-5">
+                <section className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-[var(--color-surface)]/95 p-4 shadow-sm sm:p-5">
                     <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                         <div className="flex items-center justify-between gap-2 rounded-xl bg-apple-bg p-1.5 sm:w-fit">
                             <button
                                 type="button"
                                 onClick={() => moveMonth(-1)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-apple-text transition hover:border-apple-border hover:bg-white"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-apple-text transition hover:border-apple-border hover:bg-[var(--color-surface)]"
                                 aria-label="Previous month"
                             >
                                 <FaChevronLeft className="h-3.5 w-3.5" />
@@ -357,7 +357,7 @@ export default function LifeSyncGameReleases() {
                             <button
                                 type="button"
                                 onClick={() => moveMonth(1)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-apple-text transition hover:border-apple-border hover:bg-white"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-apple-text transition hover:border-apple-border hover:bg-[var(--color-surface)]"
                                 aria-label="Next month"
                             >
                                 <FaChevronRight className="h-3.5 w-3.5" />
@@ -365,13 +365,13 @@ export default function LifeSyncGameReleases() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
-                            <span className="rounded-full border border-apple-border bg-apple-bg px-3 py-1 text-[11px] font-semibold text-[#515154]">
+                            <span className="rounded-full border border-apple-border bg-apple-bg px-3 py-1 text-[11px] font-semibold text-[var(--mx-color-515154)]">
                                 {monthReleaseCount} games this month
                             </span>
                             <button
                                 type="button"
                                 onClick={goToToday}
-                                className="rounded-lg border border-apple-border bg-white px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[#0071e3]"
+                                className="rounded-lg border border-apple-border bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)]"
                             >
                                 Today
                             </button>
@@ -379,7 +379,7 @@ export default function LifeSyncGameReleases() {
                                 type="button"
                                 onClick={() => void calendar.refetch()}
                                 disabled={calendar.loading}
-                                className="rounded-lg border border-apple-border bg-white px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[#0071e3] disabled:opacity-60"
+                                className="rounded-lg border border-apple-border bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-60"
                             >
                                 {calendar.loading ? 'Refreshing...' : 'Refresh'}
                             </button>
@@ -420,27 +420,27 @@ export default function LifeSyncGameReleases() {
                                         onClick={() => openDay(date, inCurrentMonth)}
                                         className={`lifesync-games-glass w-full rounded-xl border p-2 text-left transition-all sm:min-h-[124px] sm:p-2.5 ${
                                             selected
-                                                ? 'border-[#151418]/20 bg-white shadow-sm ring-2 ring-primary/45'
+                                                ? 'border-[var(--mx-color-151418)]/20 bg-[var(--color-surface)] shadow-sm ring-2 ring-primary/45'
                                                 : inCurrentMonth
-                                                    ? 'border-[#dbe4ef] bg-white hover:shadow-sm'
-                                                    : 'border-[#e2e8f0] bg-[#f8fafc] text-[#94a3b8]'
+                                                    ? 'border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] hover:shadow-sm'
+                                                    : 'border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] text-[var(--mx-color-94a3b8)]'
                                         }`}
                                     >
                                         <div className="flex items-center justify-between gap-2">
                                             <span
                                                 className={`inline-flex min-w-6 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold sm:text-[11px] ${
                                                     today
-                                                        ? 'bg-primary text-[#1a1628]'
+                                                        ? 'bg-primary text-[var(--mx-color-1a1628)]'
                                                         : inCurrentMonth
-                                                            ? 'text-[#1e293b]'
-                                                            : 'text-[#94a3b8]'
+                                                            ? 'text-[var(--mx-color-1e293b)]'
+                                                            : 'text-[var(--mx-color-94a3b8)]'
                                                 }`}
                                             >
                                                 {date.getDate()}
                                             </span>
 
                                             {items.length > 0 && (
-                                                <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[10px] font-semibold text-[#334155]">
+                                                <span className="rounded-full bg-[var(--mx-color-eef2ff)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-334155)]">
                                                     {items.length}
                                                 </span>
                                             )}
@@ -450,13 +450,13 @@ export default function LifeSyncGameReleases() {
                                             {items.slice(0, 2).map((item, rowIdx) => (
                                                 <div
                                                     key={`${item._title}-${rowIdx}`}
-                                                    className="w-full truncate rounded-md bg-[#f8fafc] px-2 py-1 text-[10px] font-medium text-[#334155]"
+                                                    className="w-full truncate rounded-md bg-[var(--mx-color-f8fafc)] px-2 py-1 text-[10px] font-medium text-[var(--mx-color-334155)]"
                                                 >
                                                     {item._title}
                                                 </div>
                                             ))}
                                             {items.length > 2 && (
-                                                <div className="px-1 text-[10px] font-medium text-[#64748b]">
+                                                <div className="px-1 text-[10px] font-medium text-[var(--mx-color-64748b)]">
                                                     +{items.length - 2} more
                                                 </div>
                                             )}
@@ -491,22 +491,22 @@ export default function LifeSyncGameReleases() {
                         >
                             <MotionDiv
                                 {...lifeSyncModalSlideProps}
-                                className="lifesync-games-glass relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[30px] border border-white/70 bg-white shadow-2xl sm:rounded-[28px]"
+                                className="lifesync-games-glass relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-t-[30px] border border-[var(--color-border-strong)]/70 bg-[var(--color-surface)] shadow-2xl sm:rounded-[28px]"
                             >
-                                <div className="border-b border-[#dbe4ef] bg-[linear-gradient(120deg,rgba(240,249,255,0.92),rgba(248,250,252,0.96),rgba(255,255,255,0.98))] px-5 py-4 sm:px-6">
+                                <div className="border-b border-[var(--mx-color-dbe4ef)] bg-[linear-gradient(120deg,rgba(240,249,255,0.92),rgba(248,250,252,0.96),rgba(255,255,255,0.98))] px-5 py-4 sm:px-6">
                                     <button
                                         type="button"
                                         onClick={() => setShowDayOverlay(false)}
-                                        className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#dbe4ef] bg-white text-[#475569] transition-colors hover:bg-[#f8fafc]"
+                                        className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] text-[var(--mx-color-475569)] transition-colors hover:bg-[var(--mx-color-f8fafc)]"
                                         aria-label="Close"
                                     >
                                         <FaTimes className="h-4 w-4" />
                                     </button>
 
-                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#64748b]">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--mx-color-64748b)]">
                                         Game release day
                                     </p>
-                                    <h3 className="mt-1 pr-10 text-[20px] font-black tracking-tight text-[#151418] sm:text-[23px]">
+                                    <h3 className="mt-1 pr-10 text-[20px] font-black tracking-tight text-[var(--mx-color-151418)] sm:text-[23px]">
                                         {selectedDate.toLocaleDateString('en-US', {
                                             weekday: 'long',
                                             month: 'long',
@@ -515,13 +515,13 @@ export default function LifeSyncGameReleases() {
                                         })}
                                     </h3>
                                     <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                                        <span className="rounded-full border border-[#dbe4ef] bg-white px-2.5 py-1 font-semibold text-[#1e293b]">
+                                        <span className="rounded-full border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-2.5 py-1 font-semibold text-[var(--mx-color-1e293b)]">
                                             {itemsForSelectedDay.length
                                                 ? `${itemsForSelectedDay.length} games`
                                                 : 'No games'}
                                         </span>
                                         {calendar.loading && (
-                                            <span className="inline-flex items-center gap-2 font-medium text-[#64748b]">
+                                            <span className="inline-flex items-center gap-2 font-medium text-[var(--mx-color-64748b)]">
                                                 <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                                                 Loading calendar...
                                             </span>
@@ -530,20 +530,20 @@ export default function LifeSyncGameReleases() {
                                 </div>
 
                                 <div className="grid min-h-0 flex-1 lg:grid-cols-[220px_1fr]">
-                                    <aside className="lifesync-games-glass border-b border-[#dbe4ef] bg-[#fbfdff] px-5 py-4 sm:px-6 lg:border-b-0 lg:border-r">
-                                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">Day controls</p>
+                                    <aside className="lifesync-games-glass border-b border-[var(--mx-color-dbe4ef)] bg-[var(--mx-color-fbfdff)] px-5 py-4 sm:px-6 lg:border-b-0 lg:border-r">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Day controls</p>
                                         <div className="mt-3 grid grid-cols-2 gap-2">
                                             <button
                                                 type="button"
                                                 onClick={() => moveSelectedDay(-1)}
-                                                className="inline-flex items-center justify-center rounded-xl border border-[#dbe4ef] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] transition hover:bg-[#f8fafc]"
+                                                className="inline-flex items-center justify-center rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-334155)] transition hover:bg-[var(--mx-color-f8fafc)]"
                                             >
                                                 Prev Day
                                             </button>
                                             <button
                                                 type="button"
                                                 onClick={() => moveSelectedDay(1)}
-                                                className="inline-flex items-center justify-center rounded-xl border border-[#dbe4ef] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] transition hover:bg-[#f8fafc]"
+                                                className="inline-flex items-center justify-center rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-334155)] transition hover:bg-[var(--mx-color-f8fafc)]"
                                             >
                                                 Next Day
                                             </button>
@@ -555,21 +555,21 @@ export default function LifeSyncGameReleases() {
                                                 goToToday()
                                                 setShowDayOverlay(true)
                                             }}
-                                            className="mt-3 w-full rounded-xl border border-[#dbe4ef] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] transition hover:bg-[#f8fafc]"
+                                            className="mt-3 w-full rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-334155)] transition hover:bg-[var(--mx-color-f8fafc)]"
                                         >
                                             Jump to today
                                         </button>
 
-                                        <div className="lifesync-games-glass mt-4 rounded-2xl border border-[#dbe4ef] bg-white p-3">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">Summary</p>
-                                            <p className="mt-1 text-[13px] font-bold text-[#151418]">
+                                        <div className="lifesync-games-glass mt-4 rounded-2xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] p-3">
+                                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Summary</p>
+                                            <p className="mt-1 text-[13px] font-bold text-[var(--mx-color-151418)]">
                                                 {selectedDate.toLocaleDateString('en-US', {
                                                     month: 'short',
                                                     day: 'numeric',
                                                     year: 'numeric',
                                                 })}
                                             </p>
-                                            <p className="mt-2 text-[11px] text-[#64748b]">
+                                            <p className="mt-2 text-[11px] text-[var(--mx-color-64748b)]">
                                                 Click any game to open the details popup with description, images, and direct stores.
                                             </p>
                                         </div>
@@ -591,11 +591,11 @@ export default function LifeSyncGameReleases() {
                                                                 setShowDayOverlay(false)
                                                                 void openDetailsForTitle(item._title)
                                                             }}
-                                                            className="lifesync-games-glass w-full rounded-2xl border border-[#dbe4ef] bg-white p-4 text-left transition hover:shadow-sm"
+                                                            className="lifesync-games-glass w-full rounded-2xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] p-4 text-left transition hover:shadow-sm"
                                                         >
                                                             <div className="flex items-start justify-between gap-3">
                                                                 <div className="min-w-0 flex-1">
-                                                                    <p className="truncate text-[15px] font-bold tracking-tight text-[#151418]">
+                                                                    <p className="truncate text-[15px] font-bold tracking-tight text-[var(--mx-color-151418)]">
                                                                         {item._title}
                                                                     </p>
                                                                     <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -605,18 +605,18 @@ export default function LifeSyncGameReleases() {
                                                                             {titleCaseStatus(item?.status_key)}
                                                                         </span>
                                                                         {item?.release_date && (
-                                                                            <span className="rounded-full bg-[#f8fafc] px-2.5 py-0.5 text-[10px] font-medium text-[#475569] ring-1 ring-[#e2e8f0]">
+                                                                            <span className="rounded-full bg-[var(--mx-color-f8fafc)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--mx-color-475569)] ring-1 ring-[var(--mx-color-e2e8f0)]">
                                                                                 {formatDate(item.release_date)}
                                                                             </span>
                                                                         )}
                                                                         {item?.source_section && (
-                                                                            <span className="rounded-full bg-[#f8fafc] px-2.5 py-0.5 text-[10px] font-medium text-[#475569] ring-1 ring-[#e2e8f0]">
+                                                                            <span className="rounded-full bg-[var(--mx-color-f8fafc)] px-2.5 py-0.5 text-[10px] font-medium text-[var(--mx-color-475569)] ring-1 ring-[var(--mx-color-e2e8f0)]">
                                                                                 {item.source_section}
                                                                             </span>
                                                                         )}
                                                                     </div>
                                                                 </div>
-                                                                <span className="shrink-0 rounded-lg border border-[#dbe4ef] bg-white px-2.5 py-1 text-[11px] font-semibold text-[#334155]">
+                                                                <span className="shrink-0 rounded-lg border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-2.5 py-1 text-[11px] font-semibold text-[var(--mx-color-334155)]">
                                                                     View
                                                                 </span>
                                                             </div>
@@ -625,7 +625,7 @@ export default function LifeSyncGameReleases() {
                                                 ))}
                                             </MotionDiv>
                                         ) : (
-                                            <div className="lifesync-games-glass rounded-2xl border border-dashed border-[#cbd5e1] bg-white/70 px-4 py-12 text-center text-[#64748b]">
+                                            <div className="lifesync-games-glass rounded-2xl border border-dashed border-[var(--mx-color-cbd5e1)] bg-[var(--color-surface)]/70 px-4 py-12 text-center text-[var(--mx-color-64748b)]">
                                                 <p className="text-[14px] font-semibold">No releases on this day</p>
                                                 <p className="mt-1 text-[12px]">Try another day or month.</p>
                                             </div>

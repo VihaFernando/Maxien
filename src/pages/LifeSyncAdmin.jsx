@@ -49,7 +49,7 @@ const V1_ADMIN_MODE = false
 
 function MetricCard({ label, value, hint }) {
     return (
-        <div className="rounded-2xl border border-[#e5e5ea] bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 shadow-sm">
             <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">{label}</p>
             <p className="mt-1.5 text-[22px] font-bold tabular-nums text-apple-text">{value ?? '—'}</p>
             {hint ? <p className="mt-1 text-[10px] leading-snug text-apple-subtext">{hint}</p> : null}
@@ -108,7 +108,7 @@ function SectionIntro({ title, children }) {
 
 function Panel({ children, className = '' }) {
     return (
-        <div className={`rounded-2xl border border-[#e5e5ea] bg-white p-5 shadow-sm sm:p-6 ${className}`}>{children}</div>
+        <div className={`rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 shadow-sm sm:p-6 ${className}`}>{children}</div>
     )
 }
 
@@ -329,7 +329,7 @@ export default function LifeSyncAdmin() {
 
     if (!hasToken || !isLifeSyncConnected) {
         return (
-            <div className="mx-auto max-w-lg rounded-2xl border border-[#e5e5ea] bg-white p-8 shadow-sm">
+            <div className="mx-auto max-w-lg rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-8 shadow-sm">
                 <h1 className="text-[18px] font-bold text-apple-text">LifeSync admin</h1>
                 <p className="mt-2 text-[13px] leading-relaxed text-apple-subtext">
                     Connect LifeSync with your Maxien account to use the admin console.
@@ -355,7 +355,7 @@ export default function LifeSyncAdmin() {
                 </p>
                 <Link
                     to="/dashboard"
-                    className="mt-6 inline-block rounded-xl border border-red-200 bg-white px-4 py-2.5 text-[13px] font-semibold text-red-950 hover:bg-red-50"
+                    className="mt-6 inline-block rounded-xl border border-red-200 bg-[var(--color-surface)] px-4 py-2.5 text-[13px] font-semibold text-red-950 hover:bg-red-50"
                 >
                     Back to overview
                 </Link>
@@ -366,7 +366,7 @@ export default function LifeSyncAdmin() {
     if (V1_ADMIN_MODE) {
         return (
             <div className="mx-auto max-w-3xl space-y-4">
-                <div className="rounded-2xl border border-[#e5e5ea] bg-white p-6 shadow-sm">
+                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-6 shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">Operator</p>
                     <h1 className="mt-1 text-[22px] font-bold tracking-tight text-apple-text">LifeSync admin (v1)</h1>
                     <p className="mt-2 text-[13px] leading-relaxed text-apple-subtext">
@@ -383,7 +383,7 @@ export default function LifeSyncAdmin() {
                     <MetricCard label="Runtime" value={v1Health?.runtime || '—'} />
                     <MetricCard label="Health" value={v1Health?.ok ? 'OK' : '—'} />
                 </div>
-                <div className="rounded-2xl border border-[#e5e5ea] bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 shadow-sm">
                     <p className="text-[12px] text-apple-subtext">
                         For full operator workflows, implement dedicated `/api/v1/admin/*` routes and then reconnect this UI.
                     </p>
@@ -400,7 +400,7 @@ export default function LifeSyncAdmin() {
 
     return (
         <div className="mx-auto max-w-6xl px-2 pb-12 sm:px-0">
-            <div className="mb-6 rounded-2xl border border-[#e5e5ea] p-6 shadow-sm sm:p-8">
+            <div className="mb-6 rounded-2xl border border-[var(--mx-color-e5e5ea)] p-6 shadow-sm sm:p-8">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                     <div>
                         <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">Operator</p>
@@ -423,7 +423,7 @@ export default function LifeSyncAdmin() {
                             type="button"
                             disabled={!overview}
                             onClick={downloadOverviewJson}
-                            className="w-full rounded-xl border border-[#e5e5ea] bg-white px-4 py-2.5 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50 sm:w-auto"
+                            className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-4 py-2.5 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50 sm:w-auto"
                         >
                             Export overview JSON
                         </button>
@@ -483,11 +483,11 @@ export default function LifeSyncAdmin() {
                                 </button>
                             </div>
                             <dl className="space-y-2 text-[12px] text-apple-text">
-                                <div className="flex justify-between gap-2 border-b border-[#f0f0f0] py-1">
+                                <div className="flex justify-between gap-2 border-b border-[var(--mx-color-f0f0f0)] py-1">
                                     <dt className="text-apple-subtext">Node</dt>
                                     <dd className="font-mono">{s?.nodeVersion ?? '—'}</dd>
                                 </div>
-                                <div className="flex justify-between gap-2 border-b border-[#f0f0f0] py-1">
+                                <div className="flex justify-between gap-2 border-b border-[var(--mx-color-f0f0f0)] py-1">
                                     <dt className="text-apple-subtext">API uptime</dt>
                                     <dd>{s?.uptimeSeconds != null ? formatUptime(s.uptimeSeconds) : '—'}</dd>
                                 </div>
@@ -595,7 +595,7 @@ export default function LifeSyncAdmin() {
                                 type="button"
                                 disabled={healthBusy}
                                 onClick={refreshHealth}
-                                className="rounded-xl border border-[#e5e5ea] bg-apple-bg px-4 py-2.5 text-[12px] font-semibold text-apple-text disabled:opacity-50"
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-4 py-2.5 text-[12px] font-semibold text-apple-text disabled:opacity-50"
                             >
                                 {healthBusy ? 'Pinging…' : 'Run ping'}
                             </button>
@@ -689,12 +689,12 @@ export default function LifeSyncAdmin() {
                                 type="button"
                                 disabled={activityBusy}
                                 onClick={loadActivity}
-                                className="rounded-xl border border-[#e5e5ea] bg-apple-bg px-3 py-2 text-[11px] font-semibold text-apple-text disabled:opacity-50"
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[11px] font-semibold text-apple-text disabled:opacity-50"
                             >
                                 {activityBusy ? 'Loading…' : 'Reload'}
                             </button>
                         </div>
-                        <div className="hidden overflow-x-auto rounded-xl border border-[#f0f0f0] md:block">
+                        <div className="hidden overflow-x-auto rounded-xl border border-[var(--mx-color-f0f0f0)] md:block">
                             <table className="min-w-full text-left text-[12px]">
                                 <thead className="bg-apple-bg text-[10px] font-bold uppercase tracking-wider text-apple-subtext">
                                     <tr>
@@ -731,7 +731,7 @@ export default function LifeSyncAdmin() {
                                                     <button
                                                         type="button"
                                                         onClick={() => copyText(row.userId)}
-                                                        className="rounded-lg border border-[#e5e5ea] px-2 py-1 text-[10px] font-semibold text-apple-text hover:bg-apple-bg"
+                                                        className="rounded-lg border border-[var(--mx-color-e5e5ea)] px-2 py-1 text-[10px] font-semibold text-apple-text hover:bg-apple-bg"
                                                     >
                                                         Copy id
                                                     </button>
@@ -744,16 +744,16 @@ export default function LifeSyncAdmin() {
                         </div>
                         <div className="mt-3 space-y-2 md:hidden">
                             {activityBusy && animeRows.length === 0 ? (
-                                <div className="rounded-xl border border-[#f0f0f0] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
                                     Loading…
                                 </div>
                             ) : animeRows.length === 0 ? (
-                                <div className="rounded-xl border border-[#f0f0f0] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
                                     No anime progress rows yet.
                                 </div>
                             ) : (
                                 animeRows.map((row, i) => (
-                                    <article key={`${row.userId}-${row.malId}-${i}`} className="rounded-xl border border-[#f0f0f0] bg-white p-3">
+                                    <article key={`${row.userId}-${row.malId}-${i}`} className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-[var(--color-surface)] p-3">
                                         <p className="font-mono text-[11px] text-apple-subtext">
                                             {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
                                         </p>
@@ -774,7 +774,7 @@ export default function LifeSyncAdmin() {
                                         <button
                                             type="button"
                                             onClick={() => copyText(row.userId)}
-                                            className="mt-3 w-full rounded-lg border border-[#e5e5ea] px-2 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg"
+                                            className="mt-3 w-full rounded-lg border border-[var(--mx-color-e5e5ea)] px-2 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg"
                                         >
                                             Copy user id
                                         </button>
@@ -788,7 +788,7 @@ export default function LifeSyncAdmin() {
                         <SectionIntro title="Latest manga reading updates">
                             Per-user shelf progress (source + title), newest first.
                         </SectionIntro>
-                        <div className="hidden overflow-x-auto rounded-xl border border-[#f0f0f0] md:block">
+                        <div className="hidden overflow-x-auto rounded-xl border border-[var(--mx-color-f0f0f0)] md:block">
                             <table className="min-w-full text-left text-[12px]">
                                 <thead className="bg-apple-bg text-[10px] font-bold uppercase tracking-wider text-apple-subtext">
                                     <tr>
@@ -835,7 +835,7 @@ export default function LifeSyncAdmin() {
                                                     <button
                                                         type="button"
                                                         onClick={() => copyText(row.userId)}
-                                                        className="rounded-lg border border-[#e5e5ea] px-2 py-1 text-[10px] font-semibold text-apple-text hover:bg-apple-bg"
+                                                        className="rounded-lg border border-[var(--mx-color-e5e5ea)] px-2 py-1 text-[10px] font-semibold text-apple-text hover:bg-apple-bg"
                                                     >
                                                         Copy id
                                                     </button>
@@ -848,16 +848,16 @@ export default function LifeSyncAdmin() {
                         </div>
                         <div className="mt-3 space-y-2 md:hidden">
                             {activityBusy && mangaRows.length === 0 ? (
-                                <div className="rounded-xl border border-[#f0f0f0] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
                                     Loading…
                                 </div>
                             ) : mangaRows.length === 0 ? (
-                                <div className="rounded-xl border border-[#f0f0f0] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
                                     No manga progress rows yet.
                                 </div>
                             ) : (
                                 mangaRows.map((row, i) => (
-                                    <article key={`${row.userId}-${row.mangaId}-${i}`} className="rounded-xl border border-[#f0f0f0] bg-white p-3">
+                                    <article key={`${row.userId}-${row.mangaId}-${i}`} className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-[var(--color-surface)] p-3">
                                         <p className="font-mono text-[11px] text-apple-subtext">
                                             {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
                                         </p>
@@ -882,7 +882,7 @@ export default function LifeSyncAdmin() {
                                         <button
                                             type="button"
                                             onClick={() => copyText(row.userId)}
-                                            className="mt-3 w-full rounded-lg border border-[#e5e5ea] px-2 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg"
+                                            className="mt-3 w-full rounded-lg border border-[var(--mx-color-e5e5ea)] px-2 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg"
                                         >
                                             Copy user id
                                         </button>
@@ -912,7 +912,7 @@ export default function LifeSyncAdmin() {
                                         placeholder="user@example.com"
                                         value={lookupEmail}
                                         onChange={(e) => setLookupEmail(e.target.value)}
-                                        className="min-w-0 flex-1 rounded-xl border border-[#e5e5ea] bg-apple-bg px-3 py-2 text-[13px] text-apple-text"
+                                        className="min-w-0 flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[13px] text-apple-text"
                                     />
                                     <button
                                         type="button"
@@ -942,13 +942,13 @@ export default function LifeSyncAdmin() {
                                         placeholder="674a1b2c3d4e5f6789012345"
                                         value={lookupUserId}
                                         onChange={(e) => setLookupUserId(e.target.value.trim())}
-                                        className="min-w-0 flex-1 rounded-xl border border-[#e5e5ea] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
+                                        className="min-w-0 flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
                                     />
                                     <button
                                         type="button"
                                         disabled={lookupIdBusy}
                                         onClick={runLookupById}
-                                        className="w-full rounded-xl border border-[#e5e5ea] bg-white px-4 py-2.5 text-[13px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50 sm:w-auto"
+                                        className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-4 py-2.5 text-[13px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50 sm:w-auto"
                                     >
                                         {lookupIdBusy ? '…' : 'Search'}
                                     </button>
@@ -968,7 +968,7 @@ export default function LifeSyncAdmin() {
 
                     <Panel>
                         <SectionIntro title="Recent signups">Newest LifeSync accounts (masked email).</SectionIntro>
-                        <div className="hidden overflow-x-auto rounded-xl border border-[#f0f0f0] md:block">
+                        <div className="hidden overflow-x-auto rounded-xl border border-[var(--mx-color-f0f0f0)] md:block">
                             <table className="min-w-full text-left text-[12px]">
                                 <thead className="bg-apple-bg text-[10px] font-bold uppercase tracking-wider text-apple-subtext">
                                     <tr>
@@ -1009,7 +1009,7 @@ export default function LifeSyncAdmin() {
                                                     <button
                                                         type="button"
                                                         onClick={() => copyText(row.id)}
-                                                        className="rounded-lg border border-[#e5e5ea] px-2 py-1 text-[10px] font-semibold text-apple-text hover:bg-apple-bg"
+                                                        className="rounded-lg border border-[var(--mx-color-e5e5ea)] px-2 py-1 text-[10px] font-semibold text-apple-text hover:bg-apple-bg"
                                                     >
                                                         Copy
                                                     </button>
@@ -1022,12 +1022,12 @@ export default function LifeSyncAdmin() {
                         </div>
                         <div className="mt-3 space-y-2 md:hidden">
                             {recent.length === 0 ? (
-                                <div className="rounded-xl border border-[#f0f0f0] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-4 text-center text-[12px] text-apple-subtext">
                                     {loadBusy ? 'Loading…' : 'No users yet.'}
                                 </div>
                             ) : (
                                 recent.map((row) => (
-                                    <article key={row.id} className="rounded-xl border border-[#f0f0f0] bg-white p-3">
+                                    <article key={row.id} className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-[var(--color-surface)] p-3">
                                         <p className="truncate font-mono text-[11px] text-apple-subtext">{row.id}</p>
                                         <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
                                             <div className="col-span-2">
@@ -1053,7 +1053,7 @@ export default function LifeSyncAdmin() {
                                         <button
                                             type="button"
                                             onClick={() => copyText(row.id)}
-                                            className="mt-3 w-full rounded-lg border border-[#e5e5ea] px-2 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg"
+                                            className="mt-3 w-full rounded-lg border border-[var(--mx-color-e5e5ea)] px-2 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg"
                                         >
                                             Copy user id
                                         </button>
@@ -1071,7 +1071,7 @@ export default function LifeSyncAdmin() {
 function UserSummaryCard({ user }) {
     if (!user) return null
     return (
-        <dl className="mt-4 grid gap-2 rounded-xl border border-[#e5e5ea] bg-apple-bg p-4 text-[12px] sm:grid-cols-2">
+        <dl className="mt-4 grid gap-2 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg p-4 text-[12px] sm:grid-cols-2">
             <div>
                 <dt className="text-apple-subtext">User id</dt>
                 <dd className="mt-0.5 flex flex-wrap items-center gap-2">

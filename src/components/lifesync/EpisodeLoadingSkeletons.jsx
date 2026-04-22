@@ -4,8 +4,8 @@ import { useCallback, useState } from 'react'
 export function DetailWatchGridSkeleton({ count = 6, dark = false }) {
   const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
   const cardClass = dark
-    ? 'overflow-hidden rounded-[14px] border border-white/12 bg-white/[0.04] shadow-[0_12px_36px_rgba(0,0,0,0.35)]'
-    : 'overflow-hidden rounded-[14px] border border-[#e5e5ea] bg-[#fafafa] shadow-sm'
+    ? 'overflow-hidden rounded-[14px] border border-[var(--color-border-strong)]/12 bg-[var(--color-surface)]/[0.04] shadow-[0_12px_36px_rgba(0,0,0,0.35)]'
+    : 'overflow-hidden rounded-[14px] border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] shadow-sm'
 
   return (
     <div
@@ -39,11 +39,11 @@ export function DetailWatchGridSkeleton({ count = 6, dark = false }) {
 export function LifesyncMangaChapterListSkeleton({ rows = 8, dark = false }) {
   const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
   const shellClass = dark
-    ? 'overflow-hidden rounded-xl border border-white/12 bg-white/[0.03]'
-    : 'overflow-hidden rounded-xl border border-[#e5e5ea]'
+    ? 'overflow-hidden rounded-xl border border-[var(--color-border-strong)]/12 bg-[var(--color-surface)]/[0.03]'
+    : 'overflow-hidden rounded-xl border border-[var(--mx-color-e5e5ea)]'
   const listClass = dark
     ? 'max-h-80 divide-y divide-white/10 overflow-hidden'
-    : 'max-h-80 divide-y divide-[#f0f0f0] overflow-hidden'
+    : 'max-h-80 divide-y divide-[var(--mx-color-f0f0f0)] overflow-hidden'
 
   return (
     <div
@@ -76,11 +76,11 @@ export function LifesyncHentaiEpisodeGridSkeleton({ count = 6, dark = false }) {
   const n = Math.min(12, Math.max(1, count))
   const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
   const cardClass = dark
-    ? 'overflow-hidden rounded-[14px] border border-white/12 bg-white/[0.05] shadow-[0_12px_34px_rgba(0,0,0,0.34)]'
-    : 'overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-white shadow-sm'
+    ? 'overflow-hidden rounded-[14px] border border-[var(--color-border-strong)]/12 bg-[var(--color-surface)]/[0.05] shadow-[0_12px_34px_rgba(0,0,0,0.34)]'
+    : 'overflow-hidden rounded-[14px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm'
   const mediaClass = dark
     ? 'relative aspect-video w-full overflow-hidden bg-black/35'
-    : 'relative aspect-video w-full overflow-hidden bg-[#fafafa]'
+    : 'relative aspect-video w-full overflow-hidden bg-[var(--mx-color-fafafa)]'
 
   return (
     <div
@@ -112,7 +112,7 @@ export function LifesyncHentaiEpisodeGridSkeleton({ count = 6, dark = false }) {
 export function LifesyncStreamPlayerResolvingSkeleton() {
   return (
     <div
-      className="relative flex h-full w-full min-h-[160px] flex-col items-center justify-center overflow-hidden bg-[#111]"
+      className="relative flex h-full w-full min-h-[160px] flex-col items-center justify-center overflow-hidden bg-[var(--mx-color-111)]"
       aria-busy="true"
       aria-label="Resolving stream"
     >
@@ -128,12 +128,12 @@ export function LifesyncStreamPlayerResolvingSkeleton() {
 export function WatchPageLoadSkeleton() {
   return (
     <div
-      className="rounded-3xl border border-white/10 bg-white/6 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.55)] sm:p-6"
+      className="rounded-3xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/6 p-4 shadow-[0_20px_80px_rgba(0,0,0,0.55)] sm:p-6"
       aria-busy="true"
       aria-label="Loading watch session"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-white/10 sm:h-12 sm:w-12">
+        <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-[var(--color-border-strong)]/10 sm:h-12 sm:w-12">
           <div className="lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark absolute inset-0" />
         </div>
         <div className="min-w-0 flex-1 space-y-2">
@@ -143,29 +143,29 @@ export function WatchPageLoadSkeleton() {
       </div>
       <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6">
         <div className="space-y-4">
-          <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 sm:rounded-3xl">
+          <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-[var(--color-border-strong)]/10 sm:rounded-3xl">
             <div className="lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark absolute inset-0" />
           </div>
           <div className="flex gap-1.5 overflow-hidden pb-1 lg:hidden">
             {Array.from({ length: 10 }).map((_, i) => (
               <div
                 key={i}
-                className="h-11 min-w-11 shrink-0 rounded-2xl border border-white/10 lifesync-skeleton-shimmer-dark"
+                className="h-11 min-w-11 shrink-0 rounded-2xl border border-[var(--color-border-strong)]/10 lifesync-skeleton-shimmer-dark"
                 style={{ animationDelay: `${i * 60}ms` }}
               />
             ))}
           </div>
         </div>
-        <div className="hidden min-h-[200px] overflow-hidden rounded-2xl border border-white/10 lg:block">
-          <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2.5">
+        <div className="hidden min-h-[200px] overflow-hidden rounded-2xl border border-[var(--color-border-strong)]/10 lg:block">
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border-strong)]/10 px-3 py-2.5">
             <div className="h-3 w-20 rounded-md lifesync-skeleton-shimmer-dark" />
-            <div className="h-6 w-9 rounded-full border border-white/10 lifesync-skeleton-shimmer-dark" />
+            <div className="h-6 w-9 rounded-full border border-[var(--color-border-strong)]/10 lifesync-skeleton-shimmer-dark" />
           </div>
           <div className="space-y-2 p-2">
             {Array.from({ length: 6 }).map((_, i) => (
               <div
                 key={i}
-                className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-2 py-2"
+                className="flex items-center gap-2 rounded-2xl border border-[var(--color-border-strong)]/10 bg-black/20 px-2 py-2"
               >
                 <div className="relative h-10 w-16 shrink-0 overflow-hidden rounded-xl">
                   <div className="lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark absolute inset-0" />
@@ -186,7 +186,7 @@ export function WatchPageLoadSkeleton() {
 /** Portrait catalog card (manga / hentai series). */
 export function LifesyncPortraitCardSkeleton({ className = '' }) {
   return (
-    <div className={`overflow-hidden rounded-[18px] border border-[#e5e5ea] bg-white shadow-sm ${className}`}>
+    <div className={`overflow-hidden rounded-[18px] border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] shadow-sm ${className}`}>
       <div className="relative aspect-[2/3] w-full overflow-hidden">
         <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
       </div>
@@ -243,7 +243,7 @@ export function LifesyncHentaiCatalogGridSkeleton({ count = 12 }) {
 /** Steam library / store card shape. */
 export function LifesyncSteamMediaCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[18px] border border-[#e5e5ea] bg-white shadow-sm">
+    <div className="overflow-hidden rounded-[18px] border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] shadow-sm">
       <div className="relative aspect-video w-full overflow-hidden">
         <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
       </div>
@@ -278,7 +278,7 @@ export function LifesyncSteamLibraryGridSkeleton({ count = 6 }) {
 /** Wishlist row (image + body). */
 export function LifesyncWishlistRowSkeleton() {
   return (
-    <div className="flex flex-col overflow-hidden rounded-[18px] border border-[#e5e5ea] bg-white shadow-sm sm:flex-row">
+    <div className="flex flex-col overflow-hidden rounded-[18px] border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] shadow-sm sm:flex-row">
       <div className="relative aspect-video w-full shrink-0 overflow-hidden sm:aspect-auto sm:min-h-[120px] sm:w-[200px]">
         <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
       </div>
@@ -311,7 +311,7 @@ export function LifesyncXboxCatalogGridSkeleton({ gridClass, count = 12 }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="relative aspect-[2/3] w-full overflow-hidden rounded-[12px] border border-[#e5e5ea] sm:rounded-[14px] lifesync-ep-grid-enter opacity-0"
+          className="relative aspect-[2/3] w-full overflow-hidden rounded-[12px] border border-[var(--mx-color-e5e5ea)] sm:rounded-[14px] lifesync-ep-grid-enter opacity-0"
           style={{ animationDelay: `${Math.min(i, 20) * 25}ms` }}
         >
           <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
@@ -335,7 +335,7 @@ export function LifesyncXboxLibraryGridSkeleton({ count = 6 }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="relative aspect-[2/3] w-full overflow-hidden rounded-[14px] border border-[#e5e5ea] lifesync-ep-grid-enter opacity-0"
+          className="relative aspect-[2/3] w-full overflow-hidden rounded-[14px] border border-[var(--mx-color-e5e5ea)] lifesync-ep-grid-enter opacity-0"
           style={{ animationDelay: `${i * 35}ms` }}
         >
           <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
@@ -352,11 +352,11 @@ export function LifesyncXboxLibraryGridSkeleton({ count = 6 }) {
 export function LifesyncXboxProfileSkeleton() {
   return (
     <div
-      className="flex flex-col items-center gap-4 rounded-[20px] border border-[#e5e5ea] bg-[#fafafa] p-5 sm:flex-row sm:items-center"
+      className="flex flex-col items-center gap-4 rounded-[20px] border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] p-5 sm:flex-row sm:items-center"
       aria-busy="true"
       aria-label="Loading profile"
     >
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-[#e5e5ea]">
+      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl border border-[var(--mx-color-e5e5ea)]">
         <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
       </div>
       <div className="w-full min-w-0 flex-1 space-y-2 text-center sm:text-left">
@@ -373,10 +373,10 @@ export function LifesyncXboxProfileSkeleton() {
 
 export function LifesyncAchievementRowsSkeleton({ rows = 5 }) {
   return (
-    <ul className="divide-y divide-[#e5e5ea]">
+    <ul className="divide-y divide-[var(--mx-color-e5e5ea)]">
       {Array.from({ length: rows }).map((_, i) => (
         <li key={i} className="flex gap-3 px-3 py-2.5">
-          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[#e5e5ea]">
+          <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-[var(--mx-color-e5e5ea)]">
             <div className="lifesync-skeleton-shimmer-light absolute inset-0" />
           </div>
           <div className="min-w-0 flex-1 space-y-1.5 py-0.5">
@@ -391,11 +391,11 @@ export function LifesyncAchievementRowsSkeleton({ rows = 5 }) {
 
 export function LifesyncAchievementPanelSkeleton() {
   return (
-    <div className="overflow-hidden rounded-[18px] border border-[#e5e5ea] bg-white shadow-sm" aria-busy="true" aria-label="Loading achievements">
-      <div className="border-b border-[#e5e5ea] bg-[#fafafa] px-4 py-3">
+    <div className="overflow-hidden rounded-[18px] border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] shadow-sm" aria-busy="true" aria-label="Loading achievements">
+      <div className="border-b border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] px-4 py-3">
         <div className="h-2 w-24 rounded-md lifesync-skeleton-shimmer-light opacity-70" />
         <div className="mt-2 h-4 w-[min(220px,70%)] rounded-md lifesync-skeleton-shimmer-light" />
-        <div className="mt-3 h-2 w-full max-w-xs rounded-full bg-[#e5e5ea]">
+        <div className="mt-3 h-2 w-full max-w-xs rounded-full bg-[var(--mx-color-e5e5ea)]">
           <div className="h-full w-[33%] rounded-full lifesync-skeleton-shimmer-light" />
         </div>
       </div>
@@ -411,7 +411,7 @@ export function LifesyncChapterPagesSkeleton({ bars = 4 }) {
       {Array.from({ length: bars }).map((_, i) => (
         <div
           key={i}
-          className="relative w-full overflow-hidden rounded-lg border border-white/10 lifesync-ep-grid-enter opacity-0"
+          className="relative w-full overflow-hidden rounded-lg border border-[var(--color-border-strong)]/10 lifesync-ep-grid-enter opacity-0"
           style={{
             animationDelay: `${i * 72}ms`,
             aspectRatio: '3 / 4',
@@ -434,7 +434,7 @@ export function LifesyncMangaRailSkeleton({ count = 5, compact = false }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className={`shrink-0 ${w} ${h} overflow-hidden rounded-[18px] border border-[#e5e5ea] lifesync-ep-grid-enter opacity-0`}
+          className={`shrink-0 ${w} ${h} overflow-hidden rounded-[18px] border border-[var(--mx-color-e5e5ea)] lifesync-ep-grid-enter opacity-0`}
           style={{ animationDelay: `${i * 45}ms` }}
         >
           <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light h-full w-full" />
@@ -450,7 +450,7 @@ export function LifesyncHubMangaRailSkeleton({ count = 4 }) {
     <div className="flex max-w-full min-w-0 gap-3 overflow-hidden px-4 py-4 sm:px-5" aria-busy="true" aria-label="Loading reading list">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="w-[112px] shrink-0 sm:w-[118px] lifesync-ep-grid-enter opacity-0" style={{ animationDelay: `${i * 50}ms` }}>
-          <div className="overflow-hidden rounded-2xl border border-[#e5e5ea] shadow-sm ring-1 ring-slate-200/80">
+          <div className="overflow-hidden rounded-2xl border border-[var(--mx-color-e5e5ea)] shadow-sm ring-1 ring-slate-200/80">
             <div className="relative aspect-[2/3] w-full">
               <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
             </div>
@@ -468,7 +468,7 @@ export function LifesyncHubMangaRailSkeleton({ count = 4 }) {
 /** One library shelf card: portrait + reading status + chapter info + actions (manga library cards). */
 function LifesyncLibraryShelfCardSkeleton() {
   return (
-    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[var(--color-surface)] shadow-sm">
       <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-100">
         <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
       </div>
@@ -520,7 +520,7 @@ export function LifesyncMediaLibraryPageSkeleton({ gridCount = 8, showSpotlight 
       aria-label="Loading shelf"
     >
       <aside className="w-full lg:w-[min(100%,280px)] lg:shrink-0">
-        <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-[0_8px_30px_-12px_rgba(21, 20, 24,0.12)] ring-1 ring-white/60">
+        <div className="space-y-4 rounded-3xl border border-slate-200/80 bg-[var(--color-surface)]/80 p-5 shadow-[0_8px_30px_-12px_rgba(21, 20, 24,0.12)] ring-1 ring-[var(--color-border-strong)]/60">
           <div className="flex items-start gap-3">
             <div className="h-11 w-11 shrink-0 rounded-2xl lifesync-skeleton-shimmer-light" />
             <div className="min-w-0 flex-1 space-y-2 pt-0.5">
@@ -556,12 +556,12 @@ export function LifesyncMediaLibraryPageSkeleton({ gridCount = 8, showSpotlight 
               <div className="h-8 flex-1 rounded-lg lifesync-skeleton-shimmer-light opacity-50" />
             </div>
           </div>
-          <div className="h-10 w-full rounded-xl border border-slate-200 bg-white lifesync-skeleton-shimmer-light opacity-60" />
+          <div className="h-10 w-full rounded-xl border border-slate-200 bg-[var(--color-surface)] lifesync-skeleton-shimmer-light opacity-60" />
         </div>
       </aside>
       <div className="min-w-0 flex-1 space-y-5">
         {showSpotlight ? (
-          <div className="rounded-3xl border border-amber-200/70 bg-white p-4 shadow-[0_12px_40px_-14px_rgba(180,140,60,0.14)] ring-1 ring-amber-100/50 sm:p-5">
+          <div className="rounded-3xl border border-amber-200/70 bg-[var(--color-surface)] p-4 shadow-[0_12px_40px_-14px_rgba(180,140,60,0.14)] ring-1 ring-amber-100/50 sm:p-5">
             <div className="flex flex-col gap-4 border-l-[6px] border-l-amber-400/80 pl-3 sm:flex-row sm:items-stretch sm:gap-6 sm:pl-4">
               <div className="hidden h-11 w-11 shrink-0 rounded-2xl lifesync-skeleton-shimmer-light sm:block" />
               <div className="mx-auto h-[196px] w-[128px] shrink-0 overflow-hidden rounded-2xl ring-2 ring-amber-200/50 sm:mx-0 sm:h-[218px] sm:w-[146px]">
@@ -615,12 +615,12 @@ export function LifesyncAnimeCatalogGridSkeleton({ count = 12 }) {
           className="min-h-0 min-w-0 lifesync-ep-grid-enter opacity-0"
           style={{ animationDelay: `${Math.min(i, 18) * 28}ms` }}
         >
-          <div className="overflow-hidden rounded-[18px] border border-[#d2d2d7]/50 bg-white shadow-sm">
-            <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#f5f5f7]">
+          <div className="overflow-hidden rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm">
+            <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
               <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light absolute inset-0" />
               <div className="pointer-events-none absolute inset-x-0 bottom-0 space-y-1.5 bg-gradient-to-t from-black/55 via-black/20 to-transparent p-3 pt-10">
-                <div className="h-2.5 w-[92%] rounded-md bg-white/30" />
-                <div className="h-2 w-[40%] rounded-md bg-white/22" />
+                <div className="h-2.5 w-[92%] rounded-md bg-[var(--color-surface)]/30" />
+                <div className="h-2 w-[40%] rounded-md bg-[var(--color-surface)]/22" />
               </div>
             </div>
           </div>
@@ -638,10 +638,10 @@ export function LifesyncMyListGridSkeleton({ count = 6 }) {
       {Array.from({ length: n }).map((_, i) => (
         <div
           key={i}
-          className="flex gap-3 rounded-[18px] border border-[#d2d2d7]/50 bg-white p-3 shadow-sm lifesync-ep-grid-enter opacity-0"
+          className="flex gap-3 rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-3 shadow-sm lifesync-ep-grid-enter opacity-0"
           style={{ animationDelay: `${i * 42}ms` }}
         >
-          <div className="h-[92px] w-[64px] shrink-0 overflow-hidden rounded-xl bg-[#f5f5f7]">
+          <div className="h-[92px] w-[64px] shrink-0 overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)]">
             <div className="lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light h-full w-full" />
           </div>
           <div className="min-w-0 flex-1 space-y-2 py-0.5">
@@ -767,7 +767,7 @@ export function LifesyncEpisodeThumbnail({
       ) : (
         <>
           <div
-            className={`flex h-full w-full items-center justify-center ${dark ? 'bg-white/6 text-white/25' : 'bg-apple-bg text-apple-subtext'}`}
+            className={`flex h-full w-full items-center justify-center ${dark ? 'bg-[var(--color-surface)]/6 text-white/25' : 'bg-apple-bg text-apple-subtext'}`}
           >
             <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
               <path d="M8 5v14l11-7z" />

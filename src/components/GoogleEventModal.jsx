@@ -142,12 +142,12 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
     }
 
     return (
-        <div className="fixed inset-0 bg-[#1d1d1f]/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 transition-opacity duration-300">
-            <div className="bg-white rounded-t-[32px] sm:rounded-[32px] p-6 sm:p-8 w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl relative">
+        <div className="fixed inset-0 bg-[var(--mx-color-1d1d1f)]/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 transition-opacity duration-300">
+            <div className="bg-[var(--color-surface)] rounded-t-[32px] sm:rounded-[32px] p-6 sm:p-8 w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl relative">
 
                 {/* Mobile drag handle */}
                 <div className="flex justify-center sm:hidden mb-4">
-                    <div className="w-12 h-1.5 bg-[#d2d2d7] rounded-full" />
+                    <div className="w-12 h-1.5 bg-[var(--mx-color-d2d2d7)] rounded-full" />
                 </div>
 
                 {/* Header */}
@@ -156,15 +156,15 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
                         <div className="w-9 h-9 bg-indigo-500 rounded-xl flex items-center justify-center">
                             <FaCalendarAlt className="w-4 h-4 text-white" />
                         </div>
-                        <h2 className="text-xl font-bold text-[#1d1d1f]">
+                        <h2 className="text-xl font-bold text-[var(--mx-color-1d1d1f)]">
                             {isEdit ? 'Edit Event' : 'New Calendar Event'}
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 bg-[#f5f5f7] hover:bg-[#e8e8ed] rounded-full transition-colors"
+                        className="p-2 bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-e8e8ed)] rounded-full transition-colors"
                     >
-                        <FaTimes className="w-4 h-4 text-[#86868b]" />
+                        <FaTimes className="w-4 h-4 text-[var(--mx-color-86868b)]" />
                     </button>
                 </div>
 
@@ -177,7 +177,7 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
                 <div className="space-y-5">
                     {/* Title */}
                     <div>
-                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">
+                        <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">
                             Title *
                         </label>
                         <input
@@ -186,13 +186,13 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
                             onChange={(e) => setTitle(e.target.value)}
                             placeholder="Add title"
                             autoFocus
-                            className="w-full bg-[#f5f5f7] border border-[#d2d2d7]/50 rounded-xl px-4 py-3 text-[15px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#C6FF00] focus:border-transparent transition-all"
+                            className="w-full bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-d2d2d7)]/50 rounded-xl px-4 py-3 text-[15px] text-[var(--mx-color-1d1d1f)] placeholder-[var(--mx-color-86868b)] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)] focus:border-transparent transition-all"
                         />
                     </div>
 
                     {/* Description */}
                     <div>
-                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">
+                        <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">
                             Description
                         </label>
                         <textarea
@@ -200,25 +200,25 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Add description (optional)"
                             rows={3}
-                            className="w-full bg-[#f5f5f7] border border-[#d2d2d7]/50 rounded-xl px-4 py-3 text-[15px] text-[#1d1d1f] placeholder-[#86868b] focus:outline-none focus:ring-2 focus:ring-[#C6FF00] focus:border-transparent transition-all resize-none"
+                            className="w-full bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-d2d2d7)]/50 rounded-xl px-4 py-3 text-[15px] text-[var(--mx-color-1d1d1f)] placeholder-[var(--mx-color-86868b)] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)] focus:border-transparent transition-all resize-none"
                         />
                     </div>
 
                     {/* Start / End datetime */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                            <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 flex items-center gap-1">
                                 <FaClock className="w-3 h-3" /> Start *
                             </label>
                             <input
                                 type="datetime-local"
                                 value={startDt}
                                 onChange={(e) => setStartDt(e.target.value)}
-                                className="w-full bg-[#f5f5f7] border border-[#d2d2d7]/50 rounded-xl px-4 py-3 text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#C6FF00] transition-all"
+                                className="w-full bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-d2d2d7)]/50 rounded-xl px-4 py-3 text-[14px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)] transition-all"
                             />
                         </div>
                         <div>
-                            <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                            <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 flex items-center gap-1">
                                 <FaClock className="w-3 h-3" /> End *
                             </label>
                             <input
@@ -226,20 +226,20 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
                                 value={endDt}
                                 onChange={(e) => setEndDt(e.target.value)}
                                 min={startDt}
-                                className="w-full bg-[#f5f5f7] border border-[#d2d2d7]/50 rounded-xl px-4 py-3 text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#C6FF00] transition-all"
+                                className="w-full bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-d2d2d7)]/50 rounded-xl px-4 py-3 text-[14px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)] transition-all"
                             />
                         </div>
                     </div>
 
                     {/* Timezone */}
                     <div>
-                        <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                        <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 flex items-center gap-1">
                             <FaGlobe className="w-3 h-3" /> Timezone
                         </label>
                         <select
                             value={timezone}
                             onChange={(e) => setTimezone(e.target.value)}
-                            className="w-full bg-[#f5f5f7] border border-[#d2d2d7]/50 rounded-xl px-4 py-3 text-[14px] text-[#1d1d1f] focus:outline-none focus:ring-2 focus:ring-[#C6FF00] transition-all"
+                            className="w-full bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-d2d2d7)]/50 rounded-xl px-4 py-3 text-[14px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)] transition-all"
                         >
                             {allTimezones.map((tz) => (
                                 <option key={tz} value={tz}>
@@ -250,40 +250,40 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
                     </div>
 
                     {/* Google Meet toggle */}
-                    <div className="flex items-center justify-between bg-[#f5f5f7] rounded-2xl p-4">
+                    <div className="flex items-center justify-between bg-[var(--mx-color-f5f5f7)] rounded-2xl p-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 bg-[#00897b] rounded-xl flex items-center justify-center flex-shrink-0">
+                            <div className="w-9 h-9 bg-[var(--mx-color-00897b)] rounded-xl flex items-center justify-center flex-shrink-0">
                                 <FaVideo className="w-4 h-4 text-white" />
                             </div>
                             <div>
-                                <p className="text-[14px] font-semibold text-[#1d1d1f]">Add Google Meet</p>
-                                <p className="text-[11px] text-[#86868b]">Automatically create a video call link</p>
+                                <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">Add Google Meet</p>
+                                <p className="text-[11px] text-[var(--mx-color-86868b)]">Automatically create a video call link</p>
                             </div>
                         </div>
                         <button
                             type="button"
                             onClick={() => setAddMeet(!addMeet)}
-                            className={`relative flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none ${addMeet ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'}`}
+                            className={`relative flex-shrink-0 rounded-full transition-all duration-200 focus:outline-none ${addMeet ? 'bg-[var(--mx-color-c6ff00)]' : 'bg-[var(--mx-color-d2d2d7)]'}`}
                             style={{ width: 48, height: 26 }}
                             aria-label="Toggle Google Meet"
                         >
                             <span
-                                className={`absolute top-[3px] left-[3px] w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${addMeet ? 'translate-x-[22px]' : 'translate-x-0'}`}
+                                className={`absolute top-[3px] left-[3px] w-5 h-5 bg-[var(--color-surface)] rounded-full shadow transition-transform duration-200 ${addMeet ? 'translate-x-[22px]' : 'translate-x-0'}`}
                             />
                         </button>
                     </div>
 
                     {/* Existing Meet link (edit mode) */}
                     {isEdit && meetLink && (
-                        <div className="bg-[#e8f5e9] border border-[#81c784] rounded-xl p-4">
-                            <p className="text-[11px] font-bold text-[#2e7d32] uppercase tracking-wider mb-2">
+                        <div className="bg-[var(--mx-color-e8f5e9)] border border-[var(--mx-color-81c784)] rounded-xl p-4">
+                            <p className="text-[11px] font-bold text-[var(--mx-color-2e7d32)] uppercase tracking-wider mb-2">
                                 Google Meet Link
                             </p>
                             <a
                                 href={meetLink}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[13px] text-[#1565c0] underline break-all flex items-center gap-1.5"
+                                className="text-[13px] text-[var(--mx-color-1565c0)] underline break-all flex items-center gap-1.5"
                             >
                                 <FaExternalLinkAlt className="w-3 h-3 flex-shrink-0" />
                                 {meetLink}
@@ -294,7 +294,7 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
 
                 {/* Action buttons */}
                 <div
-                    className={`mt-8 pt-6 border-t border-[#d2d2d7]/50 flex gap-3 ${isEdit ? 'justify-between' : 'justify-end'}`}
+                    className={`mt-8 pt-6 border-t border-[var(--mx-color-d2d2d7)]/50 flex gap-3 ${isEdit ? 'justify-between' : 'justify-end'}`}
                 >
                     {isEdit && (
                         <button
@@ -309,14 +309,14 @@ export default function GoogleEventModal({ event, defaultDate, onSave, onDelete,
                         <button
                             onClick={onClose}
                             disabled={saving || deleting}
-                            className="px-5 py-3 bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] font-semibold rounded-xl text-[14px] transition-all disabled:opacity-50"
+                            className="px-5 py-3 bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-e8e8ed)] text-[var(--mx-color-1d1d1f)] font-semibold rounded-xl text-[14px] transition-all disabled:opacity-50"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleSave}
                             disabled={saving || deleting}
-                            className="px-6 py-3 bg-[#C6FF00] hover:bg-[#b8f000] active:scale-[0.98] text-[#1d1d1f] font-bold rounded-xl text-[14px] transition-all shadow-sm disabled:opacity-50"
+                            className="px-6 py-3 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] active:scale-[0.98] text-[var(--mx-color-1d1d1f)] font-bold rounded-xl text-[14px] transition-all shadow-sm disabled:opacity-50"
                         >
                             {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Event'}
                         </button>

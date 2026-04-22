@@ -287,16 +287,16 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
 
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-stretch lg:gap-5">
                 {/* Service connections */}
-                <div className="lifesync-soft-borders bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
-                    <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-[#f0f0f0] flex items-center gap-2.5">
+                <div className="lifesync-soft-borders bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
+                    <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-[var(--mx-color-f0f0f0)] flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0">
-                            <svg className="w-3.5 h-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                            <svg className="w-3.5 h-3.5 text-[var(--mx-color-1d1d1f)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                             </svg>
                         </div>
                         <div>
-                            <h3 className="text-[13px] font-bold text-[#1d1d1f]">Service connections</h3>
-                            <p className="text-[10px] text-[#86868b]">Link third-party accounts to unlock features</p>
+                            <h3 className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)]">Service connections</h3>
+                            <p className="text-[10px] text-[var(--mx-color-86868b)]">Link third-party accounts to unlock features</p>
                         </div>
                     </div>
                     <ul className="">
@@ -304,17 +304,17 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                             <div className="flex min-w-0 items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl flex bg-[#171a21] items-center justify-center flex-shrink-0">
+                                <div className="w-9 h-9 rounded-xl flex bg-[var(--mx-color-171a21)] items-center justify-center flex-shrink-0">
                                     <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M11.979 0C5.678 0 .511 4.86.022 10.95l6.432 2.658a3.387 3.387 0 011.912-.588c.064 0 .126.002.189.005l2.861-4.142V8.83a4.524 4.524 0 014.519-4.519 4.524 4.524 0 014.519 4.519 4.524 4.524 0 01-4.519 4.519h-.105l-4.076 2.911c0 .052.004.105.004.159a3.393 3.393 0 01-3.39 3.39 3.403 3.403 0 01-3.35-2.858L.453 15.16A11.98 11.98 0 0011.979 24c6.627 0 12-5.373 12-12S18.605 0 11.979 0z" /></svg>
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">Steam</p>
+                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Steam</p>
                                     {steamLinked ? (
                                         <p className="text-[11px] text-emerald-600 font-medium">
                                             Connected{integrations?.steamId ? ` • ${integrations.steamId}` : ''}
                                         </p>
                                     ) : (
-                                        <p className="text-[11px] text-[#86868b]">
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
                                             Set your SteamID64 to import wishlist titles and connect Steam-aware modules.
                                         </p>
                                     )}
@@ -325,7 +325,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                     type="button"
                                     onClick={() => void unlinkSteamId()}
                                     disabled={steamBusy || busy}
-                                    className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
+                                    className="w-fit shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
                                 >
                                     {steamBusy ? 'Disconnecting…' : 'Disconnect'}
                                 </button>
@@ -338,12 +338,12 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                         onChange={(e) => setSteamIdInput(e.target.value.replace(/[^\d]/g, '').slice(0, 17))}
                                         placeholder="SteamID64 (17 digits)"
                                         disabled={steamBusy || busy}
-                                        className="w-full px-3 py-2 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#171a21]/50 disabled:opacity-50"
+                                        className="w-full px-3 py-2 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-lg text-[12px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:border-[var(--mx-color-171a21)]/50 disabled:opacity-50"
                                     />
                                     <button
                                         type="submit"
                                         disabled={steamBusy || busy || steamIdInput.trim().length !== 17}
-                                        className="text-[11px] font-semibold text-white bg-[#171a21] hover:bg-black px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
+                                        className="text-[11px] font-semibold text-white bg-[var(--mx-color-171a21)] hover:bg-black px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
                                     >
                                         {steamBusy ? 'Saving…' : 'Save Steam ID'}
                                     </button>
@@ -356,26 +356,26 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     <li className="px-5 sm:px-6 py-4 ">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                             <div className="flex min-w-0 items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[#2E51A2] flex items-center justify-center flex-shrink-0">
+                                <div className="w-9 h-9 rounded-xl bg-[var(--mx-color-2e51a2)] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-[11px] font-black leading-none">MAL</span>
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">MyAnimeList</p>
+                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">MyAnimeList</p>
                                     {malLinked ? (
                                         <p className="text-[11px] text-emerald-600 font-medium">
                                             Connected{integrations.malUsername ? ` as ${integrations.malUsername}` : ''}
                                         </p>
                                     ) : (
-                                        <p className="text-[11px] text-[#86868b]">Link to sync your anime/manga lists</p>
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Link to sync your anime/manga lists</p>
                                     )}
                                 </div>
                             </div>
                             {malLinked ? (
-                                <button type="button" onClick={() => unlinkProvider('MAL', '/api/v1/anime/link')} disabled={unlinkBusy === 'MAL'} className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto">
+                                <button type="button" onClick={() => unlinkProvider('MAL', '/api/v1/anime/link')} disabled={unlinkBusy === 'MAL'} className="w-fit shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto">
                                     {unlinkBusy === 'MAL' ? 'Unlinking…' : 'Disconnect'}
                                 </button>
                             ) : (
-                                <a href={lifesyncOAuthStartUrl('mal') || '#'} className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[#2E51A2] hover:bg-[#24408a] px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('mal') ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <a href={lifesyncOAuthStartUrl('mal') || '#'} className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[var(--mx-color-2e51a2)] hover:bg-[var(--mx-color-24408a)] px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('mal') ? 'opacity-50 pointer-events-none' : ''}`}>
                                     Connect MAL
                                 </a>
                             )}
@@ -386,28 +386,28 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                             <div className="flex min-w-0 items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[#151418] flex items-center justify-center flex-shrink-0">
+                                <div className="w-9 h-9 rounded-xl bg-[var(--mx-color-151418)] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-[9px] font-black leading-none">ASN</span>
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">AnimeSchedule</p>
+                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">AnimeSchedule</p>
                                     {animeScheduleLinked ? (
                                         <p className="text-[11px] text-emerald-600 font-medium">
                                             Connected{integrations.animescheduleUsername ? ` as ${integrations.animescheduleUsername}` : ''}
                                         </p>
                                     ) : (
-                                        <p className="text-[11px] text-[#86868b]">Optional: link to access your AnimeSchedule lists</p>
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Optional: link to access your AnimeSchedule lists</p>
                                     )}
                                 </div>
                             </div>
                             {animeScheduleLinked ? (
-                                <span className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] px-3 py-1.5 rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] sm:ml-auto">
+                                <span className="w-fit shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] sm:ml-auto">
                                     Connected
                                 </span>
                             ) : (
                                 <a
                                     href={lifesyncOAuthStartUrl('animeschedule') || '#'}
-                                    className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[#151418] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('animeschedule') ? 'opacity-50 pointer-events-none' : ''}`}
+                                    className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[var(--mx-color-151418)] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('animeschedule') ? 'opacity-50 pointer-events-none' : ''}`}
                                 >
                                     Connect AnimeSchedule
                                 </a>
@@ -419,13 +419,13 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                             <div className="flex min-w-0 items-start gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[#FF6740] flex items-center justify-center flex-shrink-0">
+                                <div className="w-9 h-9 rounded-xl bg-[var(--mx-color-ff6740)] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-[10px] font-black leading-none">MD</span>
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">MangaDex</p>
+                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">MangaDex</p>
                                     {mangadexStatus == null ? (
-                                        <p className="text-[11px] text-[#86868b]">Checking server…</p>
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Checking server…</p>
                                     ) : mangadexStatus.oauthConfigured === false ? (
                                         <p className="text-[11px] text-amber-600 font-medium">Personal client not configured on server</p>
                                     ) : mangadexStatus?.connected ? (
@@ -433,7 +433,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                             Linked{mangadexStatus.username ? ` as ${mangadexStatus.username}` : ''}
                                         </p>
                                     ) : (
-                                        <p className="text-[11px] text-[#86868b]">
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
                                             Optional: link to sync follows, follow/unfollow from the app, and push chapter read state to your MangaDex account.
                                         </p>
                                     )}
@@ -444,7 +444,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                     type="button"
                                     onClick={() => void unlinkMangaDex()}
                                     disabled={unlinkBusy === 'MangaDex'}
-                                    className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
+                                    className="w-fit shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
                                 >
                                     {unlinkBusy === 'MangaDex' ? 'Disconnecting…' : 'Disconnect'}
                                 </button>
@@ -456,7 +456,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                         value={mangadexUser}
                                         onChange={(e) => setMangadexUser(e.target.value)}
                                         placeholder="MangaDex username"
-                                        className="w-full px-3 py-2 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#C6FF00]/60"
+                                        className="w-full px-3 py-2 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-lg text-[12px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:border-[var(--mx-color-c6ff00)]/60"
                                     />
                                     <input
                                         type="password"
@@ -464,12 +464,12 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                         value={mangadexPassword}
                                         onChange={(e) => setMangadexPassword(e.target.value)}
                                         placeholder="Password"
-                                        className="w-full px-3 py-2 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#C6FF00]/60"
+                                        className="w-full px-3 py-2 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-lg text-[12px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:border-[var(--mx-color-c6ff00)]/60"
                                     />
                                     <button
                                         type="submit"
                                         disabled={mangadexBusy}
-                                        className="text-[11px] font-semibold text-white bg-[#FF6740] hover:bg-[#e55a36] px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
+                                        className="text-[11px] font-semibold text-white bg-[var(--mx-color-ff6740)] hover:bg-[var(--mx-color-e55a36)] px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
                                     >
                                         {mangadexBusy ? 'Linking…' : 'Link MangaDex'}
                                     </button>
@@ -482,13 +482,13 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                     <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                             <div className="flex min-w-0 items-start gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[#107C10] flex items-center justify-center flex-shrink-0">
+                                <div className="w-9 h-9 rounded-xl bg-[var(--mx-color-107c10)] flex items-center justify-center flex-shrink-0">
                                     <span className="text-white text-[9px] font-black leading-tight text-center px-0.5">XBOX</span>
                                 </div>
                                 <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[#1d1d1f]">Xbox</p>
+                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Xbox</p>
                                     {xboxOpenXbl == null ? (
-                                        <p className="text-[11px] text-[#86868b]">Checking server…</p>
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Checking server…</p>
                                     ) : !xboxOpenXblReady ? (
                                         <p className="text-[11px] text-amber-600 font-medium">OpenXBL not configured (add XBLIO_API_KEY)</p>
                                     ) : xboxLinked ? (
@@ -496,9 +496,9 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                             Linked as <span className="font-semibold">{String(prefs?.xboxGamertag || '').trim()}</span>
                                         </p>
                                     ) : (
-                                        <p className="text-[11px] text-[#86868b]">
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
                                             Link your gamertag for the LifeSync Xbox hub (library, Game Pass, achievements).{' '}
-                                            <Link to="/dashboard/lifesync/games/xbox" className="text-[#107C10] font-semibold hover:underline">
+                                            <Link to="/dashboard/lifesync/games/xbox" className="text-[var(--mx-color-107c10)] font-semibold hover:underline">
                                                 Open Xbox hub
                                             </Link>
                                         </p>
@@ -510,7 +510,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                     type="button"
                                     onClick={() => void unlinkXboxGamertag()}
                                     disabled={xboxBusy || busy}
-                                    className="w-fit shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
+                                    className="w-fit shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
                                 >
                                     {xboxBusy ? 'Removing…' : 'Disconnect'}
                                 </button>
@@ -523,12 +523,12 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                         onChange={(e) => setXboxGamertagInput(e.target.value)}
                                         placeholder="Xbox gamertag"
                                         disabled={!xboxOpenXblReady || xboxBusy || busy}
-                                        className="w-full px-3 py-2 bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg text-[12px] text-[#1d1d1f] focus:outline-none focus:border-[#107C10]/50 disabled:opacity-50"
+                                        className="w-full px-3 py-2 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-lg text-[12px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:border-[var(--mx-color-107c10)]/50 disabled:opacity-50"
                                     />
                                     <button
                                         type="submit"
                                         disabled={!xboxOpenXblReady || xboxBusy || busy || !xboxGamertagInput.trim()}
-                                        className="text-[11px] font-semibold text-white bg-[#107C10] hover:bg-[#0e6b0e] px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
+                                        className="text-[11px] font-semibold text-white bg-[var(--mx-color-107c10)] hover:bg-[var(--mx-color-0e6b0e)] px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
                                     >
                                         {xboxBusy ? 'Linking…' : 'Link gamertag'}
                                     </button>
@@ -540,16 +540,16 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                 </div>
 
                 {/* Content plugins */}
-                <div className="lifesync-soft-borders flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#d2d2d7]/50 bg-white shadow-sm sm:rounded-[24px]">
-                    <div className="flex items-center gap-2.5 border-b border-[#f0f0f0] px-5 pb-4 pt-5 sm:px-6">
-                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-[#C6FF00]/25">
-                            <svg className="h-3.5 w-3.5 text-[#1d1d1f]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                <div className="lifesync-soft-borders flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm sm:rounded-[24px]">
+                    <div className="flex items-center gap-2.5 border-b border-[var(--mx-color-f0f0f0)] px-5 pb-4 pt-5 sm:px-6">
+                        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)]/25">
+                            <svg className="h-3.5 w-3.5 text-[var(--mx-color-1d1d1f)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                             </svg>
                         </div>
                         <div className="min-w-0">
-                            <h3 className="text-[13px] font-bold text-[#1d1d1f]">Content plugins</h3>
-                            <p className="text-[10px] text-[#86868b]">
+                            <h3 className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)]">Content plugins</h3>
+                            <p className="text-[10px] text-[var(--mx-color-86868b)]">
                                 {prefs?.nsfwContentEnabled
                                     ? 'Anime, Manga, Hentai Ocean visibility'
                                     : 'Anime & Manga visibility'}
@@ -583,8 +583,8 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                 <li key={key}>
                                     <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                                         <div className="min-w-0">
-                                            <p className="text-[13px] font-semibold text-[#1d1d1f]">{label}</p>
-                                            <p className="mt-0.5 text-[11px] leading-relaxed text-[#86868b]">
+                                            <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">{label}</p>
+                                            <p className="mt-0.5 text-[11px] leading-relaxed text-[var(--mx-color-86868b)]">
                                                 {desc}
                                             </p>
                                         </div>
@@ -594,10 +594,10 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                             role="switch"
                                             aria-checked={on}
                                             onClick={() => togglePlugin(key, !on)}
-                                            className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${on ? 'bg-[#C6FF00]' : 'bg-[#d2d2d7]'} disabled:opacity-50`}
+                                            className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${on ? 'bg-[var(--mx-color-c6ff00)]' : 'bg-[var(--mx-color-d2d2d7)]'} disabled:opacity-50`}
                                         >
                                             <span
-                                                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`}
+                                                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${on ? 'translate-x-5' : ''}`}
                                             />
                                         </button>
                                     </div>
@@ -701,15 +701,15 @@ export default function LifeSyncIntegration({ embedded = false }) {
     return (
         <div className={embedded ? "" : "mb-5 sm:mb-6"}>
             {/* Connection card — matches GitHub integration row */}
-            <div className={`rounded-[20px] border border-[#d2d2d7]/50 bg-white p-4 shadow-sm sm:rounded-[24px] sm:p-5 ${embedded ? "mb-5" : "mb-5 sm:mb-6"}`}>
+            <div className={`rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-4 shadow-sm sm:rounded-[24px] sm:p-5 ${embedded ? "mb-5" : "mb-5 sm:mb-6"}`}>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-[#1d1d1f] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <div className="w-11 h-11 rounded-2xl bg-[var(--mx-color-1d1d1f)] flex items-center justify-center flex-shrink-0 shadow-sm">
                             <LifeSyncIcon className="w-[22px] h-[22px] text-white" />
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[14px] font-bold text-[#1d1d1f]">LifeSync</span>
+                                <span className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)]">LifeSync</span>
                                 {connected && (
                                     <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
@@ -718,12 +718,12 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                 )}
                             </div>
                             {connected ? (
-                                <p className="text-[12px] text-[#86868b] mt-0.5 truncate">
+                                <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5 truncate">
                                     Signed in as{' '}
-                                    <span className="font-semibold text-[#1d1d1f]">{lifeSyncUser.email}</span>
+                                    <span className="font-semibold text-[var(--mx-color-1d1d1f)]">{lifeSyncUser.email}</span>
                                 </p>
                             ) : (
-                                <p className="text-[12px] text-[#86868b] mt-0.5">
+                                <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5">
                                     Link plugins and your LifeSync backend session
                                 </p>
                             )}
@@ -739,7 +739,7 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                         setMessage('')
                                         setError('')
                                     }}
-                                    className="text-[12px] font-semibold text-[#86868b] hover:text-red-500 transition-colors px-3 py-2 rounded-xl hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 whitespace-nowrap"
+                                    className="text-[12px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 transition-colors px-3 py-2 rounded-xl hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 whitespace-nowrap"
                                 >
                                     Disconnect
                                 </button>
@@ -755,7 +755,7 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                         !session?.access_token
                                     }
                                     onClick={handleConnectAuto}
-                                    className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] whitespace-nowrap disabled:opacity-50"
+                                    className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] whitespace-nowrap disabled:opacity-50"
                                 >
                                     {busy ? 'Connecting…' : 'Connect'}
                                 </button>
@@ -767,7 +767,7 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                         setMessage('')
                                         setConnectExpanded((v) => !v)
                                     }}
-                                    className="text-[12px] font-semibold text-[#86868b] hover:text-[#1d1d1f] px-2 py-2 rounded-xl whitespace-nowrap disabled:opacity-50"
+                                    className="text-[12px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] px-2 py-2 rounded-xl whitespace-nowrap disabled:opacity-50"
                                 >
                                     {connectExpanded ? 'Hide password' : 'Use password'}
                                 </button>
@@ -788,12 +788,12 @@ export default function LifeSyncIntegration({ embedded = false }) {
                         aria-hidden={!connectExpanded}
                     >
                         <div className="min-h-0">
-                            <div className="mt-4 rounded-2xl border border-[#f0f0f0] bg-[#fafafa] p-4 sm:p-5">
+                            <div className="mt-4 rounded-2xl border border-[var(--mx-color-f0f0f0)] bg-[var(--mx-color-fafafa)] p-4 sm:p-5">
                                 <div className="flex items-start justify-between gap-3">
                                     <div className="min-w-0">
-                                        <p className="text-[12px] font-semibold text-[#1d1d1f]">Connect LifeSync</p>
-                                        <p className="mt-1 text-[12px] text-[#86868b] leading-relaxed">
-                                            <span className="font-mono text-[11px] text-[#1d1d1f]">
+                                        <p className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">Connect LifeSync</p>
+                                        <p className="mt-1 text-[12px] text-[var(--mx-color-86868b)] leading-relaxed">
+                                            <span className="font-mono text-[11px] text-[var(--mx-color-1d1d1f)]">
                                                 {maxienUser?.email || '—'}
                                             </span>
                                             <span className="block mt-2 text-[11px] leading-relaxed">
@@ -811,15 +811,15 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                             setError('')
                                             setMessage('')
                                         }}
-                                        className="shrink-0 text-[11px] font-semibold text-[#86868b] hover:text-[#1d1d1f] px-2 py-1 rounded-lg hover:bg-white/70 border border-transparent"
+                                        className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] px-2 py-1 rounded-lg hover:bg-[var(--color-surface)]/70 border border-transparent"
                                     >
                                         Close
                                     </button>
                                 </div>
 
                                 {lifeSyncLoading ? (
-                                    <div className="mt-3 flex items-center gap-2 text-[12px] text-[#86868b]">
-                                        <span className="w-2 h-2 rounded-full bg-[#C6FF00] animate-pulse" />
+                                    <div className="mt-3 flex items-center gap-2 text-[12px] text-[var(--mx-color-86868b)]">
+                                        <span className="w-2 h-2 rounded-full bg-[var(--mx-color-c6ff00)] animate-pulse" />
                                         Checking LifeSync session…
                                     </div>
                                 ) : (
@@ -845,7 +845,7 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                                     !session?.access_token
                                                 }
                                                 onClick={handleConnectAuto}
-                                                className="w-full sm:w-auto text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-4 py-2.5 rounded-xl border border-[#e5e5ea] disabled:opacity-50"
+                                                className="w-full sm:w-auto text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-4 py-2.5 rounded-xl border border-[var(--mx-color-e5e5ea)] disabled:opacity-50"
                                             >
                                                 {busy ? 'Connecting…' : 'Try Connect (automatic)'}
                                             </button>
@@ -853,7 +853,7 @@ export default function LifeSyncIntegration({ embedded = false }) {
 
                                         <form onSubmit={handleLinkWithPassword} className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
                                             <div className="min-w-0">
-                                                <label className="block text-[11px] font-semibold text-[#1d1d1f] mb-1.5 uppercase tracking-wide">
+                                                <label className="block text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] mb-1.5 uppercase tracking-wide">
                                                     Password
                                                 </label>
                                                 <input
@@ -861,11 +861,11 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                                     required
                                                     value={linkPassword}
                                                     onChange={(e) => setLinkPassword(e.target.value)}
-                                                    className="w-full px-4 py-3 bg-white border border-[#e5e5ea] focus:border-[#C6FF00]/60 rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
+                                                    className="w-full px-4 py-3 bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
                                                     autoComplete="current-password"
                                                     placeholder="Your LifeSync password"
                                                 />
-                                                <p className="mt-1 text-[11px] text-[#86868b]">
+                                                <p className="mt-1 text-[11px] text-[var(--mx-color-86868b)]">
                                                     If you don’t have an account yet, one will be created automatically.
                                                 </p>
                                             </div>
@@ -877,14 +877,14 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                                         setError('')
                                                         setMessage('')
                                                     }}
-                                                    className="flex-1 sm:flex-none text-[12px] font-semibold text-[#1d1d1f] bg-white hover:bg-[#f5f5f7] px-4 py-3 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 whitespace-nowrap"
+                                                    className="flex-1 sm:flex-none text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--color-surface)] hover:bg-[var(--mx-color-f5f5f7)] px-4 py-3 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50 whitespace-nowrap"
                                                 >
                                                     Cancel
                                                 </button>
                                                 <button
                                                     type="submit"
                                                     disabled={busy || !maxienUser?.email}
-                                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold px-5 py-3 rounded-xl transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 whitespace-nowrap"
+                                                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-[var(--mx-color-1d1d1f)] hover:bg-black text-white text-[13px] font-semibold px-5 py-3 rounded-xl transition-all shadow-sm active:scale-[0.98] disabled:opacity-50 whitespace-nowrap"
                                                 >
                                                     <LifeSyncIcon className="w-4 h-4 text-white" />
                                                     {busy ? 'Linking…' : 'Link LifeSync'}

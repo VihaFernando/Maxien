@@ -186,10 +186,10 @@ function mangadexImageProps(url) {
 function LifesyncChapterPagesSkeleton() {
     return (
         <div className="mx-auto max-w-3xl p-6">
-            <div className="h-4 w-40 rounded bg-white/10" />
+            <div className="h-4 w-40 rounded bg-[var(--color-surface)]/10" />
             <div className="mt-4 space-y-3">
                 {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-40 w-full rounded-xl bg-white/10" />
+                    <div key={i} className="h-40 w-full rounded-xl bg-[var(--color-surface)]/10" />
                 ))}
             </div>
         </div>
@@ -755,8 +755,8 @@ export default function LifeSyncMangaRead() {
     if (!isLifeSyncConnected) return null
 
     return (
-        <div className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-hidden bg-[#0a0a0a]">
-            <header className="shrink-0 border-b border-white/10 bg-black/70 px-2 py-2 backdrop-blur-xl">
+        <div className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-hidden bg-[var(--mx-color-0a0a0a)]">
+            <header className="shrink-0 border-b border-[var(--color-border-strong)]/10 bg-black/70 px-2 py-2 backdrop-blur-xl">
                 <div className="mx-auto flex w-full max-w-5xl items-center gap-2">
                     <button
                         type="button"
@@ -766,7 +766,7 @@ export default function LifeSyncMangaRead() {
                             void flushQueuedProgress({ maxItems: 6 })
                             navigate(closeTo)
                         }}
-                        className="inline-flex items-center gap-2 rounded-lg border border-[#3a3a3c] bg-[#1c1c1e] px-2.5 py-2 text-[11px] font-semibold text-[#f5f5f7] hover:bg-[#2c2c2e]"
+                        className="inline-flex items-center gap-2 rounded-lg border border-[var(--mx-color-3a3a3c)] bg-[var(--mx-color-1c1c1e)] px-2.5 py-2 text-[11px] font-semibold text-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-2c2c2e)]"
                         title="Back to list"
                     >
                         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
@@ -776,12 +776,12 @@ export default function LifeSyncMangaRead() {
                     </button>
 
                     <div className="min-w-0 flex-1">
-                        <p className="truncate text-[11px] font-semibold text-[#f5f5f7]">{decodeHtmlEntities(manga?.title) || 'Manga'}</p>
-                        <p className="truncate text-[10px] text-[#86868b]">{formatChapterLabel(chapter)}</p>
+                        <p className="truncate text-[11px] font-semibold text-[var(--mx-color-f5f5f7)]">{decodeHtmlEntities(manga?.title) || 'Manga'}</p>
+                        <p className="truncate text-[10px] text-[var(--mx-color-86868b)]">{formatChapterLabel(chapter)}</p>
                     </div>
 
                     <div className="hidden md:flex items-center gap-2">
-                        <label className="text-[10px] font-semibold text-[#86868b] tabular-nums" htmlFor="manga-reader-zoom">
+                        <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] tabular-nums" htmlFor="manga-reader-zoom">
                             Zoom {Math.round(zoomScale * 100)}%
                         </label>
                         <input
@@ -792,7 +792,7 @@ export default function LifeSyncMangaRead() {
                             step={5}
                             value={zoomPct}
                             onChange={(e) => setZoomPct(Number(e.target.value))}
-                            className="w-28 accent-[#C6FF00]"
+                            className="w-28 accent-[var(--mx-color-c6ff00)]"
                         />
                     </div>
 
@@ -807,7 +807,7 @@ export default function LifeSyncMangaRead() {
                             if (ch) goToChapter(ch)
                         }}
                         disabled={navBusy || busy || loadingPages || sortedChapters.length === 0}
-                        className="min-w-[10rem] max-w-[16rem] rounded-lg border border-[#3a3a3c] bg-[#1c1c1e] px-2.5 py-2 text-[11px] font-semibold text-[#f5f5f7] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/40 disabled:opacity-50"
+                        className="min-w-[10rem] max-w-[16rem] rounded-lg border border-[var(--mx-color-3a3a3c)] bg-[var(--mx-color-1c1c1e)] px-2.5 py-2 text-[11px] font-semibold text-[var(--mx-color-f5f5f7)] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/40 disabled:opacity-50"
                         title="Jump to chapter"
                     >
                         {sortedChapters.length === 0 ? (
@@ -825,7 +825,7 @@ export default function LifeSyncMangaRead() {
                         type="button"
                         disabled={!prevCh || navBusy || busy || loadingPages}
                         onClick={() => prevCh && goToChapter(prevCh)}
-                        className="inline-flex items-center justify-center rounded-lg border border-[#3a3a3c] bg-[#1c1c1e] px-2.5 py-2 text-[11px] font-semibold text-[#f5f5f7] hover:bg-[#2c2c2e] disabled:opacity-40"
+                        className="inline-flex items-center justify-center rounded-lg border border-[var(--mx-color-3a3a3c)] bg-[var(--mx-color-1c1c1e)] px-2.5 py-2 text-[11px] font-semibold text-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-2c2c2e)] disabled:opacity-40"
                         title="Previous chapter"
                     >
                         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
@@ -836,7 +836,7 @@ export default function LifeSyncMangaRead() {
                         type="button"
                         disabled={!nextCh || navBusy || busy || loadingPages}
                         onClick={() => nextCh && goToChapter(nextCh)}
-                        className="inline-flex items-center justify-center rounded-lg border border-[#3a3a3c] bg-[#1c1c1e] px-2.5 py-2 text-[11px] font-semibold text-[#f5f5f7] hover:bg-[#2c2c2e] disabled:opacity-40"
+                        className="inline-flex items-center justify-center rounded-lg border border-[var(--mx-color-3a3a3c)] bg-[var(--mx-color-1c1c1e)] px-2.5 py-2 text-[11px] font-semibold text-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-2c2c2e)] disabled:opacity-40"
                         title="Next chapter"
                     >
                         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
@@ -852,7 +852,7 @@ export default function LifeSyncMangaRead() {
                 className="min-h-0 flex-1 overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
                 {busy ? (
-                    <p className="p-8 text-center text-[13px] text-[#86868b]">Opening reader…</p>
+                    <p className="p-8 text-center text-[13px] text-[var(--mx-color-86868b)]">Opening reader…</p>
                 ) : null}
                 {error ? (
                     <p className="p-8 text-center text-[13px] text-red-400">{error}</p>
@@ -860,7 +860,7 @@ export default function LifeSyncMangaRead() {
                 {loadingPages ? <LifesyncChapterPagesSkeleton /> : null}
                 {loadErr && !loadingPages && <p className="p-8 text-center text-[13px] text-red-400">{loadErr}</p>}
                 {!loadingPages && !loadErr && urls.length === 0 && (
-                    <p className="p-8 text-center text-[13px] text-[#86868b]">No page images returned for this chapter.</p>
+                    <p className="p-8 text-center text-[13px] text-[var(--mx-color-86868b)]">No page images returned for this chapter.</p>
                 )}
                 <div
                     ref={pagesInnerRef}
@@ -887,11 +887,11 @@ export default function LifeSyncMangaRead() {
                 </div>
             </div>
 
-            <footer className="shrink-0 border-t border-white/10 bg-black/85 px-3 py-2 backdrop-blur-xl">
+            <footer className="shrink-0 border-t border-[var(--color-border-strong)]/10 bg-black/85 px-3 py-2 backdrop-blur-xl">
                 <div className="mx-auto max-w-3xl">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--color-surface)]/10">
                         <div
-                            className="h-full rounded-full bg-[#C6FF00] transition-[width] duration-100 ease-out"
+                            className="h-full rounded-full bg-[var(--mx-color-c6ff00)] transition-[width] duration-100 ease-out"
                             style={{ width: `${Math.round(chapterReadProgress * 1000) / 10}%` }}
                             role="progressbar"
                             aria-valuenow={Math.round(chapterReadProgress * 100)}
@@ -900,11 +900,11 @@ export default function LifeSyncMangaRead() {
                             aria-label="Scroll position in this chapter"
                         />
                     </div>
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-[#86868b]">
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-[var(--mx-color-86868b)]">
                         <span>
                             {urls.length > 0 ? `${urls.length} page${urls.length === 1 ? '' : 's'}` : loadingPages ? '…' : '—'}
                         </span>
-                        <span className="tabular-nums text-[#a1a1a6]">
+                        <span className="tabular-nums text-[var(--mx-color-a1a1a6)]">
                             {Math.round(chapterReadProgress * 100)}% through chapter
                         </span>
                     </div>

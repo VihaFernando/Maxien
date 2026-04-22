@@ -60,15 +60,15 @@ export function GameSearchDetailsPopup({
     return (
         <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/55 p-3 sm:p-6" onClick={() => onClose?.()}>
             <div
-                className="lifesync-games-glass max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-2xl"
+                className="lifesync-games-glass max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200/70 bg-[var(--color-surface)] shadow-2xl"
                 onClick={(event) => event.stopPropagation()}
             >
-                <div className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
+                <div className="flex items-center justify-between border-b border-slate-200 bg-[var(--color-surface)] px-4 py-3 sm:px-5">
                     <h3 className="truncate text-[16px] font-bold text-apple-text sm:text-[18px]">{title}</h3>
                     <button
                         type="button"
                         onClick={() => onClose?.()}
-                        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:border-slate-300"
+                        className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:border-slate-300"
                     >
                         Close
                     </button>
@@ -76,7 +76,7 @@ export function GameSearchDetailsPopup({
 
                 <div className="max-h-[calc(92vh-56px)] overflow-y-auto">
                     {loading ? (
-                        <div className="px-5 py-12 text-center text-[14px] text-[#6e6e73]">Loading game details...</div>
+                        <div className="px-5 py-12 text-center text-[14px] text-[var(--mx-color-6e6e73)]">Loading game details...</div>
                     ) : error ? (
                         <div className="m-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700">{error}</div>
                     ) : (
@@ -111,19 +111,19 @@ export function GameSearchDetailsPopup({
                                                 {titleCaseStatus(detail?.statusKey)}
                                             </span>
                                             {detail?.releaseDate && (
-                                                <span className="rounded-full border border-apple-border bg-apple-bg px-3 py-1 text-[11px] font-medium text-[#515154]">
+                                                <span className="rounded-full border border-apple-border bg-apple-bg px-3 py-1 text-[11px] font-medium text-[var(--mx-color-515154)]">
                                                     Released {formatDate(detail.releaseDate)}
                                                 </span>
                                             )}
                                         </div>
 
                                         {detail?.description ? (
-                                            <p className="text-[13px] leading-relaxed text-[#515154]">{detail.description}</p>
+                                            <p className="text-[13px] leading-relaxed text-[var(--mx-color-515154)]">{detail.description}</p>
                                         ) : (
                                             <p className="text-[13px] text-apple-subtext">No description available.</p>
                                         )}
 
-                                        <div className="grid gap-2 text-[12px] text-[#515154] sm:grid-cols-2">
+                                        <div className="grid gap-2 text-[12px] text-[var(--mx-color-515154)] sm:grid-cols-2">
                                             {detail?.protection ? <p><span className="font-semibold">Protection:</span> {detail.protection}</p> : null}
                                             {detail?.group ? <p><span className="font-semibold">Group:</span> {detail.group}</p> : null}
                                             {detail?.crackDate ? <p><span className="font-semibold">Crack date:</span> {formatDate(detail.crackDate)}</p> : null}
@@ -145,7 +145,7 @@ export function GameSearchDetailsPopup({
                                 <section>
                                     <h4 className="text-[14px] font-bold text-apple-text">Available stores</h4>
                                     {stores.length === 0 ? (
-                                        <p className="mt-2 text-[13px] text-[#6e6e73]">No direct store links available for this game.</p>
+                                        <p className="mt-2 text-[13px] text-[var(--mx-color-6e6e73)]">No direct store links available for this game.</p>
                                     ) : (
                                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
                                             {stores.map((store, idx) => (
@@ -154,10 +154,10 @@ export function GameSearchDetailsPopup({
                                                     href={store.url}
                                                     target="_blank"
                                                     rel="noreferrer"
-                                                    className="lifesync-games-glass rounded-lg border border-[#e5e5ea] bg-[#fbfbfd] px-3 py-2 transition hover:border-[#0071e3]/50 hover:bg-white"
+                                                    className="lifesync-games-glass rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] px-3 py-2 transition hover:border-[var(--mx-color-0071e3)]/50 hover:bg-[var(--color-surface)]"
                                                 >
                                                     <p className="text-[13px] font-semibold text-apple-text line-clamp-1">{store.name || 'Store link'}</p>
-                                                    <p className="mt-0.5 text-[11px] uppercase text-[#4f46e5]">{store.source || 'store'}</p>
+                                                    <p className="mt-0.5 text-[11px] uppercase text-[var(--mx-color-4f46e5)]">{store.source || 'store'}</p>
                                                 </a>
                                             ))}
                                         </div>

@@ -52,15 +52,15 @@ export default function GithubIntegrations({ embedded = false }) {
             {!embedded && (
                 <div className="mb-6 flex flex-col justify-between gap-1 px-0.5 sm:mb-8 sm:flex-row sm:items-end">
                     <div>
-                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-[#86868b]">Workspace</p>
-                        <h1 className="flex items-center gap-2.5 text-[20px] font-bold leading-tight tracking-tight text-[#1d1d1f] sm:text-[24px]">
-                            <span className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[#1d1d1f]">
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-widest text-[var(--mx-color-86868b)]">Workspace</p>
+                        <h1 className="flex items-center gap-2.5 text-[20px] font-bold leading-tight tracking-tight text-[var(--mx-color-1d1d1f)] sm:text-[24px]">
+                            <span className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--mx-color-1d1d1f)]">
                                 <GitHubIcon className="h-4 w-4 text-white" />
                             </span>
                             Integrations
                         </h1>
-                        <p className="mt-1 max-w-xl text-[12px] text-[#86868b]">
-                            LifeSync and GitHub connections. Use the sidebar <span className="font-semibold text-[#1d1d1f]">GitHub</span> page for repositories, commits, and issues.
+                        <p className="mt-1 max-w-xl text-[12px] text-[var(--mx-color-86868b)]">
+                            LifeSync and GitHub connections. Use the sidebar <span className="font-semibold text-[var(--mx-color-1d1d1f)]">GitHub</span> page for repositories, commits, and issues.
                         </p>
                     </div>
                 </div>
@@ -68,15 +68,15 @@ export default function GithubIntegrations({ embedded = false }) {
 
             <LifeSyncIntegration embedded={embedded} />
 
-            <div className="rounded-[20px] border border-[#d2d2d7]/50 bg-white p-4 shadow-sm sm:rounded-[24px] sm:p-5">
+            <div className="rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-4 shadow-sm sm:rounded-[24px] sm:p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-[#1d1d1f] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <div className="w-11 h-11 rounded-2xl bg-[var(--mx-color-1d1d1f)] flex items-center justify-center flex-shrink-0 shadow-sm">
                             <GitHubIcon className="w-[22px] h-[22px] text-white" />
                         </div>
                         <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-[14px] font-bold text-[#1d1d1f]">GitHub</span>
+                                <span className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)]">GitHub</span>
                                 {ghConnected && (
                                     <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
@@ -84,7 +84,7 @@ export default function GithubIntegrations({ embedded = false }) {
                                     </span>
                                 )}
                             </div>
-                            <p className="text-[12px] text-[#86868b] mt-0.5">
+                            <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5">
                                 Repos, commits, and issues live on the GitHub page.
                             </p>
                         </div>
@@ -92,7 +92,7 @@ export default function GithubIntegrations({ embedded = false }) {
                     <div className="flex flex-shrink-0 flex-wrap items-center gap-2 lg:justify-end">
                         <Link
                             to="/dashboard/github"
-                            className="flex items-center justify-center gap-2 bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98] whitespace-nowrap"
+                            className="flex items-center justify-center gap-2 bg-[var(--mx-color-1d1d1f)] hover:bg-black text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98] whitespace-nowrap"
                         >
                             <GitHubIcon className="w-4 h-4" />
                             Open GitHub
@@ -101,7 +101,7 @@ export default function GithubIntegrations({ embedded = false }) {
                             <button
                                 type="button"
                                 onClick={disconnectGithub}
-                                className="text-[12px] font-semibold text-[#86868b] hover:text-red-500 transition-colors px-3 py-2 rounded-xl hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 whitespace-nowrap"
+                                className="text-[12px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 transition-colors px-3 py-2 rounded-xl hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 whitespace-nowrap"
                             >
                                 Disconnect
                             </button>
@@ -109,7 +109,7 @@ export default function GithubIntegrations({ embedded = false }) {
                             <button
                                 type="button"
                                 onClick={connectGithub}
-                                className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] whitespace-nowrap"
+                                className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] whitespace-nowrap"
                             >
                                 Connect account
                             </button>

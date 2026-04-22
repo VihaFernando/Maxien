@@ -356,15 +356,15 @@ export default function LifeSyncAnimeCalendar() {
   if (!isLifeSyncConnected) {
     return (
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[#1a1628]">
+        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">
           Anime Calendar
         </h1>
-        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[#5b5670]">
+        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
           Connect LifeSync in your profile to access the anime calendar.
         </p>
         <Link
           to="/dashboard/profile?tab=integrations"
-          className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+          className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
         >
           Go to Integrations
         </Link>
@@ -405,22 +405,22 @@ export default function LifeSyncAnimeCalendar() {
           }}
           className={`w-full rounded-xl p-1 sm:p-2 md:p-3 min-h-[56px] sm:min-h-[80px] md:min-h-[112px] border text-left transition-all ${
             isCur
-              ? "bg-[#C6FF00]/10 border-[#C6FF00] ring-1 ring-[#C6FF00]/50"
+              ? "bg-[var(--mx-color-c6ff00)]/10 border-[var(--mx-color-c6ff00)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
               : inMonth
-                ? "bg-white border-[#d2d2d7]/40 hover:border-[#d2d2d7] hover:shadow-sm"
-                : "bg-[#fafafa] border-[#e5e5ea] hover:border-[#d2d2d7] hover:shadow-sm opacity-85"
+                ? "bg-[var(--color-surface)] border-[var(--mx-color-d2d2d7)]/40 hover:border-[var(--mx-color-d2d2d7)] hover:shadow-sm"
+                : "bg-[var(--mx-color-fafafa)] border-[var(--mx-color-e5e5ea)] hover:border-[var(--mx-color-d2d2d7)] hover:shadow-sm opacity-85"
           }`}
         >
           <div className="flex items-start justify-between gap-2">
             <div
               className={`text-[10px] sm:text-xs md:text-sm font-semibold ${
-                isCur ? "text-[#9ecb00]" : inMonth ? "text-[#1d1d1f]" : "text-[#86868b]"
+                isCur ? "text-[var(--mx-color-9ecb00)]" : inMonth ? "text-[var(--mx-color-1d1d1f)]" : "text-[var(--mx-color-86868b)]"
               }`}
             >
               <span
                 className={
                   isCur
-                    ? "bg-[#C6FF00] text-[#1d1d1f] px-2 py-0.5 rounded-full"
+                    ? "bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1d1d1f)] px-2 py-0.5 rounded-full"
                     : ""
                 }
               >
@@ -428,7 +428,7 @@ export default function LifeSyncAnimeCalendar() {
               </span>
             </div>
             {pinnedCount > 0 && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/20 px-2 py-0.5 text-[10px] font-bold text-[#1d1d1f]">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mx-color-c6ff00)]/20 px-2 py-0.5 text-[10px] font-bold text-[var(--mx-color-1d1d1f)]">
                 <FaStar className="h-2.5 w-2.5" aria-hidden />
                 {pinnedCount}
               </span>
@@ -441,15 +441,15 @@ export default function LifeSyncAnimeCalendar() {
                 key={`${it.malId}-${it.episodeNumber}-${idx}`}
                 className={`w-full truncate rounded-md px-2 py-1 text-[10px] font-medium ${
                   it?.isPinned
-                    ? "bg-[#C6FF00]/15 text-[#1d1d1f]"
-                    : "bg-[#f5f5f7] text-[#424245]"
+                    ? "bg-[var(--mx-color-c6ff00)]/15 text-[var(--mx-color-1d1d1f)]"
+                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-424245)]"
                 }`}
               >
                 {it.title} · E{it.episodeNumber}
               </div>
             ))}
             {list.length > 2 && (
-              <div className="px-2 text-[10px] font-medium text-[#86868b]">
+              <div className="px-2 text-[10px] font-medium text-[var(--mx-color-86868b)]">
                 +{list.length - 2} more
               </div>
             )}
@@ -460,12 +460,12 @@ export default function LifeSyncAnimeCalendar() {
               <span
                 key={`${it.malId}-${it.episodeNumber}-${idx}`}
                 className={`h-1.5 w-1.5 rounded-full ${
-                  it?.isPinned ? "bg-[#C6FF00]" : "bg-[#86868b]"
+                  it?.isPinned ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-86868b)]"
                 }`}
               />
             ))}
             {list.length > 4 && (
-              <span className="h-1.5 w-1.5 rounded-full bg-[#d2d2d7]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--mx-color-d2d2d7)]" />
             )}
           </div>
         </button>
@@ -486,7 +486,7 @@ export default function LifeSyncAnimeCalendar() {
             variants={lifeSyncStaggerItemFade}
             initial="hidden"
             animate="show"
-            className="text-center font-semibold text-[#86868b] text-[10px] sm:text-xs md:text-sm py-2 uppercase tracking-wider"
+            className="text-center font-semibold text-[var(--mx-color-86868b)] text-[10px] sm:text-xs md:text-sm py-2 uppercase tracking-wider"
           >
             <span className="hidden sm:inline">{d}</span>
             <span className="sm:hidden">{d.charAt(0)}</span>
@@ -679,38 +679,38 @@ export default function LifeSyncAnimeCalendar() {
       >
         <MotionDiv
           {...lifeSyncModalSlideProps}
-          className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[34px] border border-white/50 bg-[#f8fbff] shadow-[0_30px_90px_-30px_rgba(2,6,23,0.85)] sm:rounded-[34px]"
+          className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[34px] border border-[var(--color-border-strong)]/50 bg-[var(--mx-color-f8fbff)] shadow-[0_30px_90px_-30px_rgba(2,6,23,0.85)] sm:rounded-[34px]"
         >
-          <div className="relative border-b border-[#dbe4ef] bg-[linear-gradient(120deg,rgba(230,244,255,0.9),rgba(240,253,244,0.82),rgba(248,250,252,0.94))] px-5 py-4 sm:px-7 sm:py-5">
-            <div className="pointer-events-none absolute right-4 top-3 h-20 w-20 rounded-full bg-white/45 blur-2xl" />
+          <div className="relative border-b border-[var(--mx-color-dbe4ef)] bg-[linear-gradient(120deg,rgba(230,244,255,0.9),rgba(240,253,244,0.82),rgba(248,250,252,0.94))] px-5 py-4 sm:px-7 sm:py-5">
+            <div className="pointer-events-none absolute right-4 top-3 h-20 w-20 rounded-full bg-[var(--color-surface)]/45 blur-2xl" />
             <button
               type="button"
               onClick={() => setShowDayOverlay(false)}
-              className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-white/80 text-[#475569] transition-colors hover:bg-white sm:right-5 sm:top-5"
+              className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--color-border-strong)]/70 bg-[var(--color-surface)]/80 text-[var(--mx-color-475569)] transition-colors hover:bg-[var(--color-surface)] sm:right-5 sm:top-5"
               aria-label="Close"
             >
               <FaTimes className="h-4 w-4" />
             </button>
 
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[#64748b]">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--mx-color-64748b)]">
               Anime day schedule
             </p>
-            <h3 className="mt-1 pr-10 text-[19px] font-black tracking-tight text-[#151418] sm:text-[23px]">
+            <h3 className="mt-1 pr-10 text-[19px] font-black tracking-tight text-[var(--mx-color-151418)] sm:text-[23px]">
               {title}
             </h3>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-              <span className="rounded-full border border-white/70 bg-white/75 px-2.5 py-1 font-semibold text-[#1e293b]">
+              <span className="rounded-full border border-[var(--color-border-strong)]/70 bg-[var(--color-surface)]/75 px-2.5 py-1 font-semibold text-[var(--mx-color-1e293b)]">
                 {total ? `${total} episodes` : "No episodes"}
               </span>
               {pinnedTotal > 0 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/20 px-2.5 py-1 font-semibold text-[#1e293b]">
+                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mx-color-c6ff00)]/20 px-2.5 py-1 font-semibold text-[var(--mx-color-1e293b)]">
                   <FaStar className="h-3 w-3" aria-hidden />
                   {pinnedTotal} pinned
                 </span>
               )}
               {busy && (
-                <span className="inline-flex items-center gap-2 font-medium text-[#64748b]">
-                  <span className="h-3 w-3 rounded-full border-2 border-[#C6FF00] border-t-transparent animate-spin" />
+                <span className="inline-flex items-center gap-2 font-medium text-[var(--mx-color-64748b)]">
+                  <span className="h-3 w-3 rounded-full border-2 border-[var(--mx-color-c6ff00)] border-t-transparent animate-spin" />
                   Syncing schedules...
                 </span>
               )}
@@ -719,8 +719,8 @@ export default function LifeSyncAnimeCalendar() {
 
           <div className="grid min-h-0 flex-1 lg:grid-cols-[280px_1fr]">
             {/* Left rail */}
-            <aside className="border-b border-[#dbe4ef] bg-white/65 px-5 py-4 sm:px-7 lg:border-b-0 lg:border-r lg:min-h-0 lg:overflow-y-auto">
-              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+            <aside className="border-b border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)]/65 px-5 py-4 sm:px-7 lg:border-b-0 lg:border-r lg:min-h-0 lg:overflow-y-auto">
+              <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">
                 Controls
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -731,7 +731,7 @@ export default function LifeSyncAnimeCalendar() {
                     setSelectedDate(d);
                     setDayPageSize(20);
                   }}
-                  className="inline-flex items-center justify-center rounded-xl border border-[#dbe4ef] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-[#f8fafc]"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-334155)] transition-colors hover:bg-[var(--mx-color-f8fafc)]"
                 >
                   Prev
                 </button>
@@ -742,17 +742,17 @@ export default function LifeSyncAnimeCalendar() {
                     setSelectedDate(d);
                     setDayPageSize(20);
                   }}
-                  className="inline-flex items-center justify-center rounded-xl border border-[#dbe4ef] bg-white px-3 py-2 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-[#f8fafc]"
+                  className="inline-flex items-center justify-center rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-334155)] transition-colors hover:bg-[var(--mx-color-f8fafc)]"
                 >
                   Next
                 </button>
               </div>
 
-              <div className="mt-3 rounded-2xl border border-[#dbe4ef] bg-white/85 p-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+              <div className="mt-3 rounded-2xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)]/85 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">
                   Selected
                 </p>
-                <p className="mt-1 text-[13px] font-bold text-[#151418]">
+                <p className="mt-1 text-[13px] font-bold text-[var(--mx-color-151418)]">
                   {selectedDate.toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -760,19 +760,19 @@ export default function LifeSyncAnimeCalendar() {
                   })}
                 </p>
                 <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="rounded-xl bg-[#f8fafc] px-3 py-2 ring-1 ring-[#e2e8f0]">
-                    <p className="text-[#64748b]">Episodes</p>
-                    <p className="mt-0.5 text-[17px] font-black text-[#151418]">{total}</p>
+                  <div className="rounded-xl bg-[var(--mx-color-f8fafc)] px-3 py-2 ring-1 ring-[var(--mx-color-e2e8f0)]">
+                    <p className="text-[var(--mx-color-64748b)]">Episodes</p>
+                    <p className="mt-0.5 text-[17px] font-black text-[var(--mx-color-151418)]">{total}</p>
                   </div>
-                  <div className="rounded-xl bg-[#f8fafc] px-3 py-2 ring-1 ring-[#e2e8f0]">
-                    <p className="text-[#64748b]">Pinned</p>
-                    <p className="mt-0.5 text-[17px] font-black text-[#151418]">{pinnedTotal}</p>
+                  <div className="rounded-xl bg-[var(--mx-color-f8fafc)] px-3 py-2 ring-1 ring-[var(--mx-color-e2e8f0)]">
+                    <p className="text-[var(--mx-color-64748b)]">Pinned</p>
+                    <p className="mt-0.5 text-[17px] font-black text-[var(--mx-color-151418)]">{pinnedTotal}</p>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-[#dbe4ef] bg-white/85 p-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+              <div className="mt-4 rounded-2xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)]/85 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">
                   Filter & sort
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -781,8 +781,8 @@ export default function LifeSyncAnimeCalendar() {
                     onClick={() => setFilterMode("all")}
                     className={`rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-colors ${
                       filterMode === "all"
-                        ? "bg-[#151418] text-white"
-                        : "bg-white text-[#334155] ring-1 ring-[#dbe4ef] hover:bg-[#f8fafc]"
+                        ? "bg-[var(--mx-color-151418)] text-white"
+                        : "bg-[var(--color-surface)] text-[var(--mx-color-334155)] ring-1 ring-[var(--mx-color-dbe4ef)] hover:bg-[var(--mx-color-f8fafc)]"
                     }`}
                   >
                     All
@@ -792,8 +792,8 @@ export default function LifeSyncAnimeCalendar() {
                     onClick={() => setFilterMode("pinned")}
                     className={`inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] transition-colors ${
                       filterMode === "pinned"
-                        ? "bg-[#C6FF00] text-[#1e293b]"
-                        : "bg-white text-[#334155] ring-1 ring-[#dbe4ef] hover:bg-[#f8fafc]"
+                        ? "bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1e293b)]"
+                        : "bg-[var(--color-surface)] text-[var(--mx-color-334155)] ring-1 ring-[var(--mx-color-dbe4ef)] hover:bg-[var(--mx-color-f8fafc)]"
                     }`}
                   >
                     <FaStar className="h-3 w-3" aria-hidden />
@@ -810,12 +810,12 @@ export default function LifeSyncAnimeCalendar() {
                       setDayPageSize(20);
                     }}
                     placeholder="Search title or episode…"
-                    className="h-10 w-full rounded-xl border border-[#dbe4ef] bg-white px-3 text-[13px] text-[#1e293b] placeholder:text-[#94a3b8] focus:border-[#C6FF00]/70 focus:outline-none"
+                    className="h-10 w-full rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 text-[13px] text-[var(--mx-color-1e293b)] placeholder:text-[var(--mx-color-94a3b8)] focus:border-[var(--mx-color-c6ff00)]/70 focus:outline-none"
                   />
                   <select
                     value={sortMode}
                     onChange={(e) => setSortMode(String(e.target.value || "priority"))}
-                    className="h-10 w-full rounded-xl border border-[#dbe4ef] bg-white px-3 text-[12px] font-semibold text-[#334155] focus:border-[#C6FF00]/70 focus:outline-none"
+                    className="h-10 w-full rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-[var(--mx-color-334155)] focus:border-[var(--mx-color-c6ff00)]/70 focus:outline-none"
                   >
                     <option value="priority">Sort: Priority</option>
                     <option value="time">Sort: Air time</option>
@@ -823,8 +823,8 @@ export default function LifeSyncAnimeCalendar() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-[#dbe4ef] bg-white/85 p-3">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+              <div className="mt-4 rounded-2xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)]/85 p-3">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">
                   Priority Queue
                 </p>
                 {pinnedPreview.length ? (
@@ -832,22 +832,22 @@ export default function LifeSyncAnimeCalendar() {
                     {pinnedPreview.map((it) => (
                       <li
                         key={`pin-${it._rowKey}`}
-                        className="rounded-xl border border-[#dbe4ef] bg-white px-3 py-2"
+                        className="rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 py-2"
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="truncate text-[11px] font-semibold text-[#151418]">{it.title}</p>
-                          <span className="rounded-full bg-[#C6FF00]/30 px-2 py-0.5 text-[10px] font-bold text-[#1e293b]">
+                          <p className="truncate text-[11px] font-semibold text-[var(--mx-color-151418)]">{it.title}</p>
+                          <span className="rounded-full bg-[var(--mx-color-c6ff00)]/30 px-2 py-0.5 text-[10px] font-bold text-[var(--mx-color-1e293b)]">
                             P{it._priority}
                           </span>
                         </div>
-                        <p className="mt-0.5 text-[10px] text-[#64748b]">
+                        <p className="mt-0.5 text-[10px] text-[var(--mx-color-64748b)]">
                           Episode {it.episodeNumber || "?"}
                         </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-[11px] text-[#64748b]">No pinned shows yet for this day.</p>
+                  <p className="mt-3 text-[11px] text-[var(--mx-color-64748b)]">No pinned shows yet for this day.</p>
                 )}
               </div>
             </aside>
@@ -877,14 +877,14 @@ export default function LifeSyncAnimeCalendar() {
                             onClick={() => setActiveKey(it._rowKey)}
                             className={`w-full rounded-2xl border p-4 text-left transition-all sm:p-5 ${
                               selected
-                                ? "border-[#151418]/20 bg-white shadow-md ring-2 ring-[#C6FF00]/40"
+                                ? "border-[var(--mx-color-151418)]/20 bg-[var(--color-surface)] shadow-md ring-2 ring-[var(--mx-color-c6ff00)]/40"
                                 : it._isPinned
-                                  ? "border-[#C6FF00]/50 bg-[linear-gradient(115deg,rgba(198,255,0,0.15),rgba(255,255,255,0.75))] hover:shadow-sm"
-                                  : "border-[#dbe4ef] bg-white hover:shadow-sm"
+                                  ? "border-[var(--mx-color-c6ff00)]/50 bg-[linear-gradient(115deg,rgba(198,255,0,0.15),rgba(255,255,255,0.75))] hover:shadow-sm"
+                                  : "border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] hover:shadow-sm"
                             }`}
                           >
                             <div className="flex gap-3">
-                              <div className="h-[76px] w-[56px] shrink-0 overflow-hidden rounded-2xl bg-[#f1f5f9] ring-1 ring-black/5">
+                              <div className="h-[76px] w-[56px] shrink-0 overflow-hidden rounded-2xl bg-[var(--mx-color-f1f5f9)] ring-1 ring-black/5">
                                 {it.imageUrl ? (
                                   <img
                                     src={it.imageUrl}
@@ -893,26 +893,26 @@ export default function LifeSyncAnimeCalendar() {
                                     loading="lazy"
                                   />
                                 ) : (
-                                  <div className="h-full w-full bg-[linear-gradient(130deg,#f1f5f9,#e2e8f0)]" />
+                                  <div className="h-full w-full bg-[linear-gradient(130deg,var(--mx-color-f1f5f9),var(--mx-color-e2e8f0))]" />
                                 )}
                               </div>
 
                               <div className="min-w-0 flex-1">
-                                <p className="truncate text-[14px] font-black tracking-tight text-[#151418]">
+                                <p className="truncate text-[14px] font-black tracking-tight text-[var(--mx-color-151418)]">
                                   {it.title}
                                 </p>
 
                                 <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                  <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#334155] ring-1 ring-[#e2e8f0]">
+                                  <span className="rounded-full bg-[var(--color-surface)]/80 px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-334155)] ring-1 ring-[var(--mx-color-e2e8f0)]">
                                     E{it.episodeNumber}
                                   </span>
                                   {time ? (
-                                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-[#334155] ring-1 ring-[#e2e8f0]">
+                                    <span className="rounded-full bg-[var(--color-surface)]/80 px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-334155)] ring-1 ring-[var(--mx-color-e2e8f0)]">
                                       {time}
                                     </span>
                                   ) : null}
                                   {it._isPinned ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/30 px-2 py-0.5 text-[10px] font-bold text-[#1e293b]">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mx-color-c6ff00)]/30 px-2 py-0.5 text-[10px] font-bold text-[var(--mx-color-1e293b)]">
                                       <FaStar className="h-2.5 w-2.5" aria-hidden />
                                       Priority {it._priority}
                                     </span>
@@ -920,7 +920,7 @@ export default function LifeSyncAnimeCalendar() {
                                 </div>
 
                                 {it.episodeTitle ? (
-                                  <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-[#475569]">
+                                  <p className="mt-2 line-clamp-2 text-[12px] leading-relaxed text-[var(--mx-color-475569)]">
                                     {it.episodeTitle}
                                   </p>
                                 ) : null}
@@ -935,14 +935,14 @@ export default function LifeSyncAnimeCalendar() {
                       <button
                         type="button"
                         onClick={() => setDayPageSize((n) => n + 20)}
-                        className="w-full rounded-xl border border-[#dbe4ef] bg-white px-4 py-3 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-[#f8fafc]"
+                        className="w-full rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-4 py-3 text-[12px] font-semibold text-[var(--mx-color-334155)] transition-colors hover:bg-[var(--mx-color-f8fafc)]"
                       >
                         Load more episodes
                       </button>
                     ) : null}
                   </MotionDiv>
                 ) : (
-                  <div className="rounded-2xl border border-dashed border-[#cbd5e1] bg-white/65 px-4 py-12 text-center text-[#64748b]">
+                  <div className="rounded-2xl border border-dashed border-[var(--mx-color-cbd5e1)] bg-[var(--color-surface)]/65 px-4 py-12 text-center text-[var(--mx-color-64748b)]">
                     <p className="text-[14px] font-semibold">No episodes found</p>
                     <p className="mt-1 text-[12px]">Try a different filter, clear search, or pick another date.</p>
                   </div>
@@ -950,15 +950,15 @@ export default function LifeSyncAnimeCalendar() {
               </div>
 
               {/* Details panel */}
-              <aside className="border-t border-[#dbe4ef] bg-white/65 px-5 py-5 sm:px-7 sm:py-6 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-t-0">
-                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#64748b]">
+              <aside className="border-t border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)]/65 px-5 py-5 sm:px-7 sm:py-6 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-t-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">
                   Details
                 </p>
 
                 {activeItem ? (
-                  <div className="mt-3 rounded-2xl border border-[#dbe4ef] bg-white/85 p-4">
+                  <div className="mt-3 rounded-2xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)]/85 p-4">
                     <div className="flex gap-3">
-                      <div className="h-[96px] w-[70px] shrink-0 overflow-hidden rounded-2xl bg-[#f1f5f9] ring-1 ring-black/5">
+                      <div className="h-[96px] w-[70px] shrink-0 overflow-hidden rounded-2xl bg-[var(--mx-color-f1f5f9)] ring-1 ring-black/5">
                         {activeItem.imageUrl ? (
                           <img
                             src={activeItem.imageUrl}
@@ -967,35 +967,35 @@ export default function LifeSyncAnimeCalendar() {
                             loading="lazy"
                           />
                         ) : (
-                          <div className="h-full w-full bg-[linear-gradient(130deg,#f1f5f9,#e2e8f0)]" />
+                          <div className="h-full w-full bg-[linear-gradient(130deg,var(--mx-color-f1f5f9),var(--mx-color-e2e8f0))]" />
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[14px] font-black tracking-tight text-[#151418] line-clamp-2">
+                        <p className="text-[14px] font-black tracking-tight text-[var(--mx-color-151418)] line-clamp-2">
                           {activeItem.title}
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
-                          <span className="rounded-full bg-[#f5f5f7] px-2.5 py-1 font-semibold text-[#334155]">
+                          <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2.5 py-1 font-semibold text-[var(--mx-color-334155)]">
                             Episode {activeItem.episodeNumber ?? "?"}
                           </span>
                           {activeItem?._airedAtMs ? (
-                            <span className="rounded-full bg-[#f5f5f7] px-2.5 py-1 font-medium text-[#64748b]">
+                            <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2.5 py-1 font-medium text-[var(--mx-color-64748b)]">
                               {formatClock(activeItem._airedAtMs, clientTz)}
                             </span>
                           ) : null}
                           {activeItem._isPinned ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/25 px-2.5 py-1 font-bold text-[#1e293b]">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mx-color-c6ff00)]/25 px-2.5 py-1 font-bold text-[var(--mx-color-1e293b)]">
                               <FaStar className="h-3 w-3" aria-hidden />
                               P{activeItem._priority}
                             </span>
                           ) : null}
                         </div>
                         {activeItem.episodeTitle ? (
-                          <p className="mt-2 text-[12px] leading-relaxed text-[#475569] line-clamp-3">
+                          <p className="mt-2 text-[12px] leading-relaxed text-[var(--mx-color-475569)] line-clamp-3">
                             {activeItem.episodeTitle}
                           </p>
                         ) : (
-                          <p className="mt-2 text-[12px] text-[#64748b]">
+                          <p className="mt-2 text-[12px] text-[var(--mx-color-64748b)]">
                             No episode title available.
                           </p>
                         )}
@@ -1013,8 +1013,8 @@ export default function LifeSyncAnimeCalendar() {
                           }
                           className={`inline-flex min-h-[42px] items-center justify-center gap-2 rounded-xl border px-3 text-[12px] font-bold transition-colors ${
                             activeItem._isPinned
-                              ? "border-[#151418] bg-[#151418] text-white"
-                              : "border-[#dbe4ef] bg-white text-[#334155] hover:bg-[#f8fafc]"
+                              ? "border-[var(--mx-color-151418)] bg-[var(--mx-color-151418)] text-white"
+                              : "border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] text-[var(--mx-color-334155)] hover:bg-[var(--mx-color-f8fafc)]"
                           }`}
                         >
                           <FaStar className="h-3.5 w-3.5" aria-hidden />
@@ -1024,7 +1024,7 @@ export default function LifeSyncAnimeCalendar() {
                         <select
                           value={activeItem._priority}
                           onChange={(e) => pinOrUpdatePriority(activeItem, e.target.value)}
-                          className="min-h-[42px] rounded-xl border border-[#dbe4ef] bg-white px-3 text-[12px] font-semibold text-[#334155] focus:border-[#C6FF00]/70 focus:outline-none"
+                          className="min-h-[42px] rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-[var(--mx-color-334155)] focus:border-[var(--mx-color-c6ff00)]/70 focus:outline-none"
                           title="Priority"
                         >
                           {Array.from({ length: 10 }).map((_, i) => (
@@ -1038,14 +1038,14 @@ export default function LifeSyncAnimeCalendar() {
                       <button
                         type="button"
                         onClick={() => openMalDetails(activeItem)}
-                        className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-[#2E51A2] px-3 text-[12px] font-bold text-white transition hover:brightness-95"
+                        className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-[var(--mx-color-2e51a2)] px-3 text-[12px] font-bold text-white transition hover:brightness-95"
                       >
                         Open anime details
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="mt-3 rounded-2xl border border-dashed border-[#cbd5e1] bg-white/65 px-4 py-10 text-center text-[#64748b]">
+                  <div className="mt-3 rounded-2xl border border-dashed border-[var(--mx-color-cbd5e1)] bg-[var(--color-surface)]/65 px-4 py-10 text-center text-[var(--mx-color-64748b)]">
                     <p className="text-[13px] font-semibold">Pick an episode</p>
                     <p className="mt-1 text-[12px]">Select an item from the list to view details.</p>
                   </div>
@@ -1055,14 +1055,14 @@ export default function LifeSyncAnimeCalendar() {
                   <button
                     type="button"
                     onClick={() => setShowDayOverlay(false)}
-                    className="inline-flex flex-1 items-center justify-center rounded-xl border border-[#dbe4ef] bg-white px-3 py-2.5 text-[12px] font-semibold text-[#334155] transition-colors hover:bg-[#f8fafc]"
+                    className="inline-flex flex-1 items-center justify-center rounded-xl border border-[var(--mx-color-dbe4ef)] bg-[var(--color-surface)] px-3 py-2.5 text-[12px] font-semibold text-[var(--mx-color-334155)] transition-colors hover:bg-[var(--mx-color-f8fafc)]"
                   >
                     Back
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowDayOverlay(false)}
-                    className="inline-flex flex-1 items-center justify-center rounded-xl bg-[#C6FF00] px-3 py-2.5 text-[12px] font-bold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+                    className="inline-flex flex-1 items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-3 py-2.5 text-[12px] font-bold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
                   >
                     Close
                   </button>
@@ -1084,13 +1084,13 @@ export default function LifeSyncAnimeCalendar() {
       transition={lifeSyncDollyPageTransition}
     >
       <header className="space-y-1 sm:space-y-2 px-2 sm:px-1">
-        <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">
+        <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">
           LifeSync / Anime
         </p>
-        <h2 className="text-2xl sm:text-[32px] font-bold text-[#1d1d1f] tracking-tight">
+        <h2 className="text-2xl sm:text-[32px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">
           Anime Calendar
         </h2>
-        <p className="text-[#86868b] text-sm sm:text-[17px] font-medium">
+        <p className="text-[var(--mx-color-86868b)] text-sm sm:text-[17px] font-medium">
           Episode dates powered by AnimeSchedule.net (cached server-side). Pin shows to prioritize them.
         </p>
       </header>
@@ -1101,9 +1101,9 @@ export default function LifeSyncAnimeCalendar() {
         </div>
       )}
 
-      <div className="bg-white rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 md:p-8 border border-[#d2d2d7]/40 shadow-sm">
+      <div className="bg-[var(--color-surface)] rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 md:p-8 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-          <div className="flex items-center justify-between w-full sm:w-auto bg-[#f5f5f7] rounded-xl p-1">
+          <div className="flex items-center justify-between w-full sm:w-auto bg-[var(--mx-color-f5f5f7)] rounded-xl p-1">
             <button
               type="button"
               onClick={() => {
@@ -1111,12 +1111,12 @@ export default function LifeSyncAnimeCalendar() {
                 d.setMonth(d.getMonth() - 1);
                 setCurrentDate(d);
               }}
-              className="p-2 hover:bg-white rounded-lg transition-all shadow-sm hover:shadow active:scale-95"
+              className="p-2 hover:bg-[var(--color-surface)] rounded-lg transition-all shadow-sm hover:shadow active:scale-95"
               aria-label="Previous month"
             >
-              <FaChevronLeft className="w-3.5 h-3.5 text-[#1d1d1f]" />
+              <FaChevronLeft className="w-3.5 h-3.5 text-[var(--mx-color-1d1d1f)]" />
             </button>
-            <h2 className="text-[14px] sm:text-[18px] font-bold text-[#1d1d1f] min-w-[140px] sm:min-w-[200px] text-center tracking-tight">
+            <h2 className="text-[14px] sm:text-[18px] font-bold text-[var(--mx-color-1d1d1f)] min-w-[140px] sm:min-w-[200px] text-center tracking-tight">
               {monthLabel}
             </h2>
             <button
@@ -1126,10 +1126,10 @@ export default function LifeSyncAnimeCalendar() {
                 d.setMonth(d.getMonth() + 1);
                 setCurrentDate(d);
               }}
-              className="p-2 hover:bg-white rounded-lg transition-all shadow-sm hover:shadow active:scale-95"
+              className="p-2 hover:bg-[var(--color-surface)] rounded-lg transition-all shadow-sm hover:shadow active:scale-95"
               aria-label="Next month"
             >
-              <FaChevronRight className="w-3.5 h-3.5 text-[#1d1d1f]" />
+              <FaChevronRight className="w-3.5 h-3.5 text-[var(--mx-color-1d1d1f)]" />
             </button>
           </div>
 
@@ -1137,21 +1137,21 @@ export default function LifeSyncAnimeCalendar() {
             <button
               type="button"
               onClick={() => setCurrentDate(new Date())}
-              className="text-[12px] font-semibold bg-white border border-[#e5e5ea] rounded-xl px-3 py-2 hover:bg-[#fafafa] transition-colors"
+              className="text-[12px] font-semibold bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] rounded-xl px-3 py-2 hover:bg-[var(--mx-color-fafafa)] transition-colors"
             >
               Today
             </button>
             <button
               type="button"
               onClick={loadMonth}
-              className="text-[12px] font-semibold bg-[#C6FF00] text-[#1a1628] rounded-xl px-3 py-2 shadow-sm ring-1 ring-[#1a1628]/10 hover:brightness-95 transition-all disabled:opacity-60"
+              className="text-[12px] font-semibold bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] rounded-xl px-3 py-2 shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 hover:brightness-95 transition-all disabled:opacity-60"
               disabled={busy}
             >
               {busy ? "Loading…" : "Refresh"}
             </button>
             {busy && (
-              <span className="hidden sm:inline-flex items-center gap-2 text-[12px] font-medium text-[#86868b]">
-                <span className="h-3 w-3 rounded-full border-2 border-[#C6FF00] border-t-transparent animate-spin" />
+              <span className="hidden sm:inline-flex items-center gap-2 text-[12px] font-medium text-[var(--mx-color-86868b)]">
+                <span className="h-3 w-3 rounded-full border-2 border-[var(--mx-color-c6ff00)] border-t-transparent animate-spin" />
                 Loading schedules…
               </span>
             )}

@@ -146,18 +146,18 @@ export default function WorkplaceProjects({
                 </div>
             )}
 
-            <div className="bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-5 sm:p-6">
+            <div className="bg-[var(--color-surface)] rounded-[22px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-5 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                     <div>
-                        <h2 className="text-[18px] sm:text-[20px] font-bold text-[#1d1d1f]">Workplace Projects</h2>
-                        <p className="text-[12px] text-[#86868b] mt-1">Track ownership, timeline, and current status.</p>
+                        <h2 className="text-[18px] sm:text-[20px] font-bold text-[var(--mx-color-1d1d1f)]">Workplace Projects</h2>
+                        <p className="text-[12px] text-[var(--mx-color-86868b)] mt-1">Track ownership, timeline, and current status.</p>
                     </div>
                     <button
                         onClick={() => {
                             setEditingId(null)
                             setShowForm(true)
                         }}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-xl text-[13px] font-bold"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] rounded-xl text-[13px] font-bold"
                     >
                         <FaPlus className="w-3.5 h-3.5" />
                         New Project
@@ -166,19 +166,19 @@ export default function WorkplaceProjects({
 
                 <div className="flex flex-col sm:flex-row gap-3 mb-6">
                     <div className="relative flex-1">
-                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[#86868b] w-3.5 h-3.5" />
+                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mx-color-86868b)] w-3.5 h-3.5" />
                         <input
                             type="text"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="Search projects..."
-                            className="w-full pl-9 pr-4 py-2.5 border border-[#d2d2d7]/50 rounded-xl text-[13px] focus:outline-none focus:ring-1 focus:ring-[#C6FF00]/50"
+                            className="w-full pl-9 pr-4 py-2.5 border border-[var(--mx-color-d2d2d7)]/50 rounded-xl text-[13px] focus:outline-none focus:ring-1 focus:ring-[var(--mx-color-c6ff00)]/50"
                         />
                     </div>
                     <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="px-4 py-2.5 border border-[#d2d2d7]/50 rounded-xl text-[13px] bg-white"
+                        className="px-4 py-2.5 border border-[var(--mx-color-d2d2d7)]/50 rounded-xl text-[13px] bg-[var(--color-surface)]"
                     >
                         <option value="">All Statuses</option>
                         {statusOptions.map((s) => (
@@ -188,24 +188,29 @@ export default function WorkplaceProjects({
                 </div>
 
                 {loading ? (
-                    <div className="py-10 text-center text-[#86868b] text-[13px]">Loading...</div>
+                    <div className="py-10 text-center text-[var(--mx-color-86868b)] text-[13px]">Loading...</div>
                 ) : filteredProjects.length === 0 ? (
-                    <div className="py-12 text-center text-[#86868b] text-[13px]">No projects found.</div>
+                    <div className="py-12 text-center text-[var(--mx-color-86868b)] text-[13px]">No projects found.</div>
                 ) : (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
                         {filteredProjects.map((p) => (
-                            <div key={p.id} className="rounded-2xl border border-[#d2d2d7]/50 bg-white p-4 sm:p-5 hover:shadow-sm transition-all">
+                            <div key={p.id} className="rounded-2xl border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-4 sm:p-5 hover:shadow-sm transition-all">
                                 <div className="flex items-start justify-between gap-3 mb-3">
                                     <div className="min-w-0 flex-1">
-                                        <p className="text-[15px] font-bold text-[#1d1d1f] truncate">{p.name}</p>
+                                        <p className="text-[15px] font-bold text-[var(--mx-color-1d1d1f)] truncate">{p.name}</p>
                                         <div className="flex flex-wrap gap-2 mt-2">
-                                            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f]">
+                                            <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]">
                                                 {p.status || "Active"}
                                             </span>
                                             {p.department && (
                                                 <span
                                                     className="text-[11px] font-semibold px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
-                                                    style={{ backgroundColor: `${p.department.color || "#0ea5e9"}20`, color: p.department.color || "#0ea5e9" }}
+                                                    style={{
+                                                        backgroundColor: p.department.color
+                                                            ? `${p.department.color}20`
+                                                            : "color-mix(in srgb, var(--mx-color-0ea5e9) 20%, transparent)",
+                                                        color: p.department.color || "var(--mx-color-0ea5e9)",
+                                                    }}
                                                 >
                                                     <FaBuilding className="w-3 h-3" />
                                                     {getDepartmentName(p.department)}
@@ -216,7 +221,7 @@ export default function WorkplaceProjects({
                                     <div className="flex items-center gap-1">
                                         <button
                                             onClick={() => startEdit(p)}
-                                            className="p-2 rounded-lg hover:bg-[#f5f5f7] text-[#1d1d1f]"
+                                            className="p-2 rounded-lg hover:bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]"
                                             title="Edit project"
                                         >
                                             <FaEdit className="w-3.5 h-3.5" />
@@ -232,10 +237,10 @@ export default function WorkplaceProjects({
                                 </div>
 
                                 {p.description && (
-                                    <p className="text-[13px] text-[#5f6368] leading-relaxed mb-3">{p.description}</p>
+                                    <p className="text-[13px] text-[var(--mx-color-5f6368)] leading-relaxed mb-3">{p.description}</p>
                                 )}
 
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px] text-[#6b7280]">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[12px] text-[var(--mx-color-6b7280)]">
                                     <span className="inline-flex items-center gap-1.5">
                                         <FaCalendarAlt className="w-3 h-3" />
                                         Start: {p.start_date ? new Date(p.start_date).toLocaleDateString() : "Not set"}
@@ -253,36 +258,36 @@ export default function WorkplaceProjects({
                 )}
 
                 {showForm && (
-                    <div className="pt-6 border-t border-[#f0f0f0]">
+                    <div className="pt-6 border-t border-[var(--mx-color-f0f0f0)]">
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div>
-                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Project name *</label>
+                                <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-2 block">Project name *</label>
                                 <input
                                     value={newProject.name}
                                     onChange={(e) => setNewProject((v) => ({ ...v, name: e.target.value }))}
                                     placeholder="Enter project name"
-                                    className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
+                                    className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-xl border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none text-[14px]"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Description</label>
+                                <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-2 block">Description</label>
                                 <textarea
                                     value={newProject.description}
                                     onChange={(e) => setNewProject((v) => ({ ...v, description: e.target.value }))}
                                     rows={3}
                                     placeholder="Add details"
-                                    className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px] resize-none"
+                                    className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-xl border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none text-[14px] resize-none"
                                 />
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Department</label>
+                                    <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-2 block">Department</label>
                                     <select
                                         value={newProject.department_id}
                                         onChange={(e) => setNewProject((v) => ({ ...v, department_id: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
+                                        className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-xl border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none text-[14px]"
                                     >
                                         <option value="">Optional</option>
                                         {departments.map((d) => (
@@ -291,39 +296,39 @@ export default function WorkplaceProjects({
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Status</label>
+                                    <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-2 block">Status</label>
                                     <select
                                         value={newProject.status}
                                         onChange={(e) => setNewProject((v) => ({ ...v, status: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
+                                        className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-xl border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none text-[14px]"
                                     >
                                         {statusOptions.map((s) => (
                                             <option key={s} value={s}>{s}</option>
                                         ))}
                                     </select>
                                 </div>
-                                <div className="rounded-xl border border-[#d2d2d7]/50 bg-[#f8fafc] px-4 py-3 text-[12px] text-[#64748b] flex items-center">
+                                <div className="rounded-xl border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--mx-color-f8fafc)] px-4 py-3 text-[12px] text-[var(--mx-color-64748b)] flex items-center">
                                     Linked department tag appears on project cards and in task selectors.
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Start date</label>
+                                    <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-2 block">Start date</label>
                                     <input
                                         type="date"
                                         value={newProject.start_date}
                                         onChange={(e) => setNewProject((v) => ({ ...v, start_date: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
+                                        className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-xl border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none text-[14px]"
                                     />
                                 </div>
                                 <div>
-                                    <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-2 block">Target end date</label>
+                                    <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-2 block">Target end date</label>
                                     <input
                                         type="date"
                                         value={newProject.target_end_date}
                                         onChange={(e) => setNewProject((v) => ({ ...v, target_end_date: e.target.value }))}
-                                        className="w-full px-4 py-3 bg-[#f5f5f7] rounded-xl border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none text-[14px]"
+                                        className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-xl border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none text-[14px]"
                                     />
                                 </div>
                             </div>
@@ -332,14 +337,14 @@ export default function WorkplaceProjects({
                                 <button
                                     type="button"
                                     onClick={resetForm}
-                                    className="flex-1 py-3 rounded-xl bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white"
+                                    className="flex-1 py-3 rounded-xl bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] font-semibold text-[14px] hover:bg-[var(--color-surface)]"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={formLoading}
-                                    className="flex-1 py-3 rounded-xl bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-60 text-[#1d1d1f] font-bold text-[14px]"
+                                    className="flex-1 py-3 rounded-xl bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60 text-[var(--mx-color-1d1d1f)] font-bold text-[14px]"
                                 >
                                     {formLoading ? (editingId ? "Updating..." : "Creating...") : (editingId ? "Update project" : "Create project")}
                                 </button>

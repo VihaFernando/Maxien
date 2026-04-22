@@ -119,19 +119,19 @@ export default function Workplaces() {
     <div className="workplace-theme-surface animate-in fade-in duration-500 max-w-[1200px] mx-auto pb-10">
       <div className="flex items-end justify-between gap-3 mb-6">
         <div>
-          <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest mb-1">
+          <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest mb-1">
             Collaboration
           </p>
-          <h1 className="text-[20px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight">
+          <h1 className="text-[20px] sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-tight">
             Workplaces
           </h1>
-          <p className="text-[12px] text-[#86868b] mt-1">
+          <p className="text-[12px] text-[var(--mx-color-86868b)] mt-1">
             Optional shared spaces for tasks, projects, and task types.
           </p>
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold rounded-[12px] text-[13px] transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] font-bold rounded-[12px] text-[13px] transition-colors"
         >
           <FaPlus className="w-3 h-3" />
           New Workplace
@@ -150,18 +150,18 @@ export default function Workplaces() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-5">
+        <div className="lg:col-span-2 bg-[var(--color-surface)] rounded-[22px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[14px] font-bold text-[#1d1d1f]">Your workplaces</h2>
-            <span className="text-[11px] text-[#86868b] font-semibold">{accepted.length}</span>
+            <h2 className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)]">Your workplaces</h2>
+            <span className="text-[11px] text-[var(--mx-color-86868b)] font-semibold">{accepted.length}</span>
           </div>
 
           {loading && accepted.length === 0 ? (
-            <div className="py-10 text-center text-[#86868b] text-[13px]">Loading…</div>
+            <div className="py-10 text-center text-[var(--mx-color-86868b)] text-[13px]">Loading…</div>
           ) : accepted.length === 0 ? (
             <div className="py-10 text-center">
-              <p className="text-[#86868b] text-[13px]">No workplaces yet.</p>
-              <p className="text-[#86868b] text-[12px] mt-1">
+              <p className="text-[var(--mx-color-86868b)] text-[13px]">No workplaces yet.</p>
+              <p className="text-[var(--mx-color-86868b)] text-[12px] mt-1">
                 Personal tasks/projects remain unchanged. Workplaces are optional.
               </p>
             </div>
@@ -171,20 +171,20 @@ export default function Workplaces() {
                 <Link
                   key={r.id}
                   to={`/dashboard/workplaces/${r.workplaces.id}`}
-                  className="block p-4 rounded-[16px] border border-[#d2d2d7]/40 hover:border-[#d2d2d7] hover:shadow-sm transition-all bg-white"
+                  className="block p-4 rounded-[16px] border border-[var(--mx-color-d2d2d7)]/40 hover:border-[var(--mx-color-d2d2d7)] hover:shadow-sm transition-all bg-[var(--color-surface)]"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-[14px] font-bold text-[#1d1d1f] truncate">
+                      <p className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)] truncate">
                         {r.workplaces.name}
                       </p>
                       {r.workplaces.description && (
-                        <p className="text-[12px] text-[#86868b] mt-1 line-clamp-2">
+                        <p className="text-[12px] text-[var(--mx-color-86868b)] mt-1 line-clamp-2">
                           {r.workplaces.description}
                         </p>
                       )}
                     </div>
-                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#f5f5f7] text-[#1d1d1f]">
+                    <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]">
                       {r.role}
                     </span>
                   </div>
@@ -194,35 +194,35 @@ export default function Workplaces() {
           )}
         </div>
 
-        <div className="bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-5">
+        <div className="bg-[var(--color-surface)] rounded-[22px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[14px] font-bold text-[#1d1d1f]">Invites</h2>
-            <span className="text-[11px] text-[#86868b] font-semibold">{pending.length}</span>
+            <h2 className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)]">Invites</h2>
+            <span className="text-[11px] text-[var(--mx-color-86868b)] font-semibold">{pending.length}</span>
           </div>
 
           {pending.length === 0 ? (
-            <div className="py-10 text-center text-[#86868b] text-[13px]">No pending invites.</div>
+            <div className="py-10 text-center text-[var(--mx-color-86868b)] text-[13px]">No pending invites.</div>
           ) : (
             <div className="space-y-3">
               {pending.map((r) => (
                 <div
                   key={r.id}
-                  className="p-4 rounded-[16px] border border-[#d2d2d7]/40 bg-white"
+                  className="p-4 rounded-[16px] border border-[var(--mx-color-d2d2d7)]/40 bg-[var(--color-surface)]"
                 >
-                  <p className="text-[13px] font-bold text-[#1d1d1f] truncate">
+                  <p className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)] truncate">
                     {r.workplaces.name}
                   </p>
-                  <p className="text-[11px] text-[#86868b] mt-1">Status: pending</p>
+                  <p className="text-[11px] text-[var(--mx-color-86868b)] mt-1">Status: pending</p>
                   <div className="flex gap-2 mt-3">
                     <button
                       onClick={() => respondToInvite(r.id, "accepted")}
-                      className="flex-1 bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] font-bold py-2 rounded-[10px] text-[12px]"
+                      className="flex-1 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] font-bold py-2 rounded-[10px] text-[12px]"
                     >
                       Accept
                     </button>
                     <button
                       onClick={() => respondToInvite(r.id, "rejected")}
-                      className="flex-1 bg-[#f5f5f7] hover:bg-white border border-[#d2d2d7] text-[#1d1d1f] font-semibold py-2 rounded-[10px] text-[12px]"
+                      className="flex-1 bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--color-surface)] border border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] font-semibold py-2 rounded-[10px] text-[12px]"
                     >
                       Reject
                     </button>
@@ -241,54 +241,54 @@ export default function Workplaces() {
         >
           <div className="flex min-h-full items-start sm:items-center justify-center pt-[80px] sm:pt-0 p-4">
             <div
-              className="bg-white w-full max-w-lg rounded-[24px] border border-[#d2d2d7]/50 shadow-xl overflow-hidden"
+              className="bg-[var(--color-surface)] w-full max-w-lg rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-xl overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0f0f0]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--mx-color-f0f0f0)]">
                 <div>
-                  <h3 className="text-[16px] font-bold text-[#1d1d1f]">New Workplace</h3>
-                  <p className="text-[12px] text-[#86868b] mt-0.5">Create an optional shared space.</p>
+                  <h3 className="text-[16px] font-bold text-[var(--mx-color-1d1d1f)]">New Workplace</h3>
+                  <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5">Create an optional shared space.</p>
                 </div>
                 <button
                   onClick={() => setShowCreate(false)}
-                  className="p-2 hover:bg-[#f5f5f7] rounded-full transition-colors"
+                  className="p-2 hover:bg-[var(--mx-color-f5f5f7)] rounded-full transition-colors"
                 >
-                  <FaTimes className="w-4 h-4 text-[#86868b]" />
+                  <FaTimes className="w-4 h-4 text-[var(--mx-color-86868b)]" />
                 </button>
               </div>
 
               <form onSubmit={onCreate} className="px-5 py-5 space-y-4">
                 <div>
-                  <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">
+                  <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">
                     Name *
                   </label>
                   <input
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                    className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none transition-all text-[14px]"
+                    className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-[12px] border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none transition-all text-[14px]"
                     placeholder="e.g. Product Team"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">
+                  <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">
                     Description
                   </label>
                   <textarea
                     value={form.description}
                     onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                     rows={3}
-                    className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none transition-all text-[14px] resize-none"
+                    className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-[12px] border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none transition-all text-[14px] resize-none"
                     placeholder="Optional"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] font-bold text-[#86868b] uppercase tracking-wider mb-1.5 block">
+                  <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">
                     Banner URL
                   </label>
                   <input
                     value={form.bannerUrl}
                     onChange={(e) => setForm((f) => ({ ...f, bannerUrl: e.target.value }))}
-                    className="w-full px-4 py-3 bg-[#f5f5f7] rounded-[12px] border border-transparent focus:border-[#C6FF00]/60 focus:bg-white outline-none transition-all text-[14px]"
+                    className="w-full px-4 py-3 bg-[var(--mx-color-f5f5f7)] rounded-[12px] border border-transparent focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] outline-none transition-all text-[14px]"
                     placeholder="Optional image URL"
                   />
                 </div>
@@ -297,14 +297,14 @@ export default function Workplaces() {
                   <button
                     type="button"
                     onClick={() => setShowCreate(false)}
-                    className="flex-1 py-3 rounded-[12px] bg-[#f5f5f7] border border-[#d2d2d7] text-[#1d1d1f] font-semibold text-[14px] hover:bg-white transition-colors"
+                    className="flex-1 py-3 rounded-[12px] bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] font-semibold text-[14px] hover:bg-[var(--color-surface)] transition-colors"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex-1 py-3 rounded-[12px] bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-60 text-[#1d1d1f] font-bold text-[14px] transition-colors"
+                    className="flex-1 py-3 rounded-[12px] bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60 text-[var(--mx-color-1d1d1f)] font-bold text-[14px] transition-colors"
                   >
                     {loading ? "Creating…" : "Create"}
                   </button>

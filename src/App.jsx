@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Suspense, lazy } from 'react'
 import { AuthProvider } from './context/AuthContext'
 import { LifeSyncProvider } from './context/LifeSyncContext'
+import { AppThemeProvider } from './context/AppThemeContext'
 import { LifeSyncMotionRoot } from './components/LifeSyncMotionRoot'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -52,84 +53,86 @@ function App() {
     <Router>
       <AuthProvider>
         <LifeSyncProvider>
-        <LifeSyncMotionRoot>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard" element={<Dashboard />}>
-            <Route index element={<DashboardHome />} />
-            <Route path="tasks" element={<Tasks />} />
-            <Route path="projects" element={<Projects />} />
-            <Route path="subscriptions" element={<Subscriptions />} />
-            <Route path="calendar" element={<Calendar />} />
-            <Route path="ai-assistant" element={<AIAssistant />} />
-            <Route path="task-types" element={<TaskTypes />} />
-            <Route path="notes" element={<Notes />} />
-            <Route path="workplaces" element={<Workplaces />} />
-            <Route path="workplaces/:id" element={<WorkplaceDetail />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="admin" element={<LifeSyncAdmin />} />
-            <Route path="github" element={<Github />} />
-            <Route path="lifesync/games" element={<LifeSyncGamesHub />} />
-            <Route path="lifesync/games/steam/*" element={<LifeSyncSteam />} />
-            <Route path="lifesync/games/gamerant" element={<LifeSyncGameRant />} />
-            <Route path="lifesync/games/deals" element={<LifeSyncGameDeals />} />
-            <Route path="lifesync/games/gamerant/news/:slug" element={<LifeSyncGameRantArticle />} />
-            <Route path="lifesync/games/search" element={<LifeSyncGameSearch />} />
-            <Route path="lifesync/games/releases" element={<LifeSyncGameReleases />} />
-            <Route path="lifesync/games/crack-status" element={<LifeSyncGameCrackStatus />} />
-            <Route path="lifesync/games/wishlist/*" element={<LifeSyncWishlist />} />
-            <Route path="lifesync/games/xbox/*" element={<LifeSyncXbox />} />
-            <Route path="lifesync/anime" element={<LifeSyncAnimeMediaLayout />}>
-              <Route index element={<LifeSyncAnimeHub />} />
-              <Route
-                path="anime/watch/:malId/:ep"
-                element={
-                  <Suspense fallback={null}>
-                    <LifeSyncAnimeWatch />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="manga/read/:mangaId/:chapterId"
-                element={
-                  <Suspense fallback={null}>
-                    <LifeSyncMangaRead />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="manga/library"
-                element={
-                  <Suspense fallback={null}>
-                    <LifeSyncMangaLibrary />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="anime/history"
-                element={
-                  <Suspense fallback={null}>
-                    <LifeSyncAnimeHistory />
-                  </Suspense>
-                }
-              />
-              <Route path="anime/calendar" element={<LifeSyncAnimeCalendar />} />
-              <Route path="anime/*" element={<LifeSyncAnime />} />
-              <Route path="manga/*" element={<LifeSyncManga />} />
-              <Route path="hentai/*" element={<LifeSyncHentai />} />
-            </Route>
-          </Route>
-          <Route path="/auth/github/callback" element={<GithubCallback />} />
-          <Route path="/auth/lifesync/callback" element={<LifeSyncOAuthCallback />} />
-          <Route path="/settings" element={<LifeSyncOAuthCallback />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-        <GlobalCommandPalette />
-        <PWAUpdatePrompt />
-        <PWAEngagementNotifications />
-        <FloatingAIChat />
-        </LifeSyncMotionRoot>
+          <AppThemeProvider>
+            <LifeSyncMotionRoot>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/dashboard" element={<Dashboard />}>
+                  <Route index element={<DashboardHome />} />
+                  <Route path="tasks" element={<Tasks />} />
+                  <Route path="projects" element={<Projects />} />
+                  <Route path="subscriptions" element={<Subscriptions />} />
+                  <Route path="calendar" element={<Calendar />} />
+                  <Route path="ai-assistant" element={<AIAssistant />} />
+                  <Route path="task-types" element={<TaskTypes />} />
+                  <Route path="notes" element={<Notes />} />
+                  <Route path="workplaces" element={<Workplaces />} />
+                  <Route path="workplaces/:id" element={<WorkplaceDetail />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="admin" element={<LifeSyncAdmin />} />
+                  <Route path="github" element={<Github />} />
+                  <Route path="lifesync/games" element={<LifeSyncGamesHub />} />
+                  <Route path="lifesync/games/steam/*" element={<LifeSyncSteam />} />
+                  <Route path="lifesync/games/gamerant" element={<LifeSyncGameRant />} />
+                  <Route path="lifesync/games/deals" element={<LifeSyncGameDeals />} />
+                  <Route path="lifesync/games/gamerant/news/:slug" element={<LifeSyncGameRantArticle />} />
+                  <Route path="lifesync/games/search" element={<LifeSyncGameSearch />} />
+                  <Route path="lifesync/games/releases" element={<LifeSyncGameReleases />} />
+                  <Route path="lifesync/games/crack-status" element={<LifeSyncGameCrackStatus />} />
+                  <Route path="lifesync/games/wishlist/*" element={<LifeSyncWishlist />} />
+                  <Route path="lifesync/games/xbox/*" element={<LifeSyncXbox />} />
+                  <Route path="lifesync/anime" element={<LifeSyncAnimeMediaLayout />}>
+                    <Route index element={<LifeSyncAnimeHub />} />
+                    <Route
+                      path="anime/watch/:malId/:ep"
+                      element={
+                        <Suspense fallback={null}>
+                          <LifeSyncAnimeWatch />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="manga/read/:mangaId/:chapterId"
+                      element={
+                        <Suspense fallback={null}>
+                          <LifeSyncMangaRead />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="manga/library"
+                      element={
+                        <Suspense fallback={null}>
+                          <LifeSyncMangaLibrary />
+                        </Suspense>
+                      }
+                    />
+                    <Route
+                      path="anime/history"
+                      element={
+                        <Suspense fallback={null}>
+                          <LifeSyncAnimeHistory />
+                        </Suspense>
+                      }
+                    />
+                    <Route path="anime/calendar" element={<LifeSyncAnimeCalendar />} />
+                    <Route path="anime/*" element={<LifeSyncAnime />} />
+                    <Route path="manga/*" element={<LifeSyncManga />} />
+                    <Route path="hentai/*" element={<LifeSyncHentai />} />
+                  </Route>
+                </Route>
+                <Route path="/auth/github/callback" element={<GithubCallback />} />
+                <Route path="/auth/lifesync/callback" element={<LifeSyncOAuthCallback />} />
+                <Route path="/settings" element={<LifeSyncOAuthCallback />} />
+                <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+              <GlobalCommandPalette />
+              <PWAUpdatePrompt />
+              <PWAEngagementNotifications />
+              <FloatingAIChat />
+            </LifeSyncMotionRoot>
+          </AppThemeProvider>
         </LifeSyncProvider>
       </AuthProvider>
     </Router>

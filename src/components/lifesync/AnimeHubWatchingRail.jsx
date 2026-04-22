@@ -17,10 +17,10 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
     if (!loading && entries.length === 0) return null
 
     return (
-        <div className={`relative border-l-4 border-l-[#C6FF00] pl-4 sm:pl-5 ${className}`}>
+        <div className={`relative border-l-4 border-l-[var(--mx-color-c6ff00)] pl-4 sm:pl-5 ${className}`}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="flex min-w-0 items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#C6FF00]/25 text-slate-900 shadow-sm ring-1 ring-[#C6FF00]/40">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)]/25 text-slate-900 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/40">
                         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
                             <path d="M8 5v14l11-7L8 5z" />
                         </svg>
@@ -33,7 +33,7 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
                 </div>
                 <Link
                     to={`${ANIME_HUB_PATH}/history`}
-                    className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 self-start rounded-xl bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 sm:min-h-0 sm:shrink-0 sm:px-3 sm:py-2 ${focusRing}`}
+                    className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 self-start rounded-xl bg-[var(--color-surface)] px-4 py-2.5 text-[12px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 sm:min-h-0 sm:shrink-0 sm:px-3 sm:py-2 ${focusRing}`}
                 >
                     History
                     <span className="opacity-70" aria-hidden>
@@ -62,16 +62,16 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
                                             imgProps={{ referrerPolicy: 'no-referrer' }}
                                         />
                                     ) : null}
-                                    <span className="absolute left-2 top-2 z-1 max-w-[calc(100%-1rem)] truncate rounded-md bg-white/90 px-1.5 py-0.5 font-mono text-[8px] font-bold tabular-nums uppercase tracking-wide text-slate-900 ring-1 ring-slate-200/80">
+                                    <span className="absolute left-2 top-2 z-1 max-w-[calc(100%-1rem)] truncate rounded-md bg-[var(--color-surface)]/90 px-1.5 py-0.5 font-mono text-[8px] font-bold tabular-nums uppercase tracking-wide text-slate-900 ring-1 ring-slate-200/80">
                                         EP {entry.lastEpisodeNumber}
                                     </span>
-                                    <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-white/80 via-transparent to-transparent pb-3 opacity-100 transition duration-200 sm:opacity-0 sm:group-hover:opacity-100">
-                                        <span className="rounded-full bg-[#C6FF00] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-900">
+                                    <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-[var(--color-surface)]/80 via-transparent to-transparent pb-3 opacity-100 transition duration-200 sm:opacity-0 sm:group-hover:opacity-100">
+                                        <span className="rounded-full bg-[var(--mx-color-c6ff00)] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-900">
                                             Resume
                                         </span>
                                     </div>
                                 </div>
-                                <div className="border-t border-slate-200/90 bg-white px-2 py-2">
+                                <div className="border-t border-slate-200/90 bg-[var(--color-surface)] px-2 py-2">
                                     <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-slate-800">{entry.title}</p>
                                 </div>
                             </div>

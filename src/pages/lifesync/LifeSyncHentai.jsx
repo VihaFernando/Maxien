@@ -200,22 +200,22 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden bg-[#020202] text-white"
+            className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden bg-[var(--mx-color-020202)] text-white"
         >
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[#C6FF00]/12 blur-[120px]" />
-                <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[#37c9ff]/8 blur-[135px]" />
+                <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[var(--mx-color-c6ff00)]/12 blur-[120px]" />
+                <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[var(--mx-color-37c9ff)]/8 blur-[135px]" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08)_0%,rgba(2,2,2,0)_48%)]" />
             </div>
 
             <header
-                className="relative flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-black/40 py-2.5 pl-3 pr-3 backdrop-blur-xl sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-3"
+                className="relative flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-strong)]/10 bg-black/40 py-2.5 pl-3 pr-3 backdrop-blur-xl sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-3"
             >
                 <div className="flex min-w-0 items-center gap-2.5">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="inline-flex min-w-0 shrink items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 transition-colors hover:border-white/30 hover:bg-white/10 hover:text-white"
+                        className="inline-flex min-w-0 shrink items-center gap-2 rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 transition-colors hover:border-[var(--color-border-strong)]/30 hover:bg-[var(--color-surface)]/10 hover:text-white"
                     >
                         <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                         <span className="truncate">Back</span>
@@ -228,7 +228,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
 
                 <div className="flex min-w-0 items-center gap-2">
                     {progressLabel && (
-                        <span className="hidden rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/75 sm:inline-flex">
+                        <span className="hidden rounded-full border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.06] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/75 sm:inline-flex">
                             {progressLabel}
                         </span>
                     )}
@@ -238,7 +238,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                             target="_blank"
                             rel="noreferrer"
                             title="Open on source site"
-                            className="inline-flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-2.5 py-1.5 text-[10px] font-medium text-white/70 transition-colors hover:border-[#C6FF00]/45 hover:text-[#C6FF00] sm:max-w-none sm:px-3 sm:text-[11px]"
+                            className="inline-flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center gap-1.5 rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-2.5 py-1.5 text-[10px] font-medium text-white/70 transition-colors hover:border-[var(--mx-color-c6ff00)]/45 hover:text-[var(--mx-color-c6ff00)] sm:max-w-none sm:px-3 sm:text-[11px]"
                         >
                             <span className="truncate sm:whitespace-nowrap">Open source</span>
                             <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
@@ -252,7 +252,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
             >
                 <div className="mx-auto grid w-full min-w-0 max-w-[1680px] gap-4 px-3 py-4 sm:px-4 lg:h-[calc(100dvh-6rem)] lg:grid-cols-[minmax(0,1.55fr)_minmax(310px,0.85fr)] lg:gap-5 lg:px-6">
                     <section className="min-w-0 space-y-4 lg:flex lg:h-full lg:flex-col lg:gap-4 lg:space-y-0">
-                        <div className="relative w-full min-w-0 shrink-0 overflow-hidden rounded-2xl border border-white/15 bg-black shadow-[0_28px_80px_rgba(0,0,0,0.5)]">
+                        <div className="relative w-full min-w-0 shrink-0 overflow-hidden rounded-2xl border border-[var(--color-border-strong)]/15 bg-black shadow-[0_28px_80px_rgba(0,0,0,0.5)]">
                             <div className="relative aspect-video w-full">
                                 <div className="absolute inset-0">
                                     {stream.resolving ? (
@@ -276,7 +276,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                             referrerPolicy="no-referrer-when-downgrade"
                                         />
                                     ) : (
-                                        <div className="flex h-full w-full items-center justify-center bg-[#111]">
+                                        <div className="flex h-full w-full items-center justify-center bg-[var(--mx-color-111)]">
                                             <p className="text-[14px] text-white/35">No stream available.</p>
                                         </div>
                                     )}
@@ -284,29 +284,29 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                             </div>
                         </div>
 
-                        <div className="min-w-0 shrink-0 rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-5">
+                        <div className="min-w-0 shrink-0 rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.04] p-4 sm:p-5">
                             <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0 flex-1">
                                     <h1 className="wrap-anywhere text-[17px] font-bold leading-snug tracking-tight text-white sm:text-[21px]">{stream.title}</h1>
                                     <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
                                         {series && (
-                                            <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] text-white/65">
-                                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#C6FF00]" aria-hidden />
+                                            <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-[var(--color-border-strong)]/10 bg-black/35 px-3 py-1.5 text-[11px] text-white/65">
+                                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]" aria-hidden />
                                                 <span className="min-w-0 truncate">{series.title}</span>
                                             </span>
                                         )}
                                         {progressLabel && (
-                                            <span className="inline-flex rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/62">
+                                            <span className="inline-flex rounded-full border border-[var(--color-border-strong)]/10 bg-black/35 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/62">
                                                 Episode {progressLabel}
                                             </span>
                                         )}
                                         {activeEpisode?.pubDate && (
-                                            <span className="inline-flex rounded-full border border-white/10 bg-black/35 px-2.5 py-1 text-[10px] text-white/55">
+                                            <span className="inline-flex rounded-full border border-[var(--color-border-strong)]/10 bg-black/35 px-2.5 py-1 text-[10px] text-white/55">
                                                 {formatEpisodeDate(activeEpisode.pubDate) || activeEpisode.pubDate}
                                             </span>
                                         )}
                                         {canSelectQuality && (
-                                            <label className="inline-flex items-center gap-1 rounded-full border border-white/12 bg-black/35 px-2.5 py-1">
+                                            <label className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)]/12 bg-black/35 px-2.5 py-1">
                                                 <span className="text-[10px] font-semibold uppercase tracking-wide text-white/55">Quality</span>
                                                 <select
                                                     value={stream.activeQuality || qualityOptions[0]?.id || ''}
@@ -329,7 +329,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                         type="button"
                                         disabled={!prevEp}
                                         onClick={() => prevEp && onChangeEpisode(episodeIndex - 1)}
-                                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 text-[12px] font-medium text-white/80 transition-colors hover:bg-white/10 disabled:opacity-25 sm:min-w-[118px]"
+                                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-3 text-[12px] font-medium text-white/80 transition-colors hover:bg-[var(--color-surface)]/10 disabled:opacity-25 sm:min-w-[118px]"
                                     >
                                         <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                                         <span className="truncate">Previous</span>
@@ -338,7 +338,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                         type="button"
                                         disabled={!nextEp}
                                         onClick={() => nextEp && onChangeEpisode(episodeIndex + 1)}
-                                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[#C6FF00]/45 bg-[#C6FF00]/18 px-3 text-[12px] font-semibold text-[#C6FF00] transition-colors hover:bg-[#C6FF00]/28 disabled:opacity-25 sm:min-w-[118px]"
+                                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--mx-color-c6ff00)]/45 bg-[var(--mx-color-c6ff00)]/18 px-3 text-[12px] font-semibold text-[var(--mx-color-c6ff00)] transition-colors hover:bg-[var(--mx-color-c6ff00)]/28 disabled:opacity-25 sm:min-w-[118px]"
                                     >
                                         <span className="truncate">Next</span>
                                         <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
@@ -347,7 +347,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                             </div>
 
                             {episodes.length > 1 && (
-                                <div className="mt-4 rounded-xl border border-white/10 bg-black/35 px-3.5 py-3">
+                                <div className="mt-4 rounded-xl border border-[var(--color-border-strong)]/10 bg-black/35 px-3.5 py-3">
                                     <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/45">Up Next</p>
                                     <p className="mt-1 line-clamp-2 text-[12px] font-medium leading-snug text-white/85">
                                         {nextEp ? nextEp.title : 'You reached the final episode in this series.'}
@@ -357,13 +357,13 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                         </div>
 
                         {episodes.length > 0 && (
-                            <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.04] p-3 sm:p-4 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+                            <div className="min-w-0 rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.04] p-3 sm:p-4 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
                                 <div className="mb-3 flex min-w-0 items-start justify-between gap-2">
                                     <div className="min-w-0">
                                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/42">Episode Queue</p>
                                         <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-white/90">{series?.title}</p>
                                     </div>
-                                    <span className="shrink-0 rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-medium tabular-nums text-white/55">{episodes.length}</span>
+                                    <span className="shrink-0 rounded-md border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.06] px-2 py-1 text-[10px] font-medium tabular-nums text-white/55">{episodes.length}</span>
                                 </div>
 
                                 <div className={`max-h-[42dvh] overflow-y-auto pr-1 lg:min-h-0 lg:max-h-none lg:flex-1 ${hideScroll}`}>
@@ -381,8 +381,8 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                                         onClick={() => onChangeEpisode(i)}
                                                         className={`group flex w-full min-w-0 items-center gap-2.5 rounded-xl border px-2 py-2 text-left transition-all ${
                                                             isCurrent
-                                                                ? 'border-[#C6FF00]/50 bg-[#C6FF00]/14'
-                                                                : 'border-white/10 bg-black/30 hover:border-white/20 hover:bg-white/[0.06]'
+                                                                ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-c6ff00)]/14'
+                                                                : 'border-[var(--color-border-strong)]/10 bg-black/30 hover:border-[var(--color-border-strong)]/20 hover:bg-[var(--color-surface)]/[0.06]'
                                                         }`}
                                                     >
                                                         <div className="relative h-12 w-[4.4rem] shrink-0 overflow-hidden rounded-lg bg-black/45">
@@ -399,14 +399,14 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                                                 </div>
                                                             )}
                                                             {isCurrent && (
-                                                                <span className="absolute left-1 top-1 z-[2] rounded bg-[#C6FF00]/90 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
+                                                                <span className="absolute left-1 top-1 z-[2] rounded bg-[var(--mx-color-c6ff00)]/90 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
                                                                     Live
                                                                 </span>
                                                             )}
                                                         </div>
 
                                                         <div className="min-w-0 flex-1">
-                                                            <p className={`line-clamp-2 text-[11px] font-semibold leading-snug ${isCurrent ? 'text-[#C6FF00]' : 'text-white/88'}`}>
+                                                            <p className={`line-clamp-2 text-[11px] font-semibold leading-snug ${isCurrent ? 'text-[var(--mx-color-c6ff00)]' : 'text-white/88'}`}>
                                                                 {ep.title}
                                                             </p>
                                                             <p className="mt-1 text-[9px] text-white/42">
@@ -424,7 +424,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                     </section>
 
                     <aside className="min-w-0 lg:h-full">
-                        <div className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.03] p-3 sm:p-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col">
+                        <div className="min-w-0 rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.03] p-3 sm:p-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col">
                             <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Suggested</p>
                             {recommendations.length > 0 ? (
                                 <div className={`mt-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 ${hideScroll}`}>
@@ -436,7 +436,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                                 <button
                                                     type="button"
                                                     onClick={() => onPlayFromSeries?.(rec, 0)}
-                                                    className="flex w-full gap-3 rounded-xl border border-transparent bg-black/25 p-2 text-left transition-colors hover:border-white/10 hover:bg-white/[0.06]"
+                                                    className="flex w-full gap-3 rounded-xl border border-transparent bg-black/25 p-2 text-left transition-colors hover:border-[var(--color-border-strong)]/10 hover:bg-[var(--color-surface)]/[0.06]"
                                                 >
                                                     <div className="relative h-[4.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-lg bg-black/30">
                                                         {sugThumb ? (
@@ -565,7 +565,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
             <MotionDiv
                 layout="size"
                 layoutRoot
-                className="lifesync-hentai-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+                className="lifesync-hentai-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-[var(--color-surface)] shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
                 onClick={e => e.stopPropagation()}
                 initial={lifeSyncDetailSheetEnterInitial}
                 animate={lifeSyncDetailSheetEnterAnimate}
@@ -605,29 +605,29 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                             <MotionDiv
                                 layoutId={posterLayoutId}
                                 transition={lifeSyncSharedLayoutTransitionProps}
-                                className="w-full overflow-hidden rounded-xl bg-[#f5f5f7] shadow-lg ring-1 ring-black/10"
+                                className="w-full overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)] shadow-lg ring-1 ring-black/10"
                                 style={{ aspectRatio: '2/3' }}
                             >
                                 {coverImg ? (
                                     <FadeInImg src={coverImg} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center">
-                                        <svg className="w-10 h-10 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" /></svg>
+                                        <svg className="w-10 h-10 text-[var(--mx-color-86868b)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" /></svg>
                                     </div>
                                 )}
                             </MotionDiv>
                         </div>
                         <div className="flex min-w-0 w-full flex-1 flex-col justify-end pb-1">
-                            <h2 className="wrap-anywhere text-[17px] font-bold leading-tight text-[#1d1d1f] line-clamp-4 sm:text-[22px] sm:line-clamp-3">
+                            <h2 className="wrap-anywhere text-[17px] font-bold leading-tight text-[var(--mx-color-1d1d1f)] line-clamp-4 sm:text-[22px] sm:line-clamp-3">
                                 {detail?.title || series.title}
                             </h2>
                             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                                <span className="inline-flex items-center gap-1 bg-[#C6FF00]/20 text-[#1d1d1f] text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                <span className="inline-flex items-center gap-1 bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-1d1d1f)] text-[10px] font-semibold px-2 py-0.5 rounded-full">
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
                                     {episodes.length === 1 ? '1 episode' : `${episodes.length} episodes`}
                                 </span>
                                 {detail?.releaseDate && (
-                                    <span className="text-[10px] font-medium text-[#86868b] bg-[#f5f5f7] px-2 py-0.5 rounded-full">{detail.releaseDate}</span>
+                                    <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">{detail.releaseDate}</span>
                                 )}
                             </div>
                             {genres.length > 0 && (
@@ -641,7 +641,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                                                 genreTagClick?.(g)
                                                 onClose()
                                             }}
-                                            className="bg-[#C6FF00]/10 text-[#1d1d1f] text-[10px] font-medium px-2 py-0.5 rounded-full hover:bg-[#C6FF00]/25 transition-colors cursor-pointer"
+                                            className="bg-[var(--mx-color-c6ff00)]/10 text-[var(--mx-color-1d1d1f)] text-[10px] font-medium px-2 py-0.5 rounded-full hover:bg-[var(--mx-color-c6ff00)]/25 transition-colors cursor-pointer"
                                         >
                                             {g}
                                         </button>
@@ -662,16 +662,16 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                     >
                     {/* Description */}
                     {(detailBusy || description) && (
-                        <div className="px-5 sm:px-6 py-3 border-b border-[#f0f0f0]">
+                        <div className="px-5 sm:px-6 py-3 border-b border-[var(--mx-color-f0f0f0)]">
                             {detailBusy && !description ? (
                                 <LifesyncTextLinesSkeleton lines={4} dark={isDarkTheme} />
                             ) : (
                                 <>
-                                    <p className={`text-[12px] leading-relaxed text-[#424245] ${descExpanded ? '' : 'line-clamp-3'}`}>
+                                    <p className={`text-[12px] leading-relaxed text-[var(--mx-color-424245)] ${descExpanded ? '' : 'line-clamp-3'}`}>
                                         {description}
                                     </p>
                                     {description.length > 200 && (
-                                        <button type="button" onClick={() => setDescExpanded(v => !v)} className="mt-1 text-[11px] font-semibold text-[#C6FF00] hover:underline">
+                                        <button type="button" onClick={() => setDescExpanded(v => !v)} className="mt-1 text-[11px] font-semibold text-[var(--mx-color-c6ff00)] hover:underline">
                                             {descExpanded ? 'Show less' : 'Show more'}
                                         </button>
                                     )}
@@ -682,7 +682,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
 
                     {/* Episode grid — 16:9 thumbs */}
                     <div className="px-5 sm:px-6 py-4">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b] mb-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)] mb-3">
                             {detailBusy
                                 ? 'Episodes'
                                 : episodes.length === 1
@@ -703,9 +703,9 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                                     key={ep.watchUrl || ep.slug || i}
                                     type="button"
                                     onClick={() => onPlayEpisode(playbackSeries, ep, i)}
-                                    className="group text-left overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-white shadow-sm hover:shadow-md hover:border-[#C6FF00]/40 transition-all"
+                                    className="group text-left overflow-hidden rounded-[14px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm hover:shadow-md hover:border-[var(--mx-color-c6ff00)]/40 transition-all"
                                 >
-                                    <div className="relative aspect-video w-full overflow-hidden bg-[#1d1d1f]">
+                                    <div className="relative aspect-video w-full overflow-hidden bg-[var(--mx-color-1d1d1f)]">
                                         {epThumbSrc ? (
                                             <LifesyncEpisodeThumbnail
                                                 src={epThumbSrc}
@@ -719,13 +719,13 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                                         )}
                                         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-1/2 bg-gradient-to-t from-black/75 via-black/25 to-transparent" aria-hidden />
                                         {ep.episodeNum > 0 && (
-                                            <span className="absolute left-2 top-2 z-[2] rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm ring-1 ring-white/10">
+                                            <span className="absolute left-2 top-2 z-[2] rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm ring-1 ring-[var(--color-border-strong)]/10">
                                                 E{ep.episodeNum}
                                             </span>
                                         )}
                                         <div className="absolute inset-0 z-[2] flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/25">
-                                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[#C6FF00] shadow-lg ring-2 ring-black/20">
-                                                <svg className="ml-0.5 h-4 w-4 text-[#1d1d1f]" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] shadow-lg ring-2 ring-black/20">
+                                                <svg className="ml-0.5 h-4 w-4 text-[var(--mx-color-1d1d1f)]" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                             </span>
                                         </div>
                                         <div className="absolute inset-x-0 bottom-0 z-[2] px-2.5 pb-2 pt-6">
@@ -752,8 +752,8 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
 const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
     return (
         <button type="button" onClick={() => onOpenDetail?.(series)} className="group w-full text-left">
-            <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden hover:shadow-md transition-all">
-                <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#f5f5f7]">
+            <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden hover:shadow-md transition-all">
+                <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
                     <MotionDiv
                         layoutId={hentaiSeriesPosterLayoutId(series.seriesKey)}
                         transition={lifeSyncSharedLayoutTransitionProps}
@@ -766,12 +766,12 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                                 imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                             >
                                 {series.episodeCount != null && (
-                                    <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
+                                    <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
                                         {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
                                     </span>
                                 )}
                                 {!series.episodeCount && series.episodes?.length && (
-                                    <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
+                                    <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
                                         {series.episodes.length === 1 ? '1 ep' : `${series.episodes.length} ep`}
                                     </span>
                                 )}
@@ -782,18 +782,18 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                             </LifesyncEpisodeThumbnail>
                         ) : (
                             <>
-                                <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                                <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
                                     <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" />
                                     </svg>
                                 </div>
                                 {series.episodeCount != null && (
-                                    <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
+                                    <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
                                         {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
                                     </span>
                                 )}
                                 {!series.episodeCount && series.episodes?.length && (
-                                    <span className="absolute right-2 top-2 z-[2] bg-white/95 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[#e5e5ea]">
+                                    <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
                                         {series.episodes.length === 1 ? '1 ep' : `${series.episodes.length} ep`}
                                     </span>
                                 )}
@@ -805,8 +805,8 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                         )}
                     </MotionDiv>
                 </div>
-                <div className="flex items-center justify-center gap-1.5 border-t border-[#f0f0f0] bg-[#fafafa] py-2.5 text-[11px] font-semibold text-[#1d1d1f]">
-                    <svg className="w-3.5 h-3.5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                <div className="flex items-center justify-center gap-1.5 border-t border-[var(--mx-color-f0f0f0)] bg-[var(--mx-color-fafafa)] py-2.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">
+                    <svg className="w-3.5 h-3.5 text-[var(--mx-color-86868b)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
                     </svg>
@@ -1172,14 +1172,14 @@ export default function LifeSyncHentai() {
     if (!isLifeSyncConnected) {
         return (
             <div className="max-w-4xl mx-auto">
-                <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[#1a1628]">Hentai</h1>
-                <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[#5b5670]">
+                <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Hentai</h1>
+                <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
                     Adults-only catalog and in-app streaming—connect LifeSync first, then enable NSFW in preferences if you use this hub.
                 </p>
-                <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
-                    <p className="text-[15px] font-bold text-[#1a1628] mb-2">LifeSync Not Connected</p>
-                    <p className="text-[13px] text-[#5b5670] mb-4">Connect LifeSync in your profile first.</p>
-                    <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
+                <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
+                    <p className="text-[15px] font-bold text-[var(--mx-color-1a1628)] mb-2">LifeSync Not Connected</p>
+                    <p className="text-[13px] text-[var(--mx-color-5b5670)] mb-4">Connect LifeSync in your profile first.</p>
+                    <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
                         Go to Integrations
                     </Link>
                 </div>
@@ -1191,25 +1191,25 @@ export default function LifeSyncHentai() {
         return (
             <div className="max-w-4xl mx-auto space-y-6">
                 <div>
-                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">LifeSync / Anime</p>
-                    <h1 className="text-[28px] font-bold tracking-tight text-[#1a1628]">Hentai</h1>
-                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
+                    <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync / Anime</p>
+                    <h1 className="text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Hentai</h1>
+                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
                         This area stays hidden until you allow mature content and turn on the Hentai plugin in integrations.
                     </p>
                 </div>
-                <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#fce7f3]/80">
-                    <p className="text-[15px] font-bold text-[#1a1628] mb-2">Restricted Content</p>
-                    <p className="text-[13px] text-[#5b5670] mb-4">
+                <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-fce7f3)]/80">
+                    <p className="text-[15px] font-bold text-[var(--mx-color-1a1628)] mb-2">Restricted Content</p>
+                    <p className="text-[13px] text-[var(--mx-color-5b5670)] mb-4">
                         {!nsfwEnabled
                             ? 'NSFW content is disabled. Enable it in your LifeSync preferences.'
                             : 'The Hentai plugin is disabled. Enable it in your profile integrations.'}
                     </p>
                     {!nsfwEnabled ? (
-                        <button type="button" onClick={enableNsfw} className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
+                        <button type="button" onClick={enableNsfw} className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
                             Enable NSFW Content
                         </button>
                     ) : (
-                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
+                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
                             Go to Integrations
                         </Link>
                     )}
@@ -1265,9 +1265,9 @@ export default function LifeSyncHentai() {
             {/* Header */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">LifeSync / Anime</p>
-                    <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight text-[#1a1628]">Hentai</h1>
-                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
+                    <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync / Anime</p>
+                    <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Hentai</h1>
+                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
                         Browse adult series, open details and episode lists, and watch in the built-in player. Use filters and sync to refresh the catalog.
                     </p>
                 </div>
@@ -1275,7 +1275,7 @@ export default function LifeSyncHentai() {
                     <button
                         onClick={() => load(page, debouncedSearch, true)}
                         disabled={busy}
-                        className="w-full sm:w-auto text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50"
+                        className="w-full sm:w-auto text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50"
                     >
                         {busy ? 'Syncing…' : 'Sync catalog'}
                     </button>
@@ -1292,17 +1292,17 @@ export default function LifeSyncHentai() {
                     value={searchQ}
                     onChange={e => { setSearchQ(e.target.value) }}
                     placeholder="Search WatchHentai titles…"
-                    className="flex-1 px-4 py-2.5 bg-[#f5f5f7] border border-[#e5e5ea] focus:border-[#C6FF00]/60 focus:bg-white rounded-xl text-[13px] text-[#1d1d1f] focus:outline-none transition-all"
+                    className="flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
                 />
                 <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-[auto_auto]">
                     <button
                         type="button"
                         onClick={() => setFiltersExpanded(p => !p)}
-                        className="rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-4 py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#ebebed]"
+                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
                     >
                         Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
                     </button>
-                    <button type="submit" disabled={busy} className="rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50">
+                    <button type="submit" disabled={busy} className="rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50">
                         Search
                     </button>
                 </div>
@@ -1318,10 +1318,10 @@ export default function LifeSyncHentai() {
                         transition={hentaiFilterExpandTransition}
                         className="overflow-hidden"
                     >
-                        <div className="rounded-[18px] border border-[#d2d2d7]/50 bg-white shadow-sm">
+                        <div className="rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm">
                             <div className="space-y-4 px-4 py-4">
                                 <div className="flex items-center justify-between gap-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Filters &amp; Genres</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Filters &amp; Genres</p>
                                     {activeFilterCount > 0 && (
                                         <button
                                             type="button"
@@ -1329,7 +1329,7 @@ export default function LifeSyncHentai() {
                                                 handleWatchGenreChange('')
                                                 handleWatchYearChange('')
                                             }}
-                                            className="text-[10px] font-semibold text-[#86868b] transition-colors hover:text-[#1d1d1f]"
+                                            className="text-[10px] font-semibold text-[var(--mx-color-86868b)] transition-colors hover:text-[var(--mx-color-1d1d1f)]"
                                         >
                                             Clear
                                         </button>
@@ -1337,15 +1337,15 @@ export default function LifeSyncHentai() {
                                 </div>
 
                             <div className="space-y-1.5">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Genre</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Genre</p>
                                     <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
                                         <button
                                             type="button"
                                             onClick={() => handleWatchGenreChange('')}
                                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                 !watchGenre
-                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
-                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
                                             }`}
                                         >
                                             All genres
@@ -1357,8 +1357,8 @@ export default function LifeSyncHentai() {
                                                 onClick={() => handleWatchGenreChange(opt.id)}
                                                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                     watchGenre === String(opt.id)
-                                                        ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
-                                                        : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                                        ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                        : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
                                                 }`}
                                             >
                                                 {opt.label}
@@ -1368,15 +1368,15 @@ export default function LifeSyncHentai() {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Sort order</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Sort order</p>
                                     <div className="flex flex-wrap gap-1.5">
                                         <button
                                             type="button"
                                             onClick={() => setSortOrder('trending')}
                                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                 sortOrder === 'trending'
-                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
-                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
                                             }`}
                                         >
                                             Trending
@@ -1386,8 +1386,8 @@ export default function LifeSyncHentai() {
                                             onClick={() => setSortOrder('latest')}
                                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                 sortOrder === 'latest'
-                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
-                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
                                             }`}
                                         >
                                             Latest
@@ -1397,8 +1397,8 @@ export default function LifeSyncHentai() {
                                             onClick={() => setSortOrder('random')}
                                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                 sortOrder === 'random'
-                                                    ? 'bg-[#C6FF00]/25 text-[#1d1d1f] ring-1 ring-[#C6FF00]/50'
-                                                    : 'bg-[#f5f5f7] text-[#86868b] hover:bg-[#ebebed]'
+                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
                                             }`}
                                         >
                                             Random
@@ -1408,11 +1408,11 @@ export default function LifeSyncHentai() {
 
                                 <div className="w-full max-w-[14rem]">
                                     <label className="flex flex-col gap-1">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868b]">Year</span>
+                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Year</span>
                                         <select
                                             value={watchYear}
                                             onChange={e => handleWatchYearChange(e.target.value)}
-                                            className="rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2 text-[12px] text-[#1d1d1f] focus:border-[#C6FF00]/60 focus:bg-white focus:outline-none"
+                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
                                         >
                                             <option value="">All years</option>
                                             {watchYearOptions.map(opt => (
@@ -1429,7 +1429,7 @@ export default function LifeSyncHentai() {
 
             {/* Stats */}
             {(catalog?.totalSeries != null || catalog?.totalEpisodes != null) && (
-                <p className="text-[11px] text-[#86868b]">
+                <p className="text-[11px] text-[var(--mx-color-86868b)]">
                     {catalog.totalSeries != null && <span>{catalog.totalSeries} series</span>}
                     {catalog.totalEpisodes != null && <span> · {catalog.totalEpisodes} episodes</span>}
                     {catalog?.totalUpcoming != null && <span> · {catalog.totalUpcoming} upcoming</span>}
@@ -1459,8 +1459,8 @@ export default function LifeSyncHentai() {
                         })}
                     </div>
                     {!filteredFlat.length && debouncedSearch && (
-                        <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm px-6 py-10 text-center">
-                            <p className="text-[13px] text-[#86868b]">No matches for "{debouncedSearch}".</p>
+                        <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm px-6 py-10 text-center">
+                            <p className="text-[13px] text-[var(--mx-color-86868b)]">No matches for "{debouncedSearch}".</p>
                         </div>
                     )}
                 </>
@@ -1474,21 +1474,21 @@ export default function LifeSyncHentai() {
                         ))}
                     </div>
                     <div className="flex items-center justify-center gap-2 flex-wrap">
-                        <button disabled={page <= 1 || busy} onClick={() => goPage(page - 1)} className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-30">
+                        <button disabled={page <= 1 || busy} onClick={() => goPage(page - 1)} className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-30">
                             Prev
                         </button>
-                        <span className="text-[12px] text-[#86868b] px-2">
+                        <span className="text-[12px] text-[var(--mx-color-86868b)] px-2">
                             Page {page}
                             {catalog?.hasMore === false && catalog?.totalSeries != null ? ` · ${catalog.totalSeries} total` : ''}
                         </span>
-                        <button disabled={busy || catalog?.hasMore === false} onClick={() => goPage(page + 1)} className="text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-30">
+                        <button disabled={busy || catalog?.hasMore === false} onClick={() => goPage(page + 1)} className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-30">
                             Next
                         </button>
                     </div>
                 </>
             ) : !busy ? (
-                <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm px-6 py-10 text-center">
-                    <p className="text-[13px] text-[#86868b]">No content to display.</p>
+                <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm px-6 py-10 text-center">
+                    <p className="text-[13px] text-[var(--mx-color-86868b)]">No content to display.</p>
                 </div>
             ) : null}
             </div>

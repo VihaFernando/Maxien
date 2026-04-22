@@ -42,9 +42,9 @@ export function MangaReadingShelf({
     const showSuggestions = !loading && !hasItems && Array.isArray(suggestions) && suggestions.length > 0
 
     return (
-        <section className="relative overflow-hidden rounded-[24px] border border-white/90 bg-gradient-to-br from-white via-[#faf8ff] to-[#fff7ed] shadow-[0_12px_40px_-14px_rgba(100,90,130,0.12)] ring-1 ring-[#e8e4ef]/70 sm:rounded-[28px]">
+        <section className="relative overflow-hidden rounded-[24px] border border-[var(--color-border-strong)]/90 bg-gradient-to-br from-[var(--color-surface)] via-[var(--mx-color-faf8ff)] to-[var(--mx-color-fff7ed)] shadow-[0_12px_40px_-14px_rgba(100,90,130,0.12)] ring-1 ring-[var(--mx-color-e8e4ef)]/70 sm:rounded-[28px]">
             <div
-                className="pointer-events-none absolute right-0 top-0 h-40 w-40 translate-x-1/4 -translate-y-1/4 rounded-full bg-[#a78bfa]/15 blur-3xl"
+                className="pointer-events-none absolute right-0 top-0 h-40 w-40 translate-x-1/4 -translate-y-1/4 rounded-full bg-[var(--mx-color-a78bfa)]/15 blur-3xl"
                 aria-hidden
             />
             <div className={expanded ? 'relative px-4 py-4 sm:px-6 sm:py-5' : 'relative px-4 py-2.5 sm:px-5'}>
@@ -52,14 +52,14 @@ export function MangaReadingShelf({
                     <div className="space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex min-w-0 flex-1 items-center gap-2.5">
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#fef3c7] to-[#d9f99d] text-[#1a1628] shadow-sm ring-1 ring-white">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--mx-color-fef3c7)] to-[var(--mx-color-d9f99d)] text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--color-border-strong)]">
                                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75" aria-hidden>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                                     </svg>
                                 </div>
                                 <div className="min-w-0">
-                                    <h2 className="text-[13px] font-bold tracking-tight text-[#1d1d1f]">Continue reading</h2>
-                                    <p className="truncate text-[10px] text-[#86868b]">{compactSubtitle}</p>
+                                    <h2 className="text-[13px] font-bold tracking-tight text-[var(--mx-color-1d1d1f)]">Continue reading</h2>
+                                    <p className="truncate text-[10px] text-[var(--mx-color-86868b)]">{compactSubtitle}</p>
                                 </div>
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
@@ -67,7 +67,7 @@ export function MangaReadingShelf({
                                     type="button"
                                     onClick={onRefresh}
                                     disabled={loading || syncBusy}
-                                    className="rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2.5 py-1.5 text-[10px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#ebebed] disabled:opacity-50"
+                                    className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)] disabled:opacity-50"
                                 >
                                     {loading ? '…' : 'Refresh'}
                                 </button>
@@ -75,14 +75,14 @@ export function MangaReadingShelf({
                                     type="button"
                                     onClick={onSync}
                                     disabled={loading || syncBusy || !hasItems}
-                                    className="rounded-lg bg-[#C6FF00] px-2.5 py-1.5 text-[10px] font-semibold text-[#1d1d1f] shadow-sm transition-colors hover:brightness-95 disabled:opacity-50"
+                                    className="rounded-lg bg-[var(--mx-color-c6ff00)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm transition-colors hover:brightness-95 disabled:opacity-50"
                                 >
                                     {syncBusy ? '…' : 'Sync'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setExpanded(true)}
-                                    className="inline-flex items-center gap-1 rounded-lg border border-[#e5e5ea] bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#fafafa]"
+                                    className="inline-flex items-center gap-1 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-fafafa)]"
                                     aria-expanded={false}
                                 >
                                     Expand
@@ -105,8 +105,8 @@ export function MangaReadingShelf({
                                             className="group w-[92px] shrink-0 snap-start text-left disabled:opacity-60"
                                             title="Resume"
                                         >
-                                            <div className="overflow-hidden rounded-xl border border-[#d2d2d7]/50 bg-white shadow-sm ring-2 ring-transparent transition-all group-hover:ring-[#C6FF00]/60 group-hover:shadow-md">
-                                                <div className="relative aspect-[2/3] bg-[#f5f5f7]">
+                                            <div className="overflow-hidden rounded-xl border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm ring-2 ring-transparent transition-all group-hover:ring-[var(--mx-color-c6ff00)]/60 group-hover:shadow-md">
+                                                <div className="relative aspect-[2/3] bg-[var(--mx-color-f5f5f7)]">
                                                     {entry.coverUrl ? (
                                                         <LifesyncEpisodeThumbnail
                                                             src={entry.coverUrl}
@@ -116,27 +116,27 @@ export function MangaReadingShelf({
                                                         />
                                                     ) : null}
                                                     <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 via-black/10 to-transparent pb-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                                        <span className="rounded-full bg-[#C6FF00] px-2.5 py-1 text-[8px] font-bold uppercase tracking-wide text-[#1a1628] shadow-md ring-1 ring-black/10">
+                                                        <span className="rounded-full bg-[var(--mx-color-c6ff00)] px-2.5 py-1 text-[8px] font-bold uppercase tracking-wide text-[var(--mx-color-1a1628)] shadow-md ring-1 ring-black/10">
                                                             Resume
                                                         </span>
                                                     </div>
                                                     {entry.hasNewChapter && (
-                                                        <span className="absolute left-1 top-1 h-2 w-2 rounded-full bg-[#C6FF00] ring-2 ring-white" title="New chapter" />
+                                                        <span className="absolute left-1 top-1 h-2 w-2 rounded-full bg-[var(--mx-color-c6ff00)] ring-2 ring-[var(--color-border-strong)]" title="New chapter" />
                                                     )}
                                                 </div>
                                             </div>
-                                            <p className="mt-1.5 line-clamp-2 text-[9px] font-medium leading-tight text-[#1d1d1f]">
+                                            <p className="mt-1.5 line-clamp-2 text-[9px] font-medium leading-tight text-[var(--mx-color-1d1d1f)]">
                                                 {entry.title}
                                             </p>
                                         </button>
                                     ))}
                                 </div>
                                 <div className="mt-2 px-4 flex items-center justify-between">
-                                    <p className="text-[10px] text-[#86868b]">Tap a cover to resume</p>
+                                    <p className="text-[10px] text-[var(--mx-color-86868b)]">Tap a cover to resume</p>
                                     <button
                                         type="button"
                                         onClick={() => setExpanded(true)}
-                                        className="text-[10px] font-semibold text-[#1d1d1f] hover:underline"
+                                        className="text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] hover:underline"
                                     >
                                         View all
                                     </button>
@@ -154,8 +154,8 @@ export function MangaReadingShelf({
                                             onClick={() => onPickSuggestion?.(m)}
                                             className="group w-[92px] shrink-0 snap-start text-left"
                                         >
-                                            <div className="overflow-hidden rounded-xl border border-[#d2d2d7]/50 bg-white shadow-sm ring-2 ring-transparent transition-all group-hover:ring-[#C6FF00]/60 group-hover:shadow-md">
-                                                <div className="relative aspect-[2/3] bg-[#f5f5f7]">
+                                            <div className="overflow-hidden rounded-xl border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm ring-2 ring-transparent transition-all group-hover:ring-[var(--mx-color-c6ff00)]/60 group-hover:shadow-md">
+                                                <div className="relative aspect-[2/3] bg-[var(--mx-color-f5f5f7)]">
                                                     {m.coverUrl ? (
                                                         <LifesyncEpisodeThumbnail
                                                             src={m.coverUrl}
@@ -165,26 +165,26 @@ export function MangaReadingShelf({
                                                         />
                                                     ) : null}
                                                     <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 via-black/10 to-transparent pb-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                                                        <span className="rounded-full bg-[#a78bfa] px-2.5 py-1 text-[8px] font-bold uppercase tracking-wide text-white shadow-md ring-1 ring-black/20">
+                                                        <span className="rounded-full bg-[var(--mx-color-a78bfa)] px-2.5 py-1 text-[8px] font-bold uppercase tracking-wide text-white shadow-md ring-1 ring-black/20">
                                                             Open
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <p className="mt-1.5 line-clamp-2 text-[9px] font-medium leading-tight text-[#1d1d1f]">
+                                            <p className="mt-1.5 line-clamp-2 text-[9px] font-medium leading-tight text-[var(--mx-color-1d1d1f)]">
                                                 {m.title}
                                             </p>
                                         </button>
                                     ))}
                                 </div>
                                 <div className="mt-2 px-4 sm:px-5 flex items-center justify-between">
-                                    <p className="text-[10px] text-[#86868b]">
+                                    <p className="text-[10px] text-[var(--mx-color-86868b)]">
                                         Suggestions — pick one to start tracking
                                     </p>
                                     <button
                                         type="button"
                                         onClick={() => setExpanded(true)}
-                                        className="text-[10px] font-semibold text-[#1d1d1f] hover:underline"
+                                        className="text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] hover:underline"
                                     >
                                         Browse
                                     </button>
@@ -196,14 +196,14 @@ export function MangaReadingShelf({
                     <>
                         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#fef3c7] to-[#bfdbfe] text-[#1a1628] shadow-sm ring-2 ring-white">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--mx-color-fef3c7)] to-[var(--mx-color-bfdbfe)] text-[var(--mx-color-1a1628)] shadow-sm ring-2 ring-[var(--color-border-strong)]">
                                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.75" aria-hidden>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0112 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
                                     </svg>
                                 </div>
                                 <div className="min-w-0">
-                                    <h2 className="text-[15px] font-bold tracking-tight text-[#1d1d1f] sm:text-[17px]">Continue reading</h2>
-                                    <p className="text-[11px] text-[#86868b]">{statusLine}</p>
+                                    <h2 className="text-[15px] font-bold tracking-tight text-[var(--mx-color-1d1d1f)] sm:text-[17px]">Continue reading</h2>
+                                    <p className="text-[11px] text-[var(--mx-color-86868b)]">{statusLine}</p>
                                 </div>
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -211,7 +211,7 @@ export function MangaReadingShelf({
                                     type="button"
                                     onClick={onRefresh}
                                     disabled={loading || syncBusy}
-                                    className="rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2 text-[11px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#ebebed] disabled:opacity-50"
+                                    className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)] disabled:opacity-50"
                                 >
                                     {loading ? 'Refreshing…' : 'Refresh'}
                                 </button>
@@ -219,14 +219,14 @@ export function MangaReadingShelf({
                                     type="button"
                                     onClick={onSync}
                                     disabled={loading || syncBusy || !hasItems}
-                                    className="rounded-xl bg-[#C6FF00] px-3 py-2 text-[11px] font-semibold text-[#1d1d1f] shadow-sm transition-colors hover:brightness-95 disabled:opacity-50"
+                                    className="rounded-xl bg-[var(--mx-color-c6ff00)] px-3 py-2 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm transition-colors hover:brightness-95 disabled:opacity-50"
                                 >
                                     {syncBusy ? 'Syncing…' : 'Sync updates'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setExpanded(false)}
-                                    className="inline-flex items-center gap-1 rounded-xl border border-[#e5e5ea] bg-white px-3 py-2 text-[11px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#fafafa]"
+                                    className="inline-flex items-center gap-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-fafafa)]"
                                     aria-expanded
                                 >
                                     Compact
@@ -238,7 +238,7 @@ export function MangaReadingShelf({
                         </div>
 
                         {nsfwHiddenCount > 0 && (
-                            <p className="mb-3 text-[10px] text-[#86868b]">
+                            <p className="mb-3 text-[10px] text-[var(--mx-color-86868b)]">
                                 NSFW is off — {nsfwHiddenCount} saved title{nsfwHiddenCount === 1 ? '' : 's'} hidden.
                             </p>
                         )}
@@ -246,9 +246,9 @@ export function MangaReadingShelf({
                         {loading && !hasItems ? (
                     <LifesyncMangaRailSkeleton count={5} />
                 ) : !hasItems ? (
-                    <div className="rounded-[18px] border border-dashed border-[#e5e5ea] bg-[#fafafa] px-5 py-8 text-center">
-                        <p className="text-[13px] font-medium text-[#1d1d1f]">Nothing on your shelf yet</p>
-                        <p className="mt-1 text-[12px] text-[#86868b]">Browse Popular or Recent, open a chapter, and we’ll save your place.</p>
+                    <div className="rounded-[18px] border border-dashed border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] px-5 py-8 text-center">
+                        <p className="text-[13px] font-medium text-[var(--mx-color-1d1d1f)]">Nothing on your shelf yet</p>
+                        <p className="mt-1 text-[12px] text-[var(--mx-color-86868b)]">Browse Popular or Recent, open a chapter, and we’ll save your place.</p>
                     </div>
                 ) : (
                     <div className="-mx-1 flex gap-4 overflow-x-auto pb-2 pt-1 px-1 snap-x snap-mandatory">
@@ -257,8 +257,8 @@ export function MangaReadingShelf({
                                 key={`${entry.source}-${entry.mangaId}-${entry.lastChapterId || 'unknown'}`}
                                 className="group relative w-[148px] shrink-0 snap-start sm:w-[164px]"
                             >
-                                <div className="overflow-hidden rounded-[18px] border border-[#d2d2d7]/50 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
-                                    <div className="relative aspect-[2/3] w-full bg-[#f5f5f7]">
+                                <div className="overflow-hidden rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm transition-shadow duration-300 hover:shadow-md">
+                                    <div className="relative aspect-[2/3] w-full bg-[var(--mx-color-f5f5f7)]">
                                         {entry.coverUrl ? (
                                             <LifesyncEpisodeThumbnail
                                                 src={entry.coverUrl}
@@ -267,21 +267,21 @@ export function MangaReadingShelf({
                                                 imgProps={mangadexImageProps(entry.coverUrl)}
                                             />
                                         ) : (
-                                            <div className="flex h-full items-center justify-center text-[#86868b]">
+                                            <div className="flex h-full items-center justify-center text-[var(--mx-color-86868b)]">
                                                 <svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                                                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75v14.25A8.987 8.987 0 0112 18c2.305 0 4.408.867 6 2.292V7.758c-1.063-.865-2.29-1.507-3.6-1.875" />
                                                 </svg>
                                             </div>
                                         )}
                                         {entry.hasNewChapter && (
-                                            <span className="absolute left-2 top-2 rounded-full bg-[#C6FF00]/90 px-2 py-0.5 text-[9px] font-bold text-[#1d1d1f]">
+                                            <span className="absolute left-2 top-2 rounded-full bg-[var(--mx-color-c6ff00)]/90 px-2 py-0.5 text-[9px] font-bold text-[var(--mx-color-1d1d1f)]">
                                                 New
                                             </span>
                                         )}
                                         <button
                                             type="button"
                                             onClick={() => onRemove?.(entry)}
-                                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-[#86868b] opacity-0 shadow-sm ring-1 ring-[#e5e5ea] transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
+                                            className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-surface)]/95 text-[var(--mx-color-86868b)] opacity-0 shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition-opacity hover:bg-red-50 hover:text-red-500 group-hover:opacity-100"
                                             aria-label="Remove from shelf"
                                         >
                                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -289,9 +289,9 @@ export function MangaReadingShelf({
                                             </svg>
                                         </button>
                                     </div>
-                                    <div className="border-t border-[#f0f0f0] p-2.5">
-                                        <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-[#1d1d1f]">{entry.title}</p>
-                                        <p className="mt-1 line-clamp-1 text-[9px] text-[#86868b]">
+                                    <div className="border-t border-[var(--mx-color-f0f0f0)] p-2.5">
+                                        <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-[var(--mx-color-1d1d1f)]">{entry.title}</p>
+                                        <p className="mt-1 line-clamp-1 text-[9px] text-[var(--mx-color-86868b)]">
                                             {sourceLabel(entry.source)}
                                             {entry.lastChapterLabel ? ` · ${entry.lastChapterLabel}` : ''}
                                         </p>
@@ -299,7 +299,7 @@ export function MangaReadingShelf({
                                             type="button"
                                             disabled={continueDisabled}
                                             onClick={() => onContinue?.(entry)}
-                                            className="mt-2 w-full rounded-xl bg-gradient-to-r from-[#C6FF00] to-[#bef264] py-2 text-[11px] font-bold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition hover:brightness-95 disabled:opacity-50"
+                                            className="mt-2 w-full rounded-xl bg-gradient-to-r from-[var(--mx-color-c6ff00)] to-[var(--mx-color-bef264)] py-2 text-[11px] font-bold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition hover:brightness-95 disabled:opacity-50"
                                         >
                                             Resume
                                         </button>
@@ -401,21 +401,21 @@ export function LifeSyncHubMangaReading({ entries, loading, className = '' }) {
                                                 imgProps={mangadexImageProps(entry.coverUrl)}
                                             />
                                         ) : null}
-                                        <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-white/75 via-transparent to-transparent pb-3 opacity-100 transition duration-200 sm:opacity-0 sm:group-hover:opacity-100">
-                                            <span className="rounded-full bg-[#C6FF00] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-900">
+                                        <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-[var(--color-surface)]/75 via-transparent to-transparent pb-3 opacity-100 transition duration-200 sm:opacity-0 sm:group-hover:opacity-100">
+                                            <span className="rounded-full bg-[var(--mx-color-c6ff00)] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-900">
                                                 Resume
                                             </span>
                                         </div>
                                         {entry.hasNewChapter ? (
                                             <span
-                                                className="absolute left-2 top-2 z-1 rounded-md bg-[#C6FF00] px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wide text-slate-900 shadow-sm ring-1 ring-white/90"
+                                                className="absolute left-2 top-2 z-1 rounded-md bg-[var(--mx-color-c6ff00)] px-1.5 py-0.5 text-[7px] font-black uppercase tracking-wide text-slate-900 shadow-sm ring-1 ring-[var(--color-border-strong)]/90"
                                                 title="New chapter"
                                             >
                                                 New
                                             </span>
                                         ) : null}
                                     </div>
-                                    <div className="border-t border-amber-200/90 bg-white px-2 py-2">
+                                    <div className="border-t border-amber-200/90 bg-[var(--color-surface)] px-2 py-2">
                                         <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-slate-900">{entry.title}</p>
                                     </div>
                                 </div>

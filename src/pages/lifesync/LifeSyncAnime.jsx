@@ -108,13 +108,13 @@ const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
       onClick={() => anime.id != null && onSelect?.(anime)}
       className="group w-full text-left"
     >
-      <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden hover:shadow-md transition-all">
-        <div className="relative aspect-[2/3] w-full overflow-hidden bg-[#f5f5f7]">
+      <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden hover:shadow-md transition-all">
+        <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
           {anime.id != null ? (
             <MotionDiv
               layoutId={animePosterLayoutId(anime.id)}
               transition={lifeSyncSharedLayoutTransitionProps}
-              className="absolute inset-0 bg-[#f5f5f7]"
+              className="absolute inset-0 bg-[var(--mx-color-f5f5f7)]"
             >
               {pic ? (
                 <img
@@ -124,7 +124,7 @@ const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
                   loading="lazy"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
                   <svg
                     className="w-10 h-10"
                     fill="none"
@@ -149,7 +149,7 @@ const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
               loading="lazy"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+            <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
               <svg
                 className="w-10 h-10"
                 fill="none"
@@ -167,12 +167,12 @@ const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
           )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
           {ranking != null && (
-            <span className="absolute left-2 top-2 bg-[#C6FF00] text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg">
+            <span className="absolute left-2 top-2 bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg">
               #{ranking}
             </span>
           )}
           {anime.mean != null && (
-            <span className="absolute right-2 top-2 bg-white/90 text-[#1d1d1f] text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5">
+            <span className="absolute right-2 top-2 bg-[var(--color-surface)]/90 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5">
               <svg
                 className="w-3 h-3 text-amber-500 fill-amber-500"
                 viewBox="0 0 20 20"
@@ -188,21 +188,21 @@ const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
             </p>
             <div className="mt-1 flex flex-wrap gap-1">
               {anime.media_type && (
-                <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] font-medium uppercase text-white backdrop-blur-sm">
+                <span className="rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] font-medium uppercase text-white backdrop-blur-sm">
                   {anime.media_type}
                 </span>
               )}
               {anime.num_episodes != null && (
-                <span className="rounded bg-white/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
+                <span className="rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
                   {anime.num_episodes} ep
                 </span>
               )}
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-1.5 border-t border-[#f0f0f0] bg-[#fafafa] py-2.5 text-[11px] font-semibold text-[#1d1d1f]">
+        <div className="flex items-center justify-center gap-1.5 border-t border-[var(--mx-color-f0f0f0)] bg-[var(--mx-color-fafafa)] py-2.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">
           <svg
-            className="h-3.5 w-3.5 text-[#86868b]"
+            className="h-3.5 w-3.5 text-[var(--mx-color-86868b)]"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -236,10 +236,10 @@ const MyListCard = memo(function MyListCard({ node, listStatus, onSelect }) {
     completed: "bg-blue-50 text-blue-700 border-blue-100",
     on_hold: "bg-amber-50 text-amber-700 border-amber-100",
     dropped: "bg-red-50 text-red-700 border-red-100",
-    plan_to_watch: "bg-[#f5f5f7] text-[#86868b] border-[#e5e5ea]",
+    plan_to_watch: "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)]",
   };
   const badge =
-    statusColors[st.status] || "bg-[#f5f5f7] text-[#86868b] border-[#e5e5ea]";
+    statusColors[st.status] || "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)]";
 
   return (
     <button
@@ -247,8 +247,8 @@ const MyListCard = memo(function MyListCard({ node, listStatus, onSelect }) {
       onClick={() => anime.id != null && onSelect?.(anime)}
       className="group w-full text-left"
     >
-      <div className="bg-white rounded-[16px] border border-[#d2d2d7]/50 shadow-sm p-3 flex gap-3 hover:shadow-md transition-all">
-        <div className="h-24 w-16 shrink-0 overflow-hidden rounded-xl bg-[#f5f5f7]">
+      <div className="bg-[var(--color-surface)] rounded-[16px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-3 flex gap-3 hover:shadow-md transition-all">
+        <div className="h-24 w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)]">
           {anime.id != null ? (
             <MotionDiv
               layoutId={animePosterLayoutId(anime.id)}
@@ -274,7 +274,7 @@ const MyListCard = memo(function MyListCard({ node, listStatus, onSelect }) {
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-[#1d1d1f] line-clamp-2">
+          <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] line-clamp-2">
             {anime.title}
           </p>
           <span
@@ -282,7 +282,7 @@ const MyListCard = memo(function MyListCard({ node, listStatus, onSelect }) {
           >
             {(st.status || "").replace(/_/g, " ")}
           </span>
-          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#86868b]">
+          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[var(--mx-color-86868b)]">
             {st.score > 0 && (
               <span className="flex items-center gap-0.5">
                 <svg
@@ -471,7 +471,7 @@ function DetailWatchSection({
 
   return (
     <div className=" pt-4 space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b]">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)]">
         Watch
       </p>
       <AnimatePresence mode="sync" initial={false}>
@@ -496,9 +496,9 @@ function DetailWatchSection({
           >
             {streamData?.matchedStreamTitle &&
               streamData.matchedStreamTitle !== malTitle && (
-                <p className="text-[11px] text-[#86868b]">
+                <p className="text-[11px] text-[var(--mx-color-86868b)]">
                   Mirror match:{" "}
-                  <span className="font-medium text-[#1d1d1f]">
+                  <span className="font-medium text-[var(--mx-color-1d1d1f)]">
                     {streamData.matchedStreamTitle}
                   </span>
                 </p>
@@ -518,12 +518,12 @@ function DetailWatchSection({
                     onClick={() =>
                       openSeries(streamEps[resumeIndex], resumeIndex)
                     }
-                    className="w-full rounded-[14px] border border-[#C6FF00]/30 bg-[#C6FF00]/10 px-4 py-3 text-left shadow-sm transition hover:border-[#C6FF00]/50 hover:bg-[#C6FF00]/14"
+                    className="w-full rounded-[14px] border border-[var(--mx-color-c6ff00)]/30 bg-[var(--mx-color-c6ff00)]/10 px-4 py-3 text-left shadow-sm transition hover:border-[var(--mx-color-c6ff00)]/50 hover:bg-[var(--mx-color-c6ff00)]/14"
                   >
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[#C6FF00]">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-c6ff00)]">
                       Continue
                     </p>
-                    <p className="mt-1 text-[13px] font-semibold text-[#1d1d1f]">
+                    <p className="mt-1 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">
                       Resume episode {resumeLastEp}
                       {streamEps[resumeIndex]?.title
                         ? ` · ${streamEps[resumeIndex].title}`
@@ -550,9 +550,9 @@ function DetailWatchSection({
                         onMouseEnter={warmStreamCatalog}
                         onFocus={warmStreamCatalog}
                         onClick={() => openSeries(ep, i)}
-                        className="group h-full w-full overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-[#fafafa] text-left shadow-sm transition-all hover:border-[#C6FF00]/40 hover:shadow-md"
+                        className="group h-full w-full overflow-hidden rounded-[14px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--mx-color-fafafa)] text-left shadow-sm transition-all hover:border-[var(--mx-color-c6ff00)]/40 hover:shadow-md"
                       >
-                        <div className="relative aspect-video w-full overflow-hidden bg-[#f5f5f7]">
+                        <div className="relative aspect-video w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
                           {ep.thumbnailUrl || pic ? (
                             <img
                               src={ep.thumbnailUrl || pic}
@@ -561,7 +561,7 @@ function DetailWatchSection({
                               loading="lazy"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                            <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
                               <svg
                                 className="h-8 w-8"
                                 fill="currentColor"
@@ -572,14 +572,14 @@ function DetailWatchSection({
                             </div>
                           )}
                           {ep.number != null && (
-                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[#1d1d1f]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
+                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[var(--mx-color-1d1d1f)]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
                               E{ep.number}
                             </span>
                           )}
                           <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C6FF00] shadow-lg">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] shadow-lg">
                               <svg
-                                className="ml-0.5 h-4 w-4 text-[#1d1d1f]"
+                                className="ml-0.5 h-4 w-4 text-[var(--mx-color-1d1d1f)]"
                                 fill="currentColor"
                                 viewBox="0 0 24 24"
                               >
@@ -589,7 +589,7 @@ function DetailWatchSection({
                           </div>
                         </div>
                         <div className="px-2 py-2">
-                          <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-[#1d1d1f]">
+                          <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-[var(--mx-color-1d1d1f)]">
                             {ep.title}
                           </p>
                         </div>
@@ -611,9 +611,9 @@ function DetailWatchSection({
                         onMouseEnter={warmStreamCatalog}
                         onFocus={warmStreamCatalog}
                         onClick={() => openSeries(ep, i)}
-                        className="group h-full w-full overflow-hidden rounded-[14px] border border-[#d2d2d7]/50 bg-[#fafafa] text-left shadow-sm transition-all hover:border-[#C6FF00]/40 hover:shadow-md"
+                        className="group h-full w-full overflow-hidden rounded-[14px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--mx-color-fafafa)] text-left shadow-sm transition-all hover:border-[var(--mx-color-c6ff00)]/40 hover:shadow-md"
                       >
-                        <div className="relative aspect-video w-full overflow-hidden bg-[#f5f5f7]">
+                        <div className="relative aspect-video w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
                           {ep.thumbnailUrl || pic ? (
                             <img
                               src={ep.thumbnailUrl || pic}
@@ -622,7 +622,7 @@ function DetailWatchSection({
                               loading="lazy"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[#86868b]">
+                            <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
                               <svg
                                 className="h-8 w-8"
                                 fill="currentColor"
@@ -633,14 +633,14 @@ function DetailWatchSection({
                             </div>
                           )}
                           {ep.number != null && (
-                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[#1d1d1f]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
+                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[var(--mx-color-1d1d1f)]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
                               E{ep.number}
                             </span>
                           )}
                           <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C6FF00] shadow-lg">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] shadow-lg">
                               <svg
-                                className="ml-0.5 h-4 w-4 text-[#1d1d1f]"
+                                className="ml-0.5 h-4 w-4 text-[var(--mx-color-1d1d1f)]"
                                 fill="currentColor"
                                 viewBox="0 0 24 24"
                               >
@@ -650,7 +650,7 @@ function DetailWatchSection({
                           </div>
                         </div>
                         <div className="px-2 py-2">
-                          <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-[#1d1d1f]">
+                          <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-[var(--mx-color-1d1d1f)]">
                             {ep.title}
                           </p>
                         </div>
@@ -661,12 +661,12 @@ function DetailWatchSection({
               )
             ) : null}
             {streamData && streamEps.length === 0 ? (
-              <p className="text-[12px] text-[#86868b]">
+              <p className="text-[12px] text-[var(--mx-color-86868b)]">
                 No playable episodes were found for this mirror.
               </p>
             ) : null}
             {streamData === null ? (
-              <p className="text-[12px] text-[#86868b]">
+              <p className="text-[12px] text-[var(--mx-color-86868b)]">
                 We couldn’t find this title on the selected mirror. Try a different mirror.
               </p>
             ) : null}
@@ -765,7 +765,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
       <MotionDiv
         layout="size"
         layoutRoot
-        className="lifesync-anime-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+        className="lifesync-anime-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-[var(--color-surface)] shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         initial={lifeSyncDetailSheetEnterInitial}
         animate={lifeSyncDetailSheetEnterAnimate}
@@ -818,7 +818,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
             <MotionDiv
               layoutId={animePosterLayoutId(animeId)}
               transition={lifeSyncSharedLayoutTransitionProps}
-              className="w-24 shrink-0 overflow-hidden rounded-xl bg-[#f5f5f7] shadow-lg ring-1 ring-black/10 sm:w-36"
+              className="w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)] shadow-lg ring-1 ring-black/10 sm:w-36"
               style={{ aspectRatio: "2/3" }}
             >
               {heroPic ? (
@@ -830,22 +830,22 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
               ) : busy ? (
                 <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center gap-1.5">
                   <span
-                    className="lifesync-dot-bounce h-2 w-2 rounded-full bg-[#C6FF00]"
+                    className="lifesync-dot-bounce h-2 w-2 rounded-full bg-[var(--mx-color-c6ff00)]"
                     aria-hidden
                   />
                   <span
-                    className="lifesync-dot-bounce lifesync-dot-bounce-delay-1 h-2 w-2 rounded-full bg-[#C6FF00]"
+                    className="lifesync-dot-bounce lifesync-dot-bounce-delay-1 h-2 w-2 rounded-full bg-[var(--mx-color-c6ff00)]"
                     aria-hidden
                   />
                   <span
-                    className="lifesync-dot-bounce lifesync-dot-bounce-delay-2 h-2 w-2 rounded-full bg-[#C6FF00]"
+                    className="lifesync-dot-bounce lifesync-dot-bounce-delay-2 h-2 w-2 rounded-full bg-[var(--mx-color-c6ff00)]"
                     aria-hidden
                   />
                 </div>
               ) : (
                 <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center">
                   <svg
-                    className="h-10 w-10 text-[#86868b]"
+                    className="h-10 w-10 text-[var(--mx-color-86868b)]"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -862,9 +862,9 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
             </MotionDiv>
 
             <div className="flex w-full min-w-0 flex-1 flex-col justify-end pb-1">
-              <h2 className="wrap-anywhere line-clamp-4 text-[17px] font-bold leading-tight text-[#1d1d1f] sm:line-clamp-3 sm:text-[22px]">
+              <h2 className="wrap-anywhere line-clamp-4 text-[17px] font-bold leading-tight text-[var(--mx-color-1d1d1f)] sm:line-clamp-3 sm:text-[22px]">
                 {busy && !preview?.title ? (
-                  <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[#ebebed]" />
+                  <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[var(--mx-color-ebebed)]" />
                 ) : data?.title ? (
                   data.title
                 ) : preview?.title ? (
@@ -872,14 +872,14 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                 ) : !busy ? (
                 "Couldn\u2019t load details"
                 ) : (
-                  <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[#ebebed]" />
+                  <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[var(--mx-color-ebebed)]" />
                 )}
               </h2>
 
               {showPreviewMeta ? (
                 <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                   {preview.mean != null && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/20 px-2 py-0.5 text-[10px] font-semibold text-[#1d1d1f]">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mx-color-c6ff00)]/20 px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-1d1d1f)]">
                       <svg
                         className="h-3 w-3 text-amber-500 fill-amber-500"
                         viewBox="0 0 20 20"
@@ -890,12 +890,12 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                     </span>
                   )}
                   {preview.num_episodes != null && (
-                    <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium text-[#86868b]">
+                    <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium text-[var(--mx-color-86868b)]">
                       {preview.num_episodes} ep
                     </span>
                   )}
                   {preview.media_type && (
-                    <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium uppercase text-[#86868b]">
+                    <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium uppercase text-[var(--mx-color-86868b)]">
                       {preview.media_type}
                     </span>
                   )}
@@ -906,7 +906,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                 <>
                   <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                     {data.mean != null && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#C6FF00]/20 px-2 py-0.5 text-[10px] font-semibold text-[#1d1d1f]">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mx-color-c6ff00)]/20 px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-1d1d1f)]">
                         <svg
                           className="h-3 w-3 text-amber-500 fill-amber-500"
                           viewBox="0 0 20 20"
@@ -917,17 +917,17 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                       </span>
                     )}
                     {data.status && (
-                      <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium capitalize text-[#86868b]">
+                      <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--mx-color-86868b)]">
                         {String(data.status).replace(/_/g, " ")}
                       </span>
                     )}
                     {data.num_episodes != null && (
-                      <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium text-[#86868b]">
+                      <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium text-[var(--mx-color-86868b)]">
                         {data.num_episodes} ep
                       </span>
                     )}
                     {data.media_type && (
-                      <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-medium uppercase text-[#86868b]">
+                      <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium uppercase text-[var(--mx-color-86868b)]">
                         {data.media_type}
                       </span>
                     )}
@@ -938,7 +938,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                       {genres.map((g) => (
                         <span
                           key={g.id || g.name}
-                          className="rounded-full bg-[#C6FF00]/10 px-2 py-0.5 text-[10px] font-medium text-[#1d1d1f]"
+                          className="rounded-full bg-[var(--mx-color-c6ff00)]/10 px-2 py-0.5 text-[10px] font-medium text-[var(--mx-color-1d1d1f)]"
                         >
                           {g.name}
                         </span>
@@ -962,11 +962,11 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
               transition={lifeSyncDetailAnimeContentRevealTransition}
             >
               {(description || data.my_list_status) && (
-                <div className="border-b border-[#f0f0f0] px-5 py-3 sm:px-6">
+                <div className="border-b border-[var(--mx-color-f0f0f0)] px-5 py-3 sm:px-6">
                   {description && (
                     <>
                       <p
-                        className={`text-[12px] leading-relaxed text-[#424245] ${descExpanded ? "" : "line-clamp-3"}`}
+                        className={`text-[12px] leading-relaxed text-[var(--mx-color-424245)] ${descExpanded ? "" : "line-clamp-3"}`}
                       >
                         {description}
                       </p>
@@ -974,7 +974,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                         <button
                           type="button"
                           onClick={() => setDescExpanded((v) => !v)}
-                          className="mt-1 text-[11px] font-semibold text-[#1d1d1f] hover:underline"
+                          className="mt-1 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] hover:underline"
                         >
                           {descExpanded ? "Show less" : "Show more"}
                         </button>
@@ -983,21 +983,21 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                   )}
 
                   {data.my_list_status && (
-                    <div className={`${description ? "mt-3" : ""} rounded-2xl bg-[#f5f5f7] p-4`}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[#86868b]">
+                    <div className={`${description ? "mt-3" : ""} rounded-2xl bg-[var(--mx-color-f5f5f7)] p-4`}>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)]">
                         Your List Status
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                        <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-semibold capitalize text-[#1d1d1f]">
+                        <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-0.5 font-semibold capitalize text-[var(--mx-color-1d1d1f)]">
                           {(data.my_list_status.status || "").replace(/_/g, " ")}
                         </span>
                         {data.my_list_status.score > 0 && (
-                          <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-semibold text-[#1d1d1f]">
+                          <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-0.5 font-semibold text-[var(--mx-color-1d1d1f)]">
                             Score: {data.my_list_status.score}/10
                           </span>
                         )}
                         {data.my_list_status.num_episodes_watched != null && (
-                          <span className="rounded-full border border-[#e5e5ea] bg-white px-2.5 py-0.5 font-medium text-[#86868b]">
+                          <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-0.5 font-medium text-[var(--mx-color-86868b)]">
                             {data.my_list_status.num_episodes_watched} ep watched
                           </span>
                         )}
@@ -1021,18 +1021,18 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
             </MotionDiv>
           ) : !busy && !data ? (
             <div className="px-5 py-8 sm:px-6">
-              <div className="lifesync-detail-status-card rounded-2xl  bg-[#fafafa] px-4 py-5 text-center">
-                <p className="text-[13px] font-semibold text-[#1d1d1f]">
+              <div className="lifesync-detail-status-card rounded-2xl  bg-[var(--mx-color-fafafa)] px-4 py-5 text-center">
+                <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">
                   Couldn’t load this title
                 </p>
-                <p className="mt-1 text-[12px] text-[#86868b]">
+                <p className="mt-1 text-[12px] text-[var(--mx-color-86868b)]">
                   {detailError || "Try again in a moment, or open it on MyAnimeList."}
                 </p>
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   <button
                     type="button"
                     onClick={triggerReload}
-                    className="min-h-[40px] rounded-xl bg-[#C6FF00] px-4 text-[12px] font-bold text-[#1a1628] shadow-sm"
+                    className="min-h-[40px] rounded-xl bg-[var(--mx-color-c6ff00)] px-4 text-[12px] font-bold text-[var(--mx-color-1a1628)] shadow-sm"
                   >
                     Try again
                   </button>
@@ -1041,7 +1041,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                       href={malUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="min-h-[40px] rounded-xl border border-[#e5e5ea] bg-white px-4 text-[12px] font-semibold text-[#1d1d1f] transition hover:bg-[#fafafa]"
+                      className="min-h-[40px] rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-4 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:bg-[var(--mx-color-fafafa)]"
                     >
                       Open on MAL
                     </a>
@@ -1051,8 +1051,8 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
             </div>
           ) : busy ? (
             <div className="px-5 py-6 sm:px-6">
-              <div className="lifesync-detail-status-card rounded-2xl bg-white px-4 py-5">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-[#86868b]">
+              <div className="lifesync-detail-status-card rounded-2xl bg-[var(--color-surface)] px-4 py-5">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)]">
                   Loading details
                 </p>
                 <div className="mt-3">
@@ -1641,22 +1641,22 @@ export default function LifeSyncAnime() {
   if (!isLifeSyncConnected) {
     return (
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[#1a1628]">
+        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">
           Anime
         </h1>
-        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[#5b5670]">
+        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
           Track what you watch, browse seasonal charts, and open episodes—connect LifeSync to get started.
         </p>
-        <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
-          <p className="mb-2 text-[15px] font-bold text-[#1a1628]">
+        <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
+          <p className="mb-2 text-[15px] font-bold text-[var(--mx-color-1a1628)]">
             LifeSync Not Connected
           </p>
-          <p className="mb-4 text-[13px] text-[#5b5670]">
+          <p className="mb-4 text-[13px] text-[var(--mx-color-5b5670)]">
             Connect LifeSync in your profile to access anime tracking.
           </p>
           <Link
             to="/dashboard/profile?tab=integrations"
-            className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
           >
             Go to Integrations
           </Link>
@@ -1739,13 +1739,13 @@ export default function LifeSyncAnime() {
       >
       <div className="flex items-start justify-between gap-3 sm:gap-4">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">
+          <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">
             LifeSync / Anime
           </p>
-          <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1a1628] tracking-tight">
+          <h1 className="text-[24px] sm:text-[28px] font-bold text-[var(--mx-color-1a1628)] tracking-tight">
             Anime
           </h1>
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
+          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
             Track seasonal lineups and rankings, open any title for details, and continue watching on the dedicated watch page.
           </p>
         </div>
@@ -1753,7 +1753,7 @@ export default function LifeSyncAnime() {
           {!malLinked && lifesyncOAuthStartUrl("mal") && (
             <a
               href={lifesyncOAuthStartUrl("mal")}
-              className="whitespace-nowrap text-center text-[12px] font-semibold bg-[#2E51A2] text-white px-4 py-2 rounded-xl hover:bg-[#24408a] transition-colors"
+              className="whitespace-nowrap text-center text-[12px] font-semibold bg-[var(--mx-color-2e51a2)] text-white px-4 py-2 rounded-xl hover:bg-[var(--mx-color-24408a)] transition-colors"
             >
               Link MAL
             </a>
@@ -1771,7 +1771,7 @@ export default function LifeSyncAnime() {
                   setError(e.message || "Failed to disconnect MAL");
                 }
               }}
-              className="whitespace-nowrap text-[11px] font-semibold text-[#86868b] hover:text-red-500 px-3 py-2 sm:py-1.5 rounded-lg hover:bg-red-50 border border-[#e5e5ea] hover:border-red-100 transition-colors"
+              className="whitespace-nowrap text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 px-3 py-2 sm:py-1.5 rounded-lg hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 transition-colors"
             >
               Disconnect MAL
             </button>
@@ -1800,12 +1800,12 @@ export default function LifeSyncAnime() {
           value={searchQ}
           onChange={(e) => setSearchQ(e.target.value)}
           placeholder="Search anime..."
-          className="min-w-[min(100%,12rem)] flex-1 rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-4 py-2.5 text-[13px] text-[#1d1d1f] transition-all focus:border-[#C6FF00]/60 focus:bg-white focus:outline-none"
+          className="min-w-[min(100%,12rem)] flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-4 py-2.5 text-[13px] text-[var(--mx-color-1d1d1f)] transition-all focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
         />
         <button
           type="submit"
           disabled={searching}
-          className="w-full shrink-0 rounded-xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95 disabled:opacity-50 sm:w-auto"
+          className="w-full shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50 sm:w-auto"
         >
           {searching ? "Searching..." : "Search"}
         </button>
@@ -1824,7 +1824,7 @@ export default function LifeSyncAnime() {
           <div className="flex items-center gap-2">
             <label
               htmlFor="seasonal-year"
-              className="text-[11px] font-semibold text-[#86868b] whitespace-nowrap"
+              className="text-[11px] font-semibold text-[var(--mx-color-86868b)] whitespace-nowrap"
             >
               Year
             </label>
@@ -1832,7 +1832,7 @@ export default function LifeSyncAnime() {
               id="seasonal-year"
               value={seasonalYear}
               onChange={(e) => setSeasonalYear(Number(e.target.value))}
-              className="text-[12px] font-semibold text-[#1d1d1f] bg-white border border-[#e5e5ea] rounded-lg px-2.5 py-1.5 min-w-[5.5rem] focus:outline-none focus:border-[#C6FF00]/60"
+              className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] rounded-lg px-2.5 py-1.5 min-w-[5.5rem] focus:outline-none focus:border-[var(--mx-color-c6ff00)]/60"
             >
               {seasonalYearOptions.map((y) => (
                 <option key={y} value={y}>
@@ -1847,7 +1847,7 @@ export default function LifeSyncAnime() {
                 setSeasonalYear(cur.year);
                 setSeasonalSeason(cur.season);
               }}
-              className="text-[11px] font-semibold text-[#2E51A2] hover:underline px-1"
+              className="text-[11px] font-semibold text-[var(--mx-color-2e51a2)] hover:underline px-1"
             >
               This season
             </button>
@@ -1860,8 +1860,8 @@ export default function LifeSyncAnime() {
                 onClick={() => setSeasonalSeason(opt.id)}
                 className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
                   seasonalSeason === opt.id
-                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                    : "bg-white text-[#86868b] border-[#e5e5ea] hover:text-[#1d1d1f] hover:border-[#d2d2d7]"
+                    ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
+                    : "bg-[var(--color-surface)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)] hover:text-[var(--mx-color-1d1d1f)] hover:border-[var(--mx-color-d2d2d7)]"
                 }`}
               >
                 {opt.label}
@@ -1880,8 +1880,8 @@ export default function LifeSyncAnime() {
               onClick={() => setRankingType(opt.id)}
               className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${
                 rankingType === opt.id
-                  ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                  : "bg-white text-[#86868b] border-[#e5e5ea] hover:text-[#1d1d1f] hover:border-[#d2d2d7]"
+                  ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
+                  : "bg-[var(--color-surface)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)] hover:text-[var(--mx-color-1d1d1f)] hover:border-[var(--mx-color-d2d2d7)]"
               }`}
             >
               {opt.label}
@@ -1925,8 +1925,8 @@ export default function LifeSyncAnime() {
         </div>
       ) : (
         !busy && (
-          <div className="bg-white rounded-[18px] border border-[#d2d2d7]/50 shadow-sm px-6 py-10 text-center">
-            <p className="text-[13px] text-[#86868b]">
+          <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm px-6 py-10 text-center">
+            <p className="text-[13px] text-[var(--mx-color-86868b)]">
               {tab === "mylist"
                 ? "Your anime list is empty. Link MAL to sync your list."
                 : "No anime to display."}
@@ -1937,13 +1937,13 @@ export default function LifeSyncAnime() {
 
       {pager && currentItems.length > 0 && (
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-[11px] text-[#86868b]">Page {pager.page}</p>
+          <p className="text-[11px] text-[var(--mx-color-86868b)]">Page {pager.page}</p>
           <div className="flex items-center gap-2 flex-wrap">
             <button
               type="button"
               disabled={!pager.canPrev}
               onClick={() => goToPage(pager.page - 1)}
-              className="text-[11px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-1.5 rounded-lg border border-[#e5e5ea] disabled:opacity-40"
+              className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
             >
               Previous
             </button>
@@ -1964,15 +1964,15 @@ export default function LifeSyncAnime() {
                       onClick={() => goToPage(p)}
                       className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
                         p === cur
-                          ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                          : "bg-white text-[#1d1d1f] border-[#e5e5ea] hover:bg-[#fafafa]"
+                          ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
+                          : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]"
                       }`}
                       aria-current={p === cur ? "page" : undefined}
                     >
                       {p}
                     </button>
                   ) : (
-                    <span key={`dots-${idx}`} className="px-1 text-[11px] text-[#86868b]">
+                    <span key={`dots-${idx}`} className="px-1 text-[11px] text-[var(--mx-color-86868b)]">
                       …
                     </span>
                   ),
@@ -1983,7 +1983,7 @@ export default function LifeSyncAnime() {
               type="button"
               disabled={!pager.canNext}
               onClick={() => goToPage(pager.page + 1)}
-              className="text-[11px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-1.5 rounded-lg border border-[#e5e5ea] disabled:opacity-40"
+              className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
             >
               Next
             </button>

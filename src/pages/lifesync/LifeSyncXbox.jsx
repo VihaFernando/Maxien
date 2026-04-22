@@ -114,29 +114,29 @@ function buildFallbackStoreDetail({ title, href, imageUrl, subtitle, tagline }) 
 function PaginationBar({ page, pageCount, totalLabel, busy, onPrev, onNext }) {
     if (pageCount <= 1) {
         return totalLabel ? (
-            <p className="text-[12px] text-[#86868b]">{totalLabel}</p>
+            <p className="text-[12px] text-[var(--mx-color-86868b)]">{totalLabel}</p>
         ) : null
     }
     return (
         <div className="flex flex-wrap items-center justify-between gap-3">
-            {totalLabel ? <p className="text-[12px] text-[#86868b]">{totalLabel}</p> : <span />}
+            {totalLabel ? <p className="text-[12px] text-[var(--mx-color-86868b)]">{totalLabel}</p> : <span />}
             <div className="flex items-center gap-2">
                 <button
                     type="button"
                     disabled={busy || page <= 1}
                     onClick={onPrev}
-                    className="rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-1.5 text-[12px] font-semibold text-[#1d1d1f] hover:bg-[#ebebed] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-1.5 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-ebebed)] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     Previous
                 </button>
-                <span className="text-[12px] font-medium text-[#424245] tabular-nums">
+                <span className="text-[12px] font-medium text-[var(--mx-color-424245)] tabular-nums">
                     Page {page} of {pageCount}
                 </span>
                 <button
                     type="button"
                     disabled={busy || page >= pageCount}
                     onClick={onNext}
-                    className="rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-1.5 text-[12px] font-semibold text-[#1d1d1f] hover:bg-[#ebebed] disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-1.5 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-ebebed)] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     Next
                 </button>
@@ -209,14 +209,14 @@ function ProfileCard({ person, presenceBusy, presence }) {
 
     return (
         <article
-            className="rounded-[18px] border border-[#d2d2d7]/50 bg-white p-4 shadow-sm sm:flex sm:gap-4"
+            className="rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-4 shadow-sm sm:flex sm:gap-4"
             style={accent ? { borderLeftWidth: 4, borderLeftColor: accent, borderLeftStyle: 'solid' } : undefined}
         >
             <div className="mx-auto shrink-0 sm:mx-0">
                 {person?.displayPicRaw ? (
-                    <img src={person.displayPicRaw} alt="" className="h-24 w-24 rounded-xl object-cover ring-1 ring-[#e5e5ea]" loading="lazy" />
+                    <img src={person.displayPicRaw} alt="" className="h-24 w-24 rounded-xl object-cover ring-1 ring-[var(--mx-color-e5e5ea)]" loading="lazy" />
                 ) : (
-                    <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-[#f5f5f7] ring-1 ring-[#e5e5ea] text-[#86868b]">
+                    <div className="flex h-24 w-24 items-center justify-center rounded-xl bg-[var(--mx-color-f5f5f7)] ring-1 ring-[var(--mx-color-e5e5ea)] text-[var(--mx-color-86868b)]">
                         <svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5" aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                         </svg>
@@ -225,65 +225,65 @@ function ProfileCard({ person, presenceBusy, presence }) {
             </div>
             <div className="min-w-0 flex-1 space-y-2 text-center sm:text-left">
                 <div>
-                    <h3 className="flex flex-wrap items-center justify-center gap-2 text-[17px] font-bold text-[#1d1d1f] sm:justify-start">
+                    <h3 className="flex flex-wrap items-center justify-center gap-2 text-[17px] font-bold text-[var(--mx-color-1d1d1f)] sm:justify-start">
                         <span className="truncate">{display}</span>
                         {d.isVerified ? (
                             <span className="rounded-md bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-700">Verified</span>
                         ) : null}
                     </h3>
                     {person?.gamertag && person.gamertag !== display ? (
-                        <p className="text-[12px] text-[#86868b]">Classic gamertag: {person.gamertag}</p>
+                        <p className="text-[12px] text-[var(--mx-color-86868b)]">Classic gamertag: {person.gamertag}</p>
                     ) : null}
-                    <p className="mt-0.5 font-mono text-[11px] text-[#aeaeb2]">Player ID {person?.xuid ?? '—'}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-[var(--mx-color-aeaeb2)]">Player ID {person?.xuid ?? '—'}</p>
                 </div>
                 <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
                     {showGamerScore ? (
-                        <span className="inline-flex items-center gap-1 rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1 text-[11px] font-medium text-[#1d1d1f]">
+                        <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1 text-[11px] font-medium text-[var(--mx-color-1d1d1f)]">
                             {gamerScore.toLocaleString()} GS
                         </span>
                     ) : null}
                     {formatTier(d.accountTier) ? (
-                        <span className="rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1 text-[11px] text-[#1d1d1f]">{formatTier(d.accountTier)}</span>
+                        <span className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1 text-[11px] text-[var(--mx-color-1d1d1f)]">{formatTier(d.accountTier)}</span>
                     ) : null}
                     {person?.xboxOneRep ? (
-                        <span className="rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1 text-[11px] text-[#1d1d1f]">{person.xboxOneRep}</span>
+                        <span className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1 text-[11px] text-[var(--mx-color-1d1d1f)]">{person.xboxOneRep}</span>
                     ) : null}
                     {typeof d.followerCount === 'number' ? (
-                        <span className="rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-1 text-[11px] text-[#1d1d1f]">{d.followerCount.toLocaleString()} followers</span>
+                        <span className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1 text-[11px] text-[var(--mx-color-1d1d1f)]">{d.followerCount.toLocaleString()} followers</span>
                     ) : null}
                     {d.hasGamePass === true ? (
                         <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-medium text-emerald-800">Game Pass</span>
                     ) : null}
                     {presenceBusy ? (
-                        <span className="rounded-lg border border-[#e5e5ea] bg-[#fafafa] px-2 py-1 text-[11px] text-[#86868b]">Checking activity…</span>
+                        <span className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] px-2 py-1 text-[11px] text-[var(--mx-color-86868b)]">Checking activity…</span>
                     ) : presence ? (
                         <span className="rounded-lg border border-sky-200 bg-sky-50 px-2 py-1 text-[11px] font-medium text-sky-900">{presence.status}</span>
                     ) : null}
                 </div>
                 {!presenceBusy && presence?.game ? (
-                    <p className="text-[12px] text-[#424245]">
-                        <span className="font-semibold text-[#1d1d1f]">{presence.game}</span>
-                        {presence.detail ? <span className="text-[#86868b]"> · {presence.detail}</span> : null}
+                    <p className="text-[12px] text-[var(--mx-color-424245)]">
+                        <span className="font-semibold text-[var(--mx-color-1d1d1f)]">{presence.game}</span>
+                        {presence.detail ? <span className="text-[var(--mx-color-86868b)]"> · {presence.detail}</span> : null}
                     </p>
                 ) : null}
                 {platforms.length > 0 ? (
-                    <p className="text-[11px] text-[#86868b]">
+                    <p className="text-[11px] text-[var(--mx-color-86868b)]">
                         Plays on{' '}
                         {platforms.map((platform) => (
-                            <span key={platform} className="mr-1 inline-block rounded-md bg-[#f5f5f7] px-1.5 py-0.5 text-[#424245]">
+                            <span key={platform} className="mr-1 inline-block rounded-md bg-[var(--mx-color-f5f5f7)] px-1.5 py-0.5 text-[var(--mx-color-424245)]">
                                 {platform}
                             </span>
                         ))}
                     </p>
                 ) : null}
                 {(person?.realName || d.bio || d.location) ? (
-                    <div className="space-y-0.5 text-[13px] text-[#424245]">
-                        {person.realName ? <p className="font-semibold text-[#1d1d1f]">{person.realName}</p> : null}
+                    <div className="space-y-0.5 text-[13px] text-[var(--mx-color-424245)]">
+                        {person.realName ? <p className="font-semibold text-[var(--mx-color-1d1d1f)]">{person.realName}</p> : null}
                         {d.location ? <p>{d.location}</p> : null}
-                        {d.bio ? <p className="text-[#86868b]">{d.bio}</p> : null}
+                        {d.bio ? <p className="text-[var(--mx-color-86868b)]">{d.bio}</p> : null}
                     </div>
                 ) : null}
-                <a href={xboxSearch} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] font-semibold text-[#0071e3] hover:underline">
+                <a href={xboxSearch} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12px] font-semibold text-[var(--mx-color-0071e3)] hover:underline">
                     View on Xbox.com
                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
@@ -313,7 +313,7 @@ function GamePassTile({ item, onOpenDetail }) {
                     fallback: { title, href, imageUrl: img, subtitle: priceLine, tagline: blurb },
                 })
             }
-            className="group relative aspect-[2/3] w-full overflow-hidden rounded-[12px] sm:rounded-[14px] border border-[#d2d2d7]/50 bg-[#f5f5f7] text-left shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[#107C10]/40 focus-visible:ring-offset-2"
+            className="group relative aspect-[2/3] w-full overflow-hidden rounded-[12px] sm:rounded-[14px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--mx-color-f5f5f7)] text-left shadow-sm transition-all hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mx-color-107c10)]/40 focus-visible:ring-offset-2"
         >
             {hasArt ? (
                 <LifesyncEpisodeThumbnail
@@ -322,8 +322,8 @@ function GamePassTile({ item, onOpenDetail }) {
                     imgClassName="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04]"
                 />
             ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#f5f5f7] to-[#e8e8ed]">
-                    <span className="text-[10px] font-medium text-[#aeaeb2]">No art</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[var(--mx-color-f5f5f7)] to-[var(--mx-color-e8e8ed)]">
+                    <span className="text-[10px] font-medium text-[var(--mx-color-aeaeb2)]">No art</span>
                 </div>
             )}
             <div
@@ -331,32 +331,32 @@ function GamePassTile({ item, onOpenDetail }) {
                 aria-hidden
             />
             <div className="absolute right-2 top-2 z-10">
-                <span className="rounded-md bg-[#107C10]/95 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white shadow-sm backdrop-blur-[2px]">
+                <span className="rounded-md bg-[var(--mx-color-107c10)]/95 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white shadow-sm backdrop-blur-[2px]">
                     Pass
                 </span>
             </div>
             <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col justify-end p-2.5 pt-14 sm:p-3 sm:pt-16">
                 <p
-                    className={`line-clamp-2 text-[11px] font-bold leading-snug sm:text-[12px] ${hasArt ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]' : 'text-[#1d1d1f]'}`}
+                    className={`line-clamp-2 text-[11px] font-bold leading-snug sm:text-[12px] ${hasArt ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]' : 'text-[var(--mx-color-1d1d1f)]'}`}
                 >
                     {title}
                 </p>
                 {priceLine ? (
                     <p
-                        className={`mt-0.5 line-clamp-1 text-[9px] font-semibold sm:text-[10px] ${hasArt ? 'text-[#6ecf6e]' : 'text-[#107C10]'}`}
+                        className={`mt-0.5 line-clamp-1 text-[9px] font-semibold sm:text-[10px] ${hasArt ? 'text-[var(--mx-color-6ecf6e)]' : 'text-[var(--mx-color-107c10)]'}`}
                     >
                         {priceLine}
                     </p>
                 ) : null}
                 {blurb ? (
                     <p
-                        className={`mt-1 line-clamp-2 text-[9px] leading-snug sm:text-[10px] ${hasArt ? 'text-white/75' : 'text-[#86868b]'}`}
+                        className={`mt-1 line-clamp-2 text-[9px] leading-snug sm:text-[10px] ${hasArt ? 'text-white/75' : 'text-[var(--mx-color-86868b)]'}`}
                     >
                         {blurb}
                     </p>
                 ) : null}
                 <p
-                    className={`mt-1.5 text-[9px] font-semibold sm:text-[10px] ${hasArt ? 'text-[#6ecf6e]' : 'text-[#107C10]'}`}
+                    className={`mt-1.5 text-[9px] font-semibold sm:text-[10px] ${hasArt ? 'text-[var(--mx-color-6ecf6e)]' : 'text-[var(--mx-color-107c10)]'}`}
                 >
                     View details
                 </p>
@@ -373,8 +373,8 @@ function LibraryGameTile({ row, selected, onSelect, disabled }) {
             onClick={onSelect}
             disabled={disabled}
             className={`group relative aspect-[2/3] w-full overflow-hidden rounded-[14px] border text-left shadow-sm transition-all ${
-                selected ? 'border-[#107C10] ring-2 ring-[#107C10]/30 ring-offset-2 ring-offset-[#fafafa]' : 'border-[#d2d2d7]/50 hover:shadow-md'
-            } ${disabled ? 'cursor-not-allowed opacity-60 hover:shadow-sm' : ''} bg-[#f5f5f7]`}
+                selected ? 'border-[var(--mx-color-107c10)] ring-2 ring-[var(--mx-color-107c10)]/30 ring-offset-2 ring-offset-[var(--mx-color-fafafa)]' : 'border-[var(--mx-color-d2d2d7)]/50 hover:shadow-md'
+            } ${disabled ? 'cursor-not-allowed opacity-60 hover:shadow-sm' : ''} bg-[var(--mx-color-f5f5f7)]`}
         >
             {hasArt ? (
                 <LifesyncEpisodeThumbnail
@@ -383,8 +383,8 @@ function LibraryGameTile({ row, selected, onSelect, disabled }) {
                     imgClassName="h-full w-full object-cover transition-transform duration-300 ease-out group-hover:scale-[1.04] group-disabled:scale-100"
                 />
             ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[#f5f5f7] to-[#e8e8ed]">
-                    <span className="text-[10px] font-medium text-[#aeaeb2]">No art</span>
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-[var(--mx-color-f5f5f7)] to-[var(--mx-color-e8e8ed)]">
+                    <span className="text-[10px] font-medium text-[var(--mx-color-aeaeb2)]">No art</span>
                 </div>
             )}
             <div
@@ -393,14 +393,14 @@ function LibraryGameTile({ row, selected, onSelect, disabled }) {
             />
             <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col justify-end p-2.5 pt-12 sm:pt-14">
                 <p
-                    className={`line-clamp-2 text-[11px] font-bold leading-snug sm:text-[12px] ${hasArt ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]' : 'text-[#1d1d1f]'}`}
+                    className={`line-clamp-2 text-[11px] font-bold leading-snug sm:text-[12px] ${hasArt ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]' : 'text-[var(--mx-color-1d1d1f)]'}`}
                 >
                     {row.name}
                 </p>
-                <p className={`mt-0.5 text-[9px] sm:text-[10px] ${hasArt ? 'text-white/80' : 'text-[#86868b]'}`}>
+                <p className={`mt-0.5 text-[9px] sm:text-[10px] ${hasArt ? 'text-white/80' : 'text-[var(--mx-color-86868b)]'}`}>
                     {row.lastPlayedLabel ? `Last played ${row.lastPlayedLabel}` : 'Last played —'}
                 </p>
-                <p className={`text-[9px] font-medium sm:text-[10px] ${hasArt ? 'text-white/90' : 'text-[#424245]'}`}>
+                <p className={`text-[9px] font-medium sm:text-[10px] ${hasArt ? 'text-white/90' : 'text-[var(--mx-color-424245)]'}`}>
                     {row.playtimeLabel ?? 'Playtime unknown'}
                 </p>
                 {row.achHint ? (
@@ -422,12 +422,12 @@ function AchievementDetailPanel({ gameTitle, busy, err, payload }) {
         summary.total > 0 ? Math.round((summary.unlocked / summary.total) * 100) : 0
 
     return (
-        <div className="rounded-[18px] border border-[#d2d2d7]/50 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-[#e5e5ea] px-4 py-3 bg-[#fafafa]">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[#86868b]">Achievements</p>
-                <h3 className="text-[15px] font-bold text-[#1d1d1f] truncate">{gameTitle || 'Selected game'}</h3>
+        <div className="rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm overflow-hidden">
+            <div className="border-b border-[var(--mx-color-e5e5ea)] px-4 py-3 bg-[var(--mx-color-fafafa)]">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--mx-color-86868b)]">Achievements</p>
+                <h3 className="text-[15px] font-bold text-[var(--mx-color-1d1d1f)] truncate">{gameTitle || 'Selected game'}</h3>
                 {busy ? (
-                    <div className="mt-2 h-2 w-full max-w-xs rounded-full bg-[#e5e5ea] overflow-hidden">
+                    <div className="mt-2 h-2 w-full max-w-xs rounded-full bg-[var(--mx-color-e5e5ea)] overflow-hidden">
                         <div className="h-full w-[38%] rounded-full lifesync-skeleton-shimmer-light" />
                     </div>
                 ) : null}
@@ -436,10 +436,10 @@ function AchievementDetailPanel({ gameTitle, busy, err, payload }) {
                 ) : null}
                 {!busy && !err && list.length > 0 ? (
                     <div className="mt-2 space-y-1">
-                        <div className="h-2 rounded-full bg-[#e5e5ea] overflow-hidden">
-                            <div className="h-full bg-[#107C10] transition-all" style={{ width: `${pct}%` }} />
+                        <div className="h-2 rounded-full bg-[var(--mx-color-e5e5ea)] overflow-hidden">
+                            <div className="h-full bg-[var(--mx-color-107c10)] transition-all" style={{ width: `${pct}%` }} />
                         </div>
-                        <p className="text-[11px] text-[#424245]">
+                        <p className="text-[11px] text-[var(--mx-color-424245)]">
                             {summary.unlocked}/{summary.total} unlocked
                             {summary.gsPossible > 0 ? (
                                 <span>
@@ -453,10 +453,10 @@ function AchievementDetailPanel({ gameTitle, busy, err, payload }) {
             </div>
             {busy ? <LifesyncAchievementRowsSkeleton rows={8} /> : null}
             {!busy && !err && list.length === 0 ? (
-                <p className="text-[13px] text-[#86868b] px-4 py-6 text-center">No achievement list is available for this title.</p>
+                <p className="text-[13px] text-[var(--mx-color-86868b)] px-4 py-6 text-center">No achievement list is available for this title.</p>
             ) : null}
             {!busy && list.length > 0 ? (
-                <ul className="max-h-[22rem] overflow-y-auto divide-y divide-[#e5e5ea]">
+                <ul className="max-h-[22rem] overflow-y-auto divide-y divide-[var(--mx-color-e5e5ea)]">
                     {list.map((a, i) => {
                         const unlocked = isAchievementUnlocked(a)
                         const name = a.name ?? a.achievementName ?? a.title ?? `Achievement ${i + 1}`
@@ -469,7 +469,7 @@ function AchievementDetailPanel({ gameTitle, busy, err, payload }) {
                             null
                         return (
                             <li key={String(a.achievementId ?? a.id ?? i)} className="flex gap-3 px-3 py-2">
-                                <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[#f5f5f7]">
+                                <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-[var(--mx-color-f5f5f7)]">
                                     {icon ? (
                                         <img
                                             src={icon}
@@ -478,7 +478,7 @@ function AchievementDetailPanel({ gameTitle, busy, err, payload }) {
                                             loading="lazy"
                                         />
                                     ) : (
-                                        <div className="flex h-full w-full items-center justify-center text-[#aeaeb2] text-[10px] font-bold">A</div>
+                                        <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-aeaeb2)] text-[10px] font-bold">A</div>
                                     )}
                                     {!unlocked ? (
                                         <span className="absolute inset-0 flex items-center justify-center bg-black/55 text-[8px] font-bold text-white uppercase">
@@ -487,9 +487,9 @@ function AchievementDetailPanel({ gameTitle, busy, err, payload }) {
                                     ) : null}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[12px] font-semibold text-[#1d1d1f] line-clamp-2">{name}</p>
+                                    <p className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] line-clamp-2">{name}</p>
                                     {gs != null ? <span className="text-[10px] text-amber-800">{gs} GS</span> : null}
-                                    {desc ? <p className="text-[11px] text-[#86868b] line-clamp-2 mt-0.5">{desc}</p> : null}
+                                    {desc ? <p className="text-[11px] text-[var(--mx-color-86868b)] line-clamp-2 mt-0.5">{desc}</p> : null}
                                 </div>
                             </li>
                         )
@@ -855,11 +855,11 @@ export default function LifeSyncXbox() {
         return (
             <LifeSyncHubPageShell>
                 <div className="max-w-4xl mx-auto">
-                    <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1a1628] tracking-tight mb-2">Xbox</h1>
-                    <div className="rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
-                        <p className="text-[15px] font-bold text-[#1a1628] mb-2">LifeSync Not Connected</p>
-                        <p className="text-[13px] text-[#5b5670] mb-4">Connect LifeSync, then link your Xbox gamertag under Profile → Integrations to use this hub.</p>
-                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95">
+                    <h1 className="text-[24px] sm:text-[28px] font-bold text-[var(--mx-color-1a1628)] tracking-tight mb-2">Xbox</h1>
+                    <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
+                        <p className="text-[15px] font-bold text-[var(--mx-color-1a1628)] mb-2">LifeSync Not Connected</p>
+                        <p className="text-[13px] text-[var(--mx-color-5b5670)] mb-4">Connect LifeSync, then link your Xbox gamertag under Profile → Integrations to use this hub.</p>
+                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
                             Go to Integrations
                         </Link>
                     </div>
@@ -874,11 +874,11 @@ export default function LifeSyncXbox() {
             <div className="flex min-w-0 w-full flex-col gap-5 sm:gap-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="w-full min-w-0 sm:min-w-0 sm:flex-1">
-                    <p className="text-[11px] font-semibold text-[#86868b] uppercase tracking-widest">
+                    <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">
                         LifeSync / Games
                     </p>
-                    <h1 className="text-[24px] sm:text-[28px] font-bold text-[#1a1628] tracking-tight">Xbox</h1>
-                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#5b5670]">
+                    <h1 className="text-[24px] sm:text-[28px] font-bold text-[var(--mx-color-1a1628)] tracking-tight">Xbox</h1>
+                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
                         Your games, playtime, achievements, and Game Pass picks in one place.
                     </p>
                 </div>
@@ -887,20 +887,20 @@ export default function LifeSyncXbox() {
                         type="button"
                         onClick={() => void loadXboxDashboard()}
                         disabled={dashBusy}
-                        className="w-full text-center text-[12px] font-semibold text-[#1d1d1f] bg-[#f5f5f7] hover:bg-[#ebebed] px-3 py-2.5 rounded-xl border border-[#e5e5ea] transition-colors disabled:opacity-50 sm:w-auto sm:min-w-[9.5rem] sm:py-2"
+                        className="w-full text-center text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2.5 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50 sm:w-auto sm:min-w-[9.5rem] sm:py-2"
                     >
                         {dashBusy ? 'Refreshing…' : 'Refresh profile'}
                     </button>
                 </div>
             </div>
 
-            <section className="rounded-[20px] border border-[#d2d2d7]/50 bg-white p-4 shadow-sm space-y-4 sm:p-5">
+            <section className="rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-4 shadow-sm space-y-4 sm:p-5">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                        <h2 className="text-[17px] font-bold text-[#1d1d1f]">Xbox profile</h2>
-                        <p className="text-[12px] text-[#86868b] mt-0.5 max-w-xl">
+                        <h2 className="text-[17px] font-bold text-[var(--mx-color-1d1d1f)]">Xbox profile</h2>
+                        <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5 max-w-xl">
                             Link or change your gamertag under{' '}
-                            <Link to="/dashboard/profile?tab=integrations" className="font-semibold text-[#107C10] hover:underline">
+                            <Link to="/dashboard/profile?tab=integrations" className="font-semibold text-[var(--mx-color-107c10)] hover:underline">
                                 Profile → Integrations
                             </Link>
                             {' '}→ Service connections → Xbox.
@@ -940,13 +940,13 @@ export default function LifeSyncXbox() {
                     </ul>
                 ) : null}
                 {!profileBusy && !profileErr && people.length === 0 ? (
-                    <div className="rounded-xl border border-[#e5e5ea] bg-[#fafafa] px-4 py-3 text-[13px] text-[#86868b]">
+                    <div className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] px-4 py-3 text-[13px] text-[var(--mx-color-86868b)]">
                         {linkedGamertag ? (
                             <p>We couldn’t load a profile for your linked gamertag. It may be private, or Xbox data isn’t available from your host yet.</p>
                         ) : (
                             <p>
                                 No gamertag linked yet. Add one in{' '}
-                                <Link to="/dashboard/profile?tab=integrations" className="font-semibold text-[#107C10] hover:underline">
+                                <Link to="/dashboard/profile?tab=integrations" className="font-semibold text-[var(--mx-color-107c10)] hover:underline">
                                     Integrations → Xbox
                                 </Link>
                                 .
@@ -977,9 +977,9 @@ export default function LifeSyncXbox() {
             {mainTab === 'library' ? (
                 <section className="space-y-4">
                     {!openXblReady || !activeXuid ? (
-                        <p className="text-[13px] text-[#86868b] rounded-xl border border-[#e5e5ea] bg-[#fafafa] px-4 py-3">
+                        <p className="text-[13px] text-[var(--mx-color-86868b)] rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] px-4 py-3">
                             Link your gamertag in{' '}
-                            <Link to="/dashboard/profile?tab=integrations" className="font-semibold text-[#107C10] hover:underline">
+                            <Link to="/dashboard/profile?tab=integrations" className="font-semibold text-[var(--mx-color-107c10)] hover:underline">
                                 Integrations
                             </Link>
                             . Once Xbox data is enabled for your account, you’ll see recent games, playtime, and achievements here.
@@ -988,12 +988,12 @@ export default function LifeSyncXbox() {
                         <>
                             <div className="flex flex-wrap items-end justify-between gap-3">
                                 <div>
-                                    <h2 className="text-[17px] font-bold text-[#1d1d1f]">Library &amp; achievements</h2>
-                                    <p className="text-[12px] text-[#86868b] mt-0.5 max-w-2xl">
+                                    <h2 className="text-[17px] font-bold text-[var(--mx-color-1d1d1f)]">Library &amp; achievements</h2>
+                                    <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5 max-w-2xl">
                                         Sorted by last played, with hours and progress filled in from your history when available. Tap a game for the full achievement list.
                                     </p>
                                 </div>
-                                {libraryBusy ? <span className="text-[11px] font-medium text-[#86868b]">Loading…</span> : null}
+                                {libraryBusy ? <span className="text-[11px] font-medium text-[var(--mx-color-86868b)]">Loading…</span> : null}
                             </div>
                             {libraryErr ? (
                                 <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2">{libraryErr}</p>
@@ -1017,7 +1017,7 @@ export default function LifeSyncXbox() {
                                     ) : libraryBusy ? (
                                         <LifesyncXboxLibraryGridSkeleton count={9} />
                                     ) : (
-                                        <p className="text-[12px] text-[#86868b] rounded-xl border border-[#e5e5ea] bg-[#fafafa] px-3 py-2">
+                                        <p className="text-[12px] text-[var(--mx-color-86868b)] rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] px-3 py-2">
                                             No titles returned (history may be private or empty).
                                         </p>
                                     )}
@@ -1031,7 +1031,7 @@ export default function LifeSyncXbox() {
                                             payload={achPayload}
                                         />
                                     ) : (
-                                        <div className="rounded-[18px] border border-dashed border-[#d2d2d7] bg-[#fafafa] px-4 py-6 text-center text-[12px] text-[#86868b] sm:py-8 sm:text-[13px]">
+                                        <div className="rounded-[18px] border border-dashed border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-fafafa)] px-4 py-6 text-center text-[12px] text-[var(--mx-color-86868b)] sm:py-8 sm:text-[13px]">
                                             Select a game to load achievement progress.
                                         </div>
                                     )}
@@ -1045,12 +1045,12 @@ export default function LifeSyncXbox() {
             {mainTab === 'gamepass' ? (
                 <section className="space-y-4">
                     {!openXblReady ? (
-                        <p className="text-[13px] text-[#86868b] rounded-xl border border-[#e5e5ea] bg-[#fafafa] px-4 py-3">Game Pass browsing needs Xbox data to be enabled for your host.</p>
+                        <p className="text-[13px] text-[var(--mx-color-86868b)] rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafa)] px-4 py-3">Game Pass browsing needs Xbox data to be enabled for your host.</p>
                     ) : (
                         <>
                             <div>
-                                <h2 className="text-[17px] font-bold text-[#1d1d1f]">Game Pass catalog</h2>
-                                <p className="text-[12px] text-[#86868b] mt-0.5">Browse what’s included by platform or plan. Titles show Store details when available.</p>
+                                <h2 className="text-[17px] font-bold text-[var(--mx-color-1d1d1f)]">Game Pass catalog</h2>
+                                <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5">Browse what’s included by platform or plan. Titles show Store details when available.</p>
                             </div>
                             <div className="-mt-1 flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
                                 {GAMEPASS_FEEDS.map((f) => (
@@ -1059,7 +1059,7 @@ export default function LifeSyncXbox() {
                                         type="button"
                                         onClick={() => setGpFeedId(f.id)}
                                         className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-semibold whitespace-nowrap transition-colors sm:text-[12px] ${
-                                            gpFeedId === f.id ? 'bg-[#107C10] text-white' : 'bg-[#f5f5f7] text-[#424245] border border-[#e5e5ea] hover:bg-[#ebebed]'
+                                            gpFeedId === f.id ? 'bg-[var(--mx-color-107c10)] text-white' : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-424245)] border border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-ebebed)]'
                                         }`}
                                     >
                                         {f.label}
@@ -1098,7 +1098,7 @@ export default function LifeSyncXbox() {
                                     </div>
                                 </>
                             ) : !gpBusy && !gpErr ? (
-                                <p className="text-[12px] text-[#86868b]">No items in this feed.</p>
+                                <p className="text-[12px] text-[var(--mx-color-86868b)]">No items in this feed.</p>
                             ) : null}
                         </>
                     )}

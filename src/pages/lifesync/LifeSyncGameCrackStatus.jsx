@@ -34,14 +34,14 @@ function titleCaseStatus(status) {
 
 function LifeSyncConnectPrompt() {
     return (
-        <div className="mx-auto max-w-4xl rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
-            <p className="text-[17px] font-bold text-[#1a1628]">LifeSync Not Connected</p>
-            <p className="mt-2 text-[14px] text-[#5b5670]">
+        <div className="mx-auto max-w-4xl rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
+            <p className="text-[17px] font-bold text-[var(--mx-color-1a1628)]">LifeSync Not Connected</p>
+            <p className="mt-2 text-[14px] text-[var(--mx-color-5b5670)]">
                 Connect LifeSync in your profile to check real-time crack status.
             </p>
             <Link
                 to="/dashboard/profile?tab=integrations"
-                className="mt-5 inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+                className="mt-5 inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
             >
                 Go to Integrations
             </Link>
@@ -51,14 +51,14 @@ function LifeSyncConnectPrompt() {
 
 function LifeSyncPluginPrompt() {
     return (
-        <div className="mx-auto max-w-4xl rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
-            <p className="text-[17px] font-bold text-[#1a1628]">Crack Games Plugin Disabled</p>
-            <p className="mt-2 text-[14px] text-[#5b5670]">
+        <div className="mx-auto max-w-4xl rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
+            <p className="text-[17px] font-bold text-[var(--mx-color-1a1628)]">Crack Games Plugin Disabled</p>
+            <p className="mt-2 text-[14px] text-[var(--mx-color-5b5670)]">
                 Enable the Crack games content plugin to access crack status checks.
             </p>
             <Link
                 to="/dashboard/lifesync/integrations"
-                className="mt-5 inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+                className="mt-5 inline-flex items-center rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
             >
                 Open LifeSync Integrations
             </Link>
@@ -161,44 +161,44 @@ export default function LifeSyncGameCrackStatus() {
     return (
         <LifeSyncHubPageShell>
             <div className="space-y-6">
-                <header className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-white/95 p-5 shadow-sm">
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#6e6e73]">LifeSync • GameStatus</p>
+                <header className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-[var(--color-surface)]/95 p-5 shadow-sm">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-6e6e73)]">LifeSync • GameStatus</p>
                     <h1 className="mt-1 text-[30px] font-bold tracking-tight text-apple-text">Crack Status</h1>
-                    <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-[#515154]">
+                    <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-[var(--mx-color-515154)]">
                         Search any game title and inspect release protection, group, and crack timeline metadata.
                     </p>
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                         <Link
                             to="/dashboard/lifesync/games/search"
-                            className="inline-flex items-center rounded-lg border border-apple-border bg-white px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[#0071e3]"
+                            className="inline-flex items-center rounded-lg border border-apple-border bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)]"
                         >
                             Search Sources
                         </Link>
                         <Link
                             to="/dashboard/lifesync/games/releases"
-                            className="inline-flex items-center rounded-lg border border-apple-border bg-white px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[#0071e3]"
+                            className="inline-flex items-center rounded-lg border border-apple-border bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)]"
                         >
                             View Releases
                         </Link>
                     </div>
                 </header>
 
-                <section className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-white/95 p-5 shadow-sm">
+                <section className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-[var(--color-surface)]/95 p-5 shadow-sm">
                     <form onSubmit={onSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
                         <label className="flex-1">
-                            <span className="mb-1 block text-[12px] font-semibold text-[#515154]">Game name</span>
+                            <span className="mb-1 block text-[12px] font-semibold text-[var(--mx-color-515154)]">Game name</span>
                             <input
                                 type="text"
                                 value={queryInput}
                                 onChange={(e) => setQueryInput(e.target.value)}
                                 placeholder="Hogwarts Legacy"
-                                className="h-11 w-full rounded-xl border border-apple-border px-3 text-[14px] text-apple-text outline-none ring-[#0071e3]/30 transition focus:ring-2"
+                                className="h-11 w-full rounded-xl border border-apple-border px-3 text-[14px] text-apple-text outline-none ring-[var(--mx-color-0071e3)]/30 transition focus:ring-2"
                             />
                         </label>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="h-11 rounded-xl bg-primary px-5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition hover:brightness-95 disabled:opacity-60"
+                            className="h-11 rounded-xl bg-primary px-5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition hover:brightness-95 disabled:opacity-60"
                         >
                             {loading ? 'Checking...' : 'Check status'}
                         </button>
@@ -206,39 +206,39 @@ export default function LifeSyncGameCrackStatus() {
                             type="button"
                             onClick={() => void refetch()}
                             disabled={loading || !query}
-                            className="h-11 rounded-xl border border-apple-border bg-white px-4 text-[13px] font-semibold text-apple-text transition hover:border-[#0071e3] disabled:opacity-60"
+                            className="h-11 rounded-xl border border-apple-border bg-[var(--color-surface)] px-4 text-[13px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-60"
                         >
                             Refresh
                         </button>
                     </form>
                     <div className="mt-3 grid gap-3 md:grid-cols-12">
                         <label className="flex flex-col gap-1 md:col-span-3">
-                            <span className="text-[12px] font-semibold text-[#515154]">Providers mode</span>
+                            <span className="text-[12px] font-semibold text-[var(--mx-color-515154)]">Providers mode</span>
                             <select
                                 value={mode}
                                 onChange={(e) => setMode(e.target.value)}
-                                className="h-10 rounded-xl border border-apple-border px-3 text-[13px] text-apple-text outline-none ring-[#0071e3]/30 transition focus:ring-2"
+                                className="h-10 rounded-xl border border-apple-border px-3 text-[13px] text-apple-text outline-none ring-[var(--mx-color-0071e3)]/30 transition focus:ring-2"
                             >
                                 <option value="fast">Fast</option>
                                 <option value="all">All providers</option>
                             </select>
                         </label>
                         <label className="flex flex-col gap-1 md:col-span-9">
-                            <span className="text-[12px] font-semibold text-[#515154]">Specific sources (optional)</span>
+                            <span className="text-[12px] font-semibold text-[var(--mx-color-515154)]">Specific sources (optional)</span>
                             <input
                                 type="text"
                                 value={sourcesInput}
                                 onChange={(e) => setSourcesInput(e.target.value)}
                                 placeholder="gamestatus,goggames,fitgirl"
-                                className="h-10 rounded-xl border border-apple-border px-3 text-[13px] text-apple-text outline-none ring-[#0071e3]/30 transition focus:ring-2"
+                                className="h-10 rounded-xl border border-apple-border px-3 text-[13px] text-apple-text outline-none ring-[var(--mx-color-0071e3)]/30 transition focus:ring-2"
                             />
                         </label>
                     </div>
                     {availableProviders.length > 0 && (
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[#6e6e73]">
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--mx-color-6e6e73)]">
                             <span className="font-semibold">Available providers:</span>
                             {availableProviders.map((provider) => (
-                                <span key={provider} className="rounded-full border border-apple-border bg-apple-bg px-2 py-1 font-medium text-[#515154]">
+                                <span key={provider} className="rounded-full border border-apple-border bg-apple-bg px-2 py-1 font-medium text-[var(--mx-color-515154)]">
                                     {provider}
                                 </span>
                             ))}
@@ -259,13 +259,13 @@ export default function LifeSyncGameCrackStatus() {
                 )}
 
                 {!query && (
-                    <div className="lifesync-games-glass rounded-[20px] border border-dashed border-apple-border bg-white/70 px-6 py-12 text-center text-[14px] text-[#6e6e73]">
+                    <div className="lifesync-games-glass rounded-[20px] border border-dashed border-apple-border bg-[var(--color-surface)]/70 px-6 py-12 text-center text-[14px] text-[var(--mx-color-6e6e73)]">
                         Enter a game title to inspect crack timeline metadata.
                     </div>
                 )}
 
                 {query && payload && !error && (
-                    <section className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-white p-5 shadow-sm">
+                    <section className="lifesync-games-glass rounded-[20px] border border-apple-border/60 bg-[var(--color-surface)] p-5 shadow-sm">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-apple-subtext">Result</p>
@@ -302,23 +302,23 @@ export default function LifeSyncGameCrackStatus() {
                         )}
 
                         {linkedDetails.description && (
-                            <p className="mt-4 text-[13px] leading-relaxed text-[#515154]">{linkedDetails.description}</p>
+                            <p className="mt-4 text-[13px] leading-relaxed text-[var(--mx-color-515154)]">{linkedDetails.description}</p>
                         )}
 
                         <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            <div className="lifesync-games-glass rounded-xl border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+                            <div className="lifesync-games-glass rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
                                 <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-apple-subtext">Release date</dt>
                                 <dd className="mt-1 text-[13px] font-semibold text-apple-text">{formatDate(payload.release_date)}</dd>
                             </div>
-                            <div className="lifesync-games-glass rounded-xl border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+                            <div className="lifesync-games-glass rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
                                 <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-apple-subtext">Crack date</dt>
                                 <dd className="mt-1 text-[13px] font-semibold text-apple-text">{formatDate(payload.crack_date)}</dd>
                             </div>
-                            <div className="lifesync-games-glass rounded-xl border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+                            <div className="lifesync-games-glass rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
                                 <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-apple-subtext">Protection</dt>
                                 <dd className="mt-1 text-[13px] font-semibold text-apple-text">{payload.protection || 'Unknown'}</dd>
                             </div>
-                            <div className="lifesync-games-glass rounded-xl border border-[#e5e5ea] bg-[#fbfbfd] p-3">
+                            <div className="lifesync-games-glass rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
                                 <dt className="text-[11px] font-semibold uppercase tracking-[0.12em] text-apple-subtext">Group</dt>
                                 <dd className="mt-1 text-[13px] font-semibold text-apple-text">{payload.group || 'Unknown'}</dd>
                             </div>
@@ -327,10 +327,10 @@ export default function LifeSyncGameCrackStatus() {
                         <div className="mt-5">
                             <h3 className="text-[14px] font-bold text-apple-text">Direct store links</h3>
                             {linkedSearch.loading && (
-                                <p className="mt-2 text-[12px] text-[#6e6e73]">Loading store links...</p>
+                                <p className="mt-2 text-[12px] text-[var(--mx-color-6e6e73)]">Loading store links...</p>
                             )}
                             {!linkedSearch.loading && directStores.length === 0 && (
-                                <p className="mt-2 text-[12px] text-[#6e6e73]">No direct store/provider links available (GameStatus links are intentionally hidden).</p>
+                                <p className="mt-2 text-[12px] text-[var(--mx-color-6e6e73)]">No direct store/provider links available (GameStatus links are intentionally hidden).</p>
                             )}
                             {directStores.length > 0 && (
                                 <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -340,10 +340,10 @@ export default function LifeSyncGameCrackStatus() {
                                             href={store.url}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="lifesync-games-glass rounded-lg border border-[#e5e5ea] bg-[#fbfbfd] px-3 py-2 transition hover:border-[#0071e3]/40 hover:bg-white"
+                                            className="lifesync-games-glass rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] px-3 py-2 transition hover:border-[var(--mx-color-0071e3)]/40 hover:bg-[var(--color-surface)]"
                                         >
                                             <p className="text-[13px] font-semibold text-apple-text line-clamp-1">{store.name || 'Store link'}</p>
-                                            <p className="mt-0.5 text-[11px] uppercase text-[#4f46e5]">{store.source || 'store'}</p>
+                                            <p className="mt-0.5 text-[11px] uppercase text-[var(--mx-color-4f46e5)]">{store.source || 'store'}</p>
                                         </a>
                                     ))}
                                 </div>
@@ -353,7 +353,7 @@ export default function LifeSyncGameCrackStatus() {
                         <div className="mt-4 flex flex-wrap items-center gap-2">
                             <Link
                                 to={`/dashboard/lifesync/games/search${query ? `?q=${encodeURIComponent(query)}` : ''}`}
-                                className="inline-flex items-center rounded-lg border border-apple-border bg-white px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[#0071e3]"
+                                className="inline-flex items-center rounded-lg border border-apple-border bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)]"
                             >
                                 Search Similar
                             </Link>
@@ -361,7 +361,7 @@ export default function LifeSyncGameCrackStatus() {
                                 type="button"
                                 onClick={() => void addToWishlist()}
                                 disabled={wishlistBusy}
-                                className="inline-flex items-center rounded-lg border border-apple-border bg-white px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[#0071e3] disabled:opacity-60"
+                                className="inline-flex items-center rounded-lg border border-apple-border bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-apple-text transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-60"
                             >
                                 {wishlistBusy ? 'Adding…' : 'Add to Wishlist'}
                             </button>

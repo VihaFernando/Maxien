@@ -163,12 +163,12 @@ export default function WorkplaceUsers({
             )}
 
             {/* Main Container */}
-            <div className="w-full bg-white rounded-2xl md:rounded-[1.5rem] border border-gray-200/60 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+            <div className="w-full bg-[var(--color-surface)] rounded-2xl md:rounded-[1.5rem] border border-gray-200/60 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
 
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-6 border-b border-gray-100 bg-gray-50/30">
                     <div className="mb-3 sm:mb-0">
-                        <h2 className="text-base md:text-lg font-bold tracking-tight text-[#1d1d1f] flex items-center gap-2">
+                        <h2 className="text-base md:text-lg font-bold tracking-tight text-[var(--mx-color-1d1d1f)] flex items-center gap-2">
                             Team Members
                             <span className="text-[10px] md:text-xs font-semibold px-2.5 py-0.5 rounded-full bg-gray-200/70 text-gray-700">
                                 {members.length}
@@ -236,7 +236,15 @@ export default function WorkplaceUsers({
                                                             <span
                                                                 key={role.id}
                                                                 className="text-[10px] md:text-[11px] font-medium px-2 py-0.5 rounded-md inline-flex items-center border border-transparent"
-                                                                style={{ backgroundColor: `${role.color || "#6366f1"}15`, color: role.color || "#6366f1", borderColor: `${role.color || "#6366f1"}30` }}
+                                                                style={{
+                                                                    backgroundColor: role.color
+                                                                        ? `${role.color}15`
+                                                                        : "color-mix(in srgb, var(--mx-color-6366f1) 15%, transparent)",
+                                                                    color: role.color || "var(--mx-color-6366f1)",
+                                                                    borderColor: role.color
+                                                                        ? `${role.color}30`
+                                                                        : "color-mix(in srgb, var(--mx-color-6366f1) 30%, transparent)",
+                                                                }}
                                                             >
                                                                 {role.name}
                                                             </span>
@@ -250,7 +258,7 @@ export default function WorkplaceUsers({
                                                         <button
                                                             type="button"
                                                             onClick={() => startRoleEdit(m)}
-                                                            className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-3 py-1.5 md:py-1.5 rounded-lg border border-gray-200 bg-white text-[11px] md:text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                                                            className="flex-1 sm:flex-none inline-flex justify-center items-center gap-1.5 px-3 py-1.5 md:py-1.5 rounded-lg border border-gray-200 bg-[var(--color-surface)] text-[11px] md:text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors"
                                                         >
                                                             <FaUserTag className="w-3 h-3 text-gray-400" />
                                                             <span className="sm:hidden lg:inline">Roles</span>
@@ -270,7 +278,7 @@ export default function WorkplaceUsers({
 
                                                         {/* Role Picker Dropdown */}
                                                         {rolePickerOpenFor === m.id && (
-                                                            <div className="absolute right-0 top-full mt-2 z-10 w-[calc(100vw-2rem)] sm:w-64 origin-top-right rounded-xl border border-gray-200 bg-white/95 backdrop-blur-md p-3 shadow-xl ring-1 ring-black/5 focus:outline-none">
+                                                            <div className="absolute right-0 top-full mt-2 z-10 w-[calc(100vw-2rem)] sm:w-64 origin-top-right rounded-xl border border-gray-200 bg-[var(--color-surface)]/95 backdrop-blur-md p-3 shadow-xl ring-1 ring-black/5 focus:outline-none">
                                                                 <p className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2 px-1">Assign Roles</p>
                                                                 <div className="max-h-48 overflow-y-auto space-y-1 mb-3">
                                                                     {safeRoles.length === 0 ? (
@@ -289,7 +297,12 @@ export default function WorkplaceUsers({
                                                                                 </div>
                                                                                 <span
                                                                                     className="text-[11px] font-medium px-2 py-0.5 rounded-md truncate"
-                                                                                    style={{ backgroundColor: `${role.color || "#6366f1"}15`, color: role.color || "#6366f1" }}
+                                                                                    style={{
+                                                                                        backgroundColor: role.color
+                                                                                            ? `${role.color}15`
+                                                                                            : "color-mix(in srgb, var(--mx-color-6366f1) 15%, transparent)",
+                                                                                        color: role.color || "var(--mx-color-6366f1)",
+                                                                                    }}
                                                                                 >
                                                                                     {role.name}
                                                                                 </span>
@@ -301,7 +314,7 @@ export default function WorkplaceUsers({
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setRolePickerOpenFor(null)}
-                                                                        className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50"
+                                                                        className="flex-1 rounded-lg border border-gray-200 bg-[var(--color-surface)] px-2 py-1.5 text-[11px] font-medium text-gray-600 hover:bg-gray-50"
                                                                     >
                                                                         Cancel
                                                                     </button>
@@ -309,7 +322,7 @@ export default function WorkplaceUsers({
                                                                         type="button"
                                                                         disabled={formLoading}
                                                                         onClick={() => saveMemberRoles(m.id)}
-                                                                        className="flex-1 rounded-lg bg-[#C6FF00] px-2 py-1.5 text-[11px] font-bold text-gray-900 hover:bg-[#b8f000] disabled:opacity-60 transition-colors"
+                                                                        className="flex-1 rounded-lg bg-[var(--mx-color-c6ff00)] px-2 py-1.5 text-[11px] font-bold text-gray-900 hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60 transition-colors"
                                                                     >
                                                                         {formLoading ? "Saving…" : "Save"}
                                                                     </button>
@@ -336,7 +349,7 @@ export default function WorkplaceUsers({
                                     {pendingMembers.map((m) => {
                                         const { email } = getMemberLabel(m)
                                         return (
-                                            <div key={m.id} className="px-3 py-2 md:px-4 md:py-2.5 rounded-xl bg-white border border-orange-100/60 shadow-sm flex items-center justify-between gap-3">
+                                            <div key={m.id} className="px-3 py-2 md:px-4 md:py-2.5 rounded-xl bg-[var(--color-surface)] border border-orange-100/60 shadow-sm flex items-center justify-between gap-3">
                                                 <div className="min-w-0 flex-1">
                                                     <p className="text-[11px] md:text-xs font-medium text-gray-700 truncate">{email || m.user_id}</p>
                                                 </div>
@@ -362,13 +375,13 @@ export default function WorkplaceUsers({
                 ) : !showForm ? (
                     <button
                         onClick={() => setShowForm(true)}
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 md:py-3 text-[12px] md:text-[13px] font-medium text-gray-700 bg-white border border-gray-200 border-dashed rounded-xl hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all shadow-sm"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 md:py-3 text-[12px] md:text-[13px] font-medium text-gray-700 bg-[var(--color-surface)] border border-gray-200 border-dashed rounded-xl hover:bg-gray-50 hover:text-gray-900 hover:border-gray-300 transition-all shadow-sm"
                     >
                         <FaPlus className="w-3 h-3" />
                         Invite New Member
                     </button>
                 ) : (
-                    <div className="bg-white p-4 md:p-5 rounded-2xl border border-[#C6FF00]/40 shadow-sm shadow-[#C6FF00]/5">
+                    <div className="bg-[var(--color-surface)] p-4 md:p-5 rounded-2xl border border-[var(--mx-color-c6ff00)]/40 shadow-sm shadow-[var(--mx-color-c6ff00)]/5">
                         <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-start sm:items-end gap-3 md:gap-4">
                             <div className="w-full sm:flex-1">
                                 <label className="text-[10px] md:text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5 block ml-1">
@@ -379,21 +392,21 @@ export default function WorkplaceUsers({
                                     value={inviteEmail}
                                     onChange={(e) => setInviteEmail(e.target.value)}
                                     placeholder="colleague@company.com"
-                                    className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-[#C6FF00] focus:ring-2 focus:ring-[#C6FF00]/20 focus:bg-white transition-all outline-none text-[12px] md:text-[14px]"
+                                    className="w-full px-3 md:px-4 py-2 md:py-2.5 bg-gray-50 rounded-xl border border-gray-200 focus:border-[var(--mx-color-c6ff00)] focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/20 focus:bg-[var(--color-surface)] transition-all outline-none text-[12px] md:text-[14px]"
                                 />
                             </div>
                             <div className="flex gap-2 w-full sm:w-auto shrink-0 mt-2 sm:mt-0">
                                 <button
                                     type="button"
                                     onClick={() => setShowForm(false)}
-                                    className="flex-1 sm:flex-none px-4 py-2 md:py-2.5 rounded-xl bg-white border border-gray-200 text-gray-700 font-medium text-[12px] md:text-[13px] hover:bg-gray-50 transition-colors"
+                                    className="flex-1 sm:flex-none px-4 py-2 md:py-2.5 rounded-xl bg-[var(--color-surface)] border border-gray-200 text-gray-700 font-medium text-[12px] md:text-[13px] hover:bg-gray-50 transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={formLoading}
-                                    className="flex-1 sm:flex-none px-4 md:px-6 py-2 md:py-2.5 rounded-xl bg-[#C6FF00] hover:bg-[#b8f000] disabled:opacity-60 text-gray-900 font-bold text-[12px] md:text-[13px] transition-colors shadow-sm"
+                                    className="flex-1 sm:flex-none px-4 md:px-6 py-2 md:py-2.5 rounded-xl bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60 text-gray-900 font-bold text-[12px] md:text-[13px] transition-colors shadow-sm"
                                 >
                                     {formLoading ? "Sending…" : "Send Invite"}
                                 </button>

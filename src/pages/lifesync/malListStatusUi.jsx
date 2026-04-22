@@ -104,14 +104,14 @@ export function MalListStatusControl({
     variant === 'dark'
       ? [
           'block w-full max-w-none cursor-pointer outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-45',
-          'h-11 rounded-xl border border-white/12 bg-black/40 px-3 py-0 pr-9 text-[13px] font-medium leading-none text-white/90',
-          'hover:border-white/22 focus:border-white/35 focus:ring-2 focus:ring-white/10',
+          'h-11 rounded-xl border border-[var(--color-border-strong)]/12 bg-black/40 px-3 py-0 pr-9 text-[13px] font-medium leading-none text-white/90',
+          'hover:border-[var(--color-border-strong)]/22 focus:border-[var(--color-border-strong)]/35 focus:ring-2 focus:ring-[var(--color-border-strong)]/10',
           'sm:h-8 sm:w-auto sm:max-w-[10rem] sm:rounded-lg sm:px-2 sm:pr-7 sm:text-[12px] sm:focus:ring-1',
         ].join(' ')
       : [
           'block w-full max-w-none cursor-pointer outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-          'h-11 rounded-xl border border-[#d2d2d7] bg-white px-3 py-0 pr-9 text-[13px] font-medium leading-none text-[#1d1d1f]',
-          'hover:border-[#b0b0b5] focus:border-[#1d1d1f] focus:ring-2 focus:ring-[#1d1d1f]/10',
+          'h-11 rounded-xl border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-3 py-0 pr-9 text-[13px] font-medium leading-none text-[var(--mx-color-1d1d1f)]',
+          'hover:border-[var(--mx-color-b0b0b5)] focus:border-[var(--mx-color-1d1d1f)] focus:ring-2 focus:ring-[var(--mx-color-1d1d1f)]/10',
           'sm:h-8 sm:w-auto sm:max-w-[10rem] sm:rounded-lg sm:px-2 sm:pr-7 sm:text-[12px] sm:focus:ring-1',
         ].join(' ')
 
@@ -133,7 +133,7 @@ export function MalListStatusControl({
         disabled={!malLinked || busy}
       >
         {!value ? (
-          <option value="" disabled className={variant === 'dark' ? 'bg-[#111]' : ''}>
+          <option value="" disabled className={variant === 'dark' ? 'bg-[var(--mx-color-111)]' : ''}>
             Choose status…
           </option>
         ) : null}
@@ -141,7 +141,7 @@ export function MalListStatusControl({
           <option
             key={opt.value}
             value={opt.value}
-            className={variant === 'dark' ? 'bg-[#111] text-white' : ''}
+            className={variant === 'dark' ? 'bg-[var(--mx-color-111)] text-white' : ''}
           >
             {opt.label}
           </option>

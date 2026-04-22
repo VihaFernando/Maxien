@@ -38,7 +38,7 @@ const MotionLink = motion.create(Link)
 const SC = 'https://cdn.akamai.steamstatic.com/steam/apps'
 
 const focusRing =
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a78bfa] focus-visible:ring-offset-2 focus-visible:ring-offset-[#faf8ff]'
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mx-color-a78bfa)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mx-color-faf8ff)]'
 
 function dayStamp(d = new Date()) {
     try { return d.toISOString().slice(0, 10) } catch { return '' }
@@ -218,7 +218,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
     return (
         <MotionLink
             to={to}
-            className={`group relative block overflow-hidden rounded-[22px] bg-white shadow-[0_10px_34px_-18px_rgba(21, 20, 24,0.35)] ring-1 ring-slate-200/80 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-26px_rgba(21, 20, 24,0.35)] sm:rounded-[26px] ${focusRing} ${className}`}
+            className={`group relative block overflow-hidden rounded-[22px] bg-[var(--color-surface)] shadow-[0_10px_34px_-18px_rgba(21, 20, 24,0.35)] ring-1 ring-slate-200/80 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-26px_rgba(21, 20, 24,0.35)] sm:rounded-[26px] ${focusRing} ${className}`}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.99 }}
             transition={{ type: 'spring', stiffness: 420, damping: 28 }}
@@ -247,7 +247,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
                 <div className="flex items-end justify-between gap-3">
                     <div className="min-w-0">
                         {badge ? (
-                            <span className={`mb-1 inline-flex w-fit items-center rounded-full bg-white/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-sm ring-1 ring-white/20 ${badgeClass || ''}`}>
+                            <span className={`mb-1 inline-flex w-fit items-center rounded-full bg-[var(--color-surface)]/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-sm ring-1 ring-[var(--color-border-strong)]/20 ${badgeClass || ''}`}>
                                 {badge}
                             </span>
                         ) : null}
@@ -259,7 +259,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
                         </p>
                     </div>
 
-                    <span className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-2 text-[11px] font-bold text-white shadow-sm ring-1 ring-white/20 backdrop-blur transition group-hover:bg-white/20">
+                    <span className="shrink-0 inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)]/15 px-3 py-2 text-[11px] font-bold text-white shadow-sm ring-1 ring-[var(--color-border-strong)]/20 backdrop-blur transition group-hover:bg-[var(--color-surface)]/20">
                         Open
                         <FaArrowRight className="h-3 w-3 opacity-85" aria-hidden />
                     </span>
@@ -276,7 +276,7 @@ function MobileExploreRow({ to, pool, title, subtitle, badge, badgeClass }) {
     return (
         <MotionLink
             to={to}
-            className={`flex min-h-[104px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-sm ring-1 ring-slate-100/80 transition hover:bg-slate-50/60 active:scale-[0.99] sm:min-h-[104px] sm:gap-4 sm:p-4 ${focusRing}`}
+            className={`flex min-h-[104px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-[var(--color-surface)] p-3 shadow-sm ring-1 ring-slate-100/80 transition hover:bg-slate-50/60 active:scale-[0.99] sm:min-h-[104px] sm:gap-4 sm:p-4 ${focusRing}`}
             whileTap={{ scale: 0.99 }}
             whileHover={{ y: -2 }}
             transition={{ type: 'spring', stiffness: 480, damping: 32 }}
@@ -295,9 +295,9 @@ function MobileExploreRow({ to, pool, title, subtitle, badge, badgeClass }) {
                     </span>
                 ) : null}
                 <h3 className="text-[15px] font-black leading-tight tracking-tight text-slate-900 sm:text-[17px]">{title}</h3>
-                <p className="mt-0.5 text-[11px] leading-snug text-[#64748b] line-clamp-2 sm:mt-1 sm:text-[12px]">{subtitle}</p>
+                <p className="mt-0.5 text-[11px] leading-snug text-[var(--mx-color-64748b)] line-clamp-2 sm:mt-1 sm:text-[12px]">{subtitle}</p>
             </div>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-2xl bg-[#C6FF00]/25 text-slate-900 shadow-sm ring-1 ring-[#C6FF00]/40 sm:h-12 sm:w-12">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-2xl bg-[var(--mx-color-c6ff00)]/25 text-slate-900 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/40 sm:h-12 sm:w-12">
                 <FaChevronRight className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden />
             </div>
         </MotionLink>
@@ -314,7 +314,7 @@ function AnimeExploreLaneCard({ tile, compact = false, className = '' }) {
     return (
         <MotionLink
             to={tile?.to || '#'}
-            className={`group block overflow-hidden rounded-[22px] border border-slate-200/85 p-3.5 shadow-[0_14px_34px_-24px_rgba(21, 20, 24,0.36)] ring-1 ring-white/70 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_56px_-30px_rgba(21, 20, 24,0.42)] sm:p-4 ${focusRing} ${className}`}
+            className={`group block overflow-hidden rounded-[22px] border border-slate-200/85 p-3.5 shadow-[0_14px_34px_-24px_rgba(21, 20, 24,0.36)] ring-1 ring-[var(--color-border-strong)]/70 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_56px_-30px_rgba(21, 20, 24,0.42)] sm:p-4 ${focusRing} ${className}`}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.995 }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
@@ -383,16 +383,16 @@ function HubConnectPrompt({ title, body, embedded = false }) {
     const inner = (
         <div className="flex min-h-[50vh] items-center justify-center px-2 py-10 sm:py-14">
             <MotionDiv
-                className="w-full max-w-md rounded-[22px] bg-white px-6 py-9 text-center shadow-sm sm:px-8 sm:py-10"
+                className="w-full max-w-md rounded-[22px] bg-[var(--color-surface)] px-6 py-9 text-center shadow-sm sm:px-8 sm:py-10"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-                <p className="text-[16px] font-bold text-[#1d1d1f] sm:text-[17px]">{title}</p>
-                <p className="mt-2 text-[13px] leading-relaxed text-[#86868b]">{body}</p>
+                <p className="text-[16px] font-bold text-[var(--mx-color-1d1d1f)] sm:text-[17px]">{title}</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-[var(--mx-color-86868b)]">{body}</p>
                 <Link
                     to="/dashboard/profile?tab=integrations"
-                    className={`mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[#C6FF00] px-5 text-[13px] font-semibold text-[#1a1628] shadow-sm transition-all hover:brightness-95 sm:w-auto sm:min-w-[200px] ${focusRing}`}
+                    className={`mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm transition-all hover:brightness-95 sm:w-auto sm:min-w-[200px] ${focusRing}`}
                 >
                     Open integrations
                 </Link>
@@ -407,9 +407,9 @@ function SectionLabel({ id, children }) {
     return (
         <h2
             id={id}
-            className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[#5b5670] sm:text-xs"
+            className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--mx-color-5b5670)] sm:text-xs"
         >
-            <span className="h-px w-6 rounded-full bg-gradient-to-r from-[#C6FF00] to-[#a78bfa] sm:w-8" aria-hidden />
+            <span className="h-px w-6 rounded-full bg-gradient-to-r from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a78bfa)] sm:w-8" aria-hidden />
             {children}
         </h2>
     )
@@ -439,7 +439,7 @@ export function LifeSyncGamesHub() {
             pool: POOL.wishlist,
             title: 'Wishlist',
             subtitle: 'Your saved targets and reminders',
-            gradient: 'bg-gradient-to-t from-[#faf5ff] via-white/65 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-faf5ff)] via-[var(--color-surface)]/65 to-transparent',
         },
         {
             id: 'xbox',
@@ -447,7 +447,7 @@ export function LifeSyncGamesHub() {
             pool: POOL.xbox,
             title: 'Xbox',
             subtitle: 'Store highlights and platform offers',
-            gradient: 'bg-gradient-to-t from-[#ecfdf5] via-white/60 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-ecfdf5)] via-[var(--color-surface)]/60 to-transparent',
         },
         {
             id: 'deals',
@@ -455,7 +455,7 @@ export function LifeSyncGamesHub() {
             pool: POOL.deals,
             title: 'Deal radar',
             subtitle: 'CheapShark price drops and bundle spikes',
-            gradient: 'bg-gradient-to-t from-[#f0fdf4] via-white/60 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-f0fdf4)] via-[var(--color-surface)]/60 to-transparent',
         },
     ]
 
@@ -466,7 +466,7 @@ export function LifeSyncGamesHub() {
             pool: POOL.gamerant,
             title: 'Gaming news',
             subtitle: 'Headline sweep for quick context before you play',
-            gradient: 'bg-gradient-to-t from-[#fef2f2] via-white/60 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-fef2f2)] via-[var(--color-surface)]/60 to-transparent',
         },
         ...(crackGamesPluginOn
             ? [{
@@ -475,7 +475,7 @@ export function LifeSyncGamesHub() {
                 pool: POOL.gamesearch,
                 title: 'Game search',
                 subtitle: 'Cross-provider links and crack metadata lookup',
-                gradient: 'bg-gradient-to-t from-[#eef2ff] via-white/60 to-transparent',
+                gradient: 'bg-gradient-to-t from-[var(--mx-color-eef2ff)] via-[var(--color-surface)]/60 to-transparent',
             }]
             : []),
         {
@@ -484,7 +484,7 @@ export function LifeSyncGamesHub() {
             pool: POOL.releases,
             title: 'Release calendar',
             subtitle: 'Upcoming launches grouped by day and window',
-            gradient: 'bg-gradient-to-t from-[#ecfeff] via-white/60 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-ecfeff)] via-[var(--color-surface)]/60 to-transparent',
         },
         ...(crackGamesPluginOn
             ? [{
@@ -493,7 +493,7 @@ export function LifeSyncGamesHub() {
                 pool: POOL.crackstatus,
                 title: 'Crack status',
                 subtitle: 'Protection history, timeline, and release notes',
-                gradient: 'bg-gradient-to-t from-[#fff7ed] via-white/60 to-transparent',
+                gradient: 'bg-gradient-to-t from-[var(--mx-color-fff7ed)] via-[var(--color-surface)]/60 to-transparent',
             }]
             : []),
     ]
@@ -576,17 +576,17 @@ export function LifeSyncGamesHub() {
             <header className="relative mb-7 sm:mb-8 lg:mb-10">
                 <div className="overflow-hidden rounded-[30px] border border-slate-200/85 p-4 shadow-[0_30px_70px_-34px_rgba(21, 20, 24,0.28)] sm:p-6 lg:p-7">
                     <div className="pointer-events-none absolute -right-14 -top-20 h-56 w-56 rounded-full bg-sky-300/30 blur-3xl" aria-hidden />
-                    <div className="pointer-events-none absolute -left-10 bottom-0 h-44 w-44 rounded-full bg-[#C6FF00]/25 blur-3xl" aria-hidden />
+                    <div className="pointer-events-none absolute -left-10 bottom-0 h-44 w-44 rounded-full bg-[var(--mx-color-c6ff00)]/25 blur-3xl" aria-hidden />
 
                     <div className="relative grid gap-6 lg:grid-cols-12 lg:items-center">
                         <div className="lg:col-span-8">
-                            <div className="inline-flex items-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 ring-1 ring-slate-200/80">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)]/90 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 ring-1 ring-slate-200/80">
                                 <FaBolt className="h-3 w-3 text-slate-900" aria-hidden />
                                 Game Hub
                             </div>
 
                             <div className="mt-3 flex items-start gap-3 sm:gap-4">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#C6FF00] text-slate-900 shadow-lg shadow-[#C6FF00]/30 sm:h-14 sm:w-14">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)] text-slate-900 shadow-lg shadow-[var(--mx-color-c6ff00)]/30 sm:h-14 sm:w-14">
                                     <FaGamepad className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden />
                                 </div>
                                 <div className="min-w-0 pt-0.5">
@@ -626,7 +626,7 @@ export function LifeSyncGamesHub() {
                                 </Link>
                                 <Link
                                     to="/dashboard/lifesync/games/deals"
-                                    className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-[#C6FF00] px-4 text-[12px] font-semibold text-slate-900 shadow-sm transition hover:brightness-95 ${focusRing}`}
+                                    className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-[var(--mx-color-c6ff00)] px-4 text-[12px] font-semibold text-slate-900 shadow-sm transition hover:brightness-95 ${focusRing}`}
                                 >
                                     View live deals
                                     <FaChevronRight className="h-3.5 w-3.5" aria-hidden />
@@ -635,22 +635,22 @@ export function LifeSyncGamesHub() {
                         </div>
 
                         <div className="grid grid-cols-2 gap-3 sm:gap-3.5 lg:col-span-4">
-                            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                            <div className="rounded-2xl border border-slate-200/80 bg-[var(--color-surface)]/85 p-3 shadow-sm">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Modules</p>
                                 <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-slate-900">{connectedRouteCount}</p>
                                 <p className="mt-1 text-[10px] text-slate-600">Connected routes</p>
                             </div>
-                            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                            <div className="rounded-2xl border border-slate-200/80 bg-[var(--color-surface)]/85 p-3 shadow-sm">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Intel lanes</p>
                                 <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-slate-900">{intelLaneCount}</p>
                                 <p className="mt-1 text-[10px] text-slate-600">{crackGamesPluginOn ? 'News + search + status' : 'News + releases'}</p>
                             </div>
-                            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                            <div className="rounded-2xl border border-slate-200/80 bg-[var(--color-surface)]/85 p-3 shadow-sm">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Storefronts</p>
                                 <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-slate-900">2</p>
                                 <p className="mt-1 text-[10px] text-slate-600">Steam and Xbox</p>
                             </div>
-                            <div className="rounded-2xl border border-slate-200/80 bg-white/85 p-3 shadow-sm">
+                            <div className="rounded-2xl border border-slate-200/80 bg-[var(--color-surface)]/85 p-3 shadow-sm">
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Daily mode</p>
                                 <p className="mt-1 text-[26px] font-black leading-none tracking-tight text-slate-900">Live</p>
                                 <p className="mt-1 text-[10px] text-slate-600">Deals and releases</p>
@@ -662,7 +662,7 @@ export function LifeSyncGamesHub() {
 
             <section aria-labelledby="lifesync-games-maindeck-label">
                 <SectionLabel id="lifesync-games-maindeck-label">Main Deck</SectionLabel>
-                <p className="mt-1 mb-4 text-[12px] text-[#5b5670] lg:mb-5 lg:text-[13px]">
+                <p className="mt-1 mb-4 text-[12px] text-[var(--mx-color-5b5670)] lg:mb-5 lg:text-[13px]">
                     <span className="lg:hidden">Steam drives the front slot. Wishlist, Xbox, and deal radar stay stacked for quick tactical jumps.</span>
                     <span className="hidden lg:inline">Steam occupies the command lane; wishlist, Xbox, and deal radar fill the tactical stack on the right.</span>
                 </p>
@@ -675,7 +675,7 @@ export function LifeSyncGamesHub() {
                         rows={3}
                         title="Steam command"
                         subtitle="Library pulse, storefront momentum, and account sync in one launcher."
-                        gradient="bg-gradient-to-t from-[#e0f2fe] via-white/70 to-transparent"
+                        gradient="bg-gradient-to-t from-[var(--mx-color-e0f2fe)] via-[var(--color-surface)]/70 to-transparent"
                         className={`min-h-[240px] w-full shrink-0 sm:min-h-[280px] lg:col-span-8 xl:col-span-8 ${gamesHeroMinH}`}
                     />
                     <div className="grid grid-cols-1 gap-3.5 lg:col-span-4 lg:grid-cols-1 lg:gap-5 xl:col-span-4 xl:gap-6">
@@ -698,7 +698,7 @@ export function LifeSyncGamesHub() {
 
             <section aria-labelledby="lifesync-games-discovery-label" className="mt-8 sm:mt-10">
                 <SectionLabel id="lifesync-games-discovery-label">Discovery Lanes</SectionLabel>
-                <p className="mt-1 mb-4 text-[12px] text-[#5b5670] lg:mb-5 lg:text-[13px]">
+                <p className="mt-1 mb-4 text-[12px] text-[var(--mx-color-5b5670)] lg:mb-5 lg:text-[13px]">
                     <span className="lg:hidden">
                         {crackGamesPluginOn
                             ? 'News, search, launch timeline, and status intel stay grouped for rapid recon.'
@@ -754,7 +754,7 @@ export function LifeSyncGamesHub() {
                                 Shortcut grid for direct jumps into each game lane.
                             </p>
                         </div>
-                        <span className="inline-flex w-fit items-center rounded-full bg-[#C6FF00]/30 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-900 ring-1 ring-[#C6FF00]/45">
+                        <span className="inline-flex w-fit items-center rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-900 ring-1 ring-[var(--mx-color-c6ff00)]/45">
                             {fastTravelRouteCount} routes
                         </span>
                     </div>
@@ -849,7 +849,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             rows: 3,
             title: 'Anime',
             subtitle: 'MAL seasonal lineups, rankings, search, and your list.',
-            gradient: 'bg-gradient-to-t from-[#e0f2fe] via-white/70 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-e0f2fe)] via-[var(--color-surface)]/70 to-transparent',
             hero: true,
         })
     }
@@ -862,7 +862,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             rows: 2,
             title: 'Manga',
             subtitle: 'MangaDex queues, chapters, and reader.',
-            gradient: 'bg-gradient-to-t from-[#fff8eb] via-white/65 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-fff8eb)] via-[var(--color-surface)]/65 to-transparent',
             hero: !animePluginOn && tiles.length === 0,
         })
     }
@@ -877,7 +877,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             subtitle: 'Manga District in a separate destination.',
             badge: '18+',
             badgeClass: 'bg-rose-100 text-rose-800',
-            gradient: 'bg-gradient-to-t from-[#ffe4e6] via-white/60 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-ffe4e6)] via-[var(--color-surface)]/60 to-transparent',
             hero: !animePluginOn && tiles.length === 0,
         })
     }
@@ -892,7 +892,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             subtitle: 'Adults-only catalog with its own controls.',
             badge: '18+',
             badgeClass: 'bg-rose-100 text-rose-800',
-            gradient: 'bg-gradient-to-t from-[#ffe4e6] via-white/60 to-transparent',
+            gradient: 'bg-gradient-to-t from-[var(--mx-color-ffe4e6)] via-[var(--color-surface)]/60 to-transparent',
             hero: !animePluginOn && !mangaPluginOn,
         })
     }
@@ -926,7 +926,7 @@ function AnimeHubExploreSection({ tiles }) {
                         <span className="hidden lg:inline">Primary lane on the left, with adaptive destination cards on the right for faster routing.</span>
                     </p>
                 </div>
-                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-[#C6FF00]/25 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-800 ring-1 ring-[#C6FF00]/40 sm:mt-0">
+                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-[var(--mx-color-c6ff00)]/25 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-800 ring-1 ring-[var(--mx-color-c6ff00)]/40 sm:mt-0">
                     {tiles.length} destinations
                 </span>
             </div>
@@ -1024,7 +1024,7 @@ function AnimeHubBroadcastWeekSection({
                         </dl>
                         <Link
                             to={ANIME_HUB_PATHS.calendar}
-                            className={`inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-[#C6FF00] px-4 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm transition-all hover:brightness-95 ${focusRing}`}
+                            className={`inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm transition-all hover:brightness-95 ${focusRing}`}
                         >
                             Open full calendar
                             <FaChevronRight className="h-3.5 w-3.5" aria-hidden />
@@ -1041,7 +1041,7 @@ function AnimeHubBroadcastWeekSection({
                             </div>
                             <Link
                                 to={`${ANIME_HUB_PATHS.calendar}?date=${encodeURIComponent(selectedKey)}`}
-                                className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-white px-3.5 text-[11px] font-bold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 ${focusRing}`}
+                                className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-[var(--color-surface)] px-3.5 text-[11px] font-bold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 ${focusRing}`}
                             >
                                 View day
                             </Link>
@@ -1072,7 +1072,7 @@ function AnimeHubBroadcastWeekSection({
                                             <span className={`text-[10px] font-black uppercase tracking-[0.16em] ${isSel ? 'text-white/75' : 'text-slate-500'}`}>
                                                 {isToday ? 'Today' : dow}
                                             </span>
-                                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tabular-nums ${isSel ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tabular-nums ${isSel ? 'bg-[var(--color-surface)]/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
                                                 {pinned ? <FaStar className="h-2.5 w-2.5" aria-hidden /> : <FaCalendarAlt className="h-2.5 w-2.5" aria-hidden />}
                                                 {list.length}
                                             </span>
@@ -1094,7 +1094,7 @@ function AnimeHubBroadcastWeekSection({
                                 </div>
                                 <Link
                                     to={`${ANIME_HUB_PATHS.calendar}?date=${encodeURIComponent(selectedKey)}`}
-                                    className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-[#C6FF00] px-3.5 text-[11px] font-bold text-slate-900 shadow-sm transition hover:brightness-95 ${focusRing}`}
+                                    className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-3.5 text-[11px] font-bold text-slate-900 shadow-sm transition hover:brightness-95 ${focusRing}`}
                                 >
                                     Open in calendar
                                 </Link>
@@ -1113,7 +1113,7 @@ function AnimeHubBroadcastWeekSection({
                                             key={`${selectedKey}-${it?.malId}-${it?.episodeNumber}-${i}`}
                                             className={`
                                                 flex items-center gap-3 rounded-xl border px-3 py-2
-                                                ${it?.isPinned ? 'border-[#C6FF00]/50 bg-[#f7fee7]/70' : 'border-slate-200/80 bg-slate-50/80'}
+                                                ${it?.isPinned ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-f7fee7)]/70' : 'border-slate-200/80 bg-slate-50/80'}
                                             `}
                                         >
                                             <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200/80">
@@ -1168,7 +1168,7 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                 flex gap-3 rounded-2xl border border-slate-200/90 p-3 shadow-sm
                 xl:h-full xl:min-h-[min(280px,42vh)] xl:flex-col xl:gap-0 xl:rounded-none xl:border-0 xl:border-r xl:border-slate-200/90 xl:bg-transparent xl:p-0 xl:shadow-none
                 xl:last:border-r-0
-                ${isToday ? 'ring-2 ring-[#C6FF00]/45 ring-offset-2 ring-offset-white xl:ring-0 xl:ring-offset-0 xl:bg-[#f7fee7]/40' : ''}
+                ${isToday ? 'ring-2 ring-[var(--mx-color-c6ff00)]/45 ring-offset-2 ring-offset-white xl:ring-0 xl:ring-offset-0 xl:bg-[var(--mx-color-f7fee7)]/40' : ''}
             `}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1181,7 +1181,7 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                 className={`
                     group flex w-[4.25rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-center
                     xl:w-full xl:flex-row xl:justify-between xl:rounded-none xl:px-2.5 xl:py-2.5
-                    ${isToday ? 'bg-[#C6FF00] text-slate-900' : 'bg-slate-100 text-slate-700 xl:bg-white xl:text-slate-800'}
+                    ${isToday ? 'bg-[var(--mx-color-c6ff00)] text-slate-900' : 'bg-slate-100 text-slate-700 xl:bg-[var(--color-surface)] xl:text-slate-800'}
                     ${focusRing}
                 `}
                 aria-label={`Open calendar for ${label} ${dnum}`}
@@ -1201,10 +1201,10 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                         ${pinned.length
                         ? isToday
                             ? 'bg-slate-900/10 text-slate-900'
-                            : 'bg-[#C6FF00]/35 text-slate-900 xl:bg-[#C6FF00]/25 xl:text-slate-800'
+                            : 'bg-[var(--mx-color-c6ff00)]/35 text-slate-900 xl:bg-[var(--mx-color-c6ff00)]/25 xl:text-slate-800'
                         : isToday
                             ? 'bg-slate-900/10 text-slate-800'
-                            : 'bg-white/80 text-slate-600 xl:bg-slate-100 xl:text-slate-700'}
+                            : 'bg-[var(--color-surface)]/80 text-slate-600 xl:bg-slate-100 xl:text-slate-700'}
                     `}
                 >
                     {pinned.length ? <FaStar className="h-2 w-2 xl:h-2.5 xl:w-2.5" aria-hidden /> : <FaCalendarAlt className="h-2 w-2 xl:h-2.5 xl:w-2.5" aria-hidden />}
@@ -1212,7 +1212,7 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                 </span>
             </Link>
 
-            <div className="min-w-0 flex-1 xl:border-t-0 xl:bg-white xl:p-2.5">
+            <div className="min-w-0 flex-1 xl:border-t-0 xl:bg-[var(--color-surface)] xl:p-2.5">
                 {loading ? (
                     <div className="space-y-2">
                         <div className="h-11 rounded-xl bg-slate-100 animate-pulse" />
@@ -1226,7 +1226,7 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                                 key={`${key}-${it?.malId}-${it?.episodeNumber}-${i}`}
                                 className={`
                                     flex items-center gap-2 rounded-xl border px-2 py-2
-                                    ${it?.isPinned ? 'border-[#C6FF00]/50 bg-[#f7fee7]/80' : 'border-slate-200/80 bg-slate-50/80'}
+                                    ${it?.isPinned ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-f7fee7)]/80' : 'border-slate-200/80 bg-slate-50/80'}
                                 `}
                             >
                                 <div className="h-9 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-200 ring-1 ring-slate-200/80">
@@ -1454,11 +1454,11 @@ export function LifeSyncAnimeHub() {
         <div className="relative lifesync-category-borderless">
             <header className="relative mb-6 sm:mb-8">
                 <div className="overflow-hidden rounded-[28px] backdrop-blur-md p-5 text-slate-900 shadow-[0_28px_60px_-32px_rgba(21, 20, 24,0.18)] sm:p-6 lg:p-7">
-                    <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[#C6FF00]/20 blur-3xl" aria-hidden />
+                    <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[var(--mx-color-c6ff00)]/20 blur-3xl" aria-hidden />
                     <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-indigo-300/25 blur-3xl" aria-hidden />
                     <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-900 shadow-lg shadow-[#C6FF00]/25 sm:h-14 sm:w-14">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-900 shadow-lg shadow-[var(--mx-color-c6ff00)]/25 sm:h-14 sm:w-14">
                                 <FaFilm className="h-6 w-6 sm:h-7 sm:w-7" />
                             </div>
                             <div className="min-w-0 pt-0.5">
@@ -1493,7 +1493,7 @@ export function LifeSyncAnimeHub() {
                                         <span className="hidden lg:inline">Pick up streams and chapters without hunting through menus.</span>
                                     </p>
                                 </div>
-                                <span className="w-fit rounded-full bg-[#C6FF00]/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-900 ring-1 ring-[#C6FF00]/50">
+                                <span className="w-fit rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-900 ring-1 ring-[var(--mx-color-c6ff00)]/50">
                                     Live sync
                                 </span>
                             </div>
@@ -1511,11 +1511,11 @@ export function LifeSyncAnimeHub() {
                                                     className={`flex min-h-[44px] items-center justify-between rounded-xl px-3 py-2 text-[12px] font-semibold transition ${
                                                         active
                                                             ? 'bg-slate-900 text-white shadow-[0_10px_22px_-16px_rgba(21, 20, 24,0.8)]'
-                                                            : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+                                                            : 'bg-[var(--color-surface)] text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
                                                     }`}
                                                 >
                                                     <span>{tab.label}</span>
-                                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${active ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${active ? 'bg-[var(--color-surface)]/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
                                                         {tab.loading ? '…' : tab.count}
                                                     </span>
                                                 </button>

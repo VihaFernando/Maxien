@@ -83,12 +83,12 @@ const getRenewalUrgency = (nextRenewal) => {
     if (days <= 2) {
         return {
             label: `Due in ${days} day${days === 1 ? '' : 's'}`,
-            className: 'bg-[#fef2f2] border border-[#fecaca] text-[#b91c1c]',
+            className: 'bg-[var(--mx-color-fef2f2)] border border-[var(--mx-color-fecaca)] text-[var(--mx-color-b91c1c)]',
         }
     }
     return {
         label: `Due in ${days} day${days === 1 ? '' : 's'}`,
-        className: 'bg-[#fefce8] border border-[#fde68a] text-[#92400e]',
+        className: 'bg-[var(--mx-color-fefce8)] border border-[var(--mx-color-fde68a)] text-[var(--mx-color-92400e)]',
     }
 }
 
@@ -412,8 +412,8 @@ export default function Subscriptions() {
     const formContent = (
         <>
             <div className="mb-3.5">
-                <p className="text-[13px] font-semibold text-[#1d1d1f]">Subscription details</p>
-                <p className="mt-1 text-[11px] text-[#86868b]">Add your monthly cost and renewal day to keep this list up to date.</p>
+                <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Subscription details</p>
+                <p className="mt-1 text-[11px] text-[var(--mx-color-86868b)]">Add your monthly cost and renewal day to keep this list up to date.</p>
             </div>
 
             {(error || message) && (
@@ -424,18 +424,18 @@ export default function Subscriptions() {
 
             <form onSubmit={handleSave} className="space-y-3">
                 <div>
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Name</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-6b7280)]">Name</label>
                     <input
                         value={form.name}
                         onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                         placeholder="Spotify, Notion, Netflix"
-                        className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:bg-white"
+                        className="mt-1.5 w-full rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafb)] px-3 py-2 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition focus:bg-[var(--color-surface)]"
                     />
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Amount</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-6b7280)]">Amount</label>
                         <input
                             value={form.amount}
                             onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
@@ -443,15 +443,15 @@ export default function Subscriptions() {
                             min="0"
                             step="0.01"
                             placeholder="0.00"
-                            className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none  focus:bg-white"
+                            className="mt-1.5 w-full rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafb)] px-3 py-2 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none  focus:bg-[var(--color-surface)]"
                         />
                     </div>
                     <div>
-                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Currency</label>
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-6b7280)]">Currency</label>
                         <select
                             value={form.currency}
                             onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value }))}
-                            className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:bg-white"
+                            className="mt-1.5 w-full rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafb)] px-3 py-2 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition focus:bg-[var(--color-surface)]"
                         >
                             {currencyOptions.map((code) => (
                                 <option key={code} value={code}>{code}</option>
@@ -461,29 +461,29 @@ export default function Subscriptions() {
                 </div>
 
                 <div>
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#6b7280]">Renewal date</label>
+                    <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-6b7280)]">Renewal date</label>
                     <input
                         value={form.renewalDate}
                         onChange={(e) => setForm((prev) => ({ ...prev, renewalDate: e.target.value }))}
                         type="date"
-                        className="mt-1.5 w-full rounded-lg border border-[#e5e5ea] bg-[#fafafb] px-3 py-2 text-[13px] text-[#1d1d1f] outline-none transition focus:bg-white"
+                        className="mt-1.5 w-full rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafb)] px-3 py-2 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition focus:bg-[var(--color-surface)]"
                     />
-                    <p className="mt-1.5 text-[10px] text-[#86868b]">Repeats monthly on the same day.</p>
+                    <p className="mt-1.5 text-[10px] text-[var(--mx-color-86868b)]">Repeats monthly on the same day.</p>
                 </div>
 
-                <div className="rounded-lg border border-[#e5e5ea] bg-[#f8f9fb] px-3 py-2 text-[12px] text-[#1d1d1f]">
+                <div className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f8f9fb)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]">
                     <div className="flex items-center justify-between gap-2">
                         <p className="font-semibold">LKR conversion</p>
-                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#86868b]">Live</span>
+                        <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-86868b)]">Live</span>
                     </div>
-                    <p className="mt-1.5 text-[12px] text-[#52525b]">{conversionSummary}</p>
+                    <p className="mt-1.5 text-[12px] text-[var(--mx-color-52525b)]">{conversionSummary}</p>
                 </div>
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <button
                         type="submit"
                         disabled={saving}
-                        className="inline-flex items-center justify-center rounded-lg bg-[#1d1d1f] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-black disabled:opacity-60"
+                        className="inline-flex items-center justify-center rounded-lg bg-[var(--mx-color-1d1d1f)] px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-black disabled:opacity-60"
                     >
                         {saving ? "Saving..." : editing ? "Update subscription" : "Save subscription"}
                     </button>
@@ -494,7 +494,7 @@ export default function Subscriptions() {
                                 resetForm()
                                 if (isMobileViewport()) closeMobileOverlay()
                             }}
-                            className="inline-flex items-center justify-center rounded-lg border border-[#d2d2d7] bg-white px-4 py-2 text-[12px] font-semibold text-[#1d1d1f]"
+                            className="inline-flex items-center justify-center rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-4 py-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]"
                         >
                             Cancel edit
                         </button>
@@ -509,15 +509,15 @@ export default function Subscriptions() {
             <div className="fixed inset-0 z-[130] bg-black/35 backdrop-blur-sm p-2 sm:p-4 lg:hidden" onClick={closeMobileOverlay}>
                 <div className="flex min-h-full items-center justify-center">
                     <div
-                        className="lifesync-soft-borders w-full max-w-[440px] max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-2xl border border-[#d2d2d7]/60 bg-white p-3.5 shadow-[0_18px_48px_rgba(17,24,39,0.2)] sm:max-h-[calc(100dvh-2rem)]"
+                        className="lifesync-soft-borders w-full max-w-[440px] max-h-[calc(100dvh-1rem)] overflow-y-auto rounded-2xl border border-[var(--mx-color-d2d2d7)]/60 bg-[var(--color-surface)] p-3.5 shadow-[0_18px_48px_rgba(17,24,39,0.2)] sm:max-h-[calc(100dvh-2rem)]"
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className="mb-2.5 flex items-center justify-between">
-                            <p className="text-[13px] font-semibold text-[#1d1d1f]">{editing ? "Edit subscription" : "Add subscription"}</p>
+                            <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">{editing ? "Edit subscription" : "Add subscription"}</p>
                             <button
                                 type="button"
                                 onClick={closeMobileOverlay}
-                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f5f5f7] text-[#1d1d1f]"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]"
                                 aria-label="Close"
                             >
                                 <FaTimes className="h-3.5 w-3.5" />
@@ -534,16 +534,16 @@ export default function Subscriptions() {
     return (
         <div className="lifesync-soft-borders animate-in fade-in duration-500 w-full">
             <div className="mx-auto max-w-[1160px] space-y-4 px-0.5 sm:space-y-5">
-                <div className="rounded-2xl border border-[#e7e7ec] bg-white px-4 py-3.5 shadow-sm sm:px-5 sm:py-4.5">
+                <div className="rounded-2xl border border-[var(--mx-color-e7e7ec)] bg-[var(--color-surface)] px-4 py-3.5 shadow-sm sm:px-5 sm:py-4.5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <h1 className="text-[19px] font-bold tracking-tight text-[#1d1d1f] sm:text-[22px]">Subscriptions</h1>
-                            <p className="mt-1 text-[11px] text-[#86868b] sm:text-[12px]">Manage recurring costs, renewal dates, and live LKR conversion in one place.</p>
+                            <h1 className="text-[19px] font-bold tracking-tight text-[var(--mx-color-1d1d1f)] sm:text-[22px]">Subscriptions</h1>
+                            <p className="mt-1 text-[11px] text-[var(--mx-color-86868b)] sm:text-[12px]">Manage recurring costs, renewal dates, and live LKR conversion in one place.</p>
                         </div>
                         <button
                             type="button"
                             onClick={openFormForCreate}
-                            className="inline-flex items-center gap-2 rounded-lg border border-[#d2d2d7] bg-[#f9f9fb] px-3.5 py-2 text-[12px] font-semibold text-[#1d1d1f] transition hover:bg-white"
+                            className="inline-flex items-center gap-2 rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f9f9fb)] px-3.5 py-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:bg-[var(--color-surface)]"
                         >
                             <FaPlus className="h-3.5 w-3.5" />
                             Add subscription
@@ -555,38 +555,38 @@ export default function Subscriptions() {
 
                 <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
                     <div className="hidden lg:block">
-                        <div className="sticky top-5 rounded-2xl border border-[#e7e7ec] bg-white p-4 shadow-sm">
+                        <div className="sticky top-5 rounded-2xl border border-[var(--mx-color-e7e7ec)] bg-[var(--color-surface)] p-4 shadow-sm">
                             {formContent}
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-[#e7e7ec] bg-white p-3 shadow-sm sm:p-4">
+                    <div className="rounded-2xl border border-[var(--mx-color-e7e7ec)] bg-[var(--color-surface)] p-3 shadow-sm sm:p-4">
                         <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
-                            <div className="rounded-xl border border-[#ececf2] bg-[#f8f9fb] px-3 py-2.5">
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#86868b]">Monthly total</p>
-                                <p className="mt-0.5 text-[19px] font-bold text-[#1d1d1f]">{formatCurrency(subscriptionSummary.totalLkr, "LKR")}</p>
+                            <div className="rounded-xl border border-[var(--mx-color-ececf2)] bg-[var(--mx-color-f8f9fb)] px-3 py-2.5">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-86868b)]">Monthly total</p>
+                                <p className="mt-0.5 text-[19px] font-bold text-[var(--mx-color-1d1d1f)]">{formatCurrency(subscriptionSummary.totalLkr, "LKR")}</p>
                                 {subscriptionSummary.unavailableCount > 0 && (
-                                    <p className="mt-1 text-[10px] text-[#86868b]">{subscriptionSummary.unavailableCount} conversion unavailable</p>
+                                    <p className="mt-1 text-[10px] text-[var(--mx-color-86868b)]">{subscriptionSummary.unavailableCount} conversion unavailable</p>
                                 )}
                             </div>
-                            <div className="flex items-center gap-2 rounded-xl border border-[#ececf2] bg-[#fcfcfd] px-3 py-2">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f3f4f6] text-[#1d1d1f]">
+                            <div className="flex items-center gap-2 rounded-xl border border-[var(--mx-color-ececf2)] bg-[var(--mx-color-fcfcfd)] px-3 py-2">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--mx-color-f3f4f6)] text-[var(--mx-color-1d1d1f)]">
                                     <FaWallet className="h-3.5 w-3.5" />
                                 </div>
                                 <div>
-                                    <p className="text-[12px] font-semibold text-[#1d1d1f]">Your subscriptions</p>
-                                    <p className="text-[10px] text-[#86868b]">Sorted by nearest renewal</p>
+                                    <p className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">Your subscriptions</p>
+                                    <p className="text-[10px] text-[var(--mx-color-86868b)]">Sorted by nearest renewal</p>
                                 </div>
                             </div>
                         </div>
 
                         {loading ? (
-                            <div className="mt-4 flex items-center gap-2 text-[12px] text-[#86868b]">
-                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-[#1d1d1f]/60 border-t-transparent"></div>
+                            <div className="mt-4 flex items-center gap-2 text-[12px] text-[var(--mx-color-86868b)]">
+                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--mx-color-1d1d1f)]/60 border-t-transparent"></div>
                                 Loading subscriptions...
                             </div>
                         ) : subscriptions.length === 0 ? (
-                            <div className="mt-2 rounded-xl border border-dashed border-[#d6d6dd] bg-[#fafafb] px-4 py-7 text-center text-[12px] text-[#86868b]">
+                            <div className="mt-2 rounded-xl border border-dashed border-[var(--mx-color-d6d6dd)] bg-[var(--mx-color-fafafb)] px-4 py-7 text-center text-[12px] text-[var(--mx-color-86868b)]">
                                 No subscriptions yet. Add one to start tracking renewals.
                             </div>
                         ) : (
@@ -597,15 +597,15 @@ export default function Subscriptions() {
                                     const urgency = getRenewalUrgency(nextRenewal)
 
                                     return (
-                                        <div key={item.id} className="rounded-xl border border-[#e8e8ef] bg-[#fcfcfd] p-3">
+                                        <div key={item.id} className="rounded-xl border border-[var(--mx-color-e8e8ef)] bg-[var(--mx-color-fcfcfd)] p-3">
                                             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                                                 <div className="min-w-0">
                                                     <div className="flex flex-wrap items-center gap-1.5">
-                                                        <p className="truncate text-[13px] font-semibold text-[#1d1d1f]">{item.name}</p>
-                                                        <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-semibold text-[#475569]">{item.currency}</span>
-                                                        <span className="rounded-full bg-[#f5f5f7] px-2 py-0.5 text-[10px] font-semibold text-[#6b7280]">{item.currency === "LKR" ? "Local" : "Converted"}</span>
+                                                        <p className="truncate text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">{item.name}</p>
+                                                        <span className="rounded-full bg-[var(--mx-color-f1f5f9)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-475569)]">{item.currency}</span>
+                                                        <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-6b7280)]">{item.currency === "LKR" ? "Local" : "Converted"}</span>
                                                     </div>
-                                                    <p className="mt-1 text-[11px] text-[#6b7280]">
+                                                    <p className="mt-1 text-[11px] text-[var(--mx-color-6b7280)]">
                                                         Next renewal: {nextRenewal
                                                             ? nextRenewal.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
                                                             : "Invalid date"}
@@ -618,14 +618,14 @@ export default function Subscriptions() {
                                                         {urgency.label}
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex rounded-full border border-[#e5e7eb] bg-white px-2 py-0.5 text-[10px] font-semibold text-[#6b7280]">
+                                                    <span className="inline-flex rounded-full border border-[var(--mx-color-e5e7eb)] bg-[var(--color-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-6b7280)]">
                                                         On track
                                                     </span>
                                                 )}
                                             </div>
 
                                             <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-                                                <div className="rounded-lg border border-[#e7e7ec] bg-white px-2.5 py-1.5 text-[12px] text-[#4b5563]">
+                                                <div className="rounded-lg border border-[var(--mx-color-e7e7ec)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[12px] text-[var(--mx-color-4b5563)]">
                                                     {item.currency === "LKR"
                                                         ? `Amount in LKR: ${formatCurrency(item.amount, "LKR")}`
                                                         : item.converted_lkr !== null
@@ -636,7 +636,7 @@ export default function Subscriptions() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleEdit(item)}
-                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#d2d2d7] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[#1d1d1f]"
+                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]"
                                                     >
                                                         <FaPencilAlt className="h-3 w-3" />
                                                         Edit
@@ -644,7 +644,7 @@ export default function Subscriptions() {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleDelete(item.id)}
-                                                        className="inline-flex items-center gap-1.5 rounded-lg bg-[#fff1f2] px-2.5 py-1.5 text-[11px] font-semibold text-[#b91c1c] transition hover:bg-[#fee2e2]"
+                                                        className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--mx-color-fff1f2)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--mx-color-b91c1c)] transition hover:bg-[var(--mx-color-fee2e2)]"
                                                     >
                                                         <FaTrashAlt className="h-3 w-3" />
                                                         Delete

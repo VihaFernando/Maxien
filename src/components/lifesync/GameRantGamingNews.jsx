@@ -21,14 +21,47 @@ function toArticlePath(item) {
     return `/dashboard/lifesync/games/gamerant/news/${encodeURIComponent(slug)}`
 }
 
+function toAuthorInitials(name) {
+    const safe = String(name || 'GameRant').trim()
+    const parts = safe.split(/\s+/).filter(Boolean)
+    if (!parts.length) return 'GR'
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+    return `${parts[0][0] || ''}${parts[1][0] || ''}`.toUpperCase()
+}
+
+function AuthorAvatar({ name, image }) {
+    const [avatarErr, setAvatarErr] = useState(false)
+    const initials = toAuthorInitials(name)
+
+    if (image && !avatarErr) {
+        return (
+            <img
+                src={image}
+                alt={name || 'Author'}
+                loading="lazy"
+                decoding="async"
+                className="h-6 w-6 rounded-full object-cover ring-1 ring-apple-border/70"
+                onError={() => setAvatarErr(true)}
+            />
+        )
+    }
+
+    return (
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--mx-color-0071e3)] text-[10px] font-bold text-white ring-1 ring-[var(--mx-color-0071e3)]/30">
+            {initials}
+        </span>
+    )
+}
+
 function NewsCard({ item }) {
     const [imgErr, setImgErr] = useState(false)
     const timeText = String(item.time || '')
+    const authorName = item.author || 'GameRant'
 
     return (
         <Link
             to={toArticlePath(item)}
-            className="lifesync-games-glass group bg-white rounded-[18px] border border-apple-border/50 shadow-sm overflow-hidden hover:shadow-md transition-all block"
+            className="lifesync-games-glass group bg-[var(--color-surface)] rounded-[18px] border border-apple-border/50 shadow-sm overflow-hidden hover:shadow-md transition-all block"
         >
             <div className="relative aspect-video w-full overflow-hidden bg-apple-bg">
                 {item.thumbnail && !imgErr ? (
@@ -39,7 +72,7 @@ function NewsCard({ item }) {
                         imgProps={{ onError: () => setImgErr(true) }}
                     />
                 ) : (
-                    <div className="flex h-full w-full items-center justify-center text-apple-subtext bg-linear-to-br from-apple-bg to-[#e8e8ed]">
+                    <div className="flex h-full w-full items-center justify-center text-apple-subtext bg-linear-to-br from-apple-bg to-[var(--mx-color-e8e8ed)]">
                         <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                             <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v9a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 16.5z" />
                             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 10.5h.008v.008H8.25V10.5zm7.5 0h.008v.008h-.008V10.5z" />
@@ -50,7 +83,10 @@ function NewsCard({ item }) {
             <div className="p-3">
                 <p className="text-[13px] font-semibold text-apple-text line-clamp-2">{item.title}</p>
                 <div className="mt-2 flex items-center gap-2 text-[11px] text-apple-subtext">
-                    <span className="truncate">{item.author || 'GameRant'}</span>
+                    <div className="flex min-w-0 items-center gap-2">
+                        <AuthorAvatar name={authorName} image={item.authorImage} />
+                        <span className="truncate">{authorName}</span>
+                    </div>
                     <span>•</span>
                     <span className="truncate">{timeText}</span>
                 </div>
@@ -61,11 +97,12 @@ function NewsCard({ item }) {
 
 function FeaturedCard({ item }) {
     const [imgErr, setImgErr] = useState(false)
+    const authorName = item.author || 'GameRant'
 
     return (
         <Link
             to={toArticlePath(item)}
-            className="lifesync-games-glass group relative overflow-hidden rounded-[22px] border border-apple-border/60 bg-white shadow-sm block"
+            className="lifesync-games-glass group relative overflow-hidden rounded-[22px] border border-apple-border/60 bg-[var(--color-surface)] shadow-sm block"
         >
             <div className="relative aspect-video w-full overflow-hidden bg-apple-bg">
                 {item.thumbnail && !imgErr ? (
@@ -76,13 +113,18 @@ function FeaturedCard({ item }) {
                         imgProps={{ onError: () => setImgErr(true) }}
                     />
                 ) : (
-                    <div className="h-full w-full bg-linear-to-br from-apple-bg to-[#e8e8ed]" />
+                    <div className="h-full w-full bg-linear-to-br from-apple-bg to-[var(--mx-color-e8e8ed)]" />
                 )}
                 <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/70 via-black/20 to-black/0" />
                 <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
                     <p className="text-[11px] font-semibold uppercase tracking-widest text-white/80">Featured</p>
                     <h3 className="mt-1 text-[18px] font-bold leading-tight text-white line-clamp-2">{item.title}</h3>
-                    <p className="mt-1 text-[12px] text-white/80">{item.time || 'Recently published'}</p>
+                    <div className="mt-2 flex items-center gap-2 text-[12px] text-white/90">
+                        <AuthorAvatar name={authorName} image={item.authorImage} />
+                        <span className="truncate">{authorName}</span>
+                        <span>•</span>
+                        <span className="truncate">{item.time || 'Recently published'}</span>
+                    </div>
                 </div>
             </div>
         </Link>
@@ -116,7 +158,7 @@ export function GameRantGamingNews({ count = 20, page = 1, onPageChange }) {
                 {page === 1 ? (
                     <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
                         {Array.from({ length: 2 }).map((_, i) => (
-                            <div key={i} className="lifesync-games-glass animate-pulse rounded-[22px] border border-apple-border/50 bg-white overflow-hidden">
+                            <div key={i} className="lifesync-games-glass animate-pulse rounded-[22px] border border-apple-border/50 bg-[var(--color-surface)] overflow-hidden">
                                 <div className="aspect-video bg-apple-bg" />
                             </div>
                         ))}
@@ -125,7 +167,7 @@ export function GameRantGamingNews({ count = 20, page = 1, onPageChange }) {
 
                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {Array.from({ length: 8 }).map((_, i) => (
-                        <div key={i} className="lifesync-games-glass bg-white rounded-[18px] border border-apple-border/50 overflow-hidden animate-pulse">
+                        <div key={i} className="lifesync-games-glass bg-[var(--color-surface)] rounded-[18px] border border-apple-border/50 overflow-hidden animate-pulse">
                             <div className="aspect-video bg-apple-bg" />
                             <div className="p-3 space-y-2">
                                 <div className="h-4 bg-apple-bg rounded w-full" />
@@ -182,8 +224,8 @@ export function GameRantGamingNews({ count = 20, page = 1, onPageChange }) {
                         onClick={() => onPageChange?.(pageNo)}
                         className={`min-w-10 rounded-lg border px-3 py-2 text-[13px] font-semibold transition ${
                             pageNo === page
-                                ? 'border-[#0071e3] bg-[#0071e3] text-white'
-                                : 'border-apple-border bg-white text-apple-text hover:border-[#0071e3]'
+                                ? 'border-[var(--mx-color-0071e3)] bg-[var(--mx-color-0071e3)] text-white'
+                                : 'border-apple-border bg-[var(--color-surface)] text-apple-text hover:border-[var(--mx-color-0071e3)]'
                         }`}
                     >
                         {pageNo}

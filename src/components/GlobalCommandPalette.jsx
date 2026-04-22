@@ -335,7 +335,7 @@ export default function GlobalCommandPalette() {
     return createPortal(
         <div className="fixed inset-0 z-[120] bg-black/35 backdrop-blur-sm px-4 py-[10vh]" onClick={closePalette}>
             <div
-                className="mx-auto w-full max-w-[720px] overflow-hidden rounded-[28px] border border-white/70 bg-white/95 shadow-[0_24px_80px_rgba(17,24,39,0.18)]"
+                className="mx-auto w-full max-w-[720px] overflow-hidden rounded-[28px] border border-[var(--color-border-strong)]/70 bg-[var(--color-surface)]/95 shadow-[0_24px_80px_rgba(17,24,39,0.18)]"
                 onClick={(event) => event.stopPropagation()}
             >
                 <Command
@@ -344,8 +344,8 @@ export default function GlobalCommandPalette() {
                     filter={(value, search, keywords) => fuzzyScore(value, search, keywords)}
                     className="flex max-h-[75vh] flex-col"
                 >
-                    <div className="flex items-center gap-3 border-b border-[#ececf1] px-4 py-3.5 sm:px-5">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f5f5f7] text-[#1d1d1f]">
+                    <div className="flex items-center gap-3 border-b border-[var(--mx-color-ececf1)] px-4 py-3.5 sm:px-5">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]">
                             <FaSearch className="h-4 w-4" />
                         </div>
                         <Command.Input
@@ -353,9 +353,9 @@ export default function GlobalCommandPalette() {
                             value={query}
                             onValueChange={setQuery}
                             placeholder="Search pages, tasks, projects, notes, events, and commands..."
-                            className="h-11 flex-1 border-0 bg-transparent text-[15px] font-medium text-[#1d1d1f] outline-none placeholder:text-[#86868b]"
+                            className="h-11 flex-1 border-0 bg-transparent text-[15px] font-medium text-[var(--mx-color-1d1d1f)] outline-none placeholder:text-[var(--mx-color-86868b)]"
                         />
-                        <div className="hidden items-center gap-1 rounded-full bg-[#f5f5f7] px-2.5 py-1 text-[11px] font-semibold text-[#86868b] sm:flex">
+                        <div className="hidden items-center gap-1 rounded-full bg-[var(--mx-color-f5f5f7)] px-2.5 py-1 text-[11px] font-semibold text-[var(--mx-color-86868b)] sm:flex">
                             <span>{modifierLabel}</span>
                             <span>K</span>
                         </div>
@@ -364,23 +364,23 @@ export default function GlobalCommandPalette() {
                     <Command.List className="max-h-[56vh] overflow-y-auto p-2.5 sm:p-3">
                         <Command.Empty>
                             <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5f5f7] text-[#86868b]">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)]">
                                     <FaSearch className="h-4 w-4" />
                                 </div>
-                                <p className="text-[14px] font-semibold text-[#1d1d1f]">No matching results</p>
-                                <p className="max-w-[320px] text-[12px] text-[#86868b]">Try a page name, a task title, a project, a note, or a command like create task.</p>
+                                <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">No matching results</p>
+                                <p className="max-w-[320px] text-[12px] text-[var(--mx-color-86868b)]">Try a page name, a task title, a project, a note, or a command like create task.</p>
                             </div>
                         </Command.Empty>
 
                         {loading && (
-                            <div className="flex items-center gap-3 rounded-2xl border border-[#eef0f4] bg-[#fafafc] px-4 py-3 text-[13px] font-medium text-[#86868b]">
+                            <div className="flex items-center gap-3 rounded-2xl border border-[var(--mx-color-eef0f4)] bg-[var(--mx-color-fafafc)] px-4 py-3 text-[13px] font-medium text-[var(--mx-color-86868b)]">
                                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                                 Loading command results...
                             </div>
                         )}
 
                         {currencyLoading && (
-                            <div className="flex items-center gap-3 rounded-2xl border border-[#eef0f4] bg-[#fafafc] px-4 py-3 text-[13px] font-medium text-[#86868b]">
+                            <div className="flex items-center gap-3 rounded-2xl border border-[var(--mx-color-eef0f4)] bg-[var(--mx-color-fafafc)] px-4 py-3 text-[13px] font-medium text-[var(--mx-color-86868b)]">
                                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
                                 Converting currency...
                             </div>
@@ -394,7 +394,7 @@ export default function GlobalCommandPalette() {
                                 <Command.Group
                                     key={section}
                                     heading={section}
-                                    className="mb-2 rounded-[22px] bg-[#fbfbfc] p-1.5 text-[#86868b] [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.18em]"
+                                    className="mb-2 rounded-[22px] bg-[var(--mx-color-fbfbfc)] p-1.5 text-[var(--mx-color-86868b)] [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-bold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.18em]"
                                 >
                                     {items.map(item => (
                                         (() => {
@@ -406,25 +406,25 @@ export default function GlobalCommandPalette() {
                                                     value={`${item.label} ${item.subtitle} ${item.section}`}
                                                     keywords={item.keywords}
                                                     onSelect={() => executeCommand(item)}
-                                                    className="group flex cursor-pointer items-center gap-3 rounded-[18px] px-3 py-3 text-[#1d1d1f] outline-none transition-colors data-[selected=true]:bg-[#eef7d7]"
+                                                    className="group flex cursor-pointer items-center gap-3 rounded-[18px] px-3 py-3 text-[var(--mx-color-1d1d1f)] outline-none transition-colors data-[selected=true]:bg-[var(--mx-color-eef7d7)]"
                                                 >
-                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-[#1d1d1f] ring-1 ring-black/5 transition-colors group-data-[selected=true]:bg-[#C6FF00]">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] ring-1 ring-black/5 transition-colors group-data-[selected=true]:bg-[var(--mx-color-c6ff00)]">
                                                         <ItemIcon className="h-4 w-4" />
                                                     </div>
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <p className="truncate text-[13px] font-semibold text-[#1d1d1f]">{item.label}</p>
+                                                            <p className="truncate text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">{item.label}</p>
                                                             {item.badge && (
-                                                                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#86868b] ring-1 ring-black/5">
+                                                                <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--mx-color-86868b)] ring-1 ring-black/5">
                                                                     {item.badge}
                                                                 </span>
                                                             )}
                                                         </div>
                                                         {item.subtitle && (
-                                                            <p className="truncate pt-0.5 text-[11px] font-medium text-[#86868b]">{item.subtitle}</p>
+                                                            <p className="truncate pt-0.5 text-[11px] font-medium text-[var(--mx-color-86868b)]">{item.subtitle}</p>
                                                         )}
                                                     </div>
-                                                    <FaArrowRight className="h-3.5 w-3.5 shrink-0 text-[#b0b0b6] transition-transform group-data-[selected=true]:translate-x-0.5 group-data-[selected=true]:text-[#1d1d1f]" />
+                                                    <FaArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--mx-color-b0b0b6)] transition-transform group-data-[selected=true]:translate-x-0.5 group-data-[selected=true]:text-[var(--mx-color-1d1d1f)]" />
                                                 </Command.Item>
                                             )
                                         })()
@@ -434,7 +434,7 @@ export default function GlobalCommandPalette() {
                         })}
                     </Command.List>
 
-                    <div className="flex items-center justify-between border-t border-[#ececf1] px-4 py-3 text-[11px] font-medium text-[#86868b] sm:px-5">
+                    <div className="flex items-center justify-between border-t border-[var(--mx-color-ececf1)] px-4 py-3 text-[11px] font-medium text-[var(--mx-color-86868b)] sm:px-5">
                         <div className="flex items-center gap-4">
                             <span>Search everything</span>
                             <span>Arrow keys to move</span>

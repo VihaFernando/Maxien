@@ -57,12 +57,12 @@ function hasEarlyAccessSignal(values) {
 
 function LifeSyncConnectPrompt() {
     return (
-        <div className="mx-auto max-w-4xl rounded-[22px] border border-white/90 bg-white/90 px-8 py-16 text-center shadow-sm ring-1 ring-[#e8e4ef]/70">
-            <p className="mb-2 text-[15px] font-bold text-[#1a1628]">LifeSync Not Connected</p>
-            <p className="mb-4 text-[13px] text-[#5b5670]">Connect LifeSync in your profile to access wishlist integrations.</p>
+        <div className="mx-auto max-w-4xl rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
+            <p className="mb-2 text-[15px] font-bold text-[var(--mx-color-1a1628)]">LifeSync Not Connected</p>
+            <p className="mb-4 text-[13px] text-[var(--mx-color-5b5670)]">Connect LifeSync in your profile to access wishlist integrations.</p>
             <Link
                 to="/dashboard/profile?tab=integrations"
-                className="inline-flex items-center gap-2 rounded-xl bg-[#C6FF00] px-5 py-2.5 text-[13px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition-all hover:brightness-95"
+                className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
             >
                 Go to Integrations
             </Link>
@@ -106,13 +106,13 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
     const initialPrice = live?.initialFormatted || formatCurrencyMinor(live?.initial, live?.currency)
 
     return (
-        <article className="lifesync-games-glass rounded-2xl border border-[#d2d2d7]/60 bg-white p-4 shadow-sm">
+        <article className="lifesync-games-glass rounded-2xl border border-[var(--mx-color-d2d2d7)]/60 bg-[var(--color-surface)] p-4 shadow-sm">
             <div className="flex flex-col gap-3 sm:flex-row">
-                <div className="h-[78px] w-full shrink-0 overflow-hidden rounded-lg border border-[#e5e5ea] bg-[#f5f5f7] sm:h-[74px] sm:w-[132px]">
+                <div className="h-[78px] w-full shrink-0 overflow-hidden rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] sm:h-[74px] sm:w-[132px]">
                     {imageUrl ? (
                         <img src={imageUrl} alt="" loading="lazy" className="h-full w-full object-cover" />
                     ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase text-[#86868b]">
+                        <div className="flex h-full w-full items-center justify-center text-[10px] font-semibold uppercase text-[var(--mx-color-86868b)]">
                             No Image
                         </div>
                     )}
@@ -121,9 +121,9 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
-                            <p className="truncate text-[15px] font-bold text-[#1d1d1f]">{item.title}</p>
+                            <p className="truncate text-[15px] font-bold text-[var(--mx-color-1d1d1f)]">{item.title}</p>
                             <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px]">
-                                <span className="rounded-full border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-0.5 font-semibold uppercase text-[#515154]">
+                                <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 font-semibold uppercase text-[var(--mx-color-515154)]">
                                     {item.platform}
                                 </span>
                                 {crackGamesPluginOn && (
@@ -132,12 +132,12 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
                                     </span>
                                 )}
                                 {steamReleaseDate && (
-                                    <span className="rounded-full border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-0.5 font-medium text-[#515154]">
+                                    <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 font-medium text-[var(--mx-color-515154)]">
                                         {formatDate(steamReleaseDate)}
                                     </span>
                                 )}
                                 {isEarlyAccess && (
-                                    <span className="rounded-full border border-[#f59e0b]/30 bg-[#fff7e6] px-2 py-0.5 font-semibold text-[#9a3412]">
+                                    <span className="rounded-full border border-[var(--mx-color-f59e0b)]/30 bg-[var(--mx-color-fff7e6)] px-2 py-0.5 font-semibold text-[var(--mx-color-9a3412)]">
                                         Early Access
                                     </span>
                                 )}
@@ -157,17 +157,17 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
                                     ) : (
                                         <>
                                             {finalPrice && (
-                                                <span className="rounded-full border border-[#e5e5ea] bg-[#f5f5f7] px-2 py-0.5 font-semibold text-[#1d1d1f]">
+                                                <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 font-semibold text-[var(--mx-color-1d1d1f)]">
                                                     {finalPrice}
                                                 </span>
                                             )}
                                             {discountPercent > 0 && (
-                                                <span className="rounded-full border border-[#bef264] bg-[#ecfccb] px-2 py-0.5 font-bold text-[#365314]">
+                                                <span className="rounded-full border border-[var(--mx-color-bef264)] bg-[var(--mx-color-ecfccb)] px-2 py-0.5 font-bold text-[var(--mx-color-365314)]">
                                                     -{discountPercent}%
                                                 </span>
                                             )}
                                             {initialPrice && discountPercent > 0 && (
-                                                <span className="text-[#86868b] line-through">{initialPrice}</span>
+                                                <span className="text-[var(--mx-color-86868b)] line-through">{initialPrice}</span>
                                             )}
                                         </>
                                     )}
@@ -179,29 +179,29 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
                             type="button"
                             onClick={onRemove}
                             disabled={removing}
-                            className="rounded-lg border border-[#e5e5ea] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#7c7c80] transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-7c7c80)] transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                         >
                             {removing ? 'Removing…' : 'Remove'}
                         </button>
                     </div>
 
                     {showSteamFallback && (
-                        <div className="lifesync-games-glass mt-3 rounded-xl border border-[#dbeafe] bg-[#f8fbff] px-3 py-2">
-                            <p className="text-[11px] font-semibold text-[#1e40af]">Crack status unknown. Showing Steam details fallback.</p>
-                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[#334155]">
+                        <div className="lifesync-games-glass mt-3 rounded-xl border border-[var(--mx-color-dbeafe)] bg-[var(--mx-color-f8fbff)] px-3 py-2">
+                            <p className="text-[11px] font-semibold text-[var(--mx-color-1e40af)]">Crack status unknown. Showing Steam details fallback.</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-[var(--mx-color-334155)]">
                                 {steamDevelopers.map((name) => (
-                                    <span key={name} className="rounded-full border border-[#bfdbfe] bg-white px-2 py-0.5 font-medium">
+                                    <span key={name} className="rounded-full border border-[var(--mx-color-bfdbfe)] bg-[var(--color-surface)] px-2 py-0.5 font-medium">
                                         {name}
                                     </span>
                                 ))}
                                 {steamGenres.map((genre) => (
-                                    <span key={genre} className="rounded-full border border-[#bfdbfe] bg-white px-2 py-0.5 font-medium">
+                                    <span key={genre} className="rounded-full border border-[var(--mx-color-bfdbfe)] bg-[var(--color-surface)] px-2 py-0.5 font-medium">
                                         {genre}
                                     </span>
                                 ))}
                             </div>
                             {steamShortDescription && (
-                                <p className="mt-1 text-[11px] leading-relaxed text-[#4b5563]">{steamShortDescription}</p>
+                                <p className="mt-1 text-[11px] leading-relaxed text-[var(--mx-color-4b5563)]">{steamShortDescription}</p>
                             )}
                         </div>
                     )}
@@ -213,13 +213,13 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
                     <>
                         <Link
                             to={`/dashboard/lifesync/games/search?q=${encodeURIComponent(item.title)}`}
-                            className="rounded-lg border border-[#e5e5ea] bg-white px-2.5 py-1 font-semibold text-[#1d1d1f] hover:border-[#0071e3]"
+                            className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-1 font-semibold text-[var(--mx-color-1d1d1f)] hover:border-[var(--mx-color-0071e3)]"
                         >
                             Search
                         </Link>
                         <Link
                             to={`/dashboard/lifesync/games/crack-status?q=${encodeURIComponent(item.title)}`}
-                            className="rounded-lg border border-[#e5e5ea] bg-white px-2.5 py-1 font-semibold text-[#1d1d1f] hover:border-[#0071e3]"
+                            className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-1 font-semibold text-[var(--mx-color-1d1d1f)] hover:border-[var(--mx-color-0071e3)]"
                         >
                             Crack Status
                         </Link>
@@ -230,7 +230,7 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
                         href={steamStoreUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-lg border border-[#e5e5ea] bg-white px-2.5 py-1 font-semibold text-[#1d1d1f] hover:border-[#0071e3]"
+                        className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-1 font-semibold text-[var(--mx-color-1d1d1f)] hover:border-[var(--mx-color-0071e3)]"
                     >
                         Store
                     </a>
@@ -240,7 +240,7 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
                         href={steamWebsite}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-lg border border-[#e5e5ea] bg-white px-2.5 py-1 font-semibold text-[#1d1d1f] hover:border-[#0071e3]"
+                        className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-1 font-semibold text-[var(--mx-color-1d1d1f)] hover:border-[var(--mx-color-0071e3)]"
                     >
                         Official Site
                     </a>
@@ -255,10 +255,10 @@ function WishlistItemCard({ item, onRemove, removing, crackGamesPluginOn }) {
                             href={store.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="lifesync-games-glass rounded-lg border border-[#e5e5ea] bg-[#fbfbfd] px-3 py-2 text-[11px] text-[#515154] transition hover:bg-white"
+                            className="lifesync-games-glass rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] px-3 py-2 text-[11px] text-[var(--mx-color-515154)] transition hover:bg-[var(--color-surface)]"
                         >
-                            <p className="truncate font-semibold text-[#1d1d1f]">{store.name || 'Store link'}</p>
-                            <p className="mt-0.5 uppercase text-[#4f46e5]">{store.source || 'store'}</p>
+                            <p className="truncate font-semibold text-[var(--mx-color-1d1d1f)]">{store.name || 'Store link'}</p>
+                            <p className="mt-0.5 uppercase text-[var(--mx-color-4f46e5)]">{store.source || 'store'}</p>
                         </a>
                     ))}
                 </div>
@@ -480,25 +480,25 @@ export default function LifeSyncWishlist() {
     return (
         <LifeSyncHubPageShell>
             <div className="space-y-6">
-                <header className="lifesync-games-glass overflow-hidden rounded-[24px] border border-[#d2d2d7]/60 bg-[radial-gradient(circle_at_top_right,_#f2ffe0_0%,_#ffffff_52%,_#eef6ff_100%)] p-6 shadow-sm">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#86868b]">LifeSync / Games</p>
+                <header className="lifesync-games-glass overflow-hidden rounded-[24px] border border-[var(--mx-color-d2d2d7)]/60 bg-[radial-gradient(circle_at_top_right,_var(--mx-color-f2ffe0)_0%,_var(--mx-color-ffffff)_52%,_var(--mx-color-eef6ff)_100%)] p-6 shadow-sm">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[var(--mx-color-86868b)]">LifeSync / Games</p>
                     <div className="mt-2 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
                         <div>
-                            <h1 className="text-[28px] font-bold tracking-tight text-[#1a1628]">Wishlist Command Deck</h1>
-                            <p className="mt-1 text-[13px] text-[#5b5670]">
+                            <h1 className="text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Wishlist Command Deck</h1>
+                            <p className="mt-1 text-[13px] text-[var(--mx-color-5b5670)]">
                                 {crackGamesPluginOn
                                     ? 'Steam import, crack intelligence, unknown-status fallback from Steam, and Early Access detection in one board.'
                                     : 'Steam import and Early Access detection in one board. Crack tools are hidden by your content plugins.'}
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-2 text-[11px]">
-                            <span className="rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 font-semibold text-[#1d1d1f]">
+                            <span className="rounded-full border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-2.5 py-1 font-semibold text-[var(--mx-color-1d1d1f)]">
                                 Total {wishlistCount}
                             </span>
-                            <span className="rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 font-semibold text-[#1d1d1f]">
+                            <span className="rounded-full border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-2.5 py-1 font-semibold text-[var(--mx-color-1d1d1f)]">
                                 Visible {visibleCount}
                             </span>
-                            <span className="rounded-full border border-[#d2d2d7] bg-white px-2.5 py-1 font-semibold text-[#1d1d1f]">
+                            <span className="rounded-full border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-2.5 py-1 font-semibold text-[var(--mx-color-1d1d1f)]">
                                 Steam {steamLinked ? 'Linked' : 'Not linked'}
                             </span>
                         </div>
@@ -515,11 +515,11 @@ export default function LifeSyncWishlist() {
 
                 <div className="grid gap-4 xl:grid-cols-12">
                     <aside className="space-y-4 xl:col-span-4">
-                        <section className="lifesync-games-glass rounded-[20px] border border-[#d2d2d7]/50 bg-white p-5 shadow-sm">
+                        <section className="lifesync-games-glass rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-5 shadow-sm">
                             <div className="flex items-start justify-between gap-3">
                                 <div>
-                                    <p className="text-[14px] font-semibold text-[#1d1d1f]">Steam import channel</p>
-                                    <p className="mt-1 text-[12px] text-[#5b5670]">
+                                    <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">Steam import channel</p>
+                                    <p className="mt-1 text-[12px] text-[var(--mx-color-5b5670)]">
                                         Set SteamID64 once and import directly from your Steam wishlist.
                                     </p>
                                 </div>
@@ -533,14 +533,14 @@ export default function LifeSyncWishlist() {
                                     value={steamIdInput}
                                     onChange={(e) => setSteamIdInput(e.target.value.replace(/[^\d]/g, '').slice(0, 17))}
                                     placeholder="SteamID64 (17 digits)"
-                                    className="w-full rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2 text-[12px] text-[#1d1d1f] outline-none focus:border-[#0071e3]/60"
+                                    className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60"
                                 />
                                 <div className="flex flex-wrap gap-2">
                                     <button
                                         type="button"
                                         onClick={() => void saveSteamId()}
                                         disabled={!canSaveSteamId || steamBusy}
-                                        className="rounded-xl bg-[#1d1d1f] px-3.5 py-2 text-[12px] font-semibold text-white transition hover:bg-black disabled:opacity-50"
+                                        className="rounded-xl bg-[var(--mx-color-1d1d1f)] px-3.5 py-2 text-[12px] font-semibold text-white transition hover:bg-black disabled:opacity-50"
                                     >
                                         {steamBusy ? 'Saving…' : 'Save'}
                                     </button>
@@ -549,7 +549,7 @@ export default function LifeSyncWishlist() {
                                             type="button"
                                             onClick={() => void disconnectSteam()}
                                             disabled={steamBusy}
-                                            className="rounded-xl border border-[#e5e5ea] bg-white px-3.5 py-2 text-[12px] font-semibold text-[#86868b] transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3.5 py-2 text-[12px] font-semibold text-[var(--mx-color-86868b)] transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                                         >
                                             Disconnect
                                         </button>
@@ -558,7 +558,7 @@ export default function LifeSyncWishlist() {
                                         type="button"
                                         onClick={() => void importSteamWishlist()}
                                         disabled={importBusy || !steamLinked}
-                                        className="rounded-xl bg-[#C6FF00] px-3.5 py-2 text-[12px] font-semibold text-[#1a1628] shadow-sm ring-1 ring-[#1a1628]/10 transition hover:brightness-95 disabled:opacity-50"
+                                        className="rounded-xl bg-[var(--mx-color-c6ff00)] px-3.5 py-2 text-[12px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition hover:brightness-95 disabled:opacity-50"
                                     >
                                         {importBusy ? 'Importing…' : 'Import Wishlist'}
                                     </button>
@@ -567,11 +567,11 @@ export default function LifeSyncWishlist() {
                         </section>
 
                         {crackGamesPluginOn ? (
-                            <section className="lifesync-games-glass rounded-[20px] border border-[#d2d2d7]/50 bg-white p-5 shadow-sm">
+                            <section className="lifesync-games-glass rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-5 shadow-sm">
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
-                                        <p className="text-[14px] font-semibold text-[#1d1d1f]">Crack preference</p>
-                                        <p className="mt-1 text-[12px] text-[#5b5670]">
+                                        <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">Crack preference</p>
+                                        <p className="mt-1 text-[12px] text-[var(--mx-color-5b5670)]">
                                             Toggle whether your wishlist should only show cracked games.
                                         </p>
                                     </div>
@@ -583,47 +583,47 @@ export default function LifeSyncWishlist() {
                                         className="inline-flex items-center disabled:opacity-60"
                                         title={requireCracked ? 'Disable cracked-only mode' : 'Enable cracked-only mode'}
                                     >
-                                        <span className={`relative inline-flex h-6 w-11 rounded-full transition ${requireCracked ? 'bg-[#1d1d1f]' : 'bg-[#d1d1d6]'}`}>
-                                            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${requireCracked ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                        <span className={`relative inline-flex h-6 w-11 rounded-full transition ${requireCracked ? 'bg-[var(--mx-color-1d1d1f)]' : 'bg-[var(--mx-color-d1d1d6)]'}`}>
+                                            <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition ${requireCracked ? 'translate-x-5' : 'translate-x-0.5'}`} />
                                         </span>
                                     </button>
                                 </div>
-                                <p className="mt-3 rounded-lg border border-[#e5e5ea] bg-[#f8f8fb] px-3 py-2 text-[12px] text-[#4b5563]">
+                                <p className="mt-3 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f8f8fb)] px-3 py-2 text-[12px] text-[var(--mx-color-4b5563)]">
                                     {requireCracked
                                         ? 'Cracked-only mode is ON. Non-cracked and unknown-status items are hidden.'
                                         : 'Cracked-only mode is OFF. All wishlist entries are visible.'}
                                 </p>
                             </section>
                         ) : (
-                            <section className="lifesync-games-glass rounded-[20px] border border-[#d2d2d7]/50 bg-white p-5 shadow-sm">
-                                <p className="text-[14px] font-semibold text-[#1d1d1f]">Crack tools hidden</p>
-                                <p className="mt-1 text-[12px] text-[#5b5670]">
+                            <section className="lifesync-games-glass rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-5 shadow-sm">
+                                <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">Crack tools hidden</p>
+                                <p className="mt-1 text-[12px] text-[var(--mx-color-5b5670)]">
                                     Enable the Crack games content plugin in LifeSync integrations to show crack status and cracked-only filters.
                                 </p>
                             </section>
                         )}
 
-                        <section className="lifesync-games-glass rounded-[20px] border border-[#d2d2d7]/50 bg-white p-5 shadow-sm">
-                            <p className="text-[14px] font-semibold text-[#1d1d1f]">Quick add</p>
+                        <section className="lifesync-games-glass rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-5 shadow-sm">
+                            <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">Quick add</p>
                             <form onSubmit={addManualItem} className="mt-3 space-y-2">
                                 <input
                                     type="text"
                                     value={newTitle}
                                     onChange={(e) => setNewTitle(e.target.value)}
                                     placeholder="Game title"
-                                    className="w-full rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2 text-[12px] text-[#1d1d1f] outline-none focus:border-[#0071e3]/60"
+                                    className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60"
                                 />
                                 <input
                                     type="url"
                                     value={newStoreUrl}
                                     onChange={(e) => setNewStoreUrl(e.target.value)}
                                     placeholder="Store URL (optional)"
-                                    className="w-full rounded-xl border border-[#e5e5ea] bg-[#f5f5f7] px-3 py-2 text-[12px] text-[#1d1d1f] outline-none focus:border-[#0071e3]/60"
+                                    className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60"
                                 />
                                 <button
                                     type="submit"
                                     disabled={addingBusy}
-                                    className="w-full rounded-xl border border-[#e5e5ea] bg-white px-3 py-2 text-[12px] font-semibold text-[#1d1d1f] transition hover:border-[#0071e3] disabled:opacity-50"
+                                    className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-50"
                                 >
                                     {addingBusy ? 'Adding…' : 'Add to Wishlist'}
                                 </button>
@@ -632,32 +632,32 @@ export default function LifeSyncWishlist() {
                     </aside>
 
                     <section className="space-y-3 xl:col-span-8">
-                        <div className="lifesync-games-glass flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-[#d2d2d7]/50 bg-white px-5 py-4 shadow-sm">
+                        <div className="lifesync-games-glass flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] px-5 py-4 shadow-sm">
                             <div>
-                                <p className="text-[14px] font-semibold text-[#1d1d1f]">Wishlist items ({visibleCount})</p>
+                                <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">Wishlist items ({visibleCount})</p>
                                 {crackGamesPluginOn && requireCracked && (
-                                    <p className="mt-0.5 text-[11px] text-[#6b7280]">Filtered from {wishlistCount} total entries by your cracked-only preference.</p>
+                                    <p className="mt-0.5 text-[11px] text-[var(--mx-color-6b7280)]">Filtered from {wishlistCount} total entries by your cracked-only preference.</p>
                                 )}
                             </div>
                             <button
                                 type="button"
                                 onClick={() => void loadWishlist()}
                                 disabled={loading}
-                                className="rounded-lg border border-[#e5e5ea] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#1d1d1f] transition hover:border-[#0071e3] disabled:opacity-50"
+                                className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-50"
                             >
                                 {loading ? 'Loading…' : 'Refresh'}
                             </button>
                         </div>
 
                         {wishlistData.length === 0 ? (
-                            <div className="lifesync-games-glass rounded-2xl border border-dashed border-[#cbd5e1] bg-white/80 px-6 py-12 text-center">
-                                <p className="text-[14px] font-semibold text-[#1d1d1f]">No wishlist items yet</p>
-                                <p className="mt-1 text-[12px] text-[#64748b]">Import from Steam or add items manually.</p>
+                            <div className="lifesync-games-glass rounded-2xl border border-dashed border-[var(--mx-color-cbd5e1)] bg-[var(--color-surface)]/80 px-6 py-12 text-center">
+                                <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">No wishlist items yet</p>
+                                <p className="mt-1 text-[12px] text-[var(--mx-color-64748b)]">Import from Steam or add items manually.</p>
                             </div>
                         ) : filteredWishlist.length === 0 ? (
-                            <div className="lifesync-games-glass rounded-2xl border border-dashed border-[#cbd5e1] bg-white/80 px-6 py-12 text-center">
-                                <p className="text-[14px] font-semibold text-[#1d1d1f]">No cracked games in current wishlist</p>
-                                <p className="mt-1 text-[12px] text-[#64748b]">Turn off cracked-only mode to view unknown, upcoming, and uncracked entries.</p>
+                            <div className="lifesync-games-glass rounded-2xl border border-dashed border-[var(--mx-color-cbd5e1)] bg-[var(--color-surface)]/80 px-6 py-12 text-center">
+                                <p className="text-[14px] font-semibold text-[var(--mx-color-1d1d1f)]">No cracked games in current wishlist</p>
+                                <p className="mt-1 text-[12px] text-[var(--mx-color-64748b)]">Turn off cracked-only mode to view unknown, upcoming, and uncracked entries.</p>
                             </div>
                         ) : (
                             <div className="grid gap-3">

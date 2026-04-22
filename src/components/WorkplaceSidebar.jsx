@@ -28,8 +28,8 @@ export default function WorkplaceSidebar({ workplaceName, activeTab, setActiveTa
                                     key={tab.id}
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap border transition-colors ${isActive
-                                        ? "bg-[#C6FF00] border-[#c3f700] text-black"
-                                        : "bg-white border-[#e5e5ea] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                                        ? "bg-[var(--mx-color-c6ff00)] border-[var(--mx-color-c3f700)] text-black"
+                                        : "bg-[var(--color-surface)] border-[var(--mx-color-e5e5ea)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                                         }`}
                                 >
                                     <Icon className="w-3.5 h-3.5" />

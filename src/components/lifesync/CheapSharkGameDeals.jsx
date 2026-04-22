@@ -29,9 +29,9 @@ function DealsCard({ item }) {
             href={item.dealUrl}
             target="_blank"
             rel="noreferrer"
-            className="lifesync-games-glass group rounded-[18px] border border-[#d2d2d7]/55 bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+            className="lifesync-games-glass group rounded-[18px] border border-[var(--mx-color-d2d2d7)]/55 bg-[var(--color-surface)] shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
         >
-            <div className="relative aspect-video w-full overflow-hidden rounded-t-[18px] bg-[#f5f5f7]">
+            <div className="relative aspect-video w-full overflow-hidden rounded-t-[18px] bg-[var(--mx-color-f5f5f7)]">
                 {item.thumb && !imgErr ? (
                     <LifesyncEpisodeThumbnail
                         src={item.thumb}
@@ -40,26 +40,26 @@ function DealsCard({ item }) {
                         imgProps={{ onError: () => setImgErr(true) }}
                     />
                 ) : (
-                    <div className="h-full w-full bg-linear-to-br from-[#f5f5f7] to-[#ececf1]" />
+                    <div className="h-full w-full bg-linear-to-br from-[var(--mx-color-f5f5f7)] to-[var(--mx-color-ececf1)]" />
                 )}
 
                 {savings ? (
-                    <span className="absolute right-2 top-2 rounded-lg bg-[#C6FF00] px-2 py-0.5 text-[11px] font-bold text-[#1d1d1f] shadow-sm">
+                    <span className="absolute right-2 top-2 rounded-lg bg-[var(--mx-color-c6ff00)] px-2 py-0.5 text-[11px] font-bold text-[var(--mx-color-1d1d1f)] shadow-sm">
                         {savings}
                     </span>
                 ) : null}
             </div>
 
             <div className="space-y-2 p-3">
-                <p className="line-clamp-2 text-[13px] font-semibold text-[#1d1d1f]">{item.title || 'Untitled Deal'}</p>
-                <p className="text-[11px] text-[#6e6e73]">{item.storeName || 'Store unavailable'}</p>
+                <p className="line-clamp-2 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">{item.title || 'Untitled Deal'}</p>
+                <p className="text-[11px] text-[var(--mx-color-6e6e73)]">{item.storeName || 'Store unavailable'}</p>
 
                 <div className="flex items-center gap-2 text-[12px]">
-                    <span className="font-bold text-[#1d1d1f]">{formatMoney(item.salePrice)}</span>
-                    <span className="text-[#8a8a8e] line-through">{formatMoney(item.normalPrice)}</span>
+                    <span className="font-bold text-[var(--mx-color-1d1d1f)]">{formatMoney(item.salePrice)}</span>
+                    <span className="text-[var(--mx-color-8a8a8e)] line-through">{formatMoney(item.normalPrice)}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-[11px] text-[#6e6e73]">
+                <div className="flex items-center justify-between text-[11px] text-[var(--mx-color-6e6e73)]">
                     <span>{item.dealRating != null ? `Deal ${item.dealRating}` : 'Live deal'}</span>
                     <span>{item.steamRatingPercent != null ? `${item.steamRatingPercent}% Steam` : 'N/A'}</span>
                 </div>
@@ -120,19 +120,19 @@ export function CheapSharkGameDeals() {
     }
 
     return (
-        <section className="lifesync-games-glass space-y-4 rounded-[20px] border border-[#d2d2d7]/55 bg-white/95 p-4 shadow-sm sm:p-5">
+        <section className="lifesync-games-glass space-y-4 rounded-[20px] border border-[var(--mx-color-d2d2d7)]/55 bg-[var(--color-surface)]/95 p-4 shadow-sm sm:p-5">
             <header className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                 <div>
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[#6e6e73]">CheapShark • Game Deals</p>
-                    <h2 className="mt-0.5 text-[24px] font-bold tracking-tight text-[#1d1d1f]">Live Deals</h2>
-                    <p className="mt-1 text-[13px] text-[#515154]">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-6e6e73)]">CheapShark • Game Deals</p>
+                    <h2 className="mt-0.5 text-[24px] font-bold tracking-tight text-[var(--mx-color-1d1d1f)]">Live Deals</h2>
+                    <p className="mt-1 text-[13px] text-[var(--mx-color-515154)]">
                         Store prices and discounts from CheapShark, saved in LifeSync MongoDB for fast fallback.
                     </p>
                 </div>
                 <button
                     type="button"
                     onClick={() => refetchDeals()}
-                    className="inline-flex h-[38px] items-center justify-center rounded-xl border border-[#d2d2d7] bg-white px-3 text-[12px] font-semibold text-[#1d1d1f] transition hover:bg-[#f5f5f7]"
+                    className="inline-flex h-[38px] items-center justify-center rounded-xl border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:bg-[var(--mx-color-f5f5f7)]"
                 >
                     Refresh deals
                 </button>
@@ -140,7 +140,7 @@ export function CheapSharkGameDeals() {
 
             <div className="grid gap-3 md:grid-cols-3">
                 <div>
-                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[#6e6e73]" htmlFor="cheapshark-store-filter">
+                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--mx-color-6e6e73)]" htmlFor="cheapshark-store-filter">
                         Store
                     </label>
                     <select
@@ -148,7 +148,7 @@ export function CheapSharkGameDeals() {
                         value={storeId}
                         onChange={onChangeStore}
                         disabled={storesLoading}
-                        className="h-[40px] w-full rounded-xl border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] outline-none focus:border-[#0071e3]"
+                        className="h-[40px] w-full rounded-xl border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-3 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]"
                     >
                         <option value="">All stores</option>
                         {stores.map((store) => (
@@ -160,7 +160,7 @@ export function CheapSharkGameDeals() {
                 </div>
 
                 <form onSubmit={onSubmitSearch} className="md:col-span-2">
-                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[#6e6e73]" htmlFor="cheapshark-search">
+                    <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-[var(--mx-color-6e6e73)]" htmlFor="cheapshark-search">
                         Search deals
                     </label>
                     <div className="flex gap-2">
@@ -170,11 +170,11 @@ export function CheapSharkGameDeals() {
                             value={searchInput}
                             onChange={(event) => setSearchInput(event.target.value)}
                             placeholder="E.g. Cyberpunk, Elden Ring"
-                            className="h-[40px] min-w-0 flex-1 rounded-xl border border-[#d2d2d7] bg-white px-3 text-[13px] text-[#1d1d1f] outline-none focus:border-[#0071e3]"
+                            className="h-[40px] min-w-0 flex-1 rounded-xl border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-3 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]"
                         />
                         <button
                             type="submit"
-                            className="h-[40px] rounded-xl bg-[#0071e3] px-4 text-[12px] font-semibold text-white transition hover:brightness-95"
+                            className="h-[40px] rounded-xl bg-[var(--mx-color-0071e3)] px-4 text-[12px] font-semibold text-white transition hover:brightness-95"
                         >
                             Search
                         </button>
@@ -197,11 +197,11 @@ export function CheapSharkGameDeals() {
             {dealsLoading ? (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {Array.from({ length: 8 }).map((_, idx) => (
-                        <div key={idx} className="lifesync-games-glass animate-pulse overflow-hidden rounded-[18px] border border-[#d2d2d7]/55 bg-white">
-                            <div className="aspect-video bg-[#f5f5f7]" />
+                        <div key={idx} className="lifesync-games-glass animate-pulse overflow-hidden rounded-[18px] border border-[var(--mx-color-d2d2d7)]/55 bg-[var(--color-surface)]">
+                            <div className="aspect-video bg-[var(--mx-color-f5f5f7)]" />
                             <div className="space-y-2 p-3">
-                                <div className="h-4 rounded bg-[#f1f1f4]" />
-                                <div className="h-3 w-2/3 rounded bg-[#f1f1f4]" />
+                                <div className="h-4 rounded bg-[var(--mx-color-f1f1f4)]" />
+                                <div className="h-3 w-2/3 rounded bg-[var(--mx-color-f1f1f4)]" />
                             </div>
                         </div>
                     ))}
@@ -219,25 +219,25 @@ export function CheapSharkGameDeals() {
                             type="button"
                             onClick={() => setPageNumber((prev) => Math.max(0, prev - 1))}
                             disabled={pageNumber <= 0}
-                            className="rounded-lg border border-[#d2d2d7] bg-white px-3 py-2 text-[12px] font-semibold text-[#1d1d1f] transition hover:bg-[#f5f5f7] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:bg-[var(--mx-color-f5f5f7)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Previous
                         </button>
-                        <span className="min-w-[88px] text-center text-[12px] font-semibold text-[#6e6e73]">
+                        <span className="min-w-[88px] text-center text-[12px] font-semibold text-[var(--mx-color-6e6e73)]">
                             Page {pageNumber + 1}
                         </span>
                         <button
                             type="button"
                             onClick={() => setPageNumber((prev) => prev + 1)}
                             disabled={!hasMore}
-                            className="rounded-lg border border-[#d2d2d7] bg-white px-3 py-2 text-[12px] font-semibold text-[#1d1d1f] transition hover:bg-[#f5f5f7] disabled:cursor-not-allowed disabled:opacity-50"
+                            className="rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:bg-[var(--mx-color-f5f5f7)] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             Next
                         </button>
                     </div>
                 </>
             ) : (
-                <div className="lifesync-games-glass rounded-xl border border-[#d2d2d7]/55 bg-[#f5f5f7] px-4 py-6 text-center text-[13px] text-[#6e6e73]">
+                <div className="lifesync-games-glass rounded-xl border border-[var(--mx-color-d2d2d7)]/55 bg-[var(--mx-color-f5f5f7)] px-4 py-6 text-center text-[13px] text-[var(--mx-color-6e6e73)]">
                     No deals found for this filter.
                 </div>
             )}

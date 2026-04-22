@@ -266,6 +266,18 @@ export function lifesyncPatchPreferences(body) {
     return lifesyncFetch('/api/v1/auth/preferences', { method: 'PATCH', json: body })
 }
 
+export function lifesyncResolveYouTubeLoopSource({ url, videoId } = {}) {
+    const params = new URLSearchParams()
+    const rawUrl = String(url ?? '').trim()
+    const rawVideoId = String(videoId ?? '').trim()
+
+    if (rawUrl) params.set('url', rawUrl)
+    if (rawVideoId) params.set('videoId', rawVideoId)
+
+    const qs = params.toString()
+    return lifesyncFetch(`/api/v1/media/youtube-loop${qs ? `?${qs}` : ''}`, { method: 'GET' })
+}
+
 /** @param {Record<string, unknown>|null|undefined} prefs */
 export function getAnimeStreamAudio(prefs) {
     return prefs?.animeStreamAudio === 'dub' ? 'dub' : 'sub'

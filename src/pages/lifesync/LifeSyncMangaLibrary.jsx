@@ -181,7 +181,7 @@ function StatusSelect({ value, onChange, disabled, className = '' }) {
             value={value || ''}
             onChange={(event) => onChange(event.target.value || null)}
             disabled={disabled}
-            className={`min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:opacity-50 ${className}`}
+            className={`min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:opacity-50 ${className}`}
         >
             <option value="">No status</option>
             {STATUS_OPTIONS.filter((opt) => opt.id !== 'all').map((opt) => (
@@ -206,7 +206,7 @@ function ConfirmationModal({ isOpen, title, message, confirmLabel, cancelLabel, 
             onClick={onCancel}
         >
             <MotionDiv
-                className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
+                className="w-full max-w-md rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-5 shadow-2xl"
                 initial={{ scale: 0.94, y: 14 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.94, y: 14 }}
@@ -224,7 +224,7 @@ function ConfirmationModal({ isOpen, title, message, confirmLabel, cancelLabel, 
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="min-h-[42px] rounded-xl border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                        className="min-h-[42px] rounded-xl border border-slate-200 bg-[var(--color-surface)] px-4 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
                         {cancelLabel || 'Cancel'}
                     </button>
@@ -257,7 +257,7 @@ function LibraryMangaCard({
     return (
         <MotionLi
             variants={lifeSyncStaggerItemFade}
-            className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
+            className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[var(--color-surface)] shadow-sm transition hover:shadow-md"
             whileHover={{ y: -2, transition: { type: 'tween', duration: 0.2, ease: lifeSyncEaseOut } }}
         >
             <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-100">
@@ -283,15 +283,15 @@ function LibraryMangaCard({
                         onClick={() => onToggleSelect(entry)}
                         className={`flex h-6 w-6 items-center justify-center rounded border text-[11px] ${
                             selected
-                                ? 'border-[#C6FF00] bg-[#C6FF00] text-black'
-                                : 'border-white/70 bg-white/90 text-transparent hover:border-white'
+                                ? 'border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-black'
+                                : 'border-[var(--color-border-strong)]/70 bg-[var(--color-surface)]/90 text-transparent hover:border-[var(--color-border-strong)]'
                         }`}
                         aria-label={selected ? 'Unselect' : 'Select'}
                     >
                         ✓
                     </button>
                     {entry.hasNewChapter ? (
-                        <span className="rounded-full bg-[#C6FF00] px-2 py-0.5 text-[9px] font-bold text-slate-900">New</span>
+                        <span className="rounded-full bg-[var(--mx-color-c6ff00)] px-2 py-0.5 text-[9px] font-bold text-slate-900">New</span>
                     ) : null}
                 </div>
 
@@ -299,7 +299,7 @@ function LibraryMangaCard({
                     type="button"
                     onClick={() => onRequestRemove(entry)}
                     disabled={removeBusy}
-                    className="absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#C6FF00]/90 text-black opacity-0 shadow-sm ring-1 ring-[#C6FF00]/50 transition group-hover:opacity-100 hover:bg-[#C6FF00] disabled:opacity-50"
+                    className="absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)]/90 text-black opacity-0 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/50 transition group-hover:opacity-100 hover:bg-[var(--mx-color-c6ff00)] disabled:opacity-50"
                     aria-label="Remove"
                 >
                     {removeBusy ? '…' : '✕'}
@@ -323,7 +323,7 @@ function LibraryMangaCard({
                         <span className="text-slate-800">{Math.round(progressPercent)}%</span>
                     </div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                        <div className="h-full rounded-full" style={{ width: `${progressPercent}%`, backgroundColor: '#C6FF00' }} />
+                        <div className="h-full rounded-full" style={{ width: `${progressPercent}%`, backgroundColor: 'var(--mx-color-c6ff00)' }} />
                     </div>
                     <p className="mt-0.5 text-[9px] text-slate-500">{progressDetailLabel(entry)}</p>
                 </div>
@@ -350,7 +350,7 @@ function LibraryMangaCard({
                         to={to}
                         state={state}
                         className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-bold text-black transition hover:shadow-lg active:scale-95"
-                        style={{ backgroundColor: '#C6FF00' }}
+                        style={{ backgroundColor: 'var(--mx-color-c6ff00)' }}
                     >
                         Continue
                     </Link>
@@ -624,7 +624,7 @@ export default function LifeSyncMangaLibrary() {
     if (!mangaPluginOn) {
         return (
             <MotionDiv
-                className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-white to-lime-50/40 px-6 py-14 text-center shadow-sm"
+                className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-[var(--color-surface)] to-lime-50/40 px-6 py-14 text-center shadow-sm"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={lifeSyncPageTransition}
@@ -651,12 +651,12 @@ export default function LifeSyncMangaLibrary() {
             animate={{ opacity: 1, y: 0 }}
             transition={lifeSyncPageTransition}
         >
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <section className="rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex items-start gap-3">
                         <Link
                             to="/dashboard/lifesync/anime"
-                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-white"
+                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-[var(--color-surface)]"
                             aria-label="Back to hub"
                         >
                             <FaChevronLeft className="h-4 w-4" />
@@ -672,7 +672,7 @@ export default function LifeSyncMangaLibrary() {
                             type="button"
                             onClick={() => void onSync()}
                             disabled={syncBusy || anyRefreshing || summary.total === 0}
-                            className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-[#C6FF00] px-3 text-[12px] font-bold text-slate-900 transition hover:brightness-95 disabled:opacity-50"
+                            className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-3 text-[12px] font-bold text-slate-900 transition hover:brightness-95 disabled:opacity-50"
                         >
                             <FaSyncAlt className={`h-3 w-3 ${syncBusy ? 'animate-spin' : ''}`} />
                             {syncBusy ? 'Syncing' : 'Sync'}
@@ -681,7 +681,7 @@ export default function LifeSyncMangaLibrary() {
                             type="button"
                             onClick={() => void refreshAll()}
                             disabled={syncBusy || anyRefreshing}
-                            className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+                            className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
                         >
                             {anyRefreshing ? 'Refreshing' : 'Reload'}
                         </button>
@@ -704,7 +704,7 @@ export default function LifeSyncMangaLibrary() {
                 </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <section className="rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
                 <div className="flex items-center justify-between gap-2">
                     <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-600">
                         <FaFilter className="h-3 w-3" />
@@ -724,12 +724,12 @@ export default function LifeSyncMangaLibrary() {
                         value={queryInput}
                         onChange={(event) => setQueryInput(event.target.value)}
                         placeholder="Search titles, chapters, notes"
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 sm:col-span-2 lg:col-span-3 xl:col-span-2"
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 sm:col-span-2 lg:col-span-3 xl:col-span-2"
                     />
                     <select
                         value={sourceFilter}
                         onChange={(event) => setSourceFilter(event.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
                     >
                         {sourceOptions.map((opt) => (
                             <option key={opt.id} value={opt.id}>
@@ -740,7 +740,7 @@ export default function LifeSyncMangaLibrary() {
                     <select
                         value={statusFilter}
                         onChange={(event) => setStatusFilter(event.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
                     >
                         {STATUS_OPTIONS.map((opt) => (
                             <option key={opt.id} value={opt.id}>
@@ -751,7 +751,7 @@ export default function LifeSyncMangaLibrary() {
                     <select
                         value={updateStateFilter}
                         onChange={(event) => setUpdateStateFilter(event.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
                     >
                         {UPDATE_STATE_OPTIONS.map((opt) => (
                             <option key={opt.id} value={opt.id}>
@@ -762,7 +762,7 @@ export default function LifeSyncMangaLibrary() {
                     <select
                         value={sortBy}
                         onChange={(event) => setSortBy(event.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-white px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
                     >
                         {SORT_OPTIONS.map((opt) => (
                             <option key={opt.id} value={opt.id}>
@@ -776,14 +776,14 @@ export default function LifeSyncMangaLibrary() {
                     <button
                         type="button"
                         onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-                        className="min-h-[34px] rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                        className="min-h-[34px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                     >
                         Order: {sortOrder === 'desc' ? 'Desc' : 'Asc'}
                     </button>
                     <select
                         value={String(limit)}
                         onChange={(event) => setLimit(Number(event.target.value) || 24)}
-                        className="min-h-[34px] rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
+                        className="min-h-[34px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
                     >
                         <option value="12">12 per page</option>
                         <option value="24">24 per page</option>
@@ -799,8 +799,8 @@ export default function LifeSyncMangaLibrary() {
             </section>
 
             {anyRefreshing && !initialLoading ? (
-                <div className="overflow-hidden rounded-lg border border-amber-100 bg-white">
-                    <div className="h-1 w-full animate-pulse bg-gradient-to-r from-amber-200 via-[#C6FF00] to-amber-200" />
+                <div className="overflow-hidden rounded-lg border border-amber-100 bg-[var(--color-surface)]">
+                    <div className="h-1 w-full animate-pulse bg-gradient-to-r from-amber-200 via-[var(--mx-color-c6ff00)] to-amber-200" />
                 </div>
             ) : null}
 
@@ -818,7 +818,7 @@ export default function LifeSyncMangaLibrary() {
                                     event.target.value = ''
                                 }}
                                 disabled={bulkBusy}
-                                className="min-h-[34px] rounded-lg border border-amber-300 bg-white px-3 text-[11px] font-semibold text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:opacity-50"
+                                className="min-h-[34px] rounded-lg border border-amber-300 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:opacity-50"
                             >
                                 <option value="">Set status</option>
                                 {STATUS_OPTIONS.filter((opt) => opt.id !== 'all').map((opt) => (
@@ -831,7 +831,7 @@ export default function LifeSyncMangaLibrary() {
                                 type="button"
                                 onClick={() => void onBulkDelete()}
                                 disabled={bulkBusy}
-                                className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-red-200 bg-white px-3 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                                className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-red-200 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
                             >
                                 <FaTrashAlt className="h-3 w-3" />
                                 Remove
@@ -839,7 +839,7 @@ export default function LifeSyncMangaLibrary() {
                             <button
                                 type="button"
                                 onClick={onClearSelection}
-                                className="min-h-[34px] rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className="min-h-[34px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
                                 Clear
                             </button>
@@ -849,7 +849,7 @@ export default function LifeSyncMangaLibrary() {
             ) : null}
 
             {initialLoading && visibleEntries.length === 0 ? (
-                <div className="rounded-2xl border border-slate-100 bg-white/60 p-5 sm:p-6">
+                <div className="rounded-2xl border border-slate-100 bg-[var(--color-surface)]/60 p-5 sm:p-6">
                     <LifesyncMediaLibraryPageSkeleton
                         gridCount={Math.max(8, limit)}
                         showSpotlight={false}
@@ -868,14 +868,14 @@ export default function LifeSyncMangaLibrary() {
                     <button
                         type="button"
                         onClick={() => void refreshList({ forceInitial: true })}
-                        className="mt-4 rounded-lg border border-red-200 bg-white px-4 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100"
+                        className="mt-4 rounded-lg border border-red-200 bg-[var(--color-surface)] px-4 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100"
                     >
                         Retry
                     </button>
                 </MotionDiv>
             ) : visibleEntries.length === 0 ? (
                 <MotionDiv
-                    className="rounded-2xl border border-dashed border-amber-200 bg-gradient-to-br from-white via-amber-50/40 to-lime-50/25 px-6 py-14 text-center"
+                    className="rounded-2xl border border-dashed border-amber-200 bg-gradient-to-br from-[var(--color-surface)] via-amber-50/40 to-lime-50/25 px-6 py-14 text-center"
                     initial={{ opacity: 0, scale: 0.98 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
@@ -906,14 +906,14 @@ export default function LifeSyncMangaLibrary() {
                             <button
                                 type="button"
                                 onClick={onSelectAllVisible}
-                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
                                 Select all
                             </button>
                             <button
                                 type="button"
                                 onClick={onClearSelection}
-                                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                                className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
                             >
                                 Clear
                             </button>
@@ -944,12 +944,12 @@ export default function LifeSyncMangaLibrary() {
                         })}
                     </MotionUl>
 
-                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-[var(--color-surface)] px-4 py-3 shadow-sm">
                         <button
                             type="button"
                             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
                             disabled={pageInfo.page <= 1 || refreshing}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+                            className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
                         >
                             Previous
                         </button>
@@ -960,7 +960,7 @@ export default function LifeSyncMangaLibrary() {
                             type="button"
                             onClick={() => setPage((prev) => prev + 1)}
                             disabled={!pageInfo.hasMore || refreshing}
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+                            className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
                         >
                             Next
                         </button>

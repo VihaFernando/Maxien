@@ -68,7 +68,7 @@ export function LifeSyncSectionNav({
 
     return (
         <nav
-            className={`rounded-xl border border-[#e5e5ea]/90 bg-white/90 shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur-sm ${className}`}
+            className={`rounded-xl border border-[var(--mx-color-e5e5ea)]/90 bg-[var(--color-surface)]/90 shadow-[0_1px_0_rgba(0,0,0,0.04)] backdrop-blur-sm ${className}`}
             aria-label={ariaLabel}
         >
             <div ref={scrollRef} className="min-w-0 overflow-x-auto hide-scrollbar">
@@ -76,7 +76,7 @@ export function LifeSyncSectionNav({
                     {indicator.ready && (
                         <MotionSpan
                             aria-hidden
-                            className="pointer-events-none absolute bottom-0 z-10 h-[3px] rounded-full bg-[#C6FF00]"
+                            className="pointer-events-none absolute bottom-0 z-10 h-[3px] rounded-full bg-[var(--mx-color-c6ff00)]"
                             initial={false}
                             animate={{ left: indicator.left, width: indicator.width }}
                             transition={{ type: 'spring', stiffness: 520, damping: 38, mass: 0.85 }}
@@ -97,8 +97,8 @@ export function LifeSyncSectionNav({
                                 onClick={() => !disabled && onSelect(it.id)}
                                 className={`relative z-0 shrink-0 font-semibold transition-colors ${pad} ${
                                     active
-                                        ? 'text-[#1a1628]'
-                                        : 'text-[#86868b] hover:text-[#1d1d1f] disabled:cursor-not-allowed disabled:opacity-40'
+                                        ? 'text-[var(--mx-color-1a1628)]'
+                                        : 'text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] disabled:cursor-not-allowed disabled:opacity-40'
                                 }`}
                             >
                                 {it.label}

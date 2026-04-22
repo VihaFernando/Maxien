@@ -49,10 +49,10 @@ export default function Tasks() {
     const statusOptions = ["To Do", "In Progress", "Done", "Cancelled"]
     const priorityOptions = ["Low", "Medium", "High", "Urgent"]
     const priorityColors = {
-        Low: "#86868b",
-        Medium: "#3b82f6",
-        High: "#f97316",
-        Urgent: "#ef4444",
+        Low: "var(--mx-color-86868b)",
+        Medium: "var(--mx-color-3b82f6)",
+        High: "var(--mx-color-f97316)",
+        Urgent: "var(--mx-color-ef4444)",
     }
 
     const buildDueAt = (date, time) => {
@@ -395,12 +395,12 @@ export default function Tasks() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [tasks])
 
-    const priorityBgs = { "Low": "#f5f5f7", "Medium": "#eff6ff", "High": "#fff7ed", "Urgent": "#fef2f2" }
+    const priorityBgs = { "Low": "var(--mx-color-f5f5f7)", "Medium": "var(--mx-color-eff6ff)", "High": "var(--mx-color-fff7ed)", "Urgent": "var(--mx-color-fef2f2)" }
     const statusColors = {
-        "To Do": { bg: "#f5f5f7", text: "#86868b" },
-        "In Progress": { bg: "#eff6ff", text: "#3b82f6" },
-        "Done": { bg: "#f0fdf4", text: "#16a34a" },
-        "Cancelled": { bg: "#fef2f2", text: "#dc2626" }
+        "To Do": { bg: "var(--mx-color-f5f5f7)", text: "var(--mx-color-86868b)" },
+        "In Progress": { bg: "var(--mx-color-eff6ff)", text: "var(--mx-color-3b82f6)" },
+        "Done": { bg: "var(--mx-color-f0fdf4)", text: "var(--mx-color-16a34a)" },
+        "Cancelled": { bg: "var(--mx-color-fef2f2)", text: "var(--mx-color-dc2626)" }
     }
 
     const openCreate = () => {
@@ -428,10 +428,10 @@ export default function Tasks() {
 
     const boardColumns = useMemo(() => {
         return [
-            { key: "To Do", color: "#94a3b8" },
-            { key: "In Progress", color: "#3b82f6" },
-            { key: "Done", color: "#22c55e" },
-            { key: "Cancelled", color: "#ef4444" },
+            { key: "To Do", color: "var(--mx-color-94a3b8)" },
+            { key: "In Progress", color: "var(--mx-color-3b82f6)" },
+            { key: "Done", color: "var(--mx-color-22c55e)" },
+            { key: "Cancelled", color: "var(--mx-color-ef4444)" },
         ].map((column) => ({
             ...column,
             items: filteredTasks.filter((task) => task.status === column.key),
@@ -445,17 +445,17 @@ export default function Tasks() {
                     e.stopPropagation()
                     setActionMenu(actionMenu === task.id ? null : task.id)
                 }}
-                className="rounded-md p-1.5 transition-colors hover:bg-[#f3f4f6]"
+                className="rounded-md p-1.5 transition-colors hover:bg-[var(--mx-color-f3f4f6)]"
             >
-                <FaEllipsisH className="h-3.5 w-3.5 text-[#6b7280]" />
+                <FaEllipsisH className="h-3.5 w-3.5 text-[var(--mx-color-6b7280)]" />
             </button>
 
             {actionMenu === task.id && (
-                <div className="absolute right-0 top-8 z-50 min-w-[152px] overflow-hidden rounded-xl border border-[#d2d2d7]/80 bg-white shadow-xl" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => { setSelectedTask(task); setActionMenu(null) }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">View Details</button>
-                    <button onClick={() => openEdit(task)} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">Edit</button>
-                    <button onClick={() => { duplicateTask(task); setActionMenu(null) }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[#1d1d1f] hover:bg-[#f5f5f7]">Duplicate</button>
-                    <div className="border-t border-[#f0f0f0]" />
+                <div className="absolute right-0 top-8 z-50 min-w-[152px] overflow-hidden rounded-xl border border-[var(--mx-color-d2d2d7)]/80 bg-[var(--color-surface)] shadow-xl" onClick={e => e.stopPropagation()}>
+                    <button onClick={() => { setSelectedTask(task); setActionMenu(null) }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)]">View Details</button>
+                    <button onClick={() => openEdit(task)} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)]">Edit</button>
+                    <button onClick={() => { duplicateTask(task); setActionMenu(null) }} className="w-full px-3 py-2 text-left text-[12px] font-medium text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)]">Duplicate</button>
+                    <div className="border-t border-[var(--mx-color-f0f0f0)]" />
                     <button onClick={() => deleteTask(task.id)} className="w-full px-3 py-2 text-left text-[12px] font-medium text-red-600 hover:bg-red-50">Delete</button>
                 </div>
             )}
@@ -480,12 +480,12 @@ export default function Tasks() {
         const project = projects.find(p => p.id === task.project_id)
 
         return (
-            <div className={`rounded-xl border p-2.5 transition-all sm:p-3 ${overdue ? "border-red-200/70 bg-red-50/40" : "border-[#e5e7eb] bg-white hover:border-[#d1d5db]"}`}>
+            <div className={`rounded-xl border p-2.5 transition-all sm:p-3 ${overdue ? "border-red-200/70 bg-red-50/40" : "border-[var(--mx-color-e5e7eb)] bg-[var(--color-surface)] hover:border-[var(--mx-color-d1d5db)]"}`}>
                 <div className="mb-2 flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                        <p className="truncate text-[12px] font-semibold text-[#111827] sm:text-[13px]">{task.title}</p>
+                        <p className="truncate text-[12px] font-semibold text-[var(--mx-color-111827)] sm:text-[13px]">{task.title}</p>
                         {task.description && (
-                            <p className="mt-0.5 line-clamp-1 text-[10px] text-[#6b7280] sm:text-[11px]">{task.description}</p>
+                            <p className="mt-0.5 line-clamp-1 text-[10px] text-[var(--mx-color-6b7280)] sm:text-[11px]">{task.description}</p>
                         )}
                     </div>
                     <TaskActionsMenu task={task} />
@@ -495,7 +495,7 @@ export default function Tasks() {
                     <StatusBadge task={task} />
                     <PriorityBadge task={task} />
                     {taskType && (
-                        <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-[10px]" style={{ backgroundColor: taskType.color || "#C6FF00", color: "#1d1d1f" }}>
+                        <span className="rounded-full px-1.5 py-0.5 text-[9px] font-semibold sm:px-2 sm:text-[10px]" style={{ backgroundColor: taskType.color || "var(--mx-color-c6ff00)", color: "var(--mx-color-1d1d1f)" }}>
                             {taskType.name}
                         </span>
                     )}
@@ -504,14 +504,14 @@ export default function Tasks() {
                     )}
                 </div>
 
-                <div className="flex items-center justify-between gap-2 border-t border-[#f1f5f9] pt-2">
+                <div className="flex items-center justify-between gap-2 border-t border-[var(--mx-color-f1f5f9)] pt-2">
                     <div className="min-w-0 space-y-1">
-                        <div className="flex items-center gap-1 text-[9px] text-[#6b7280] sm:text-[10px]">
+                        <div className="flex items-center gap-1 text-[9px] text-[var(--mx-color-6b7280)] sm:text-[10px]">
                             <FaCalendar className="h-2.5 w-2.5" />
                             <span className="truncate">{formatDueDateTime(task.due_at)}</span>
                         </div>
                         {project && (
-                            <div className="flex items-center gap-1 text-[9px] text-[#6b7280] sm:text-[10px]">
+                            <div className="flex items-center gap-1 text-[9px] text-[var(--mx-color-6b7280)] sm:text-[10px]">
                                 <FaFolder className="h-2.5 w-2.5" />
                                 <span className="truncate">{project.name}</span>
                             </div>
@@ -520,7 +520,7 @@ export default function Tasks() {
 
                     <button
                         onClick={() => toggleComplete(task)}
-                        className={`rounded-md border px-2 py-1 text-[9px] font-semibold transition-colors sm:text-[10px] ${task.status === "Done" ? "border-[#22c55e] bg-[#22c55e] text-white" : "border-[#d1d5db] bg-white text-[#374151]"}`}
+                        className={`rounded-md border px-2 py-1 text-[9px] font-semibold transition-colors sm:text-[10px] ${task.status === "Done" ? "border-[var(--mx-color-22c55e)] bg-[var(--mx-color-22c55e)] text-white" : "border-[var(--mx-color-d1d5db)] bg-[var(--color-surface)] text-[var(--mx-color-374151)]"}`}
                     >
                         {task.status === "Done" ? "Completed" : "Mark done"}
                     </button>
@@ -536,11 +536,11 @@ export default function Tasks() {
         const isDone = task.status === "Done"
 
         return (
-            <tr className="border-b border-[#eef2f7] transition-colors hover:bg-[#f8fafc]">
+            <tr className="border-b border-[var(--mx-color-eef2f7)] transition-colors hover:bg-[var(--mx-color-f8fafc)]">
                 <td className="px-2 py-2.5 sm:px-3">
                     <button
                         onClick={() => toggleComplete(task)}
-                        className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${isDone ? "border-[#22c55e] bg-[#22c55e] text-white" : "border-[#cbd5e1] bg-[#f8fafc] text-transparent hover:border-[#94a3b8]"}`}
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border transition-colors ${isDone ? "border-[var(--mx-color-22c55e)] bg-[var(--mx-color-22c55e)] text-white" : "border-[var(--mx-color-cbd5e1)] bg-[var(--mx-color-f8fafc)] text-transparent hover:border-[var(--mx-color-94a3b8)]"}`}
                         aria-label={isDone ? "Mark task as not done" : "Mark task as done"}
                     >
                         <svg className={`h-2.5 w-2.5 transition-opacity ${isDone ? "opacity-100" : "opacity-0"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -548,7 +548,7 @@ export default function Tasks() {
                         </svg>
                     </button>
                 </td>
-                <td className="px-2 py-2.5 text-[11px] font-semibold text-[#111827] sm:px-3 sm:text-[12px]">
+                <td className="px-2 py-2.5 text-[11px] font-semibold text-[var(--mx-color-111827)] sm:px-3 sm:text-[12px]">
                     <div className="flex max-w-[260px] items-center gap-1.5">
                         <div className="truncate">{task.title}</div>
                         {overdue && (
@@ -558,11 +558,11 @@ export default function Tasks() {
                         )}
                     </div>
                 </td>
-                <td className="px-2 py-2.5 text-[10px] text-[#6b7280] sm:px-3 sm:text-[11px]">{project?.name || "-"}</td>
+                <td className="px-2 py-2.5 text-[10px] text-[var(--mx-color-6b7280)] sm:px-3 sm:text-[11px]">{project?.name || "-"}</td>
                 <td className="px-2 py-2.5 sm:px-3"><StatusBadge task={task} /></td>
                 <td className="px-2 py-2.5 sm:px-3"><PriorityBadge task={task} /></td>
-                <td className="px-2 py-2.5 text-[10px] text-[#6b7280] sm:px-3 sm:text-[11px]">{formatDueDateTime(task.due_at)}</td>
-                <td className="px-2 py-2.5 text-[10px] text-[#6b7280] sm:px-3 sm:text-[11px]">{taskType?.name || "-"}</td>
+                <td className="px-2 py-2.5 text-[10px] text-[var(--mx-color-6b7280)] sm:px-3 sm:text-[11px]">{formatDueDateTime(task.due_at)}</td>
+                <td className="px-2 py-2.5 text-[10px] text-[var(--mx-color-6b7280)] sm:px-3 sm:text-[11px]">{taskType?.name || "-"}</td>
                 <td className="px-2 py-2.5 sm:px-3">
                     <div className="flex justify-end">
                         <TaskActionsMenu task={task} />
@@ -578,8 +578,8 @@ export default function Tasks() {
         return (
             <section id={sectionId}>
                 <div className="mb-2 flex items-center justify-between">
-                    <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#64748b]">{title}</h3>
-                    <span className="rounded-full bg-[#f1f5f9] px-2 py-0.5 text-[10px] font-semibold text-[#64748b]">{taskList.length}</span>
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">{title}</h3>
+                    <span className="rounded-full bg-[var(--mx-color-f1f5f9)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-64748b)]">{taskList.length}</span>
                 </div>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     {taskList.map((task) => <TaskCard key={task.id} task={task} />)}
@@ -595,20 +595,20 @@ export default function Tasks() {
 
             <div className="mb-4 flex flex-col gap-2.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">Workspace</p>
-                    <h1 className="text-[20px] font-bold tracking-tight text-[#111827] sm:text-[24px]">Tasks</h1>
+                    <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--mx-color-6b7280)]">Workspace</p>
+                    <h1 className="text-[20px] font-bold tracking-tight text-[var(--mx-color-111827)] sm:text-[24px]">Tasks</h1>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto">
                     <Link
                         to="/dashboard/task-types"
-                        className="inline-flex items-center gap-2 rounded-[10px] border border-[#d2d2d7] bg-white px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors hover:bg-[#f8fafc] sm:text-[13px]"
+                        className="inline-flex items-center gap-2 rounded-[10px] border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-3.5 py-2 text-[12px] font-bold text-[var(--mx-color-111827)] transition-colors hover:bg-[var(--mx-color-f8fafc)] sm:text-[13px]"
                     >
                         <FaTags className="h-3 w-3" />
                         Task Types
                     </Link>
                     <button
                         onClick={(e) => { e.stopPropagation(); openCreate() }}
-                        className="inline-flex items-center gap-2 rounded-[10px] bg-[#C6FF00] px-3.5 py-2 text-[12px] font-bold text-[#111827] transition-colors sm:text-[13px]"
+                        className="inline-flex items-center gap-2 rounded-[10px] bg-[var(--mx-color-c6ff00)] px-3.5 py-2 text-[12px] font-bold text-[var(--mx-color-111827)] transition-colors sm:text-[13px]"
                     >
                         <FaPlus className="h-3 w-3" />
                         New Task
@@ -618,43 +618,43 @@ export default function Tasks() {
 
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-2.5">
                 {[
-                    { label: "Total", value: taskStats.total, color: "#3b82f6" },
-                    { label: "To Do", value: taskStats.todo, color: "#64748b" },
-                    { label: "In Progress", value: taskStats.inProgress, color: "#f59e0b" },
-                    { label: "Completed", value: taskStats.done, color: "#22c55e" },
-                    { label: "Overdue", value: taskStats.overdue, color: "#ef4444" },
+                    { label: "Total", value: taskStats.total, color: "var(--mx-color-3b82f6)" },
+                    { label: "To Do", value: taskStats.todo, color: "var(--mx-color-64748b)" },
+                    { label: "In Progress", value: taskStats.inProgress, color: "var(--mx-color-f59e0b)" },
+                    { label: "Completed", value: taskStats.done, color: "var(--mx-color-22c55e)" },
+                    { label: "Overdue", value: taskStats.overdue, color: "var(--mx-color-ef4444)" },
                 ].map((s) => (
-                    <div key={s.label} className="rounded-xl border border-[#e2e8f0] bg-white px-3 py-2.5 shadow-sm">
-                        <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[#6b7280]">{s.label}</p>
+                    <div key={s.label} className="rounded-xl border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] px-3 py-2.5 shadow-sm">
+                        <p className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-6b7280)]">{s.label}</p>
                         <p className="text-[18px] font-bold leading-tight sm:text-[20px]" style={{ color: s.color }}>{s.value}</p>
                     </div>
                 ))}
             </div>
 
-            <div className="mb-4 rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm sm:p-4">
+            <div className="mb-4 rounded-2xl border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] p-3 shadow-sm sm:p-4">
                 <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex gap-2 sm:flex-1">
                         <div className="relative flex-1">
-                            <FaSearch className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#6b7280]" />
+                            <FaSearch className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--mx-color-6b7280)]" />
                             <input
                                 type="text"
                                 placeholder="Search tasks..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full rounded-lg border border-transparent bg-[#f5f7fa] py-2 pl-8.5 pr-3 text-[12px] text-[#111827] outline-none transition-all focus:bg-white sm:text-[13px]"
+                                className="w-full rounded-lg border border-transparent bg-[var(--mx-color-f5f7fa)] py-2 pl-8.5 pr-3 text-[12px] text-[var(--mx-color-111827)] outline-none transition-all focus:bg-[var(--color-surface)] sm:text-[13px]"
                                 onClick={e => e.stopPropagation()}
                             />
                         </div>
                         <button
                             onClick={(e) => { e.stopPropagation(); setShowFilters(!showFilters) }}
-                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[11px] font-semibold transition-all sm:text-[12px] ${showFilters ? "border-[#C6FF00] bg-[#C6FF00] text-[#111827]" : "border-[#d2d2d7] bg-[#f5f7fa] text-[#111827] hover:bg-white"}`}
+                            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[11px] font-semibold transition-all sm:text-[12px] ${showFilters ? "border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-111827)]" : "border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f7fa)] text-[var(--mx-color-111827)] hover:bg-[var(--color-surface)]"}`}
                         >
                             <FaFilter className="h-3 w-3" />
                             Filters
                         </button>
                     </div>
 
-                    <div className="inline-flex w-full rounded-lg border border-[#d2d2d7] bg-[#f8fafc] p-1 sm:w-auto">
+                    <div className="inline-flex w-full rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f8fafc)] p-1 sm:w-auto">
                         {[
                             { key: "grid", label: "Grid", icon: FaBorderAll },
                             { key: "list", label: "List", icon: FaListUl },
@@ -666,7 +666,7 @@ export default function Tasks() {
                                     key={mode.key}
                                     type="button"
                                     onClick={() => setViewMode(mode.key)}
-                                    className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all sm:flex-none ${viewMode === mode.key ? "bg-white text-[#111827] shadow-sm" : "text-[#64748b]"}`}
+                                    className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all sm:flex-none ${viewMode === mode.key ? "bg-[var(--color-surface)] text-[var(--mx-color-111827)] shadow-sm" : "text-[var(--mx-color-64748b)]"}`}
                                 >
                                     <Icon className="h-3 w-3" />
                                     {mode.label}
@@ -677,21 +677,21 @@ export default function Tasks() {
                 </div>
 
                 {showFilters && (
-                    <div className="mt-3 border-t border-[#f1f5f9] pt-3">
+                    <div className="mt-3 border-t border-[var(--mx-color-f1f5f9)] pt-3">
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-lg border border-transparent bg-[#f5f7fa] px-3 py-2 text-[11px] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[12px]">
+                            <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded-lg border border-transparent bg-[var(--mx-color-f5f7fa)] px-3 py-2 text-[11px] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/50 focus:bg-[var(--color-surface)] sm:text-[12px]">
                                 <option value="">All Statuses</option>
                                 {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
-                            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded-lg border border-transparent bg-[#f5f7fa] px-3 py-2 text-[11px] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[12px]">
+                            <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="rounded-lg border border-transparent bg-[var(--mx-color-f5f7fa)] px-3 py-2 text-[11px] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/50 focus:bg-[var(--color-surface)] sm:text-[12px]">
                                 <option value="">All Types</option>
                                 {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                             </select>
-                            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="rounded-lg border border-transparent bg-[#f5f7fa] px-3 py-2 text-[11px] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[12px]">
+                            <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className="rounded-lg border border-transparent bg-[var(--mx-color-f5f7fa)] px-3 py-2 text-[11px] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/50 focus:bg-[var(--color-surface)] sm:text-[12px]">
                                 <option value="">All Priorities</option>
                                 {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
-                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-transparent bg-[#f5f7fa] px-3 py-2 text-[11px] outline-none transition-all focus:border-[#C6FF00]/50 focus:bg-white sm:text-[12px]">
+                            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-transparent bg-[var(--mx-color-f5f7fa)] px-3 py-2 text-[11px] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/50 focus:bg-[var(--color-surface)] sm:text-[12px]">
                                 <option value="due_at">Sort: Due Date</option>
                                 <option value="priority">Sort: Priority</option>
                                 <option value="created_at">Sort: Created</option>
@@ -701,36 +701,36 @@ export default function Tasks() {
                 )}
             </div>
 
-            <div className="rounded-2xl border border-[#e2e8f0] bg-white p-3 shadow-sm sm:p-4">
+            <div className="rounded-2xl border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] p-3 shadow-sm sm:p-4">
                 {loading ? (
                     <div className="flex items-center justify-center py-16">
-                        <div className="h-7 w-7 animate-spin rounded-full border-4 border-[#C6FF00] border-t-transparent"></div>
+                        <div className="h-7 w-7 animate-spin rounded-full border-4 border-[var(--mx-color-c6ff00)] border-t-transparent"></div>
                     </div>
                 ) : totalVisible === 0 ? (
                     <div className="flex flex-col items-center justify-center gap-3 py-14">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f5f7fa]">
-                            <svg className="h-6 w-6 text-[#cbd5e1]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--mx-color-f5f7fa)]">
+                            <svg className="h-6 w-6 text-[var(--mx-color-cbd5e1)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                                 <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                         </div>
                         <div className="text-center">
-                            <p className="text-[14px] font-semibold text-[#111827]">No tasks found</p>
-                            <p className="mt-0.5 text-[12px] text-[#6b7280]">{tasks.length === 0 ? "Create your first task to get started." : "Try adjusting your filters."}</p>
+                            <p className="text-[14px] font-semibold text-[var(--mx-color-111827)]">No tasks found</p>
+                            <p className="mt-0.5 text-[12px] text-[var(--mx-color-6b7280)]">{tasks.length === 0 ? "Create your first task to get started." : "Try adjusting your filters."}</p>
                         </div>
                     </div>
                 ) : viewMode === "list" ? (
                     <div className="overflow-x-auto">
                         <table className="min-w-[900px] w-full table-auto">
                             <thead>
-                                <tr className="border-b border-[#e2e8f0] bg-[#f8fafc] text-left">
-                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Done</th>
-                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Task name</th>
-                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Project</th>
-                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Status</th>
-                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Priority</th>
-                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Date time</th>
-                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Type</th>
-                                    <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-[#64748b] sm:px-3">Actions</th>
+                                <tr className="border-b border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] text-left">
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-64748b)] sm:px-3">Done</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-64748b)] sm:px-3">Task name</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-64748b)] sm:px-3">Project</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-64748b)] sm:px-3">Status</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-64748b)] sm:px-3">Priority</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-64748b)] sm:px-3">Date time</th>
+                                    <th className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-64748b)] sm:px-3">Type</th>
+                                    <th className="px-2 py-2 text-right text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--mx-color-64748b)] sm:px-3">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -744,18 +744,18 @@ export default function Tasks() {
                     <div className="overflow-x-auto pb-1">
                         <div className="flex min-w-[1040px] gap-3">
                             {boardColumns.map((column) => (
-                                <div key={column.key} className="w-[250px] shrink-0 rounded-xl border border-[#e2e8f0] bg-[#f8fafc] p-2.5 sm:w-[260px]">
+                                <div key={column.key} className="w-[250px] shrink-0 rounded-xl border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] p-2.5 sm:w-[260px]">
                                     <div className="mb-2 flex items-center justify-between px-0.5">
                                         <div className="flex items-center gap-2">
                                             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: column.color }}></span>
-                                            <h3 className="text-[11px] font-semibold text-[#334155]">{column.key}</h3>
+                                            <h3 className="text-[11px] font-semibold text-[var(--mx-color-334155)]">{column.key}</h3>
                                         </div>
-                                        <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-[#64748b]">{column.items.length}</span>
+                                        <span className="rounded-full bg-[var(--color-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-64748b)]">{column.items.length}</span>
                                     </div>
 
                                     <div className="space-y-2">
                                         {column.items.length === 0 ? (
-                                            <div className="rounded-lg border border-dashed border-[#dbe1ea] bg-white px-3 py-4 text-center text-[10px] text-[#94a3b8]">No tasks</div>
+                                            <div className="rounded-lg border border-dashed border-[var(--mx-color-dbe1ea)] bg-[var(--color-surface)] px-3 py-4 text-center text-[10px] text-[var(--mx-color-94a3b8)]">No tasks</div>
                                         ) : (
                                             column.items.map((task) => <TaskCard key={task.id} task={task} />)
                                         )}
@@ -776,84 +776,84 @@ export default function Tasks() {
             </div>
             {/* ── Create / Edit Modal ── */}
             {showTaskModal && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#151418]/45 backdrop-blur-[3px]" onClick={() => { setShowTaskModal(false); setEditing(null) }}>
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[var(--mx-color-151418)]/45 backdrop-blur-[3px]" onClick={() => { setShowTaskModal(false); setEditing(null) }}>
                     <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
-                        <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
+                        <div className="w-full overflow-hidden rounded-t-3xl border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between border-b border-[var(--mx-color-eef2f7)] bg-[var(--mx-color-f8fafc)] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
                                 <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Task editor</p>
-                                    <h3 className="mt-0.5 text-[15px] font-bold text-[#111827] sm:text-[17px]">{editing ? "Edit Task" : "New Task"}</h3>
-                                    <p className="mt-0.5 text-[11px] text-[#64748b]">{editing ? "Update task details" : "Add a new task to your workspace"}</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Task editor</p>
+                                    <h3 className="mt-0.5 text-[15px] font-bold text-[var(--mx-color-111827)] sm:text-[17px]">{editing ? "Edit Task" : "New Task"}</h3>
+                                    <p className="mt-0.5 text-[11px] text-[var(--mx-color-64748b)]">{editing ? "Update task details" : "Add a new task to your workspace"}</p>
                                 </div>
-                                <button onClick={() => { setShowTaskModal(false); setEditing(null) }} className="rounded-full border border-[#e2e8f0] bg-white p-1.5 transition-colors hover:bg-[#f8fafc]">
-                                    <FaTimes className="w-4 h-4 text-[#64748b]" />
+                                <button onClick={() => { setShowTaskModal(false); setEditing(null) }} className="rounded-full border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] p-1.5 transition-colors hover:bg-[var(--mx-color-f8fafc)]">
+                                    <FaTimes className="w-4 h-4 text-[var(--mx-color-64748b)]" />
                                 </button>
                             </div>
                             <form onSubmit={createTask} className="max-h-[76vh] space-y-3.5 overflow-y-auto px-4.5 py-4 sm:max-h-[80vh] sm:px-5 sm:py-4.5">
                                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                     <div className="md:col-span-2">
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Title *</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Title *</label>
                                         <input value={form.title} onChange={(e) => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Finish report"
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white" />
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]" />
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Type *</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Type *</label>
                                         <select value={form.type_id} onChange={(e) => setForm(f => ({ ...f, type_id: e.target.value }))}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white">
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]">
                                             <option value="">Select a type</option>
                                             {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Project</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Project</label>
                                         <select value={form.project_id} onChange={(e) => setForm(f => ({ ...f, project_id: e.target.value }))}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white">
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]">
                                             <option value="">No Project</option>
                                             {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Priority</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Priority</label>
                                         <select value={form.priority} onChange={(e) => setForm(f => ({ ...f, priority: e.target.value }))}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white">
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]">
                                             {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Status</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Status</label>
                                         <select value={form.status} onChange={(e) => setForm(f => ({ ...f, status: e.target.value }))}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white">
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]">
                                             {statusOptions.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Due Date</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Due Date</label>
                                         <input type="date" value={form.due_date} onChange={(e) => setForm(f => ({ ...f, due_date: e.target.value }))}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white" />
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]" />
                                     </div>
                                     <div>
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Time</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Time</label>
                                         <input type="time" value={form.due_time} onChange={(e) => setForm(f => ({ ...f, due_time: e.target.value }))}
-                                            className="w-full rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white" />
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]" />
                                     </div>
                                     <div className="md:col-span-2">
-                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Notes</label>
+                                        <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Notes</label>
                                         <textarea value={form.description || ""} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={3} placeholder="Add details or notes..."
-                                            className="w-full resize-none rounded-lg border border-[#e2e8f0] bg-[#f8fafc] px-3 py-2.5 text-[13px] text-[#111827] outline-none transition-all focus:border-[#C6FF00]/70 focus:bg-white" />
+                                            className="w-full resize-none rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]" />
                                     </div>
                                 </div>
                                 {types.length === 0 && (
-                                    <p className="rounded-lg bg-[#f8fafc] px-3 py-2 text-[11px] text-[#64748b]">No active types. <Link to="/dashboard/task-types" className="font-semibold text-[#86b300] hover:underline">Create types</Link></p>
+                                    <p className="rounded-lg bg-[var(--mx-color-f8fafc)] px-3 py-2 text-[11px] text-[var(--mx-color-64748b)]">No active types. <Link to="/dashboard/task-types" className="font-semibold text-[var(--mx-color-86b300)] hover:underline">Create types</Link></p>
                                 )}
                                 {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600">{error}</p>}
                                 {message && <p className="rounded-lg bg-green-50 px-3 py-2 text-[12px] font-medium text-green-700">{message}</p>}
-                                <div className="flex gap-2 border-t border-[#eef2f7] pt-3">
+                                <div className="flex gap-2 border-t border-[var(--mx-color-eef2f7)] pt-3">
                                     <button type="submit" disabled={loading}
-                                        className="flex-1 rounded-lg bg-[#C6FF00] py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#b8f000] disabled:opacity-60">
+                                        className="flex-1 rounded-lg bg-[var(--mx-color-c6ff00)] py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60">
                                         {loading ? (editing ? "Saving..." : "Creating...") : (editing ? "Update Task" : "Create Task")}
                                     </button>
                                     <button type="button" onClick={resetForm}
-                                        className="rounded-lg border border-[#d2d2d7] bg-[#f5f7fa] px-4 py-2.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-white">
+                                        className="rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f7fa)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-334155)] transition-colors hover:bg-[var(--color-surface)]">
                                         Cancel
                                     </button>
                                 </div>
@@ -865,22 +865,22 @@ export default function Tasks() {
 
             {/* ── Task Details Modal ── */}
             {selectedTask && (
-                <div className="fixed inset-0 z-50 overflow-y-auto bg-[#151418]/45 backdrop-blur-[3px]" onClick={() => setSelectedTask(null)}>
+                <div className="fixed inset-0 z-50 overflow-y-auto bg-[var(--mx-color-151418)]/45 backdrop-blur-[3px]" onClick={() => setSelectedTask(null)}>
                     <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
-                        <div className="w-full overflow-hidden rounded-t-3xl border border-[#e2e8f0] bg-white shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[#f8fafc] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
+                        <div className="w-full overflow-hidden rounded-t-3xl border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between border-b border-[var(--mx-color-eef2f7)] bg-[var(--mx-color-f8fafc)] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
                                 <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Overview</p>
-                                    <h3 className="mt-0.5 text-[15px] font-bold text-[#111827] sm:text-[17px]">Task Details</h3>
+                                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Overview</p>
+                                    <h3 className="mt-0.5 text-[15px] font-bold text-[var(--mx-color-111827)] sm:text-[17px]">Task Details</h3>
                                 </div>
-                                <button onClick={() => setSelectedTask(null)} className="rounded-full border border-[#e2e8f0] bg-white p-1.5 transition-colors hover:bg-[#f8fafc]">
-                                    <FaTimes className="h-4 w-4 text-[#6b7280]" />
+                                <button onClick={() => setSelectedTask(null)} className="rounded-full border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] p-1.5 transition-colors hover:bg-[var(--mx-color-f8fafc)]">
+                                    <FaTimes className="h-4 w-4 text-[var(--mx-color-6b7280)]" />
                                 </button>
                             </div>
                             <div className="max-h-[72vh] space-y-3.5 overflow-y-auto px-4.5 py-4 sm:max-h-[75vh] sm:px-5">
                                 <div>
                                     <div className="flex items-start justify-between gap-3 mb-1">
-                                        <h4 className={`text-[15px] sm:text-[17px] font-bold leading-snug ${selectedTask.status === "Done" ? "line-through text-[#94a3b8]" : "text-[#111827]"}`}>
+                                        <h4 className={`text-[15px] sm:text-[17px] font-bold leading-snug ${selectedTask.status === "Done" ? "line-through text-[var(--mx-color-94a3b8)]" : "text-[var(--mx-color-111827)]"}`}>
                                             {selectedTask.title}
                                         </h4>
                                         <span className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold"
@@ -889,55 +889,55 @@ export default function Tasks() {
                                         </span>
                                     </div>
                                     {selectedTask.description && (
-                                        <p className="mt-1.5 whitespace-pre-wrap text-[12px] leading-relaxed text-[#64748b]">{selectedTask.description}</p>
+                                        <p className="mt-1.5 whitespace-pre-wrap text-[12px] leading-relaxed text-[var(--mx-color-64748b)]">{selectedTask.description}</p>
                                     )}
                                 </div>
-                                <div className="rounded-xl border border-[#eef2f7] bg-[#fcfdff]">
-                                    <div className="flex items-center justify-between border-b border-[#f1f5f9] px-3 py-2.5">
-                                        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Priority</span>
+                                <div className="rounded-xl border border-[var(--mx-color-eef2f7)] bg-[var(--mx-color-fcfdff)]">
+                                    <div className="flex items-center justify-between border-b border-[var(--mx-color-f1f5f9)] px-3 py-2.5">
+                                        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Priority</span>
                                         <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
                                             style={{ backgroundColor: priorityBgs[selectedTask.priority], color: priorityColors[selectedTask.priority] }}>
                                             {selectedTask.priority}
                                         </span>
                                     </div>
                                     {selectedTask.type_id && (
-                                        <div className="flex items-center justify-between border-b border-[#f1f5f9] px-3 py-2.5">
-                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Type</span>
-                                            {(() => { const t = types.find(x => x.id === selectedTask.type_id); return t ? <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: t.color || "#C6FF00", color: "#1d1d1f" }}>{t.name}</span> : <span className="text-[12px] text-[#64748b]">—</span> })()}
+                                        <div className="flex items-center justify-between border-b border-[var(--mx-color-f1f5f9)] px-3 py-2.5">
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Type</span>
+                                            {(() => { const t = types.find(x => x.id === selectedTask.type_id); return t ? <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: t.color || "var(--mx-color-c6ff00)", color: "var(--mx-color-1d1d1f)" }}>{t.name}</span> : <span className="text-[12px] text-[var(--mx-color-64748b)]">—</span> })()}
                                         </div>
                                     )}
                                     {selectedTask.project_id && (
-                                        <div className="flex items-center justify-between border-b border-[#f1f5f9] px-3 py-2.5">
-                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Project</span>
-                                            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#111827]">
-                                                <FaFolder className="h-3.5 w-3.5 text-[#C6FF00]" />
+                                        <div className="flex items-center justify-between border-b border-[var(--mx-color-f1f5f9)] px-3 py-2.5">
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Project</span>
+                                            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--mx-color-111827)]">
+                                                <FaFolder className="h-3.5 w-3.5 text-[var(--mx-color-c6ff00)]" />
                                                 {projects.find(p => p.id === selectedTask.project_id)?.name || "—"}
                                             </span>
                                         </div>
                                     )}
                                     {selectedTask.due_at && (
                                         <div className="flex items-center justify-between px-3 py-2.5">
-                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Due Date</span>
-                                            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[#111827]">
-                                                <FaCalendar className="h-3.5 w-3.5 text-[#64748b]" />
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Due Date</span>
+                                            <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--mx-color-111827)]">
+                                                <FaCalendar className="h-3.5 w-3.5 text-[var(--mx-color-64748b)]" />
                                                 {formatDueDateTime(selectedTask.due_at)}
                                             </span>
                                         </div>
                                     )}
                                 </div>
-                                <div className="space-y-2 rounded-xl border border-[#eef2f7] bg-[#f8fafc] p-3">
-                                    <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Created</span><span className="text-[11px] text-[#334155]">{formatTimestamp(selectedTask.created_at)}</span></div>
-                                    <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Updated</span><span className="text-[11px] text-[#334155]">{formatTimestamp(selectedTask.updated_at)}</span></div>
-                                    {selectedTask.completed_at && <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#64748b]">Completed</span><span className="text-[11px] text-[#334155]">{formatTimestamp(selectedTask.completed_at)}</span></div>}
+                                <div className="space-y-2 rounded-xl border border-[var(--mx-color-eef2f7)] bg-[var(--mx-color-f8fafc)] p-3">
+                                    <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Created</span><span className="text-[11px] text-[var(--mx-color-334155)]">{formatTimestamp(selectedTask.created_at)}</span></div>
+                                    <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Updated</span><span className="text-[11px] text-[var(--mx-color-334155)]">{formatTimestamp(selectedTask.updated_at)}</span></div>
+                                    {selectedTask.completed_at && <div className="flex justify-between"><span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Completed</span><span className="text-[11px] text-[var(--mx-color-334155)]">{formatTimestamp(selectedTask.completed_at)}</span></div>}
                                 </div>
                             </div>
-                            <div className="flex gap-2 border-t border-[#eef2f7] px-4.5 pb-4.5 pt-3 sm:px-5 sm:pb-5">
+                            <div className="flex gap-2 border-t border-[var(--mx-color-eef2f7)] px-4.5 pb-4.5 pt-3 sm:px-5 sm:pb-5">
                                 <button onClick={() => openEdit(selectedTask)}
-                                    className="flex-1 rounded-lg bg-[#C6FF00] py-2.5 text-[13px] font-semibold text-[#1d1d1f] transition-colors hover:bg-[#b8f000]">
+                                    className="flex-1 rounded-lg bg-[var(--mx-color-c6ff00)] py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-b8f000)]">
                                     Edit Task
                                 </button>
                                 <button onClick={() => setSelectedTask(null)}
-                                    className="rounded-lg border border-[#d2d2d7] bg-[#f5f7fa] px-4 py-2.5 text-[13px] font-semibold text-[#334155] transition-colors hover:bg-white">
+                                    className="rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f7fa)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-334155)] transition-colors hover:bg-[var(--color-surface)]">
                                     Close
                                 </button>
                             </div>

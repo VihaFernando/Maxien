@@ -110,9 +110,9 @@ export default function WorkplaceDetail() {
   if (!workplace && !loading && !error) {
     return (
       <div className="workplace-theme-surface max-w-[1200px] mx-auto">
-        <div className="bg-white rounded-[22px] border border-[#d2d2d7]/50 shadow-sm p-6">
-          <p className="text-[14px] font-bold text-[#1d1d1f]">Workplace not available</p>
-          <p className="text-[12px] text-[#86868b] mt-1">
+        <div className="bg-[var(--color-surface)] rounded-[22px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-6">
+          <p className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)]">Workplace not available</p>
+          <p className="text-[12px] text-[var(--mx-color-86868b)] mt-1">
             You may not be an accepted member of this workplace.
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function WorkplaceDetail() {
 
       <div className="animate-in fade-in duration-300">
         {loading && !tasks.length && !projects.length && !types.length && !members.length && !departments.length && !roles.length && (
-          <div className="p-6 text-center text-[#86868b] text-[14px]">
+          <div className="p-6 text-center text-[var(--mx-color-86868b)] text-[14px]">
             Loading workplace data…
           </div>
         )}

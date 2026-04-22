@@ -25,7 +25,7 @@ const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-ch
 const openSpotlight = () => window.dispatchEvent(new CustomEvent("maxien:open-command-palette"))
 
 const NAV_BASE = "flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
-const NAV_ACTIVE = "bg-[#C6FF00] text-black shadow-sm"
+const NAV_ACTIVE = "bg-[var(--mx-color-c6ff00)] text-black shadow-sm"
 const NAV_IDLE = "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
 
 function SidebarLink({ to, icon: Icon, label, active, onClick }) {
@@ -232,13 +232,13 @@ export default function Dashboard() {
     const isActive = (path) => location.pathname === path
 
     const renderWorkspaceSwitcher = () => (
-        <div className="mb-4 rounded-2xl border border-[#e5e5ea] bg-[#fafafc] p-3">
+        <div className="mb-4 rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafc)] p-3">
             <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">Workspace</p>
-            <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-white p-1 border border-[#ececf1]">
+            <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-[var(--color-surface)] p-1 border border-[var(--mx-color-ececf1)]">
                 <button
                     type="button"
                     onClick={() => handleWorkspaceModeChange("personal")}
-                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${!isWorkplaceMode ? "bg-[#C6FF00] text-black" : "text-[var(--color-text-secondary)]"
+                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${!isWorkplaceMode ? "bg-[var(--mx-color-c6ff00)] text-black" : "text-[var(--color-text-secondary)]"
                         }`}
                 >
                     Personal
@@ -246,7 +246,7 @@ export default function Dashboard() {
                 <button
                     type="button"
                     onClick={() => handleWorkspaceModeChange("workplace")}
-                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${isWorkplaceMode ? "bg-[#C6FF00] text-black" : "text-[var(--color-text-secondary)] "
+                    className={`px-2.5 py-2 text-[12px] font-semibold rounded-lg transition-colors ${isWorkplaceMode ? "bg-[var(--mx-color-c6ff00)] text-black" : "text-[var(--color-text-secondary)] "
                         }`}
                 >
                     Workplace
@@ -258,7 +258,7 @@ export default function Dashboard() {
                     <select
                         value={selectedWorkplaceId}
                         onChange={(e) => handleWorkplaceSelection(e.target.value)}
-                        className="w-full bg-white border border-[#e5e5ea] rounded-xl px-3 py-2 text-[12px] font-semibold text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50"
+                        className="w-full bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] rounded-xl px-3 py-2 text-[12px] font-semibold text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50"
                     >
                         {!workplaces.length && <option value="">No workplace yet</option>}
                         {workplaces.map((workplace) => (
@@ -346,8 +346,8 @@ export default function Dashboard() {
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center">
-                <div className="w-10 h-10 border-4 border-[#C6FF00] border-t-transparent rounded-full animate-spin"></div>
+            <div className="min-h-screen bg-[var(--mx-color-f5f5f7)] flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-[var(--mx-color-c6ff00)] border-t-transparent rounded-full animate-spin"></div>
             </div>
         )
     }
@@ -394,16 +394,16 @@ export default function Dashboard() {
 
                 <div className="mt-auto px-5 pb-5">
                     <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} />
-                    <div className="bg-[#f5f5f7] rounded-2xl p-4">
+                    <div className="bg-[var(--mx-color-f5f5f7)] rounded-2xl p-4">
                         <button
                             type="button"
                             onClick={handleOpenProfile}
-                            className="mb-3 flex w-full items-center gap-3 rounded-xl p-1 text-left transition-colors hover:bg-white/70"
+                            className="mb-3 flex w-full items-center gap-3 rounded-xl p-1 text-left transition-colors hover:bg-[var(--color-surface)]/70"
                         >
                             {user?.user_metadata?.picture ? (
                                 <img src={user.user_metadata.picture} alt="Avatar" className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5" />
                             ) : (
-                                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[var(--color-text-primary)] font-bold text-sm ring-1 ring-black/5">
+                                <div className="w-9 h-9 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-sm ring-1 ring-black/5">
                                     {initials}
                                 </div>
                             )}
@@ -414,7 +414,7 @@ export default function Dashboard() {
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); handleSignOut() }}
-                            className="w-full bg-white hover:bg-red-50 text-red-500 font-semibold py-2 rounded-lg text-[12px] transition-all border border-[#d2d2d7] active:scale-[0.98]"
+                            className="w-full bg-[var(--color-surface)] hover:bg-red-50 text-red-500 font-semibold py-2 rounded-lg text-[12px] transition-all border border-[var(--mx-color-d2d2d7)] active:scale-[0.98]"
                         >
                             Sign Out
                         </button>
@@ -487,18 +487,18 @@ export default function Dashboard() {
                         </div>
                     )}
 
-                    <div className="mt-auto pt-5 border-t border-[#e5e5ea]">
+                    <div className="mt-auto pt-5 border-t border-[var(--mx-color-e5e5ea)]">
                         <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} />
                         <div className="rounded-2xl p-4">
                             <button
                                 type="button"
                                 onClick={handleOpenProfile}
-                                className="mb-3 flex w-full items-center gap-3 rounded-xl p-1 text-left transition-colors hover:bg-white/70"
+                                className="mb-3 flex w-full items-center gap-3 rounded-xl p-1 text-left transition-colors hover:bg-[var(--color-surface)]/70"
                             >
                                 {user?.user_metadata?.picture ? (
                                     <img src={user.user_metadata.picture} alt="Avatar" className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5" />
                                 ) : (
-                                    <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-[var(--color-text-primary)] font-bold text-sm ring-1 ring-black/5">
+                                    <div className="w-9 h-9 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-sm ring-1 ring-black/5">
                                         {initials}
                                     </div>
                                 )}
@@ -509,7 +509,7 @@ export default function Dashboard() {
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleSignOut() }}
-                                className="w-full bg-white hover:bg-red-50 text-red-500 font-semibold py-2 rounded-lg text-[12px] transition-all border border-[#d2d2d7] active:scale-[0.98]"
+                                className="w-full bg-[var(--color-surface)] hover:bg-red-50 text-red-500 font-semibold py-2 rounded-lg text-[12px] transition-all border border-[var(--mx-color-d2d2d7)] active:scale-[0.98]"
                             >
                                 Sign Out
                             </button>
@@ -532,7 +532,7 @@ export default function Dashboard() {
                         {user?.user_metadata?.picture ? (
                             <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
                         ) : (
-                            <div className="w-8 h-8 rounded-full bg-[#f5f5f7] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-xs ring-1 ring-black/5">
+                            <div className="w-8 h-8 rounded-full bg-[var(--mx-color-f5f5f7)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-xs ring-1 ring-black/5">
                                 {initials}
                             </div>
                         )}

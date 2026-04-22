@@ -408,7 +408,7 @@ export default function AdvancedVideoPlayer({
                     onClick={togglePlay}
                     className="absolute inset-0 flex items-center justify-center z-10"
                 >
-                    <span className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+                    <span className="w-16 h-16 rounded-full bg-[var(--color-surface)]/20 backdrop-blur-md flex items-center justify-center">
                         <svg className="w-7 h-7 ml-1 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                     </span>
                 </button>
@@ -439,18 +439,18 @@ export default function AdvancedVideoPlayer({
                         className="group/seek relative h-5 flex items-center cursor-pointer mb-2"
                         onPointerDown={onSeekPointerDown}
                     >
-                        <div className="absolute inset-x-0 h-1 rounded-full bg-white/20 group-hover/seek:h-1.5 transition-all">
+                        <div className="absolute inset-x-0 h-1 rounded-full bg-[var(--color-surface)]/20 group-hover/seek:h-1.5 transition-all">
                             <div
-                                className="absolute inset-y-0 left-0 rounded-full bg-white/30"
+                                className="absolute inset-y-0 left-0 rounded-full bg-[var(--color-surface)]/30"
                                 style={{ width: `${bufferedPct}%` }}
                             />
                             <div
-                                className="absolute inset-y-0 left-0 rounded-full bg-[#C6FF00]"
+                                className="absolute inset-y-0 left-0 rounded-full bg-[var(--mx-color-c6ff00)]"
                                 style={{ width: `${progress}%` }}
                             />
                         </div>
                         <div
-                            className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-[#C6FF00] shadow-lg shadow-black/40 scale-0 group-hover/seek:scale-100 transition-transform"
+                            className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-[var(--mx-color-c6ff00)] shadow-lg shadow-black/40 scale-0 group-hover/seek:scale-100 transition-transform"
                             style={{ left: `calc(${progress}% - 7px)` }}
                         />
                     </div>
@@ -458,7 +458,7 @@ export default function AdvancedVideoPlayer({
                     {/* Bottom row — wraps on narrow widths; secondary cluster full-width on xs */}
                     <div className="flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-2">
                         {/* Play / Pause */}
-                        <button type="button" onClick={togglePlay} className="flex h-8 w-8 shrink-0 items-center justify-center text-white transition-colors hover:text-[#C6FF00]">
+                        <button type="button" onClick={togglePlay} className="flex h-8 w-8 shrink-0 items-center justify-center text-white transition-colors hover:text-[var(--mx-color-c6ff00)]">
                             {playing ? (
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" /></svg>
                             ) : (
@@ -508,7 +508,7 @@ export default function AdvancedVideoPlayer({
                                         step="0.05"
                                         value={muted ? 0 : volume}
                                         onChange={e => changeVolume(Number(e.target.value))}
-                                        className="w-full h-1 appearance-none rounded-full bg-white/20 accent-[#C6FF00] cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#C6FF00]"
+                                        className="w-full h-1 appearance-none rounded-full bg-[var(--color-surface)]/20 accent-[var(--mx-color-c6ff00)] cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--mx-color-c6ff00)]"
                                     />
                                 </div>
                             )}
@@ -530,14 +530,14 @@ export default function AdvancedVideoPlayer({
                                     onClick={() => setShowSpeedMenu(v => !v)}
                                     className={`h-7 rounded-md px-2 text-[11px] font-semibold tabular-nums transition-colors ${
                                         speed !== 1
-                                            ? 'bg-[#C6FF00]/20 text-[#C6FF00]'
-                                            : 'text-white/70 hover:bg-white/10 hover:text-white'
+                                            ? 'bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-c6ff00)]'
+                                            : 'text-white/70 hover:bg-[var(--color-surface)]/10 hover:text-white'
                                     }`}
                                 >
                                     {speed}x
                                 </button>
                                 {showSpeedMenu && (
-                                    <div className="absolute bottom-full right-0 z-30 mb-2 min-w-[5rem] overflow-hidden rounded-xl border border-white/10 bg-[#1c1c1e] shadow-xl">
+                                    <div className="absolute bottom-full right-0 z-30 mb-2 min-w-[5rem] overflow-hidden rounded-xl border border-[var(--color-border-strong)]/10 bg-[var(--mx-color-1c1c1e)] shadow-xl">
                                         {SPEEDS.map(s => (
                                             <button
                                                 key={s}
@@ -545,8 +545,8 @@ export default function AdvancedVideoPlayer({
                                                 onClick={() => changeSpeed(s)}
                                                 className={`block w-full px-3 py-1.5 text-left text-[11px] font-medium tabular-nums transition-colors ${
                                                     s === speed
-                                                        ? 'bg-[#C6FF00]/20 text-[#C6FF00]'
-                                                        : 'text-white/80 hover:bg-white/10'
+                                                        ? 'bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-c6ff00)]'
+                                                        : 'text-white/80 hover:bg-[var(--color-surface)]/10'
                                                 }`}
                                             >
                                                 {s}x
@@ -560,7 +560,7 @@ export default function AdvancedVideoPlayer({
                                     type="button"
                                     onClick={togglePiP}
                                     className={`flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-                                        pipActive ? 'text-[#C6FF00]' : 'text-white/70 hover:text-white'
+                                        pipActive ? 'text-[var(--mx-color-c6ff00)]' : 'text-white/70 hover:text-white'
                                     }`}
                                     title="Picture-in-Picture (P)"
                                 >

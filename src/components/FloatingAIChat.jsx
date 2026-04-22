@@ -75,7 +75,7 @@ const SpeakerOffIcon = ({ className }) => (
 )
 
 // ─── Inline voice waveform (5 bars) ─────────────────────────────────────────
-const VoiceWave = ({ color = "#C6FF00", size = 14 }) => (
+const VoiceWave = ({ color = "var(--mx-color-c6ff00)", size = 14 }) => (
     <div className="flex items-end gap-[2px]" style={{ height: size }}>
         {[0.5, 0.9, 1, 0.7, 0.45].map((h, i) => (
             <span
@@ -94,7 +94,7 @@ const ACTION_STYLES = {
     update_task: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100", label: "Task Updated" },
     update_project: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100", label: "Project Updated" },
     link_task_project: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100", label: "Task Linked" },
-    none: { bg: "bg-[#f5f5f7]", text: "text-[#86868b]", border: "border-[#e5e5ea]", label: "No Action" },
+    none: { bg: "bg-[var(--mx-color-f5f5f7)]", text: "text-[var(--mx-color-86868b)]", border: "border-[var(--mx-color-e5e5ea)]", label: "No Action" },
     clarify: { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-100", label: "Select One" },
 }
 
@@ -203,25 +203,25 @@ function ChatBubble({ msg, onSelectOption }) {
         <div className={`flex gap-2 ${isUser ? "flex-row-reverse" : "flex-row"} items-start`}>
             {/* AI avatar */}
             {!isUser && (
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
-                    <SparkleIcon className="w-3 h-3 text-[#1d1d1f]" />
+                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
+                    <SparkleIcon className="w-3 h-3 text-[var(--mx-color-1d1d1f)]" />
                 </div>
             )}
 
             <div className={`flex flex-col gap-1.5 max-w-[82%] ${isUser ? "items-end" : "items-start"}`}>
                 {/* Bubble */}
                 <div className={`px-3 py-2.5 rounded-[14px] ${isUser
-                    ? "bg-[#1d1d1f] text-white rounded-br-[5px]"
-                    : "bg-white border border-[#e8e8ed] text-[#1d1d1f] rounded-bl-[5px] shadow-sm"
+                    ? "bg-[var(--mx-color-1d1d1f)] text-white rounded-br-[5px]"
+                    : "bg-[var(--color-surface)] border border-[var(--mx-color-e8e8ed)] text-[var(--mx-color-1d1d1f)] rounded-bl-[5px] shadow-sm"
                     }`}>
                     {isLoading ? (
                         <div className="flex items-center gap-1.5 px-1 py-1">
                             {[0, 120, 240].map(d => (
-                                <span key={d} className="w-1.5 h-1.5 rounded-full bg-[#C6FF00] animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                                <span key={d} className="w-1.5 h-1.5 rounded-full bg-[var(--mx-color-c6ff00)] animate-bounce" style={{ animationDelay: `${d}ms` }} />
                             ))}
                         </div>
                     ) : (
-                        <p className={`text-[12.5px] leading-relaxed whitespace-pre-wrap ${isUser ? "text-white" : "text-[#1d1d1f]"}`}>
+                        <p className={`text-[12.5px] leading-relaxed whitespace-pre-wrap ${isUser ? "text-white" : "text-[var(--mx-color-1d1d1f)]"}`}>
                             {getDisplayContent()}
                         </p>
                     )}
@@ -239,12 +239,12 @@ function ChatBubble({ msg, onSelectOption }) {
                                     : "bg-violet-50 border-violet-100 hover:bg-violet-100/60"
                                     }`}
                             >
-                                <p className="font-semibold text-[12px] text-[#1d1d1f] line-clamp-1">{item.title}</p>
+                                <p className="font-semibold text-[12px] text-[var(--mx-color-1d1d1f)] line-clamp-1">{item.title}</p>
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${getStatusColor(item.meta)}`}>
                                         {item.meta.split("•")[0]?.trim()}
                                     </span>
-                                    <span className="text-[10px] text-[#86868b]">
+                                    <span className="text-[10px] text-[var(--mx-color-86868b)]">
                                         {item.meta.split("•").slice(1).join("•").trim()}
                                     </span>
                                 </div>
@@ -271,7 +271,7 @@ function ChatBubble({ msg, onSelectOption }) {
 
                 {/* Action badge */}
                 {!isLoading && msg.action && msg.action !== "none" && msg.action !== "error" && msg.action !== "clarify" && (
-                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${ACTION_STYLES[msg.action]?.bg || "bg-[#f5f5f7]"} ${ACTION_STYLES[msg.action]?.text || "text-[#86868b]"} ${ACTION_STYLES[msg.action]?.border || "border-[#e5e5ea]"}`}>
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${ACTION_STYLES[msg.action]?.bg || "bg-[var(--mx-color-f5f5f7)]"} ${ACTION_STYLES[msg.action]?.text || "text-[var(--mx-color-86868b)]"} ${ACTION_STYLES[msg.action]?.border || "border-[var(--mx-color-e5e5ea)]"}`}>
                         <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70" />
                         {ACTION_STYLES[msg.action]?.label || msg.action}
                     </div>
@@ -285,7 +285,7 @@ function ChatBubble({ msg, onSelectOption }) {
                     </div>
                 )}
 
-                <p className="text-[9.5px] text-[#aeaeb2] px-0.5">{formatTime(msg.ts)}</p>
+                <p className="text-[9.5px] text-[var(--mx-color-aeaeb2)] px-0.5">{formatTime(msg.ts)}</p>
             </div>
         </div>
     )
@@ -326,17 +326,17 @@ function KeySetupScreen({ onSaved }) {
     return (
         <div className="flex-1 flex flex-col items-center justify-center px-5 py-6 overflow-y-auto">
             {/* Icon */}
-            <div className="w-14 h-14 rounded-[18px] bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center shadow-lg mb-4">
-                <SparkleIcon className="w-7 h-7 text-[#1d1d1f]" />
+            <div className="w-14 h-14 rounded-[18px] bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] flex items-center justify-center shadow-lg mb-4">
+                <SparkleIcon className="w-7 h-7 text-[var(--mx-color-1d1d1f)]" />
             </div>
-            <h3 className="text-[15px] font-bold text-[#1d1d1f] mb-1">Connect Groq AI</h3>
-            <p className="text-[12px] text-[#86868b] text-center mb-5 max-w-[260px]">
+            <h3 className="text-[15px] font-bold text-[var(--mx-color-1d1d1f)] mb-1">Connect Groq AI</h3>
+            <p className="text-[12px] text-[var(--mx-color-86868b)] text-center mb-5 max-w-[260px]">
                 Add your free Groq API key to use AI features
             </p>
 
             {/* Setup steps */}
-            <div className="w-full bg-[#f5f5f7] rounded-[14px] p-4 mb-5">
-                <p className="text-[10px] font-bold text-[#1d1d1f] uppercase tracking-wider mb-3">How to get a free key</p>
+            <div className="w-full bg-[var(--mx-color-f5f5f7)] rounded-[14px] p-4 mb-5">
+                <p className="text-[10px] font-bold text-[var(--mx-color-1d1d1f)] uppercase tracking-wider mb-3">How to get a free key</p>
                 {[
                     ["1", "Go to", "console.groq.com", "https://console.groq.com"],
                     ["2", "Sign in (free account)", null, null],
@@ -344,10 +344,10 @@ function KeySetupScreen({ onSaved }) {
                     ["4", "Paste it below", null, null],
                 ].map(([n, pre, link, href]) => (
                     <div key={n} className="flex items-start gap-2 mb-1.5 last:mb-0">
-                        <span className="w-4 h-4 rounded-full bg-[#C6FF00] flex items-center justify-center text-[9px] font-black text-[#1d1d1f] flex-shrink-0 mt-0.5">{n}</span>
-                        <p className="text-[11.5px] text-[#3a3a3c]">
+                        <span className="w-4 h-4 rounded-full bg-[var(--mx-color-c6ff00)] flex items-center justify-center text-[9px] font-black text-[var(--mx-color-1d1d1f)] flex-shrink-0 mt-0.5">{n}</span>
+                        <p className="text-[11.5px] text-[var(--mx-color-3a3a3c)]">
                             {pre}{" "}
-                            {link && href && <a href={href} target="_blank" rel="noreferrer" className="font-semibold text-[#0969da] hover:underline">{link}</a>}
+                            {link && href && <a href={href} target="_blank" rel="noreferrer" className="font-semibold text-[var(--mx-color-0969da)] hover:underline">{link}</a>}
                         </p>
                     </div>
                 ))}
@@ -366,16 +366,16 @@ function KeySetupScreen({ onSaved }) {
                     onChange={e => setKeyInput(e.target.value)}
                     placeholder="gsk_..."
                     autoComplete="off"
-                    className="w-full px-3.5 py-2.5 text-[12.5px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all placeholder:text-[#aeaeb2]"
+                    className="w-full px-3.5 py-2.5 text-[12.5px] bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 focus:border-[var(--mx-color-c6ff00)] transition-all placeholder:text-[var(--mx-color-aeaeb2)]"
                 />
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 bg-[#1d1d1f] hover:bg-black text-white text-[12.5px] font-semibold py-2.5 rounded-xl transition-all disabled:opacity-60"
+                    className="w-full flex items-center justify-center gap-2 bg-[var(--mx-color-1d1d1f)] hover:bg-black text-white text-[12.5px] font-semibold py-2.5 rounded-xl transition-all disabled:opacity-60"
                 >
                     {loading ? (
                         <>
-                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <div className="w-3.5 h-3.5 border-2 border-[var(--color-border-strong)]/30 border-t-white rounded-full animate-spin" />
                             Verifying…
                         </>
                     ) : (
@@ -386,7 +386,7 @@ function KeySetupScreen({ onSaved }) {
                     )}
                 </button>
             </form>
-            <p className="text-[10px] text-[#aeaeb2] text-center mt-3">
+            <p className="text-[10px] text-[var(--mx-color-aeaeb2)] text-center mt-3">
                 Encrypted with AES-256 · never exposed to browser
             </p>
         </div>
@@ -901,27 +901,27 @@ function FloatingAIChatInner({
                 `}
             >
                 <div className={`
-                    bg-white flex flex-col overflow-hidden shadow-2xl
+                    bg-[var(--color-surface)] flex flex-col overflow-hidden shadow-2xl
                     /* Mobile: rounded top corners only, full width */
                     rounded-t-[28px] 
                     /* Tablet+: fully rounded */
                     sm:rounded-[24px]
                     /* Height */
                     h-[82svh] sm:h-[580px]
-                    border border-[#e5e5ea]/80
+                    border border-[var(--mx-color-e5e5ea)]/80
                 `}
                     style={{ boxShadow: "0 20px 60px -12px rgba(0,0,0,0.20), 0 4px 20px -4px rgba(0,0,0,0.10)" }}
                 >
 
                     {/* ── Header ──────────────────────────────────────────── */}
-                    <div className="relative flex-shrink-0 bg-gradient-to-br from-[#1d1d1f] to-[#2d2d30] px-4 py-4 rounded-t-[28px] sm:rounded-t-[24px]">
+                    <div className="relative flex-shrink-0 bg-gradient-to-br from-[var(--mx-color-1d1d1f)] to-[var(--mx-color-2d2d30)] px-4 py-4 rounded-t-[28px] sm:rounded-t-[24px]">
                         {/* Drag handle (mobile) */}
-                        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-white/20 sm:hidden" />
+                        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 w-10 h-1 rounded-full bg-[var(--color-surface)]/20 sm:hidden" />
 
                         <div className="flex items-center gap-3 mt-1.5 sm:mt-0">
                             {/* Logo */}
-                            <div className="w-9 h-9 rounded-[12px] bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center shadow-md flex-shrink-0">
-                                <SparkleIcon className="w-4.5 h-4.5 text-[#1d1d1f]" style={{ width: "18px", height: "18px" }} />
+                            <div className="w-9 h-9 rounded-[12px] bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] flex items-center justify-center shadow-md flex-shrink-0">
+                                <SparkleIcon className="w-4.5 h-4.5 text-[var(--mx-color-1d1d1f)]" style={{ width: "18px", height: "18px" }} />
                             </div>
 
                             {/* Title */}
@@ -929,8 +929,8 @@ function FloatingAIChatInner({
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-[14px] font-bold text-white tracking-tight">Maxien AI</span>
                                     <span className="flex items-center gap-1">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-[#C6FF00] animate-pulse" />
-                                        <span className="text-[10px] font-semibold text-[#C6FF00]/80 hidden sm:inline">Online</span>
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--mx-color-c6ff00)] animate-pulse" />
+                                        <span className="text-[10px] font-semibold text-[var(--mx-color-c6ff00)]/80 hidden sm:inline">Online</span>
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
@@ -944,7 +944,7 @@ function FloatingAIChatInner({
                                 {voice.ttsSupported && (
                                     <button
                                         onClick={() => setShowVoiceSettings(s => !s)}
-                                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${showVoiceSettings ? "bg-white/20 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"
+                                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${showVoiceSettings ? "bg-[var(--color-surface)]/20 text-white" : "text-white/60 hover:bg-[var(--color-surface)]/10 hover:text-white"
                                             }`}
                                         title="Voice settings"
                                     >
@@ -959,12 +959,12 @@ function FloatingAIChatInner({
                                 {voice.ttsSupported && hasKey && (
                                     <button
                                         onClick={() => { voice.setVoiceEnabled(v => !v); if (voice.isSpeaking) voice.stopSpeaking() }}
-                                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${voice.voiceEnabled ? "text-[#C6FF00]/90 hover:bg-white/10" : "text-white/35 hover:bg-white/10 hover:text-white/60"
+                                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${voice.voiceEnabled ? "text-[var(--mx-color-c6ff00)]/90 hover:bg-[var(--color-surface)]/10" : "text-white/35 hover:bg-[var(--color-surface)]/10 hover:text-white/60"
                                             }`}
                                         title={voice.voiceEnabled ? "Voice responses on" : "Voice responses off"}
                                     >
                                         {voice.isSpeaking
-                                            ? <VoiceWave size={12} color="#C6FF00" />
+                                            ? <VoiceWave size={12} color="var(--mx-color-c6ff00)" />
                                             : voice.voiceEnabled
                                                 ? <SpeakerOnIcon className="w-3.5 h-3.5" />
                                                 : <SpeakerOffIcon className="w-3.5 h-3.5" />
@@ -974,7 +974,7 @@ function FloatingAIChatInner({
                                 {hasKey && (
                                     <button
                                         onClick={() => setShowKeySettings(s => !s)}
-                                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${showKeySettings ? "bg-white/20 text-white" : "text-white/60 hover:bg-white/10 hover:text-white"}`}
+                                        className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${showKeySettings ? "bg-[var(--color-surface)]/20 text-white" : "text-white/60 hover:bg-[var(--color-surface)]/10 hover:text-white"}`}
                                         title="API Key settings"
                                     >
                                         <KeyIcon className="w-3.5 h-3.5" />
@@ -982,14 +982,14 @@ function FloatingAIChatInner({
                                 )}
                                 <button
                                     onClick={() => navigate("/dashboard/ai-assistant")}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-white/60 hover:bg-[var(--color-surface)]/10 hover:text-white transition-colors"
                                     title="Open full page"
                                 >
                                     <ExpandIcon className="w-3.5 h-3.5" />
                                 </button>
                                 <button
                                     onClick={handleClose}
-                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white transition-colors"
+                                    className="w-7 h-7 flex items-center justify-center rounded-lg text-white/60 hover:bg-[var(--color-surface)]/10 hover:text-white transition-colors"
                                 >
                                     <CloseIcon className="w-3.5 h-3.5" />
                                 </button>
@@ -999,15 +999,15 @@ function FloatingAIChatInner({
 
                     {/* ── Voice settings panel ──────────────────────────────── */}
                     {showVoiceSettings && voice.ttsSupported && (
-                        <div className="flex-shrink-0 border-b border-[#f0f0f5] bg-[#fafafa] px-4 py-3 space-y-3">
+                        <div className="flex-shrink-0 border-b border-[var(--mx-color-f0f0f5)] bg-[var(--mx-color-fafafa)] px-4 py-3 space-y-3">
                             {/* Voice select */}
                             {voice.availableVoices.length > 0 && (
                                 <div>
-                                    <label className="text-[10px] font-semibold text-[#1d1d1f] block mb-1.5">VOICE</label>
+                                    <label className="text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] block mb-1.5">VOICE</label>
                                     <select
                                         value={voice.selectedVoiceIndex}
                                         onChange={e => voice.setSelectedVoiceIndex(Number(e.target.value))}
-                                        className="w-full px-2.5 py-1.5 text-[11px] bg-white border border-[#e5e5ea] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all"
+                                        className="w-full px-2.5 py-1.5 text-[11px] bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 focus:border-[var(--mx-color-c6ff00)] transition-all"
                                     >
                                         {voice.availableVoices.map((v, i) => (
                                             <option key={i} value={i}>
@@ -1020,9 +1020,9 @@ function FloatingAIChatInner({
 
                             {/* Speech rate */}
                             <div>
-                                <label className="text-[10px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-1.5">
+                                <label className="text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] flex items-center justify-between mb-1.5">
                                     <span>SPEED</span>
-                                    <span className="text-[#86868b]">{voice.speechRate.toFixed(1)}x</span>
+                                    <span className="text-[var(--mx-color-86868b)]">{voice.speechRate.toFixed(1)}x</span>
                                 </label>
                                 <input
                                     type="range"
@@ -1031,15 +1031,15 @@ function FloatingAIChatInner({
                                     step="0.1"
                                     value={voice.speechRate}
                                     onChange={e => voice.setSpeechRate(Number(e.target.value))}
-                                    className="w-full h-1.5 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                    className="w-full h-1.5 bg-[var(--mx-color-e5e5ea)] rounded-full appearance-none cursor-pointer accent-[var(--mx-color-c6ff00)]"
                                 />
                             </div>
 
                             {/* Speech pitch */}
                             <div>
-                                <label className="text-[10px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-1.5">
+                                <label className="text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] flex items-center justify-between mb-1.5">
                                     <span>PITCH</span>
-                                    <span className="text-[#86868b]">{voice.speechPitch.toFixed(1)}</span>
+                                    <span className="text-[var(--mx-color-86868b)]">{voice.speechPitch.toFixed(1)}</span>
                                 </label>
                                 <input
                                     type="range"
@@ -1048,15 +1048,15 @@ function FloatingAIChatInner({
                                     step="0.1"
                                     value={voice.speechPitch}
                                     onChange={e => voice.setSpeechPitch(Number(e.target.value))}
-                                    className="w-full h-1.5 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                    className="w-full h-1.5 bg-[var(--mx-color-e5e5ea)] rounded-full appearance-none cursor-pointer accent-[var(--mx-color-c6ff00)]"
                                 />
                             </div>
 
                             {/* Speech volume */}
                             <div>
-                                <label className="text-[10px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-1.5">
+                                <label className="text-[10px] font-semibold text-[var(--mx-color-1d1d1f)] flex items-center justify-between mb-1.5">
                                     <span>VOLUME</span>
-                                    <span className="text-[#86868b]">{Math.round(voice.speechVolume * 100)}%</span>
+                                    <span className="text-[var(--mx-color-86868b)]">{Math.round(voice.speechVolume * 100)}%</span>
                                 </label>
                                 <input
                                     type="range"
@@ -1065,7 +1065,7 @@ function FloatingAIChatInner({
                                     step="0.05"
                                     value={voice.speechVolume}
                                     onChange={e => voice.setSpeechVolume(Number(e.target.value))}
-                                    className="w-full h-1.5 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                    className="w-full h-1.5 bg-[var(--mx-color-e5e5ea)] rounded-full appearance-none cursor-pointer accent-[var(--mx-color-c6ff00)]"
                                 />
                             </div>
                         </div>
@@ -1073,7 +1073,7 @@ function FloatingAIChatInner({
 
                     {/* ── Key settings panel ──────────────────────────────── */}
                     {showKeySettings && hasKey && (
-                        <div className="flex-shrink-0 border-b border-[#f0f0f5] bg-[#fafafa] px-4 py-3">
+                        <div className="flex-shrink-0 border-b border-[var(--mx-color-f0f0f5)] bg-[var(--mx-color-fafafa)] px-4 py-3">
                             {keyError && (
                                 <p className="text-[11px] text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 mb-2">{keyError}</p>
                             )}
@@ -1084,12 +1084,12 @@ function FloatingAIChatInner({
                                     onChange={e => setKeyInput(e.target.value)}
                                     placeholder="New Groq API key…"
                                     autoComplete="off"
-                                    className="flex-1 px-3 py-2 text-[12px] bg-white border border-[#e5e5ea] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all placeholder:text-[#aeaeb2]"
+                                    className="flex-1 px-3 py-2 text-[12px] bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 focus:border-[var(--mx-color-c6ff00)] transition-all placeholder:text-[var(--mx-color-aeaeb2)]"
                                 />
                                 <button
                                     type="submit"
                                     disabled={keyLoading}
-                                    className="px-3 py-2 bg-[#1d1d1f] text-white text-[11.5px] font-semibold rounded-xl disabled:opacity-50 hover:bg-black transition-colors"
+                                    className="px-3 py-2 bg-[var(--mx-color-1d1d1f)] text-white text-[11.5px] font-semibold rounded-xl disabled:opacity-50 hover:bg-black transition-colors"
                                 >
                                     {keyLoading ? "…" : "Save"}
                                 </button>
@@ -1112,7 +1112,7 @@ function FloatingAIChatInner({
                         <div className="flex-1 flex items-center justify-center">
                             <div className="flex gap-1.5">
                                 {[0, 120, 240].map(d => (
-                                    <span key={d} className="w-2 h-2 rounded-full bg-[#C6FF00] animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                                    <span key={d} className="w-2 h-2 rounded-full bg-[var(--mx-color-c6ff00)] animate-bounce" style={{ animationDelay: `${d}ms` }} />
                                 ))}
                             </div>
                         </div>
@@ -1137,14 +1137,14 @@ function FloatingAIChatInner({
                             {/* Example prompts */}
                             {messages.length === 1 && (
                                 <div className="px-4 pb-2 flex-shrink-0">
-                                    <p className="text-[9.5px] font-bold text-[#aeaeb2] uppercase tracking-wider mb-1.5">Try asking</p>
+                                    <p className="text-[9.5px] font-bold text-[var(--mx-color-aeaeb2)] uppercase tracking-wider mb-1.5">Try asking</p>
                                     <div className="flex flex-wrap gap-1.5">
                                         {EXAMPLE_PROMPTS.map((p, i) => (
                                             <button
                                                 key={i}
                                                 onClick={() => handleSend(p)}
                                                 disabled={sending}
-                                                className="text-[11px] font-medium bg-[#f5f5f7] hover:bg-[#ebebed] text-[#3a3a3c] px-2.5 py-1 rounded-full border border-[#e5e5ea] transition-colors disabled:opacity-50 text-left"
+                                                className="text-[11px] font-medium bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] text-[var(--mx-color-3a3a3c)] px-2.5 py-1 rounded-full border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50 text-left"
                                             >
                                                 {p}
                                             </button>
@@ -1163,10 +1163,10 @@ function FloatingAIChatInner({
                             )}
 
                             {/* Divider */}
-                            <div className="h-px bg-[#f0f0f5] flex-shrink-0" />
+                            <div className="h-px bg-[var(--mx-color-f0f0f5)] flex-shrink-0" />
 
                             {/* Input */}
-                            <div className="px-3 py-3 flex-shrink-0 bg-white">
+                            <div className="px-3 py-3 flex-shrink-0 bg-[var(--color-surface)]">
                                 <div className="flex items-center gap-2">
                                     <div className="flex-1 relative">
                                         <textarea
@@ -1177,7 +1177,7 @@ function FloatingAIChatInner({
                                             placeholder={voice.isListening ? "" : "Ask me anything… (Enter to send)"}
                                             rows={1}
                                             disabled={sending || voice.isListening}
-                                            className="w-full px-3.5 py-2.5 pr-3 text-[12.5px] bg-[#f5f5f7] border border-[#e8e8ed] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all resize-none placeholder:text-[#aeaeb2] disabled:opacity-60 leading-relaxed hide-scrollbar"
+                                            className="w-full px-3.5 py-2.5 pr-3 text-[12.5px] bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e8e8ed)] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 focus:border-[var(--mx-color-c6ff00)] transition-all resize-none placeholder:text-[var(--mx-color-aeaeb2)] disabled:opacity-60 leading-relaxed hide-scrollbar"
                                             style={{ maxHeight: "100px", overflowY: "auto" }}
                                             onInput={e => {
                                                 e.target.style.height = "auto"
@@ -1186,9 +1186,9 @@ function FloatingAIChatInner({
                                         />
                                         {/* Listening overlay */}
                                         {voice.isListening && (
-                                            <div className="absolute inset-0 bg-[#f5f5f7] border border-[#C6FF00] rounded-[14px] flex items-center gap-2.5 px-3.5 pointer-events-none">
-                                                <VoiceWave size={16} color="#1d1d1f" />
-                                                <span className="text-[12px] text-[#1d1d1f] flex-1 truncate">
+                                            <div className="absolute inset-0 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-c6ff00)] rounded-[14px] flex items-center gap-2.5 px-3.5 pointer-events-none">
+                                                <VoiceWave size={16} color="var(--mx-color-1d1d1f)" />
+                                                <span className="text-[12px] text-[var(--mx-color-1d1d1f)] flex-1 truncate">
                                                     {voice.interimText || "Listening…"}
                                                 </span>
                                             </div>
@@ -1202,7 +1202,7 @@ function FloatingAIChatInner({
                                             title={voice.isListening ? "Stop listening" : "Speak your message"}
                                             className={`w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-[14px] transition-all disabled:opacity-40 ${voice.isListening
                                                 ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.4)] scale-105"
-                                                : "bg-[#f5f5f7] border border-[#e8e8ed] text-[#86868b] hover:bg-[#ebebed] hover:text-[#1d1d1f] active:scale-95"
+                                                : "bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e8e8ed)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)] hover:text-[var(--mx-color-1d1d1f)] active:scale-95"
                                                 }`}
                                         >
                                             {voice.isListening
@@ -1215,16 +1215,16 @@ function FloatingAIChatInner({
                                     <button
                                         onClick={() => handleSend()}
                                         disabled={!input.trim() || sending || voice.isListening}
-                                        className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 shadow-sm"
+                                        className="w-9 h-9 flex-shrink-0 flex items-center justify-center bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 shadow-sm"
                                     >
                                         {sending ? (
-                                            <div className="w-3.5 h-3.5 border-2 border-[#1d1d1f]/30 border-t-[#1d1d1f] rounded-full animate-spin" />
+                                            <div className="w-3.5 h-3.5 border-2 border-[var(--mx-color-1d1d1f)]/30 border-t-[var(--mx-color-1d1d1f)] rounded-full animate-spin" />
                                         ) : (
                                             <SendIcon className="w-3.5 h-3.5" />
                                         )}
                                     </button>
                                 </div>
-                                <p className="text-[9.5px] text-[#c7c7cc] mt-1.5 text-center">
+                                <p className="text-[9.5px] text-[var(--mx-color-c7c7cc)] mt-1.5 text-center">
                                     {voice.isListening ? "Speak clearly · tap mic to stop" : "AI can make mistakes · Review changes in Tasks & Projects"}
                                 </p>
                             </div>
@@ -1344,7 +1344,7 @@ function FloatingAIChatInner({
                     w-14 h-14
                     sm:w-[58px] sm:h-[58px]
                     rounded-full
-                    bg-gradient-to-br from-[#1d1d1f] to-[#3a3a3c]
+                    bg-gradient-to-br from-[var(--mx-color-1d1d1f)] to-[var(--mx-color-3a3a3c)]
                     text-white
                     shadow-[0_8px_24px_-4px_rgba(0,0,0,0.35),0_2px_8px_-2px_rgba(0,0,0,0.2)]
                     hover:shadow-[0_12px_32px_-4px_rgba(0,0,0,0.45),0_4px_12px_-2px_rgba(0,0,0,0.25)]
@@ -1373,10 +1373,10 @@ function FloatingAIChatInner({
                 }}
             >
                 {/* Glow ring */}
-                <span className="absolute inset-0 rounded-full bg-[#C6FF00]/10 animate-ping pointer-events-none" style={{ animationDuration: "2.5s" }} />
+                <span className="absolute inset-0 rounded-full bg-[var(--mx-color-c6ff00)]/10 animate-ping pointer-events-none" style={{ animationDuration: "2.5s" }} />
 
                 {/* Icon */}
-                <SparkleIcon className="w-6 h-6 relative z-10 text-[#C6FF00]" />
+                <SparkleIcon className="w-6 h-6 relative z-10 text-[var(--mx-color-c6ff00)]" />
 
                 {/* Unread badge */}
                 {unreadCount > 0 && !isOpen && (

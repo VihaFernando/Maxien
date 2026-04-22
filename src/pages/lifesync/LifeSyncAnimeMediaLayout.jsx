@@ -38,9 +38,9 @@ export default function LifeSyncAnimeMediaLayout() {
                         <button
                             type="button"
                             onClick={() => navigate(ANIME_HUB)}
-                            className="hidden w-fit items-center gap-2 rounded-xl border border-[#e5e5ea] bg-white px-3 py-2 text-[13px] font-semibold text-[#1d1d1f] shadow-sm transition-colors hover:bg-[#f5f5f7] sm:inline-flex"
+                            className="hidden w-fit items-center gap-2 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm transition-colors hover:bg-[var(--mx-color-f5f5f7)] sm:inline-flex"
                         >
-                            <FaChevronLeft className="h-3.5 w-3.5 text-[#86868b]" aria-hidden />
+                            <FaChevronLeft className="h-3.5 w-3.5 text-[var(--mx-color-86868b)]" aria-hidden />
                             Back
                         </button>
                     )}

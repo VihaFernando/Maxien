@@ -57,7 +57,7 @@ const SpeakerOffIcon = ({ className }) => (
 )
 
 // ─── Voice waveform ──────────────────────────────────────────────────────────
-const VoiceWave = ({ color = "#C6FF00", size = 16 }) => (
+const VoiceWave = ({ color = "var(--mx-color-c6ff00)", size = 16 }) => (
     <div className="flex items-end gap-[2px]" style={{ height: size }}>
         {[0.5, 0.9, 1, 0.7, 0.45].map((h, i) => (
             <span
@@ -76,7 +76,7 @@ const ACTION_STYLES = {
     update_task: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100", label: "Task Updated" },
     update_project: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100", label: "Project Updated" },
     link_task_project: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100", label: "Task Linked" },
-    none: { bg: "bg-[#f5f5f7]", text: "text-[#86868b]", border: "border-[#e5e5ea]", label: "No Action" },
+    none: { bg: "bg-[var(--mx-color-f5f5f7)]", text: "text-[var(--mx-color-86868b)]", border: "border-[var(--mx-color-e5e5ea)]", label: "No Action" },
     clarify: { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-100", label: "Select One" },
 }
 
@@ -141,25 +141,25 @@ function MessageBubble({ msg }) {
         <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"} items-start`}>
             {/* Avatar */}
             {!isUser && (
-                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
-                    <SparkleIcon className="w-3.5 h-3.5 text-[#1d1d1f]" />
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] flex items-center justify-center flex-shrink-0 shadow-sm mt-0.5">
+                    <SparkleIcon className="w-3.5 h-3.5 text-[var(--mx-color-1d1d1f)]" />
                 </div>
             )}
 
             <div className={`flex flex-col gap-2 max-w-[85%] sm:max-w-[72%] ${isUser ? "items-end" : "items-start"}`}>
                 {/* Bubble */}
                 <div className={`px-4 py-3 rounded-[18px] ${isUser
-                    ? "bg-[#1d1d1f] text-white rounded-br-[6px]"
-                    : "bg-white border border-[#e5e5ea] text-[#1d1d1f] rounded-bl-[6px] shadow-sm"
+                    ? "bg-[var(--mx-color-1d1d1f)] text-white rounded-br-[6px]"
+                    : "bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] text-[var(--mx-color-1d1d1f)] rounded-bl-[6px] shadow-sm"
                     }`}>
                     {isLoading ? (
                         <div className="flex items-center gap-1.5 px-1 py-0.5">
                             {[0, 150, 300].map(d => (
-                                <span key={d} className="w-2 h-2 rounded-full bg-[#C6FF00] animate-bounce" style={{ animationDelay: `${d}ms` }}></span>
+                                <span key={d} className="w-2 h-2 rounded-full bg-[var(--mx-color-c6ff00)] animate-bounce" style={{ animationDelay: `${d}ms` }}></span>
                             ))}
                         </div>
                     ) : (
-                        <p className={`text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-wrap ${isUser ? "text-white" : "text-[#1d1d1f]"}`}>
+                        <p className={`text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-wrap ${isUser ? "text-white" : "text-[var(--mx-color-1d1d1f)]"}`}>
                             {getDisplayContent()}
                         </p>
                     )}
@@ -177,14 +177,14 @@ function MessageBubble({ msg }) {
                                     : "bg-violet-50 border-violet-100 hover:bg-violet-75"
                                     }`}
                             >
-                                <p className="font-semibold text-[13px] text-[#1d1d1f] line-clamp-2">
+                                <p className="font-semibold text-[13px] text-[var(--mx-color-1d1d1f)] line-clamp-2">
                                     {item.title}
                                 </p>
                                 <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className={`text-[11px] font-medium px-2 py-1 rounded-full ${getStatusColor(item.meta)}`}>
                                         {item.meta.split("•")[0]?.trim()}
                                     </span>
-                                    <span className="text-[11px] text-[#86868b]">
+                                    <span className="text-[11px] text-[var(--mx-color-86868b)]">
                                         {item.meta.split("•").slice(1).join("•").trim()}
                                     </span>
                                 </div>
@@ -195,7 +195,7 @@ function MessageBubble({ msg }) {
 
                 {/* Action badge */}
                 {!isLoading && msg.action && msg.action !== "none" && msg.action !== "error" && (
-                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${ACTION_STYLES[msg.action]?.bg || "bg-[#f5f5f7]"} ${ACTION_STYLES[msg.action]?.text || "text-[#86868b]"} ${ACTION_STYLES[msg.action]?.border || "border-[#e5e5ea]"}`}>
+                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${ACTION_STYLES[msg.action]?.bg || "bg-[var(--mx-color-f5f5f7)]"} ${ACTION_STYLES[msg.action]?.text || "text-[var(--mx-color-86868b)]"} ${ACTION_STYLES[msg.action]?.border || "border-[var(--mx-color-e5e5ea)]"}`}>
                         <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
                         {ACTION_STYLES[msg.action]?.label || msg.action}
                     </div>
@@ -210,7 +210,7 @@ function MessageBubble({ msg }) {
                 )}
 
                 {/* Timestamp */}
-                <p className="text-[10px] text-[#86868b] px-1">{formatTime(msg.ts)}</p>
+                <p className="text-[10px] text-[var(--mx-color-86868b)] px-1">{formatTime(msg.ts)}</p>
             </div>
         </div>
     )
@@ -460,10 +460,10 @@ export default function AIAssistant() {
                 <div className="flex flex-col items-center gap-3">
                     <div className="flex gap-1.5">
                         {[0, 150, 300].map(d => (
-                            <span key={d} className="w-2.5 h-2.5 rounded-full bg-[#C6FF00] animate-bounce" style={{ animationDelay: `${d}ms` }}></span>
+                            <span key={d} className="w-2.5 h-2.5 rounded-full bg-[var(--mx-color-c6ff00)] animate-bounce" style={{ animationDelay: `${d}ms` }}></span>
                         ))}
                     </div>
-                    <p className="text-[13px] text-[#86868b] font-medium">Loading AI Assistant…</p>
+                    <p className="text-[13px] text-[var(--mx-color-86868b)] font-medium">Loading AI Assistant…</p>
                 </div>
             </div>
         )
@@ -475,12 +475,12 @@ export default function AIAssistant() {
             {/* ── Page header ── */}
             <div className="flex flex-row items-center justify-between gap-2 mb-3 sm:mb-5 px-0.5 flex-shrink-0">
                 <div className="flex items-center gap-2 min-w-0">
-                    <span className="inline-flex w-7 h-7 rounded-lg bg-gradient-to-br from-[#C6FF00] to-[#a8db00] items-center justify-center flex-shrink-0">
-                        <SparkleIcon className="w-4 h-4 text-[#1d1d1f]" />
+                    <span className="inline-flex w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] items-center justify-center flex-shrink-0">
+                        <SparkleIcon className="w-4 h-4 text-[var(--mx-color-1d1d1f)]" />
                     </span>
                     <div className="min-w-0">
-                        <p className="hidden sm:block text-[11px] font-semibold text-[#86868b] uppercase tracking-widest leading-none mb-0.5">Maxien</p>
-                        <h1 className="text-[15px] sm:text-[24px] font-bold text-[#1d1d1f] tracking-tight leading-tight truncate">
+                        <p className="hidden sm:block text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest leading-none mb-0.5">Maxien</p>
+                        <h1 className="text-[15px] sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-tight truncate">
                             AI Assistant
                         </h1>
                     </div>
@@ -492,8 +492,8 @@ export default function AIAssistant() {
                             <button
                                 onClick={() => setShowVoiceSettings(s => !s)}
                                 className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showVoiceSettings
-                                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                                    : "bg-white text-[#1d1d1f] border-[#d2d2d7] hover:bg-[#f5f5f7]"
+                                    ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
+                                    : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-d2d2d7)] hover:bg-[var(--mx-color-f5f5f7)]"
                                     }`}
                                 title="Voice settings"
                             >
@@ -510,13 +510,13 @@ export default function AIAssistant() {
                             <button
                                 onClick={() => { voice.setVoiceEnabled(v => !v); if (voice.isSpeaking) voice.stopSpeaking() }}
                                 className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${voice.voiceEnabled
-                                    ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                                    : "bg-white text-[#86868b] border-[#d2d2d7] hover:bg-[#f5f5f7]"
+                                    ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
+                                    : "bg-[var(--color-surface)] text-[var(--mx-color-86868b)] border-[var(--mx-color-d2d2d7)] hover:bg-[var(--mx-color-f5f5f7)]"
                                     }`}
                                 title={voice.voiceEnabled ? "Voice responses on" : "Voice responses off"}
                             >
                                 {voice.isSpeaking
-                                    ? <VoiceWave size={14} color="#C6FF00" />
+                                    ? <VoiceWave size={14} color="var(--mx-color-c6ff00)" />
                                     : voice.voiceEnabled
                                         ? <SpeakerOnIcon className="w-3.5 h-3.5" />
                                         : <SpeakerOffIcon className="w-3.5 h-3.5" />
@@ -529,8 +529,8 @@ export default function AIAssistant() {
                         <button
                             onClick={() => setShowSettings(s => !s)}
                             className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${showSettings
-                                ? "bg-[#1d1d1f] text-white border-[#1d1d1f]"
-                                : "bg-white text-[#1d1d1f] border-[#d2d2d7] hover:bg-[#f5f5f7]"
+                                ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
+                                : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-d2d2d7)] hover:bg-[var(--mx-color-f5f5f7)]"
                                 }`}
                         >
                             <KeyIcon className="w-3.5 h-3.5" />
@@ -542,25 +542,25 @@ export default function AIAssistant() {
 
             {/* ── Voice Settings Panel ── */}
             {showVoiceSettings && voice.ttsSupported && hasKey && (
-                <div className="flex-shrink-0 mb-4 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
-                    <div className="px-5 sm:px-6 py-4 border-b border-[#f0f0f0] flex items-center gap-2.5">
+                <div className="flex-shrink-0 mb-4 bg-[var(--color-surface)] rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
+                    <div className="px-5 sm:px-6 py-4 border-b border-[var(--mx-color-f0f0f0)] flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-xl bg-blue-500/10 flex items-center justify-center">
                             <SpeakerOnIcon className="w-3.5 h-3.5 text-blue-600" />
                         </div>
                         <div>
-                            <h3 className="text-[13px] font-bold text-[#1d1d1f]">Voice Settings</h3>
-                            <p className="text-[10px] text-[#86868b]">Customize how the AI speaks to you</p>
+                            <h3 className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)]">Voice Settings</h3>
+                            <p className="text-[10px] text-[var(--mx-color-86868b)]">Customize how the AI speaks to you</p>
                         </div>
                     </div>
                     <div className="px-5 sm:px-6 py-4 space-y-4">
                         {/* Voice select */}
                         {voice.availableVoices.length > 0 && (
                             <div>
-                                <label className="text-[11px] font-semibold text-[#1d1d1f] block mb-2">VOICE</label>
+                                <label className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] block mb-2">VOICE</label>
                                 <select
                                     value={voice.selectedVoiceIndex}
                                     onChange={e => voice.setSelectedVoiceIndex(Number(e.target.value))}
-                                    className="w-full px-3 py-2 text-[12px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all"
+                                    className="w-full px-3 py-2 text-[12px] bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 focus:border-[var(--mx-color-c6ff00)] transition-all"
                                 >
                                     {voice.availableVoices.map((v, i) => (
                                         <option key={i} value={i}>
@@ -573,9 +573,9 @@ export default function AIAssistant() {
 
                         {/* Speech rate */}
                         <div>
-                            <label className="text-[11px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-2">
+                            <label className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] flex items-center justify-between mb-2">
                                 <span>SPEED</span>
-                                <span className="text-[#86868b]">{voice.speechRate.toFixed(1)}x</span>
+                                <span className="text-[var(--mx-color-86868b)]">{voice.speechRate.toFixed(1)}x</span>
                             </label>
                             <input
                                 type="range"
@@ -584,15 +584,15 @@ export default function AIAssistant() {
                                 step="0.1"
                                 value={voice.speechRate}
                                 onChange={e => voice.setSpeechRate(Number(e.target.value))}
-                                className="w-full h-2 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                className="w-full h-2 bg-[var(--mx-color-e5e5ea)] rounded-full appearance-none cursor-pointer accent-[var(--mx-color-c6ff00)]"
                             />
                         </div>
 
                         {/* Speech pitch */}
                         <div>
-                            <label className="text-[11px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-2">
+                            <label className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] flex items-center justify-between mb-2">
                                 <span>PITCH</span>
-                                <span className="text-[#86868b]">{voice.speechPitch.toFixed(1)}</span>
+                                <span className="text-[var(--mx-color-86868b)]">{voice.speechPitch.toFixed(1)}</span>
                             </label>
                             <input
                                 type="range"
@@ -601,15 +601,15 @@ export default function AIAssistant() {
                                 step="0.1"
                                 value={voice.speechPitch}
                                 onChange={e => voice.setSpeechPitch(Number(e.target.value))}
-                                className="w-full h-2 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                className="w-full h-2 bg-[var(--mx-color-e5e5ea)] rounded-full appearance-none cursor-pointer accent-[var(--mx-color-c6ff00)]"
                             />
                         </div>
 
                         {/* Speech volume */}
                         <div>
-                            <label className="text-[11px] font-semibold text-[#1d1d1f] flex items-center justify-between mb-2">
+                            <label className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] flex items-center justify-between mb-2">
                                 <span>VOLUME</span>
-                                <span className="text-[#86868b]">{Math.round(voice.speechVolume * 100)}%</span>
+                                <span className="text-[var(--mx-color-86868b)]">{Math.round(voice.speechVolume * 100)}%</span>
                             </label>
                             <input
                                 type="range"
@@ -618,7 +618,7 @@ export default function AIAssistant() {
                                 step="0.05"
                                 value={voice.speechVolume}
                                 onChange={e => voice.setSpeechVolume(Number(e.target.value))}
-                                className="w-full h-2 bg-[#e5e5ea] rounded-full appearance-none cursor-pointer accent-[#C6FF00]"
+                                className="w-full h-2 bg-[var(--mx-color-e5e5ea)] rounded-full appearance-none cursor-pointer accent-[var(--mx-color-c6ff00)]"
                             />
                         </div>
                     </div>
@@ -627,14 +627,14 @@ export default function AIAssistant() {
 
             {/* ── Settings panel ── */}
             {showSettings && hasKey && (
-                <div className="flex-shrink-0 mb-4 bg-white rounded-[20px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
-                    <div className="px-5 sm:px-6 py-4 border-b border-[#f0f0f0] flex items-center gap-2.5">
+                <div className="flex-shrink-0 mb-4 bg-[var(--color-surface)] rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
+                    <div className="px-5 sm:px-6 py-4 border-b border-[var(--mx-color-f0f0f0)] flex items-center gap-2.5">
                         <div className="w-7 h-7 rounded-xl bg-amber-500/10 flex items-center justify-center">
                             <KeyIcon className="w-3.5 h-3.5 text-amber-600" />
                         </div>
                         <div>
-                            <h3 className="text-[13px] font-bold text-[#1d1d1f]">Groq API Key</h3>
-                            <p className="text-[10px] text-[#86868b]">Encrypted and stored securely on our servers</p>
+                            <h3 className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)]">Groq API Key</h3>
+                            <p className="text-[10px] text-[var(--mx-color-86868b)]">Encrypted and stored securely on our servers</p>
                         </div>
                     </div>
                     <div className="px-5 sm:px-6 py-4">
@@ -657,13 +657,13 @@ export default function AIAssistant() {
                                 onChange={e => setKeyInput(e.target.value)}
                                 placeholder="Enter new Groq API key (gsk_...)"
                                 autoComplete="off"
-                                className="flex-1 px-3.5 py-2.5 text-[13px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all placeholder:text-[#86868b]"
+                                className="flex-1 px-3.5 py-2.5 text-[13px] bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 focus:border-[var(--mx-color-c6ff00)] transition-all placeholder:text-[var(--mx-color-86868b)]"
                             />
                             <div className="flex gap-2">
                                 <button
                                     type="submit"
                                     disabled={keyLoading}
-                                    className="flex-1 sm:flex-none px-4 py-2.5 bg-[#1d1d1f] hover:bg-black text-white text-[12px] font-semibold rounded-xl transition-all disabled:opacity-50"
+                                    className="flex-1 sm:flex-none px-4 py-2.5 bg-[var(--mx-color-1d1d1f)] hover:bg-black text-white text-[12px] font-semibold rounded-xl transition-all disabled:opacity-50"
                                 >
                                     {keyLoading ? "Saving…" : "Update Key"}
                                 </button>
@@ -685,15 +685,15 @@ export default function AIAssistant() {
             {/* ── No key — Setup state ── */}
             {!hasKey ? (
                 <div className="flex-1 flex items-center justify-center">
-                    <div className="w-full max-w-lg bg-white rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                    <div className="w-full max-w-lg bg-[var(--color-surface)] rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
                         {/* Header */}
-                        <div className="bg-gradient-to-br from-[#f0f9d4] via-[#e2f5a0] to-[#f5f5f7] px-6 pt-8 pb-6 flex flex-col items-center gap-4 text-center">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#C6FF00] to-[#a8db00] flex items-center justify-center shadow-lg">
-                                <SparkleIcon className="w-8 h-8 text-[#1d1d1f]" />
+                        <div className="bg-gradient-to-br from-[var(--mx-color-f0f9d4)] via-[var(--mx-color-e2f5a0)] to-[var(--mx-color-f5f5f7)] px-6 pt-8 pb-6 flex flex-col items-center gap-4 text-center">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] flex items-center justify-center shadow-lg">
+                                <SparkleIcon className="w-8 h-8 text-[var(--mx-color-1d1d1f)]" />
                             </div>
                             <div>
-                                <h2 className="text-[18px] font-bold text-[#1d1d1f]">Set Up AI Assistant</h2>
-                                <p className="text-[13px] text-[#86868b] mt-1.5 max-w-xs mx-auto">
+                                <h2 className="text-[18px] font-bold text-[var(--mx-color-1d1d1f)]">Set Up AI Assistant</h2>
+                                <p className="text-[13px] text-[var(--mx-color-86868b)] mt-1.5 max-w-xs mx-auto">
                                     Connect your Groq API key to start managing tasks and projects with natural language.
                                 </p>
                             </div>
@@ -702,8 +702,8 @@ export default function AIAssistant() {
                         {/* Form */}
                         <div className="px-6 py-6">
                             {/* Instruction steps */}
-                            <div className="bg-[#f5f5f7] rounded-xl p-4 mb-5">
-                                <p className="text-[11px] font-bold text-[#1d1d1f] uppercase tracking-wider mb-3">How to get your free API key</p>
+                            <div className="bg-[var(--mx-color-f5f5f7)] rounded-xl p-4 mb-5">
+                                <p className="text-[11px] font-bold text-[var(--mx-color-1d1d1f)] uppercase tracking-wider mb-3">How to get your free API key</p>
                                 {[
                                     ["1", "Go to", "console.groq.com", "https://console.groq.com"],
                                     ["2", "Sign in or create a free Groq account", null, null],
@@ -711,10 +711,10 @@ export default function AIAssistant() {
                                     ["4", "Copy the key and paste it below", null, null],
                                 ].map(([n, pre, link, href]) => (
                                     <div key={n} className="flex items-start gap-2.5 mb-2 last:mb-0">
-                                        <span className="w-4 h-4 rounded-full bg-[#C6FF00] flex items-center justify-center text-[9px] font-black text-[#1d1d1f] flex-shrink-0 mt-0.5">{n}</span>
-                                        <p className="text-[12px] text-[#1d1d1f]">
+                                        <span className="w-4 h-4 rounded-full bg-[var(--mx-color-c6ff00)] flex items-center justify-center text-[9px] font-black text-[var(--mx-color-1d1d1f)] flex-shrink-0 mt-0.5">{n}</span>
+                                        <p className="text-[12px] text-[var(--mx-color-1d1d1f)]">
                                             {pre}{" "}
-                                            {link && href && <a href={href} target="_blank" rel="noreferrer" className="font-semibold text-[#0969da] hover:underline">{link}</a>}
+                                            {link && href && <a href={href} target="_blank" rel="noreferrer" className="font-semibold text-[var(--mx-color-0969da)] hover:underline">{link}</a>}
                                             {link && !href && <span className="font-semibold">{link}</span>}
                                         </p>
                                     </div>
@@ -730,24 +730,24 @@ export default function AIAssistant() {
 
                             <form onSubmit={handleSaveKey} className="space-y-3">
                                 <div>
-                                    <label className="block text-[11px] font-semibold text-[#86868b] uppercase tracking-wide mb-1.5">Groq API Key</label>
+                                    <label className="block text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide mb-1.5">Groq API Key</label>
                                     <input
                                         type="password"
                                         value={keyInput}
                                         onChange={e => setKeyInput(e.target.value)}
                                         placeholder="gsk_..."
                                         autoComplete="off"
-                                        className="w-full px-4 py-3 text-[13px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all placeholder:text-[#86868b]"
+                                        className="w-full px-4 py-3 text-[13px] bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 focus:border-[var(--mx-color-c6ff00)] transition-all placeholder:text-[var(--mx-color-86868b)]"
                                     />
                                 </div>
                                 <button
                                     type="submit"
                                     disabled={keyLoading}
-                                    className="w-full flex items-center justify-center gap-2 bg-[#1d1d1f] hover:bg-black text-white text-[13px] font-semibold py-3 rounded-xl transition-all disabled:opacity-60 active:scale-[0.99]"
+                                    className="w-full flex items-center justify-center gap-2 bg-[var(--mx-color-1d1d1f)] hover:bg-black text-white text-[13px] font-semibold py-3 rounded-xl transition-all disabled:opacity-60 active:scale-[0.99]"
                                 >
                                     {keyLoading ? (
                                         <>
-                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                            <div className="w-4 h-4 border-2 border-[var(--color-border-strong)]/30 border-t-white rounded-full animate-spin"></div>
                                             Verifying key…
                                         </>
                                     ) : (
@@ -757,7 +757,7 @@ export default function AIAssistant() {
                                         </>
                                     )}
                                 </button>
-                                <p className="text-center text-[11px] text-[#86868b]">
+                                <p className="text-center text-[11px] text-[var(--mx-color-86868b)]">
                                     Your key is encrypted with AES-256 and never exposed to the browser.
                                 </p>
                             </form>
@@ -766,7 +766,7 @@ export default function AIAssistant() {
                 </div>
             ) : (
                 /* ── Chat interface ── */
-                <div className="flex flex-col sm:flex-1 sm:min-h-0 bg-white rounded-[20px] sm:rounded-[24px] border border-[#d2d2d7]/50 shadow-sm overflow-hidden">
+                <div className="flex flex-col sm:flex-1 sm:min-h-0 bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
 
                     {/* Chat messages area */}
                     <div ref={chatRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5 min-h-[40vh] sm:min-h-0">
@@ -783,14 +783,14 @@ export default function AIAssistant() {
                     {/* Example prompts (shown when only welcome message) */}
                     {messages.length === 1 && (
                         <div className="px-4 sm:px-6 pb-3 flex-shrink-0">
-                            <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-wider mb-2">Try these examples</p>
+                            <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-2">Try these examples</p>
                             <div className="flex flex-wrap gap-2">
                                 {EXAMPLE_PROMPTS.map((p, i) => (
                                     <button
                                         key={i}
                                         onClick={() => handleSend(p)}
                                         disabled={sending}
-                                        className="text-[11px] font-medium bg-[#f5f5f7] hover:bg-[#ebebed] text-[#1d1d1f] px-3 py-1.5 rounded-full border border-[#e5e5ea] transition-colors disabled:opacity-50 text-left"
+                                        className="text-[11px] font-medium bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] text-[var(--mx-color-1d1d1f)] px-3 py-1.5 rounded-full border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50 text-left"
                                     >
                                         {p}
                                     </button>
@@ -800,7 +800,7 @@ export default function AIAssistant() {
                     )}
 
                     {/* Divider */}
-                    <div className="border-t border-[#f0f0f0] flex-shrink-0"></div>
+                    <div className="border-t border-[var(--mx-color-f0f0f0)] flex-shrink-0"></div>
 
                     {/* Pending clarification banner */}
                     {pendingClarification && (
@@ -832,7 +832,7 @@ export default function AIAssistant() {
                                     disabled={sending || voice.isListening}
                                     enterKeyHint="send"
                                     inputMode="text"
-                                    className="w-full px-4 py-3 pr-3 text-[13px] bg-[#f5f5f7] border border-[#e5e5ea] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[#C6FF00]/50 focus:border-[#C6FF00] transition-all resize-none placeholder:text-[#86868b] disabled:opacity-60 leading-relaxed"
+                                    className="w-full px-4 py-3 pr-3 text-[13px] bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-[14px] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 focus:border-[var(--mx-color-c6ff00)] transition-all resize-none placeholder:text-[var(--mx-color-86868b)] disabled:opacity-60 leading-relaxed"
                                     style={{ maxHeight: "120px", overflowY: "auto" }}
                                     onInput={e => {
                                         e.target.style.height = "auto"
@@ -841,12 +841,12 @@ export default function AIAssistant() {
                                 />
                                 {/* Listening overlay */}
                                 {voice.isListening && (
-                                    <div className="absolute inset-0 bg-[#f5f5f7] border border-[#C6FF00] rounded-[14px] flex items-center gap-3 px-4 pointer-events-none">
-                                        <VoiceWave size={20} color="#1d1d1f" />
-                                        <span className="text-[13px] text-[#1d1d1f] flex-1 truncate">
+                                    <div className="absolute inset-0 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-c6ff00)] rounded-[14px] flex items-center gap-3 px-4 pointer-events-none">
+                                        <VoiceWave size={20} color="var(--mx-color-1d1d1f)" />
+                                        <span className="text-[13px] text-[var(--mx-color-1d1d1f)] flex-1 truncate">
                                             {voice.interimText || "Listening…"}
                                         </span>
-                                        <span className="text-[11px] text-[#C6FF00] font-semibold bg-[#1d1d1f] px-2 py-0.5 rounded-full">LIVE</span>
+                                        <span className="text-[11px] text-[var(--mx-color-c6ff00)] font-semibold bg-[var(--mx-color-1d1d1f)] px-2 py-0.5 rounded-full">LIVE</span>
                                     </div>
                                 )}
                             </div>
@@ -858,7 +858,7 @@ export default function AIAssistant() {
                                     title={voice.isListening ? "Stop listening" : "Speak your message"}
                                     className={`w-10 h-10 flex-shrink-0 flex items-center justify-center rounded-[14px] transition-all disabled:opacity-40 ${voice.isListening
                                         ? "bg-red-500 text-white shadow-[0_0_16px_rgba(239,68,68,0.45)] scale-110"
-                                        : "bg-[#f5f5f7] border border-[#e5e5ea] text-[#86868b] hover:bg-[#ebebed] hover:text-[#1d1d1f] active:scale-[0.95]"
+                                        : "bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)] hover:text-[var(--mx-color-1d1d1f)] active:scale-[0.95]"
                                         }`}
                                 >
                                     {voice.isListening
@@ -871,16 +871,16 @@ export default function AIAssistant() {
                             <button
                                 onClick={() => handleSend()}
                                 disabled={!input.trim() || sending || voice.isListening}
-                                className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[#C6FF00] hover:bg-[#b8f000] text-[#1d1d1f] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.95] shadow-sm"
+                                className="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] rounded-[14px] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.95] shadow-sm"
                             >
                                 {sending ? (
-                                    <div className="w-4 h-4 border-2 border-[#1d1d1f]/30 border-t-[#1d1d1f] rounded-full animate-spin"></div>
+                                    <div className="w-4 h-4 border-2 border-[var(--mx-color-1d1d1f)]/30 border-t-[var(--mx-color-1d1d1f)] rounded-full animate-spin"></div>
                                 ) : (
                                     <SendIcon className="w-4 h-4" />
                                 )}
                             </button>
                         </div>
-                        <p className="text-[10px] text-[#86868b] mt-2 text-center">
+                        <p className="text-[10px] text-[var(--mx-color-86868b)] mt-2 text-center">
                             {voice.isListening
                                 ? "Speak clearly · tap mic again to stop"
                                 : <span className="hidden sm:inline">AI can make mistakes. Review important changes in Tasks &amp; Projects.</span>
