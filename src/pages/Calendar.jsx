@@ -587,7 +587,7 @@ export default function Calendar() {
                 {!hasAnything ? (
                     <div className="text-center py-12 bg-[var(--mx-color-f5f5f7)]/50 rounded-2xl border border-dashed border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-86868b)]">
                         <p className="font-medium">No events scheduled</p>
-                        <p className="text-sm mt-1">Take a breather for the day!</p>
+                        <p className="text-sm mt-1">Take a breather for the day</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
