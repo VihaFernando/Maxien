@@ -320,6 +320,11 @@ html[data-maxien-theme='dark'] .lifesync-category-borderless :is(a, button):not(
   box-shadow: 0 18px 38px -28px rgba(0, 0, 0, 0.55);
 }
 
+/* LifeSync: primary background should always use black foreground text/icons. */
+:is(.lifesync-theme-surface, .lifesync-category-borderless, .lifesync-anime-history, .lifesync-manga-history) [class*="bg-[var(--mx-color-c6ff00)"] {
+  color: #000 !important;
+}
+
 /* LifeSync category hub: dark-mode text/readability remap. */
 html[data-maxien-theme='dark'] .lifesync-category-borderless [class*="text-slate-900"],
 html[data-maxien-theme='dark'] .lifesync-category-borderless [class*="text-slate-800"],
@@ -485,6 +490,202 @@ html[data-maxien-theme='dark'] .lifesync-anime-history .lifesync-history-card {
 
 html[data-maxien-theme='dark'] .lifesync-anime-history .lifesync-history-card-body {
   background-image: linear-gradient(180deg, rgba(34, 33, 40, 0.72), rgba(21, 20, 24, 0.92)) !important;
+}
+
+/* LifeSync Manga Reading History: dark mode contrast tuning */
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-white"] {
+  background-color: color-mix(in srgb, var(--color-surface) 92%, var(--color-surface-soft) 8%) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-slate-50"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-slate-100"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-slate-200"] {
+  background-color: color-mix(in srgb, var(--color-surface-muted) 86%, transparent) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-slate-900"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-slate-800"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-slate-700"] {
+  color: var(--color-text-primary) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-slate-600"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-slate-500"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-slate-400"] {
+  color: var(--color-text-secondary) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="border-slate-"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="ring-slate-"] {
+  border-color: var(--color-border-soft) !important;
+  --tw-ring-color: var(--color-border-soft) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-amber-50"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-amber-100"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-amber-200"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-lime-50"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-lime-100"] {
+  background-color: rgba(155, 201, 42, 0.12) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="border-amber-"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="ring-amber-"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="border-lime-"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="ring-lime-"] {
+  border-color: rgba(155, 201, 42, 0.26) !important;
+  --tw-ring-color: rgba(155, 201, 42, 0.24) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-amber-"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-lime-"] {
+  color: color-mix(in srgb, var(--color-primary) 78%, var(--color-text-primary) 22%) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-red-50"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-red-100"] {
+  background-color: rgba(186, 71, 71, 0.14) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="border-red-"],
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="ring-red-"] {
+  border-color: rgba(186, 71, 71, 0.3) !important;
+  --tw-ring-color: rgba(186, 71, 71, 0.28) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="text-red-"] {
+  color: color-mix(in srgb, var(--mx-color-fecaca) 72%, var(--color-text-primary) 28%) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-slate-900"] {
+  background-color: color-mix(in srgb, var(--color-surface-soft) 82%, var(--color-text-primary) 18%) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history [class*="bg-slate-900"][class*="text-white"] {
+  color: var(--color-text-primary) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history .lifesync-manga-history-accent {
+  background-color: var(--mx-color-c6ff00) !important;
+  border-color: color-mix(in srgb, var(--mx-color-c6ff00) 84%, var(--color-border-soft) 16%) !important;
+  color: #000 !important;
+  --tw-ring-color: color-mix(in srgb, var(--mx-color-c6ff00) 72%, var(--color-border-soft) 28%) !important;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history .lifesync-manga-history-accent:hover {
+  background-color: var(--mx-color-c6ff00) !important;
+  filter: none;
+}
+
+html[data-maxien-theme='dark'] .lifesync-manga-history .lifesync-manga-history-progress-fill {
+  background-color: var(--mx-color-c6ff00) !important;
+}
+
+/* LifeSync Anime Watch + Manga Read: enable light mode UI chrome */
+html[data-maxien-theme='light'] .lifesync-anime-watch,
+html[data-maxien-theme='light'] .lifesync-manga-read {
+  color: var(--mx-color-1d1d1f);
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="text-white"],
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="text-white"] {
+  color: var(--mx-color-1d1d1f) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="text-white/"],
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="text-white/"] {
+  color: var(--mx-color-4b5563) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="bg-black"],
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="bg-[var(--mx-color-0"],
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="bg-black"],
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="bg-[var(--mx-color-0"] {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="border-[var(--color-border-strong)]"],
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="border-[var(--color-border-strong)]"] {
+  border-color: rgba(17, 24, 39, 0.12) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="bg-[var(--color-surface)]/"],
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="bg-[var(--color-surface)]/"] {
+  background-color: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* Keep actual media surfaces dark for readability/playback contrast. */
+html[data-maxien-theme='light'] .lifesync-anime-watch .lifesync-anime-watch-media,
+html[data-maxien-theme='light'] .lifesync-anime-watch .lifesync-anime-watch-media [class*="bg-black"],
+html[data-maxien-theme='light'] .lifesync-anime-watch .lifesync-anime-watch-media[class*="bg-[var(--mx-color-0"] {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-manga-read .lifesync-manga-read-media,
+html[data-maxien-theme='light'] .lifesync-manga-read .lifesync-manga-read-media [class*="bg-black"],
+html[data-maxien-theme='light'] .lifesync-manga-read .lifesync-manga-read-media[class*="bg-[var(--mx-color-0"] {
+  background-color: #000 !important;
+}
+
+/* Manga read: remap hardcoded dark utility tokens to light surfaces/chrome. */
+html[data-maxien-theme='light'] .lifesync-manga-read {
+  background-color: var(--color-surface-muted) !important;
+  color: var(--mx-color-1d1d1f) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-manga-read > header,
+html[data-maxien-theme='light'] .lifesync-manga-read > footer {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  border-color: rgba(17, 24, 39, 0.12) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="bg-[var(--mx-color-1c1c1e)"] {
+  background-color: #fff !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="hover:bg-[var(--mx-color-2c2c2e)"]:hover {
+  background-color: color-mix(in srgb, var(--color-surface-muted) 86%, #fff 14%) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="border-[var(--mx-color-3a3a3c)"] {
+  border-color: rgba(17, 24, 39, 0.18) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="text-[var(--mx-color-f5f5f7)"] {
+  color: var(--mx-color-1d1d1f) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="text-[var(--mx-color-86868b)"] {
+  color: var(--mx-color-6e6e73) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-manga-read [class*="text-[var(--mx-color-a1a1a6)"] {
+  color: var(--mx-color-6e6e73) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="bg-[var(--mx-color-111)"] {
+  background-color: #fff !important;
+  color: var(--mx-color-1d1d1f) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="text-sky-100"],
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="text-emerald-200"] {
+  color: var(--mx-color-334155) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="bg-sky-500/"],
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="bg-emerald-500/"] {
+  background-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="border-sky-400/"],
+html[data-maxien-theme='light'] .lifesync-anime-watch [class*="border-emerald-500/"] {
+  border-color: rgba(100, 116, 139, 0.28) !important;
+}
+
+html[data-maxien-theme='light'] .lifesync-anime-watch .bg-linear-to-b {
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.88), rgba(249, 250, 251, 0.96)) !important;
 }
 
 /* LifeSync detail sheets (anime/manga/hentai) */

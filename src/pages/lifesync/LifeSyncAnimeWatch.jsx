@@ -540,7 +540,7 @@ export default function LifeSyncAnimeWatch() {
 
     if (!isLifeSyncConnected) {
         return (
-        <div className="fixed inset-0 z-9999 flex h-dvh w-full items-center justify-center bg-[var(--mx-color-020202)] text-white">
+        <div className="lifesync-anime-watch fixed inset-0 z-9999 flex h-dvh w-full items-center justify-center bg-[var(--mx-color-020202)] text-white">
                 <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/5 px-6 py-5 text-center">
                     <p className="text-[13px] font-semibold text-white/90">Connecting LifeSync…</p>
                     <p className="mt-1 text-[12px] text-white/50">Please wait.</p>
@@ -569,7 +569,7 @@ export default function LifeSyncAnimeWatch() {
 
     return (
         <MotionDiv
-            className="fixed inset-0 z-9999 h-dvh w-full overflow-hidden bg-[var(--mx-color-050506)] text-white"
+            className="lifesync-anime-watch fixed inset-0 z-9999 h-dvh w-full overflow-hidden bg-[var(--mx-color-050506)] text-white"
             style={{
                 transformOrigin: '50% 0%',
                 viewTransitionName: 'lifesync-anime-watch',
@@ -588,20 +588,20 @@ export default function LifeSyncAnimeWatch() {
                         loading="lazy"
                         referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-linear-to-b from-black/80 via-black/65 to-black/90" />
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.08),transparent_55%)]" />
+                    <div className="absolute inset-0 bg-linear-to-b from-black/72 via-black/58 to-black/84" />
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(198,255,0,0.12),transparent_58%)]" />
                 </div>
             ) : null}
 
             <div className="relative flex h-dvh w-full flex-col">
-                <header className="shrink-0 border-b border-[var(--color-border-strong)]/10 bg-black/25 backdrop-blur-xl">
-                    <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-2.5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:py-3 sm:px-6 lg:px-10">
+                <header className="shrink-0 border-b border-[var(--color-border-strong)]/12 bg-black/30 backdrop-blur-2xl">
+                    <div className="mx-auto flex w-full max-w-[1680px] flex-col gap-2 px-4 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:py-2.5 sm:px-6 lg:px-10">
                         <div className="flex min-w-0 items-center gap-2 sm:min-w-0 sm:flex-1">
                             <button
                                 type="button"
                                 onClick={close}
                                 aria-label="Back"
-                                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-2.5 py-2 text-[12px] font-semibold text-white/85 hover:border-[var(--color-border-strong)]/30 hover:bg-[var(--color-surface)]/10 sm:px-3 sm:py-1.5"
+                                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[var(--color-border-strong)]/18 bg-[var(--color-surface)]/8 px-3 py-2 text-[12px] font-semibold text-white/90 transition-colors hover:border-[var(--mx-color-c6ff00)]/40 hover:bg-[var(--color-surface)]/14 sm:py-1.5"
                             >
                                 <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden>
                                     <path
@@ -639,7 +639,7 @@ export default function LifeSyncAnimeWatch() {
                                 </MotionDiv>
                             ) : null}
                             <div className="min-w-0 flex-1">
-                                <p className="truncate text-[12px] font-semibold text-white/92 sm:text-[13px]">
+                                <p className="truncate text-[12px] font-semibold text-white sm:text-[13px]">
                                     {anime?.title || 'Loading…'}
                                 </p>
                                 <p className="truncate text-[10px] text-white/55 sm:text-[11px]">
@@ -653,7 +653,7 @@ export default function LifeSyncAnimeWatch() {
                                 type="button"
                                 disabled={!canPrev}
                                 onClick={() => goEpisode(episodeIdx - 1)}
-                                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-3 py-2 text-[12px] font-semibold text-white/85 hover:border-[var(--color-border-strong)]/25 hover:bg-[var(--color-surface)]/10 disabled:opacity-30 sm:min-h-0 sm:flex-none sm:py-1.5"
+                                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-[var(--color-border-strong)]/18 bg-[var(--color-surface)]/8 px-3 py-2 text-[12px] font-semibold text-white/90 transition-colors hover:border-[var(--mx-color-c6ff00)]/35 hover:bg-[var(--color-surface)]/14 disabled:opacity-30 sm:min-h-0 sm:flex-none sm:py-1.5"
                                 title="Previous episode"
                             >
                                 Prev
@@ -662,7 +662,7 @@ export default function LifeSyncAnimeWatch() {
                                 type="button"
                                 disabled={!canNext}
                                 onClick={() => goEpisode(episodeIdx + 1)}
-                                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-3 py-2 text-[12px] font-semibold text-white/85 hover:border-[var(--color-border-strong)]/25 hover:bg-[var(--color-surface)]/10 disabled:opacity-30 sm:min-h-0 sm:flex-none sm:py-1.5"
+                                className="inline-flex min-h-11 flex-1 items-center justify-center rounded-xl border border-[var(--color-border-strong)]/18 bg-[var(--color-surface)]/8 px-3 py-2 text-[12px] font-semibold text-white/90 transition-colors hover:border-[var(--mx-color-c6ff00)]/35 hover:bg-[var(--color-surface)]/14 disabled:opacity-30 sm:min-h-0 sm:flex-none sm:py-1.5"
                                 title="Next episode"
                             >
                                 Next
@@ -677,15 +677,15 @@ export default function LifeSyncAnimeWatch() {
                             <WatchPageLoadSkeleton />
                         ) : (
                             <MotionDiv
-                                className="grid gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-6"
+                                className="grid gap-4 sm:gap-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-7"
                                 {...lifeSyncModalSlideProps}
                             >
-                                <main className="min-w-0 space-y-2.5 sm:space-y-3">
-                                    <div className="overflow-hidden rounded-2xl border border-[var(--color-border-strong)]/10 bg-black shadow-[0_20px_80px_rgba(0,0,0,0.55)] sm:rounded-3xl">
+                                <main className="min-w-0 space-y-3 sm:space-y-4">
+                                    <div className="lifesync-anime-watch-media overflow-hidden rounded-3xl border border-[var(--color-border-strong)]/12 bg-black">
                                         <div className="relative aspect-video w-full">
                                             {stream?.resolving ? (
                                                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-                                                    <div className="w-[min(520px,92vw)] rounded-3xl border border-[var(--color-border-strong)]/10 bg-[var(--mx-color-0b0b0d)]/90 p-5 shadow-[0_30px_120px_rgba(0,0,0,0.8)]">
+                                                    <div className="w-[min(520px,92vw)] rounded-3xl border border-[var(--color-border-strong)]/10 bg-[var(--mx-color-0b0b0d)]/90 p-5">
                                                         <div className="flex items-center gap-3">
                                                             <div className="h-10 w-10 rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/5 p-2.5">
                                                                 <svg className="h-full w-full animate-spin text-white/80" viewBox="0 0 24 24" fill="none">
@@ -724,7 +724,7 @@ export default function LifeSyncAnimeWatch() {
                                                     key={stream.iframeUrl}
                                                     title={stream.title || 'Episode'}
                                                     src={stream.iframeUrl}
-                                                    className="h-full w-full border-0 bg-black"
+                                                    className="lifesync-anime-watch-media h-full w-full border-0 bg-black"
                                                     allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
                                                     {...streamIframeSandboxProps(stream.iframeUrl, {
                                                         provider: stream.provider,
@@ -743,7 +743,7 @@ export default function LifeSyncAnimeWatch() {
                                                     }}
                                                 />
                                             ) : (
-                                                <div className="flex h-full w-full items-center justify-center bg-[var(--mx-color-0f0f12)] px-4 text-center">
+                                                <div className="lifesync-anime-watch-media flex h-full w-full items-center justify-center bg-[var(--mx-color-0f0f12)] px-4 text-center">
                                                     <div className="max-w-md">
                                                         <p className="text-[13px] font-semibold text-white/85">
                                                             {stream?.error ? 'Stream error' : 'No stream available'}
@@ -819,7 +819,7 @@ export default function LifeSyncAnimeWatch() {
                                         </div>
                                     ) : null}
 
-                                    <section className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-linear-to-br from-[var(--color-surface)]/6 via-black/25 to-black/40 p-3 shadow-[0_24px_80px_rgba(0,0,0,0.5)] sm:rounded-3xl sm:p-5">
+                                    <section className="rounded-3xl border border-[var(--color-border-strong)]/12 bg-linear-to-br from-[var(--color-surface)]/10 via-black/22 to-black/38 p-4 sm:p-6">
                                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
                                             {/* Series identity + rating */}
                                             <div className="min-w-0 flex-1 space-y-3 sm:space-y-4">
@@ -828,7 +828,7 @@ export default function LifeSyncAnimeWatch() {
                                                         <img
                                                             src={backdropUrl}
                                                             alt=""
-                                                            className="h-19 w-[3.35rem] shrink-0 rounded-2xl object-cover shadow-[0_12px_40px_rgba(0,0,0,0.45)] ring-1 ring-[var(--color-border-strong)]/12 sm:h-21 sm:w-[3.7rem]"
+                                                            className="h-19 w-[3.35rem] shrink-0 rounded-2xl object-cover ring-1 ring-[var(--color-border-strong)]/12 sm:h-21 sm:w-[3.7rem]"
                                                             loading="lazy"
                                                             referrerPolicy="no-referrer"
                                                         />
@@ -930,7 +930,7 @@ export default function LifeSyncAnimeWatch() {
 
                                             {/* Playback controls — stacked rail on desktop */}
                                             <div className="flex w-full shrink-0 flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-2.5 lg:w-[min(100%,15.5rem)] lg:grid-cols-1 lg:gap-2">
-                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-black/30 p-3">
+                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/12 bg-black/28 p-3.5">
                                                     <div className="flex items-center justify-between gap-2">
                                                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
                                                             Audio
@@ -949,7 +949,7 @@ export default function LifeSyncAnimeWatch() {
                                                                 setAudioOverride(v === 'sub' || v === 'dub' ? v : null)
                                                                 setMirrorOverrideId('')
                                                             }}
-                                                            className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-[var(--color-border-strong)]/12 bg-black/40 px-3 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-[var(--color-border-strong)]/22 focus:border-[var(--color-border-strong)]/35 focus:ring-2 focus:ring-[var(--color-border-strong)]/10"
+                                                            className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-[var(--color-border-strong)]/14 bg-black/42 px-3 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-[var(--mx-color-c6ff00)]/30 focus:border-[var(--mx-color-c6ff00)]/45 focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/20"
                                                         >
                                                             <option value="" className="bg-[var(--mx-color-111)]">
                                                                 {autoAudioLabel}
@@ -974,7 +974,7 @@ export default function LifeSyncAnimeWatch() {
                                                     )}
                                                 </div>
 
-                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-black/30 p-3">
+                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/12 bg-black/28 p-3.5">
                                                     <div className="flex items-center justify-between gap-2">
                                                         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">
                                                             Mirror
@@ -997,7 +997,7 @@ export default function LifeSyncAnimeWatch() {
                                                     <select
                                                         value={mirrorOverrideId}
                                                         onChange={(e) => setMirrorOverrideId(safeText(e.target.value).trim())}
-                                                        className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-[var(--color-border-strong)]/12 bg-black/40 px-3 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-[var(--color-border-strong)]/22 focus:border-[var(--color-border-strong)]/35 focus:ring-2 focus:ring-[var(--color-border-strong)]/10 disabled:cursor-not-allowed disabled:opacity-45"
+                                                        className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-[var(--color-border-strong)]/14 bg-black/42 px-3 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-[var(--mx-color-c6ff00)]/30 focus:border-[var(--mx-color-c6ff00)]/45 focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/20 disabled:cursor-not-allowed disabled:opacity-45"
                                                         disabled={!Array.isArray(stream?.mirrors) || stream.mirrors.length === 0}
                                                     >
                                                         <option value="" className="bg-[var(--mx-color-111)]">
@@ -1023,7 +1023,7 @@ export default function LifeSyncAnimeWatch() {
                                     {seriesSeasonOptions.length > 1 || sequelOptions.length > 0 ? (
                                         <section className="grid gap-2.5 sm:gap-3 lg:grid-cols-2">
                                             {seriesSeasonOptions.length > 1 ? (
-                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/6 p-3 sm:rounded-3xl">
+                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/12 bg-[var(--color-surface)]/8 p-3.5 sm:rounded-3xl">
                                                     <p className="text-[10px] font-semibold uppercase tracking-widest text-white/45">
                                                         Series season
                                                     </p>
@@ -1042,7 +1042,7 @@ export default function LifeSyncAnimeWatch() {
                                                                 }
                                                             )
                                                         }}
-                                                        className="mt-2 h-10 w-full rounded-2xl border border-[var(--color-border-strong)]/10 bg-black/30 px-3 text-[12px] font-semibold text-white/85 outline-none hover:border-[var(--color-border-strong)]/20 focus:border-[var(--color-border-strong)]/30"
+                                                        className="mt-2 h-10 w-full rounded-2xl border border-[var(--color-border-strong)]/12 bg-black/34 px-3 text-[12px] font-semibold text-white/90 outline-none hover:border-[var(--mx-color-c6ff00)]/28 focus:border-[var(--mx-color-c6ff00)]/42"
                                                     >
                                                         {seriesSeasonOptions.map((o) => (
                                                             <option key={o.id} value={o.id} className="bg-[var(--mx-color-111)]">
@@ -1056,7 +1056,7 @@ export default function LifeSyncAnimeWatch() {
                                             ) : null}
 
                                             {sequelOptions.length > 0 ? (
-                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/6 p-3 sm:rounded-3xl">
+                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/12 bg-[var(--color-surface)]/8 p-3.5 sm:rounded-3xl">
                                                     <p className="text-[10px] font-semibold uppercase tracking-widest text-white/45">
                                                         Sequels
                                                     </p>
@@ -1076,7 +1076,7 @@ export default function LifeSyncAnimeWatch() {
                                                                         }
                                                                     )
                                                                 }}
-                                                                className="min-h-11 rounded-2xl border border-[var(--color-border-strong)]/10 bg-black/20 px-3 py-2 text-left text-[12px] font-semibold text-white/80 hover:border-[var(--color-border-strong)]/20 hover:bg-[var(--color-surface)]/5 sm:min-h-0"
+                                                                className="min-h-11 rounded-2xl border border-[var(--color-border-strong)]/12 bg-black/24 px-3 py-2 text-left text-[12px] font-semibold text-white/85 transition-colors hover:border-[var(--mx-color-c6ff00)]/28 hover:bg-[var(--color-surface)]/8 sm:min-h-0"
                                                             >
                                                                 {s.title}
                                                             </button>
@@ -1089,7 +1089,7 @@ export default function LifeSyncAnimeWatch() {
                                 </main>
 
                                 <aside className="hidden min-w-0 lg:block">
-                                    <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-black/25 shadow-[0_20px_80px_rgba(0,0,0,0.45)] sm:rounded-3xl">
+                                    <div className="rounded-3xl border border-[var(--color-border-strong)]/12 bg-black/26">
                                         <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border-strong)]/10 px-3 py-2.5 sm:py-3">
                                             <p className="text-[11px] font-semibold text-white/85">Episodes</p>
                                             <span className="rounded-full border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/5 px-2 py-1 text-[10px] font-semibold text-white/60">
@@ -1112,8 +1112,8 @@ export default function LifeSyncAnimeWatch() {
                                                                     onClick={() => goEpisode(i)}
                                                                     className={`flex w-full items-center gap-2 rounded-2xl border px-2.5 py-2 text-left transition-colors ${
                                                                         on
-                                                                            ? 'border-[var(--color-border-strong)]/25 bg-[var(--color-surface)]/10'
-                                                                            : 'border-[var(--color-border-strong)]/10 bg-black/20 hover:bg-[var(--color-surface)]/5'
+                                                                            ? 'border-[var(--mx-color-c6ff00)]/45 bg-[var(--color-surface)]/14'
+                                                                            : 'border-[var(--color-border-strong)]/12 bg-black/22 hover:border-[var(--mx-color-c6ff00)]/24 hover:bg-[var(--color-surface)]/8'
                                                                     }`}
                                                                 >
                                                                     <LifesyncEpisodeThumbnail

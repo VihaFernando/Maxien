@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { FaBookOpen, FaChevronLeft, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTrashAlt } from 'react-icons/fa'
+import { FaBookOpen, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTrashAlt } from 'react-icons/fa'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
@@ -291,7 +291,7 @@ function LibraryMangaCard({
                         ✓
                     </button>
                     {entry.hasNewChapter ? (
-                        <span className="rounded-full bg-[var(--mx-color-c6ff00)] px-2 py-0.5 text-[9px] font-bold text-slate-900">New</span>
+                        <span className="lifesync-manga-history-accent rounded-full bg-[var(--mx-color-c6ff00)] px-2 py-0.5 text-[9px] font-bold text-slate-900">New</span>
                     ) : null}
                 </div>
 
@@ -299,7 +299,7 @@ function LibraryMangaCard({
                     type="button"
                     onClick={() => onRequestRemove(entry)}
                     disabled={removeBusy}
-                    className="absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)]/90 text-black opacity-0 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/50 transition group-hover:opacity-100 hover:bg-[var(--mx-color-c6ff00)] disabled:opacity-50"
+                    className="lifesync-manga-history-accent absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)]/90 text-black opacity-0 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/50 transition group-hover:opacity-100 hover:bg-[var(--mx-color-c6ff00)] disabled:opacity-50"
                     aria-label="Remove"
                 >
                     {removeBusy ? '…' : '✕'}
@@ -323,7 +323,10 @@ function LibraryMangaCard({
                         <span className="text-slate-800">{Math.round(progressPercent)}%</span>
                     </div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                        <div className="h-full rounded-full" style={{ width: `${progressPercent}%`, backgroundColor: 'var(--mx-color-c6ff00)' }} />
+                        <div
+                            className="lifesync-manga-history-progress-fill h-full rounded-full"
+                            style={{ width: `${progressPercent}%`, backgroundColor: 'var(--mx-color-c6ff00)' }}
+                        />
                     </div>
                     <p className="mt-0.5 text-[9px] text-slate-500">{progressDetailLabel(entry)}</p>
                 </div>
@@ -349,7 +352,7 @@ function LibraryMangaCard({
                     <Link
                         to={to}
                         state={state}
-                        className="inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-bold text-black transition hover:shadow-lg active:scale-95"
+                        className="lifesync-manga-history-accent inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-bold text-black transition hover:shadow-lg active:scale-95"
                         style={{ backgroundColor: 'var(--mx-color-c6ff00)' }}
                     >
                         Continue
@@ -646,33 +649,24 @@ export default function LifeSyncMangaLibrary() {
 
     return (
         <MotionDiv
-            className="relative min-w-0 space-y-4"
+            className="lifesync-manga-history relative min-w-0 space-y-4"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={lifeSyncPageTransition}
         >
             <section className="rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                        <Link
-                            to="/dashboard/lifesync/anime"
-                            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-[var(--color-surface)]"
-                            aria-label="Back to hub"
-                        >
-                            <FaChevronLeft className="h-4 w-4" />
-                        </Link>
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">Library</p>
-                            <h1 className="text-[22px] font-black leading-tight text-slate-900">Reading History</h1>
-                            <p className="mt-1 text-[13px] text-slate-600">Track progress, manage status, and continue reading quickly.</p>
-                        </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">Library</p>
+                        <h1 className="text-[22px] font-black leading-tight text-slate-900">Reading History</h1>
+                        <p className="mt-1 text-[13px] text-slate-600">Track progress, manage status, and continue reading quickly.</p>
                     </div>
                     <div className="flex gap-2">
                         <button
                             type="button"
                             onClick={() => void onSync()}
                             disabled={syncBusy || anyRefreshing || summary.total === 0}
-                            className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-3 text-[12px] font-bold text-slate-900 transition hover:brightness-95 disabled:opacity-50"
+                            className="lifesync-manga-history-accent inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-3 text-[12px] font-bold text-slate-900 transition hover:brightness-95 disabled:opacity-50"
                         >
                             <FaSyncAlt className={`h-3 w-3 ${syncBusy ? 'animate-spin' : ''}`} />
                             {syncBusy ? 'Syncing' : 'Sync'}
