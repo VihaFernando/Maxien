@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lifesyncFetch } from '../lib/lifesyncApi'
 
-const MD_NSFW_RATINGS = new Set(['erotica', 'pornographic'])
 const EMPTY_SUMMARY = {
     total: 0,
     withNewChapter: 0,
@@ -9,7 +8,7 @@ const EMPTY_SUMMARY = {
     caughtUp: 0,
     seriesEnded: 0,
     pinned: 0,
-    sources: { mangadex: 0, mangadistrict: 0, hentaifox: 0 },
+    sources: { mangadistrict: 0, comix: 0, hentaifox: 0 },
     statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
 }
 
@@ -50,7 +49,7 @@ function summarizeEntries(entries) {
         caughtUp: 0,
         seriesEnded: 0,
         pinned: 0,
-        sources: { mangadex: 0, mangadistrict: 0, hentaifox: 0 },
+        sources: { mangadistrict: 0, comix: 0, hentaifox: 0 },
         statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
     }
     for (const entry of entries) {
@@ -120,12 +119,9 @@ export function filterMangaReadingByNsfw(entries, nsfwEnabled, hManhwaEnabled = 
     if (nsfwEnabled && hManhwaEnabled) return entries
     return entries.filter((entry) => {
         if (entry.source === 'mangadistrict') return Boolean(nsfwEnabled && hManhwaEnabled)
-        if (entry.source === 'mangadex') {
-            if (!nsfwEnabled) {
-                const cr = entry.contentRating
-                if (cr && MD_NSFW_RATINGS.has(String(cr))) return false
-            }
-            return true
+        if (entry.source === 'comix' && !nsfwEnabled) {
+            const rating = String(entry.contentRating || '').trim().toLowerCase()
+            if (rating === 'adult' || rating === 'hentai' || rating === 'mature' || rating === 'ecchi') return false
         }
         return true
     })

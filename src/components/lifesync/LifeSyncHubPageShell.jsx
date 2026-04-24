@@ -265,6 +265,16 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
                             posterUrl: poster,
                         }
                     }
+                    if (candidate.embedUrl) {
+                        return {
+                            kind: 'youtube_embed',
+                            videoWebmUrl: '',
+                            videoMp4Url: '',
+                            imageUrl: '',
+                            posterUrl: poster,
+                            embedUrl: candidate.embedUrl,
+                        }
+                    }
                     if (poster) {
                         return {
                             kind: 'image',
@@ -359,6 +369,16 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
                             posterUrl: poster,
                         }
                     }
+                    if (candidate.embedUrl) {
+                        return {
+                            kind: 'youtube_embed',
+                            videoWebmUrl: '',
+                            videoMp4Url: '',
+                            imageUrl: '',
+                            posterUrl: poster,
+                            embedUrl: candidate.embedUrl,
+                        }
+                    }
                     if (poster) {
                         return {
                             kind: 'image',
@@ -400,6 +420,7 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
 
     const hasBackgroundMedia = Boolean(
         backgroundMedia?.imageUrl ||
+        backgroundMedia?.embedUrl ||
         backgroundMedia?.videoMp4Url ||
         backgroundMedia?.videoWebmUrl,
     )
@@ -431,7 +452,16 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
         >
             {backgroundActive && (
                 <div className="pointer-events-none fixed inset-0 overflow-hidden">
-                    {backgroundMedia?.kind === 'video' ? (
+                    {backgroundMedia?.kind === 'youtube_embed' ? (
+                        <iframe
+                            title="YouTube background"
+                            src={backgroundMedia?.embedUrl}
+                            className="absolute inset-0 h-full w-full border-0"
+                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                            referrerPolicy="strict-origin-when-cross-origin"
+                            tabIndex={-1}
+                        />
+                    ) : backgroundMedia?.kind === 'video' ? (
                         <video
                             className="absolute inset-0 h-full w-full object-cover object-center"
                             autoPlay

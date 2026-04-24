@@ -79,10 +79,10 @@ function remapToV1Path(path) {
     }
 
     // Manga
-    if (pathname.startsWith('/api/manga/mangadex/')) {
+    if (pathname.startsWith('/api/manga/mangadistrict/')) {
         return pathname.replace('/api/manga', '/api/v1/manga') + suffix
     }
-    if (pathname.startsWith('/api/manga/mangadistrict/')) {
+    if (pathname.startsWith('/api/manga/comix/')) {
         return pathname.replace('/api/manga', '/api/v1/manga') + suffix
     }
     if (
@@ -297,13 +297,11 @@ export function lifesyncBatchUserStartup() {
     return Promise.allSettled([
         lifesyncFetch('/api/v1/auth/me', { method: 'GET' }),
         lifesyncFetch('/api/v1/steam/status?view=compact', { method: 'GET' }),
-        lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact', { method: 'GET' }),
         lifesyncFetch('/api/v1/xbox/openxbl/status?view=compact', { method: 'GET' }),
-    ]).then(([me, steam, mangadex, xbox]) => ({
+    ]).then(([me, steam, xbox]) => ({
         user: me.status === 'fulfilled' ? me.value : null,
         integrations: {
             steam: steam.status === 'fulfilled' ? steam.value : null,
-            mangadex: mangadex.status === 'fulfilled' ? mangadex.value : null,
             xbox: xbox.status === 'fulfilled' ? xbox.value : null,
         },
     }))

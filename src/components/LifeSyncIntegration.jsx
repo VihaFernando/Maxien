@@ -59,10 +59,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
     const [oauthMsg, setOauthMsg] = useState('')
     const [steamIdInput, setSteamIdInput] = useState('')
     const [steamBusy, setSteamBusy] = useState(false)
-    const [mangadexStatus, setMangadexStatus] = useState(null)
-    const [mangadexUser, setMangadexUser] = useState('')
-    const [mangadexPassword, setMangadexPassword] = useState('')
-    const [mangadexBusy, setMangadexBusy] = useState(false)
     const [unlinkBusy, setUnlinkBusy] = useState('')
     const [xboxOpenXbl, setXboxOpenXbl] = useState(null)
     const [xboxGamertagInput, setXboxGamertagInput] = useState('')
@@ -89,14 +85,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
 
     useEffect(() => {
         let cancelled = false
-        lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact')
-            .then(data => { if (!cancelled) setMangadexStatus(data) })
-            .catch(() => { if (!cancelled) setMangadexStatus(null) })
-        return () => { cancelled = true }
-    }, [])
-
-    useEffect(() => {
-        let cancelled = false
         lifesyncFetch('/api/v1/xbox/openxbl/status?view=compact')
             .then(data => { if (!cancelled) setXboxOpenXbl(data || null) })
             .catch(() => { if (!cancelled) setXboxOpenXbl(null) })
@@ -110,48 +98,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
     useEffect(() => {
         setSteamIdInput(typeof integrations?.steamId === 'string' ? integrations.steamId : '')
     }, [integrations?.steamId])
-
-    async function linkMangaDex(e) {
-        e.preventDefault()
-        const u = mangadexUser.trim()
-        const p = mangadexPassword
-        if (!u || !p) {
-            setError('Enter your MangaDex username and password.')
-            return
-        }
-        setMangadexBusy(true)
-        setError('')
-        setMessage('')
-        try {
-            await lifesyncFetch('/api/v1/manga/mangadex/auth', { method: 'POST', json: { username: u, password: p } })
-            setMangadexPassword('')
-            setMessage(
-                'MangaDex linked. Your MangaDex reading list is importing in the background — open Manga and refresh the reading shelf if titles do not appear right away.'
-            )
-            const st = await lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact')
-            setMangadexStatus(st)
-        } catch (err) {
-            setError(err.message || 'MangaDex login failed')
-        } finally {
-            setMangadexBusy(false)
-        }
-    }
-
-    async function unlinkMangaDex() {
-        setUnlinkBusy('MangaDex')
-        setError('')
-        try {
-            await lifesyncFetch('/api/v1/manga/mangadex/auth', { method: 'DELETE' })
-            setMessage('MangaDex disconnected.')
-            setMangadexStatus(s => (s ? { ...s, connected: false, username: null } : s))
-            const st = await lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact').catch(() => null)
-            if (st) setMangadexStatus(st)
-        } catch (err) {
-            setError(err.message || 'Could not disconnect MangaDex')
-        } finally {
-            setUnlinkBusy('')
-        }
-    }
 
     async function unlinkProvider(provider, apiPath) {
         setUnlinkBusy(provider)
@@ -411,69 +357,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                 >
                                     Connect AnimeSchedule
                                 </a>
-                            )}
-                        </div>
-                    </li>
-
-                    {/* MangaDex (password grant via server personal client) */}
-                    <li className="px-5 sm:px-6 py-4">
-                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
-                            <div className="flex min-w-0 items-start gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[var(--mx-color-ff6740)] flex items-center justify-center flex-shrink-0">
-                                    <span className="text-white text-[10px] font-black leading-none">MD</span>
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">MangaDex</p>
-                                    {mangadexStatus == null ? (
-                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Checking server…</p>
-                                    ) : mangadexStatus.oauthConfigured === false ? (
-                                        <p className="text-[11px] text-amber-600 font-medium">Personal client not configured on server</p>
-                                    ) : mangadexStatus?.connected ? (
-                                        <p className="text-[11px] text-emerald-600 font-medium">
-                                            Linked{mangadexStatus.username ? ` as ${mangadexStatus.username}` : ''}
-                                        </p>
-                                    ) : (
-                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                                            Optional: link to sync follows, follow/unfollow from the app, and push chapter read state to your MangaDex account.
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                            {mangadexStatus == null ? null : mangadexStatus.oauthConfigured === false ? null : mangadexStatus.connected ? (
-                                <button
-                                    type="button"
-                                    onClick={() => void unlinkMangaDex()}
-                                    disabled={unlinkBusy === 'MangaDex'}
-                                    className="w-fit shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 transition-colors disabled:opacity-50 md:ml-auto"
-                                >
-                                    {unlinkBusy === 'MangaDex' ? 'Disconnecting…' : 'Disconnect'}
-                                </button>
-                            ) : (
-                                <form onSubmit={linkMangaDex} className="flex w-full max-w-full shrink-0 flex-col gap-2 md:max-w-[260px]">
-                                    <input
-                                        type="text"
-                                        autoComplete="username"
-                                        value={mangadexUser}
-                                        onChange={(e) => setMangadexUser(e.target.value)}
-                                        placeholder="MangaDex username"
-                                        className="w-full px-3 py-2 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-lg text-[12px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:border-[var(--mx-color-c6ff00)]/60"
-                                    />
-                                    <input
-                                        type="password"
-                                        autoComplete="current-password"
-                                        value={mangadexPassword}
-                                        onChange={(e) => setMangadexPassword(e.target.value)}
-                                        placeholder="Password"
-                                        className="w-full px-3 py-2 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] rounded-lg text-[12px] text-[var(--mx-color-1d1d1f)] focus:outline-none focus:border-[var(--mx-color-c6ff00)]/60"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={mangadexBusy}
-                                        className="text-[11px] font-semibold text-white bg-[var(--mx-color-ff6740)] hover:bg-[var(--mx-color-e55a36)] px-3.5 py-2 rounded-lg transition-colors disabled:opacity-50"
-                                    >
-                                        {mangadexBusy ? 'Linking…' : 'Link MangaDex'}
-                                    </button>
-                                </form>
                             )}
                         </div>
                     </li>

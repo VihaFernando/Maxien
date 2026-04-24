@@ -98,6 +98,55 @@ const ANIME_BG_MODE_DESCRIPTIONS = {
     custom_video: "MP4/WEBM or YouTube link",
 }
 
+const COMIX_TYPE_PREF_OPTIONS = [
+    { id: "manga", label: "Manga" },
+    { id: "manhwa", label: "Manhwa" },
+    { id: "manhua", label: "Manhua" },
+    { id: "other", label: "Oneshot / Other" },
+]
+
+function parseCommaOrLineList(value, { maxItems = 200, maxLen = 80 } = {}) {
+    const rows = String(value || "")
+        .split(/[\n,]/)
+        .map((row) => row.trim().toLowerCase())
+        .filter(Boolean)
+    const out = []
+    const seen = new Set()
+    for (const row of rows) {
+        const token = row.slice(0, maxLen)
+        if (!token || seen.has(token)) continue
+        seen.add(token)
+        out.push(token)
+        if (out.length >= maxItems) break
+    }
+    return out
+}
+
+function formatColoredGenresInput(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return ""
+    return Object.entries(value)
+        .map(([key, color]) => `${String(key || "").trim()}:${String(color || "").trim()}`)
+        .filter((row) => row !== ":")
+        .join("\n")
+}
+
+function parseColoredGenresInput(value) {
+    const out = {}
+    const lines = String(value || "").split(/\r?\n/)
+    for (const line of lines) {
+        const raw = line.trim()
+        if (!raw) continue
+        const divider = raw.indexOf(":")
+        if (divider <= 0) continue
+        const key = raw.slice(0, divider).trim().toLowerCase().slice(0, 40)
+        const color = raw.slice(divider + 1).trim().slice(0, 30)
+        if (!key || !color) continue
+        out[key] = color
+        if (Object.keys(out).length >= 300) break
+    }
+    return out
+}
+
 function ModePreviewMedia({ preview, className = "" }) {
     const hasVideo = Boolean(preview?.kind === "video" && (preview?.videoMp4Url || preview?.videoWebmUrl))
     const hasImage = Boolean(preview?.imageUrl)
@@ -199,6 +248,11 @@ export default function Profile() {
     const [animeCustomVideoUrlInput, setAnimeCustomVideoUrlInput] = useState("")
     const [gamesYoutubePreviewResolution, setGamesYoutubePreviewResolution] = useState(null)
     const [animeYoutubePreviewResolution, setAnimeYoutubePreviewResolution] = useState(null)
+    const [comixExcludeTypesInput, setComixExcludeTypesInput] = useState([])
+    const [comixExcludeGendersInput, setComixExcludeGendersInput] = useState("")
+    const [comixExcludeGenresInput, setComixExcludeGenresInput] = useState("")
+    const [comixColoredGenresInput, setComixColoredGenresInput] = useState("")
+    const [mangaLastRouteInput, setMangaLastRouteInput] = useState("")
 
     const [fullName, setFullName] = useState("")
     const [username, setUsername] = useState("")
@@ -235,6 +289,23 @@ export default function Profile() {
             setEngageNotifs(false)
         }
     }, [])
+
+    useEffect(() => {
+        const pref = lifeSyncUser?.preferences?.comixFilterPrefs
+        const excludeTypes = Array.isArray(pref?.excludeTypes)
+            ? pref.excludeTypes
+                .map((row) => String(row || "").trim().toLowerCase())
+                .filter(Boolean)
+            : []
+        setComixExcludeTypesInput(excludeTypes)
+        setComixExcludeGendersInput(Array.isArray(pref?.excludeGenders) ? pref.excludeGenders.join(", ") : "")
+        setComixExcludeGenresInput(Array.isArray(pref?.excludeGenres) ? pref.excludeGenres.join(", ") : "")
+        setComixColoredGenresInput(formatColoredGenresInput(pref?.coloredGenres))
+        setMangaLastRouteInput(String(lifeSyncUser?.preferences?.mangaLastRoute || ""))
+    }, [
+        lifeSyncUser?.preferences?.comixFilterPrefs,
+        lifeSyncUser?.preferences?.mangaLastRoute,
+    ])
 
     useEffect(() => {
         refreshLifeSyncPreferencesFromDb().catch(() => {})
@@ -611,6 +682,53 @@ export default function Profile() {
             return
         }
         await updateLifeSyncBackgroundPreferences({ [key]: cleaned })
+    }
+
+    const toggleComixExcludeType = (typeId) => {
+        const token = String(typeId || "").trim().toLowerCase()
+        if (!token) return
+        setComixExcludeTypesInput((prev) =>
+            prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token],
+        )
+    }
+
+    const saveComixFilterPrefs = async () => {
+        if (!lifeSyncUser) return
+        const orderedTypes = COMIX_TYPE_PREF_OPTIONS
+            .map((row) => row.id)
+            .filter((id) => comixExcludeTypesInput.includes(id))
+        const payload = {
+            comixFilterPrefs: {
+                excludeTypes: orderedTypes,
+                excludeGenders: parseCommaOrLineList(comixExcludeGendersInput, { maxItems: 40, maxLen: 40 }),
+                excludeGenres: parseCommaOrLineList(comixExcludeGenresInput, { maxItems: 500, maxLen: 50 }),
+                coloredGenres: parseColoredGenresInput(comixColoredGenresInput),
+            },
+        }
+        setPrefsBusy(true)
+        setError("")
+        try {
+            await lifeSyncUpdatePreferences(payload)
+        } catch (e) {
+            setError(e?.message || "Could not save Comix defaults")
+        } finally {
+            setPrefsBusy(false)
+        }
+    }
+
+    const saveMangaLastRoute = async (nextRouteRaw) => {
+        if (!lifeSyncUser) return
+        const nextRoute = String(nextRouteRaw || "").trim()
+        setPrefsBusy(true)
+        setError("")
+        try {
+            await lifeSyncUpdatePreferences({ mangaLastRoute: nextRoute })
+            setMangaLastRouteInput(nextRoute)
+        } catch (e) {
+            setError(e?.message || "Could not save remembered manga route")
+        } finally {
+            setPrefsBusy(false)
+        }
     }
 
     return (
@@ -1050,7 +1168,7 @@ export default function Profile() {
                                             <p className="text-[12px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync</p>
                                             <h3 className="mt-1 text-[15px] font-bold text-[var(--mx-color-1d1d1f)]">LifeSync preferences</h3>
                                             <p className="mt-0.5 text-[12px] text-[var(--mx-color-86868b)]">
-                                                NSFW access, MangaDex language filtering, and default anime audio.
+                                                NSFW access, manga source defaults, and default anime audio.
                                             </p>
                                         </div>
                                         <div className="flex flex-wrap items-center gap-2">
@@ -1117,7 +1235,7 @@ export default function Profile() {
                                                 <div className="min-w-0">
                                                     <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">English manga only</p>
                                                     <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
-                                                        In LifeSync Manga, only list and search titles that have English chapter releases (MangaDex).
+                                                        In LifeSync Manga, only list and search titles that have English chapter releases.
                                                     </p>
                                                 </div>
                                                 <button
@@ -1145,6 +1263,137 @@ export default function Profile() {
                                                         className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${lifeSyncUser?.preferences?.mangaEnglishReleasesOnly !== false ? "translate-x-5" : ""}`}
                                                     />
                                                 </button>
+                                            </div>
+                                        </li>
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Comix default filters</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                        Account-level Comix exclusions shared across devices (Manga / Manhwa / Manhua / Oneshot tabs).
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-3 rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
+                                                    <div className="space-y-1">
+                                                        <p className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">Exclude types</p>
+                                                        <div className="flex flex-wrap gap-1.5">
+                                                            {COMIX_TYPE_PREF_OPTIONS.map((row) => {
+                                                                const active = comixExcludeTypesInput.includes(row.id)
+                                                                return (
+                                                                    <button
+                                                                        key={row.id}
+                                                                        type="button"
+                                                                        disabled={prefsBusy || !lifeSyncUser}
+                                                                        onClick={() => toggleComixExcludeType(row.id)}
+                                                                        className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+                                                                            active
+                                                                                ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/45"
+                                                                                : "bg-[var(--color-surface)] text-[var(--mx-color-5b5670)] ring-1 ring-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-f5f5f7)]"
+                                                                        } disabled:opacity-50`}
+                                                                    >
+                                                                        {row.label}
+                                                                    </button>
+                                                                )
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid gap-3 md:grid-cols-2">
+                                                        <label className="flex min-w-0 flex-col gap-1">
+                                                            <span className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">Exclude demographics</span>
+                                                            <input
+                                                                type="text"
+                                                                value={comixExcludeGendersInput}
+                                                                onChange={(e) => setComixExcludeGendersInput(e.target.value)}
+                                                                placeholder="shounen, seinen"
+                                                                disabled={prefsBusy || !lifeSyncUser}
+                                                                className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
+                                                            />
+                                                        </label>
+                                                        <label className="flex min-w-0 flex-col gap-1">
+                                                            <span className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">Exclude genres</span>
+                                                            <input
+                                                                type="text"
+                                                                value={comixExcludeGenresInput}
+                                                                onChange={(e) => setComixExcludeGenresInput(e.target.value)}
+                                                                placeholder="adult, ecchi, mature"
+                                                                disabled={prefsBusy || !lifeSyncUser}
+                                                                className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
+                                                            />
+                                                        </label>
+                                                    </div>
+                                                    <label className="flex min-w-0 flex-col gap-1">
+                                                        <span className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">Colored genres map</span>
+                                                        <textarea
+                                                            value={comixColoredGenresInput}
+                                                            onChange={(e) => setComixColoredGenresInput(e.target.value)}
+                                                            placeholder={"genre-slug:color-name\nromance:pink"}
+                                                            rows={3}
+                                                            disabled={prefsBusy || !lifeSyncUser}
+                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
+                                                        />
+                                                    </label>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <button
+                                                            type="button"
+                                                            disabled={prefsBusy || !lifeSyncUser}
+                                                            onClick={() => void saveComixFilterPrefs()}
+                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)] disabled:opacity-50"
+                                                        >
+                                                            Save Comix defaults
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled={prefsBusy || !lifeSyncUser}
+                                                            onClick={() => {
+                                                                setComixExcludeTypesInput([])
+                                                                setComixExcludeGendersInput("")
+                                                                setComixExcludeGenresInput("")
+                                                                setComixColoredGenresInput("")
+                                                            }}
+                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-5b5670)] hover:bg-[var(--mx-color-ebebed)] disabled:opacity-50"
+                                                        >
+                                                            Clear form
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Remembered Manga landing route</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                        Default route used when you open Manga without a subpath.
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
+                                                    <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                                                        <input
+                                                            type="text"
+                                                            value={mangaLastRouteInput}
+                                                            onChange={(e) => setMangaLastRouteInput(e.target.value)}
+                                                            placeholder="/dashboard/lifesync/anime/manga/comix/manga/page/1"
+                                                            disabled={prefsBusy || !lifeSyncUser}
+                                                            className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            disabled={prefsBusy || !lifeSyncUser}
+                                                            onClick={() => void saveMangaLastRoute(mangaLastRouteInput)}
+                                                            className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)] disabled:opacity-50"
+                                                        >
+                                                            Save route
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            disabled={prefsBusy || !lifeSyncUser}
+                                                            onClick={() => void saveMangaLastRoute("")}
+                                                            className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 text-[11px] font-semibold text-[var(--mx-color-5b5670)] hover:bg-[var(--mx-color-ebebed)] disabled:opacity-50"
+                                                        >
+                                                            Clear
+                                                        </button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </li>
                                         <li className="px-6 sm:px-8 py-5">

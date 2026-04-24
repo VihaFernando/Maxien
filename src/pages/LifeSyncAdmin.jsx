@@ -18,7 +18,6 @@ const CAPABILITY_LABELS = {
     steamWebApi: 'Steam Web API',
     malOAuth: 'MAL OAuth',
     googleOAuth: 'Google OAuth',
-    mangadexServerClient: 'MangaDex server client',
     animeScheduleAppToken: 'AnimeSchedule app token',
     animeScheduleOAuth: 'AnimeSchedule OAuth',
     supabasePasswordless: 'Supabase passwordless',
@@ -531,7 +530,6 @@ export default function LifeSyncAdmin() {
                             <MetricCard label="Password logins" value={m?.usersWithLocalPassword} />
                             <MetricCard label="Steam linked" value={m?.usersSteamLinked} />
                             <MetricCard label="MAL linked" value={m?.usersMalLinked} />
-                            <MetricCard label="MangaDex linked" value={m?.usersMangadexLinked} />
                             <MetricCard label="Google linked" value={m?.usersGoogleLinked} />
                             <MetricCard label="AnimeSchedule" value={m?.usersAnimeScheduleLinked} />
                             <MetricCard label="Tips opt-in" value={m?.engagementOptInUsers} />
@@ -1000,7 +998,6 @@ export default function LifeSyncAdmin() {
                                                     <div className="flex flex-wrap gap-1">
                                                         <LinkPill label="St" active={row.links?.steam} />
                                                         <LinkPill label="MAL" active={row.links?.mal} />
-                                                        <LinkPill label="MD" active={row.links?.mangadex} />
                                                         <LinkPill label="G" active={row.links?.google} />
                                                         <LinkPill label="AS" active={row.links?.animeSchedule} />
                                                     </div>
@@ -1046,7 +1043,6 @@ export default function LifeSyncAdmin() {
                                         <div className="mt-2 flex flex-wrap gap-1">
                                             <LinkPill label="St" active={row.links?.steam} />
                                             <LinkPill label="MAL" active={row.links?.mal} />
-                                            <LinkPill label="MD" active={row.links?.mangadex} />
                                             <LinkPill label="G" active={row.links?.google} />
                                             <LinkPill label="AS" active={row.links?.animeSchedule} />
                                         </div>
@@ -1102,7 +1098,6 @@ function UserSummaryCard({ user }) {
                 <dd className="mt-1 flex flex-wrap gap-1">
                     <LinkPill label="Steam" active={user.links?.steam} />
                     <LinkPill label="MAL" active={user.links?.mal} />
-                    <LinkPill label="MangaDex" active={user.links?.mangadex} />
                     <LinkPill label="Google" active={user.links?.google} />
                     <LinkPill label="AnimeSchedule" active={user.links?.animeSchedule} />
                 </dd>

@@ -163,12 +163,12 @@ const POOL = {
         'https://cdn.myanimelist.net/images/anime/1223/96541.jpg',
     ],
     manga: [
-        'https://uploads.mangadex.org/covers/32d76d19-8a05-4db0-9fc2-e0b0648fe9d0/e90bdc47-c8b9-4df7-b2c0-17641b645ee1.jpg.256.jpg',
-        'https://uploads.mangadex.org/covers/557615b9-6fec-4ab7-a512-03cbde39815f/d83b55f6-2120-4a03-8cbf-8141241de22e.jpg.256.jpg',
-        'https://uploads.mangadex.org/covers/25e1d17b-6a4d-4698-a4f6-bf53460c10af/0fc34ab4-a172-4db0-9cbc-893380685a58.jpg.256.jpg',
-        'https://uploads.mangadex.org/covers/c4238215-3a0e-47f8-be4a-504089d38742/e2338437-78c0-4526-990a-5aefe0e2b6d2.jpg.256.jpg',
-        'https://uploads.mangadex.org/covers/c52b2ce3-7f95-469c-96b0-479524fb7a1a/7dc752c3-8c90-468e-8c75-6903e38d7c7f.jpg.256.jpg',
-        'https://uploads.mangadex.org/covers/e18fe8c6-f6dc-4f05-8462-7b2083ff9a6c/07752bfc-2c12-46a5-afaf-68ec1888cba1.jpg.256.jpg'    
+        'https://picsum.photos/seed/lifesync-manga-1/512/768',
+        'https://picsum.photos/seed/lifesync-manga-2/512/768',
+        'https://picsum.photos/seed/lifesync-manga-3/512/768',
+        'https://picsum.photos/seed/lifesync-manga-4/512/768',
+        'https://picsum.photos/seed/lifesync-manga-5/512/768',
+        'https://picsum.photos/seed/lifesync-manga-6/512/768',
     ],
     hentai: [
         'https://watchhentai.net/uploads/2022/11/boy-meets-harem-the-animation/poster.jpg',
@@ -830,7 +830,7 @@ async function fetchCalendarMonthCached(year, month1) {
 const ANIME_HUB_PATHS = {
     seasonal: '/dashboard/lifesync/anime/anime/seasonal/page/1',
     calendar: '/dashboard/lifesync/anime/anime/calendar',
-    mangaHome: '/dashboard/lifesync/anime/manga/mangadex/popular/page/1',
+    mangaHome: '/dashboard/lifesync/anime/manga',
     hManhwaHome: '/dashboard/lifesync/anime/manga/mangadistrict/latest/page/1',
     hentaiHome: '/dashboard/lifesync/anime/hentai',
 }
@@ -861,7 +861,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             cols: 2,
             rows: 2,
             title: 'Manga',
-            subtitle: 'MangaDex queues, chapters, and reader.',
+            subtitle: 'Comix and Manga District browse, chapters, and reader.',
             gradient: 'bg-gradient-to-t from-[var(--mx-color-fff8eb)] via-[var(--color-surface)]/65 to-transparent',
             hero: !animePluginOn && tiles.length === 0,
         })

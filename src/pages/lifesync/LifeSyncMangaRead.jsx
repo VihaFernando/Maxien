@@ -7,7 +7,7 @@ import { decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 const MANGA_PROGRESS_QUEUE_KEY = 'lifesync:manga-progress-queue:v1'
 const MANGA_PROGRESS_LOCAL_SAVE_MS = 8000
 const MANGA_PROGRESS_FLUSH_BATCH = 16
-const MANGA_PROGRESS_SOURCES = new Set(['mangadex', 'mangadistrict', 'hentaifox'])
+const MANGA_PROGRESS_SOURCES = new Set(['mangadistrict', 'comix', 'hentaifox'])
 const MANGA_READER_INITIAL_PAGE_BURST = 4
 
 function compareChapters(a, b) {
@@ -43,7 +43,7 @@ function normalizeReadPercent(value) {
 function normalizeMangaSource(value) {
     const source = String(value || '').trim().toLowerCase()
     if (source === 'mangadistrict') return 'mangadistrict'
-    if (source === 'mangadex') return 'mangadex'
+    if (source === 'comix') return 'comix'
     return ''
 }
 
@@ -67,7 +67,7 @@ function sanitizeProgressPayload(raw) {
         lastReadPercent: normalizeReadPercent(raw?.lastReadPercent),
     }
     const contentRating = String(raw?.contentRating || '').trim()
-    if (source === 'mangadex' && contentRating) {
+    if (source === 'comix' && contentRating) {
         payload.contentRating = contentRating
     }
     return payload
@@ -168,13 +168,13 @@ function pickReadingResumeCandidate(rows, mangaId, preferredSource = '') {
     }
 }
 
-function mangadexImageProps(url) {
+function mangaImageProps(url) {
     const src = String(url || '')
     if (!src) return {}
     try {
         const u = new URL(src, window.location.origin)
         const host = u.hostname || ''
-        if (host.includes('mangadex')) {
+        if (host.includes('comix.to') || host.includes('mangadistrict')) {
             return { referrerPolicy: 'no-referrer' }
         }
     } catch {
@@ -209,7 +209,7 @@ export default function LifeSyncMangaRead() {
     const closeTo =
         typeof from === 'string' && from.startsWith('/dashboard/lifesync/anime/manga')
             ? from
-            : '/dashboard/lifesync/anime/manga/mangadex/popular/page/1'
+            : '/dashboard/lifesync/anime/manga'
 
     const searchParams = useMemo(() => new URLSearchParams(location.search || ''), [location.search])
 
@@ -221,7 +221,7 @@ export default function LifeSyncMangaRead() {
 
     const [fallbackResume, setFallbackResume] = useState({ source: '', chapterId: '', percent: 0 })
 
-    const source = sourceHint || fallbackResume.source || 'mangadex'
+    const source = sourceHint || fallbackResume.source || 'comix'
 
     const browseTranslatedLang = useMemo(() => {
         const fromQuery = String(searchParams.get('lang') || '').trim().toLowerCase()
@@ -287,9 +287,7 @@ export default function LifeSyncMangaRead() {
     const pagesInnerRef = useRef(null)
     const scrollRafRef = useRef(null)
 
-    const [dexAuthStatus, setDexAuthStatus] = useState(null)
     const mdReadSyncTimer = useRef(null)
-    const mdReadingStatusSent = useRef(new Set())
     const resumeRestoreKeyRef = useRef('')
     const latestProgressRef = useRef({ manga: null, chapter: null, percent: 0 })
     const lastFlushedSignatureRef = useRef('')
@@ -298,7 +296,12 @@ export default function LifeSyncMangaRead() {
         const manga = row?.manga
         const chapter = row?.chapter
         if (!manga?.id || !chapter?.id) return null
-        const sourceName = manga.source === 'mangadistrict' ? 'mangadistrict' : 'mangadex'
+        const sourceName =
+            manga.source === 'mangadistrict'
+                ? 'mangadistrict'
+                : manga.source === 'comix'
+                    ? 'comix'
+                    : 'comix'
         return sanitizeProgressPayload({
             source: sourceName,
             mangaId: String(manga.id),
@@ -309,7 +312,7 @@ export default function LifeSyncMangaRead() {
             lastVolume: chapter?.volume != null && chapter.volume !== '' ? String(chapter.volume) : '',
             lastChapterNum: chapter?.chapter != null && chapter.chapter !== '' ? String(chapter.chapter) : '',
             lastReadPercent: normalizeReadPercent(row?.percent),
-            ...(sourceName === 'mangadex' && manga?.contentRating ? { contentRating: String(manga.contentRating) } : {}),
+            ...(sourceName === 'comix' && manga?.contentRating ? { contentRating: String(manga.contentRating) } : {}),
         })
     }, [])
 
@@ -359,51 +362,6 @@ export default function LifeSyncMangaRead() {
         writeProgressQueue(remaining)
     }, [isLifeSyncConnected])
 
-    useEffect(() => {
-        if (!isLifeSyncConnected) return
-        let cancelled = false
-        lifesyncFetch('/api/v1/manga/mangadex/auth/status?view=compact')
-            .then(s => { if (!cancelled) setDexAuthStatus(s) })
-            .catch(() => { if (!cancelled) setDexAuthStatus({ oauthConfigured: false, connected: false }) })
-        return () => { cancelled = true }
-    }, [isLifeSyncConnected])
-
-
-
-    const syncMangaDexReading = useCallback(async (manga, chapter) => {
-        if (!manga?.id || !chapter?.id) return
-        const src =
-            manga.source === 'mangadistrict'
-                ? manga.source
-                : 'mangadex'
-        if (src !== 'mangadex' || !dexAuthStatus?.connected) return
-        if (mdReadSyncTimer.current) clearTimeout(mdReadSyncTimer.current)
-        mdReadSyncTimer.current = setTimeout(() => {
-            mdReadSyncTimer.current = null
-            void (async () => {
-                try {
-                    await lifesyncFetch(`/api/v1/manga/mangadex/read-chapters/${encodeURIComponent(String(manga.id))}`, {
-                        method: 'POST',
-                        json: { read: [String(chapter.id)], unread: [] },
-                    })
-                } catch {
-                    /* token / network */
-                }
-                const k = String(manga.id)
-                if (mdReadingStatusSent.current.has(k)) return
-                try {
-                    await lifesyncFetch(`/api/v1/manga/mangadex/reading-status/${encodeURIComponent(k)}`, {
-                        method: 'POST',
-                        json: { status: 'reading' },
-                    })
-                    mdReadingStatusSent.current.add(k)
-                } catch {
-                    /* ignore */
-                }
-            })()
-        }, 450)
-    }, [dexAuthStatus?.connected])
-
     const flushReadingProgress = useCallback(async ({ keepalive = false, queueFirst = true } = {}) => {
         let payload = buildProgressPayload(latestProgressRef.current)
         if (!payload) return false
@@ -439,23 +397,7 @@ export default function LifeSyncMangaRead() {
             setBusy(true)
             setError('')
             try {
-                if (source === 'mangadex') {
-                    const detail = await lifesyncFetch(`/api/v1/manga/details/${encodeURIComponent(mangaId)}?view=full`)
-                    const langParam = browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang
-                    const feed = await lifesyncFetch(
-                        `/api/v1/manga/chapters/${encodeURIComponent(mangaId)}?limit=200&lang=${encodeURIComponent(langParam)}&order=asc`
-                        + '&view=full'
-                    )
-                    const list = [...(feed?.data || [])]
-                    list.sort(compareChapters)
-                    const ch = list.find(c => String(c?.id) === chapterId) || (list.length ? list[list.length - 1] : null)
-                    if (!ch) throw new Error('No chapters available.')
-                    if (!cancelled) {
-                        setManga({ ...detail, source: 'mangadex' })
-                        setSortedChapters(list)
-                        setChapter(ch)
-                    }
-                } else if (source === 'mangadistrict') {
+                if (source === 'mangadistrict') {
                     const data = await lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(mangaId)}?view=full`)
                     const list = [...(data?.chapters || [])]
                     list.sort(compareChapters)
@@ -463,6 +405,17 @@ export default function LifeSyncMangaRead() {
                     if (!ch) throw new Error('No chapters available.')
                     if (!cancelled) {
                         setManga({ ...data, source: 'mangadistrict' })
+                        setSortedChapters(list)
+                        setChapter(ch)
+                    }
+                } else if (source === 'comix') {
+                    const data = await lifesyncFetch(`/api/v1/manga/comix/info/${encodeURIComponent(mangaId)}?view=full`)
+                    const list = [...(data?.chapters || [])]
+                    list.sort(compareChapters)
+                    const ch = list.find(c => String(c?.id) === chapterId) || (list.length ? list[list.length - 1] : null)
+                    if (!ch) throw new Error('No chapters available.')
+                    if (!cancelled) {
+                        setManga({ ...data, source: 'comix' })
                         setSortedChapters(list)
                         setChapter(ch)
                     }
@@ -475,11 +428,6 @@ export default function LifeSyncMangaRead() {
         })()
         return () => { cancelled = true }
     }, [browseTranslatedLang, chapterId, mangaId, source])
-
-    useEffect(() => {
-        if (!manga?.id || !chapter?.id) return
-        void syncMangaDexReading(manga, chapter)
-    }, [chapter, manga, syncMangaDexReading])
 
     useEffect(() => {
         if (!isLifeSyncConnected) return
@@ -549,6 +497,8 @@ export default function LifeSyncMangaRead() {
             const path =
                 manga.source === 'mangadistrict'
                         ? `/api/v1/manga/mangadistrict/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
+                        : manga.source === 'comix'
+                            ? `/api/v1/manga/comix/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
                         : `/api/v1/manga/pages/${chapter.id}`
             try {
                 const data = await lifesyncFetch(`${path}${path.includes('?') ? '&' : '?'}view=full`)
@@ -880,7 +830,7 @@ export default function LifeSyncMangaRead() {
                                 fetchPriority={i < MANGA_READER_INITIAL_PAGE_BURST ? 'high' : 'low'}
                                 decoding="async"
                                 onLoad={onPageImageLoad}
-                                {...mangadexImageProps(src)}
+                                {...mangaImageProps(src)}
                             />
                         </div>
                     ))}

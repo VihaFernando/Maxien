@@ -5,7 +5,7 @@ import { FaBookOpen, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTrashAlt } fr
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
-import { mangadexImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
+import { mangaImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 import { LifesyncEpisodeThumbnail, LifesyncMediaLibraryPageSkeleton } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import { SeriesCompleteBadge } from '../../components/lifesync/LifeSyncShelfDecor'
 import {
@@ -24,7 +24,7 @@ const MANGA_READING_HISTORY_PATH = `${MANGA_BASE}/history`
 
 const SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
-    { id: 'mangadex', label: 'MangaDex' },
+    { id: 'comix', label: 'Comix' },
     { id: 'mangadistrict', label: 'Manga District' },
 ]
 
@@ -58,7 +58,8 @@ const SORT_OPTIONS = [
 
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
-    return source || 'MangaDex'
+    if (source === 'comix') return 'Comix'
+    return source || 'Manga'
 }
 
 function entryKey(entry) {
@@ -125,7 +126,7 @@ function resumeTarget(entry, browseTranslatedLang) {
         }
     }
     return {
-        to: `${MANGA_BASE}/mangadex/popular/page/1`,
+        to: `${MANGA_BASE}`,
         state: { resumeEntry: entry },
     }
 }
@@ -267,7 +268,7 @@ function LibraryMangaCard({
                             src={entry.coverUrl}
                             className="absolute inset-0 h-full w-full"
                             imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-[1.05]"
-                            imgProps={mangadexImageProps(entry.coverUrl)}
+                            imgProps={mangaImageProps(entry.coverUrl)}
                         />
                     ) : (
                         <div className="flex h-full items-center justify-center text-slate-300">
@@ -705,7 +706,7 @@ export default function LifeSyncMangaLibrary() {
                         Filter and Search
                     </p>
                     <Link
-                        to={`${MANGA_BASE}/mangadex/popular/page/1`}
+                        to={`${MANGA_BASE}`}
                         className="text-[12px] font-semibold text-amber-700 transition hover:text-amber-900"
                     >
                         Browse manga
@@ -884,7 +885,7 @@ export default function LifeSyncMangaLibrary() {
                         Open any chapter in the reader to track progress here.
                     </p>
                     <Link
-                        to={`${MANGA_BASE}/mangadex/popular/page/1`}
+                        to={`${MANGA_BASE}`}
                         className="mt-7 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-slate-800"
                     >
                         Browse popular manga

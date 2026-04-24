@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LifesyncEpisodeThumbnail, LifesyncHubMangaRailSkeleton, LifesyncMangaRailSkeleton } from './EpisodeLoadingSkeletons'
-import { mangadexImageProps } from '../../lib/mangaChapterUtils'
+import { mangaImageProps } from '../../lib/mangaChapterUtils'
 
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
-    return source || 'MangaDex'
+    if (source === 'comix') return 'Comix'
+    return source || 'Manga'
 }
 
 /** Full-width horizontal “shelf” for the Manga page — not a generic grid. */
@@ -112,7 +113,7 @@ export function MangaReadingShelf({
                                                             src={entry.coverUrl}
                                                             className="absolute inset-0 h-full w-full"
                                                             imgClassName="h-full w-full object-cover"
-                                                            imgProps={mangadexImageProps(entry.coverUrl)}
+                                                            imgProps={mangaImageProps(entry.coverUrl)}
                                                         />
                                                     ) : null}
                                                     <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 via-black/10 to-transparent pb-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -149,7 +150,7 @@ export function MangaReadingShelf({
                                 <div className="flex max-w-full min-w-0 gap-3 overflow-x-auto overflow-y-hidden px-4 sm:px-5 pb-0.5 hide-scrollbar overscroll-x-contain snap-x snap-mandatory scroll-pl-4 scroll-pr-4 sm:scroll-pl-5 sm:scroll-pr-5">
                                     {suggestions.slice(0, 10).map((m) => (
                                         <button
-                                            key={`${m.source || 'mangadex'}-${m.id}`}
+                                            key={`${m.source || 'comix'}-${m.id}`}
                                             type="button"
                                             onClick={() => onPickSuggestion?.(m)}
                                             className="group w-[92px] shrink-0 snap-start text-left"
@@ -161,7 +162,7 @@ export function MangaReadingShelf({
                                                             src={m.coverUrl}
                                                             className="absolute inset-0 h-full w-full"
                                                             imgClassName="h-full w-full object-cover"
-                                                            imgProps={mangadexImageProps(m.coverUrl)}
+                                                            imgProps={mangaImageProps(m.coverUrl)}
                                                         />
                                                     ) : null}
                                                     <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-black/55 via-black/10 to-transparent pb-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -264,7 +265,7 @@ export function MangaReadingShelf({
                                                 src={entry.coverUrl}
                                                 className="absolute inset-0 h-full w-full"
                                                 imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                                                imgProps={mangadexImageProps(entry.coverUrl)}
+                                                imgProps={mangaImageProps(entry.coverUrl)}
                                             />
                                         ) : (
                                             <div className="flex h-full items-center justify-center text-[var(--mx-color-86868b)]">
@@ -398,7 +399,7 @@ export function LifeSyncHubMangaReading({ entries, loading, className = '' }) {
                                                 src={entry.coverUrl}
                                                 className="absolute inset-0 h-full w-full"
                                                 imgClassName="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                                                imgProps={mangadexImageProps(entry.coverUrl)}
+                                                imgProps={mangaImageProps(entry.coverUrl)}
                                             />
                                         ) : null}
                                         <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-[var(--color-surface)]/75 via-transparent to-transparent pb-3 opacity-100 transition duration-200 sm:opacity-0 sm:group-hover:opacity-100">

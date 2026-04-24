@@ -13,18 +13,17 @@ export function decodeHtmlEntities(str) {
 }
 
 /**
- * Props for <img> when loading MangaDex CDN assets. Deployed sites send a cross-origin Referer;
- * uploads/chapter CDNs often reject that unless Referer is omitted (same pattern as Profile avatars).
+ * Props for <img> when loading remote manga assets.
  * @param {string|null|undefined} src
  * @returns {{ referrerPolicy?: 'no-referrer' }}
  */
-const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com'])
+const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com', 'comix.to'])
 
 /**
  * Manga District APIs may still return root-relative cover URLs; the detail sheet
  * loads them as `<img src>` against this app’s origin unless expanded here.
  * @param {string|null|undefined} src
- * @param {string} [source] mangadistrict | mangadex
+ * @param {string} [source] mangadistrict | comix
  * @returns {string|null}
  */
 export function resolveMangaCoverDisplayUrl(src, source) {
@@ -37,31 +36,22 @@ export function resolveMangaCoverDisplayUrl(src, source) {
     const origin =
         key === 'mangadistrict'
             ? 'https://mangadistrict.com'
+            : key === 'comix'
+                ? 'https://comix.to'
             : ''
     if (!origin) return s
     if (s.startsWith('/')) return `${origin}${s}`
     return `${origin}/${s.replace(/^\/+/, '')}`
 }
 
-export function mangadexImageProps(src) {
+export function mangaImageProps(src) {
     if (src == null || typeof src !== 'string') return {}
     try {
         const host = new URL(src).hostname.toLowerCase()
-        if (host === 'mangadex.org' || host.endsWith('.mangadex.org')) {
-            return { referrerPolicy: 'no-referrer' }
-        }
         if (SCRAPER_IMAGE_ORIGINS.has(host) || [...SCRAPER_IMAGE_ORIGINS].some((d) => host.endsWith(`.${d}`))) {
             return { referrerPolicy: 'no-referrer' }
         }
-        // MangaDex@Home nodes (`*.mangadex.network`) can be sensitive to referrer policy.
-        // We intentionally do NOT override it here so browsers send a normal cross-origin Referer.
-        // (Some nodes return 404s when Referer is omitted.)
-        if (host.endsWith('.mangadex.network')) return {}
-    } catch {
-        if (/mangadex\.org/i.test(src)) {
-            return { referrerPolicy: 'no-referrer' }
-        }
-    }
+    } catch {}
     return {}
 }
 
@@ -88,7 +78,7 @@ export function formatChapterLabel(ch) {
     return `${vol}Ch. ${num}${title}`
 }
 
-/** MangaDex translation locales for browse + chapter feed (aligned with client MangaPage.jsx). */
+/** Translation locale options for chapter lists. */
 export const DEX_TRANSLATION_LANG_OPTIONS = [
     { value: 'en', label: 'English' },
     { value: 'ja', label: 'Japanese' },
