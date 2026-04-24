@@ -2,12 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Command } from 'cmdk'
-import { evaluate } from 'mathjs'
 import { FaArrowRight, FaBolt, FaCalculator, FaCalendarAlt, FaCheckSquare, FaExchangeAlt, FaFolder, FaSearch, FaStickyNote, FaUser } from 'react-icons/fa'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { fetchGoogleEvents } from '../lib/googleCalendar'
-import { buildCommandEntries, fetchCurrencyConversion, formatCommandNumber, getCommandModifierLabel, getGoogleCalendarPaletteToken, looksLikeCurrencyIntent, looksLikeMathExpression, parseCurrencyConversionQuery } from '../lib/commandPalette'
+import { buildCommandEntries, evaluateMathExpression, fetchCurrencyConversion, formatCommandNumber, getCommandModifierLabel, getGoogleCalendarPaletteToken, looksLikeCurrencyIntent, looksLikeMathExpression, parseCurrencyConversionQuery } from '../lib/commandPalette'
 
 const isMacPlatform = () => {
     if (typeof navigator === 'undefined') return false
@@ -209,20 +208,15 @@ export default function GlobalCommandPalette() {
         if (!looksLikeMathExpression(trimmedQuery)) return null
 
         try {
-            const result = evaluate(trimmedQuery)
-            if (result === null || result === undefined || typeof result === 'function') return null
-
-            const formattedResult = formatCommandNumber(typeof result === 'number' ? result : Number(result))
-            const rawResult = typeof result === 'number' && Number.isFinite(result)
-                ? formattedResult
-                : String(result)
+            const result = evaluateMathExpression(trimmedQuery)
+            const formattedResult = formatCommandNumber(result)
 
             return {
                 id: 'utility-calculation',
                 section: 'Utilities',
-                label: `= ${rawResult}`,
+                label: `= ${formattedResult}`,
                 subtitle: `Calculation result for ${trimmedQuery}`,
-                keywords: [trimmedQuery, rawResult, 'calculate', 'math'],
+                keywords: [trimmedQuery, formattedResult, 'calculate', 'math'],
                 badge: 'Calc',
                 icon: FaCalculator,
                 run: async () => {

@@ -243,6 +243,26 @@ export const parseCurrencyConversionQuery = (query) => {
     }
 }
 
+export const evaluateMathExpression = (expression) => {
+    const raw = String(expression || '').trim()
+    if (!raw) throw new Error('Empty expression')
+
+    const normalized = raw.replace(/,/g, '')
+    if (!/^[0-9+\-*/().%\s^]+$/.test(normalized)) {
+        throw new Error('Unsupported characters')
+    }
+
+    // Support ^ for exponent while only allowing arithmetic tokens.
+    const jsExpression = normalized.replace(/\^/g, '**')
+    // eslint-disable-next-line no-new-func
+    const result = Function(`"use strict"; return (${jsExpression});`)()
+    if (!Number.isFinite(result)) {
+        throw new Error('Invalid result')
+    }
+
+    return result
+}
+
 export const fetchCurrencyRate = async ({ fromCurrency, toCurrency, signal } = {}) => {
     const base = String(fromCurrency || '').toUpperCase()
     const target = String(toCurrency || '').toUpperCase()

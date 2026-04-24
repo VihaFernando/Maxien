@@ -20,7 +20,7 @@ export default defineConfig(() => {
                 includeAssets: ['logopwa.svg'],
                 workbox: {
                     // Default is 2 MiB; this app’s main bundle can exceed that.
-                    maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
+                    maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
                 },
                 manifest: {
                     name: 'Maxien',
@@ -42,6 +42,10 @@ export default defineConfig(() => {
                 },
             }),
         ],
+        build: {
+            // hls.js is loaded lazily and remains slightly above Vite's default 500 kB warning threshold.
+            chunkSizeWarningLimit: 550,
+        },
         server: {
             allowedHosts: true,
             proxy: {

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import Hls from 'hls.js'
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 const SKIP_SEC = 10
@@ -92,6 +91,7 @@ export default function AdvancedVideoPlayer({
         }
 
         let hls = null
+        let cancelled = false
         const destroyHls = () => {
             if (hls) {
                 try {
@@ -101,28 +101,48 @@ export default function AdvancedVideoPlayer({
             }
         }
 
-        if (isHlsUrl(s)) {
-            if (videoSupportsNativeHls(v)) {
+        const attachSource = async () => {
+            if (isHlsUrl(s)) {
+                if (videoSupportsNativeHls(v)) {
+                    v.src = s
+                    v.load()
+                    return
+                }
+
+                try {
+                    const { default: Hls } = await import('hls.js')
+                    if (cancelled) return
+
+                    if (Hls.isSupported()) {
+                        hls = new Hls({
+                            enableWorker: true,
+                            lowLatencyMode: false,
+                        })
+                        hls.on(Hls.Events.ERROR, (_e, data) => {
+                            if (data?.fatal) destroyHls()
+                        })
+                        hls.loadSource(s)
+                        hls.attachMedia(v)
+                        return
+                    }
+                } catch {
+                    // fallback to direct source assignment below
+                }
+
+                if (cancelled) return
                 v.src = s
                 v.load()
-            } else if (Hls.isSupported()) {
-                hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: false,
-                })
-                hls.on(Hls.Events.ERROR, (_e, data) => {
-                    if (data?.fatal) destroyHls()
-                })
-                hls.loadSource(s)
-                hls.attachMedia(v)
-            } else {
-                v.src = s
+                return
             }
-        } else {
+
             v.src = s
+            v.load()
         }
 
+        void attachSource()
+
         return () => {
+            cancelled = true
             destroyHls()
             v.removeAttribute('src')
             v.load()
