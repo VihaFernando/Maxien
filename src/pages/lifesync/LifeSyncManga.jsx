@@ -1145,13 +1145,20 @@ const COMIX_ORDER_OPTIONS = [
     { id: 'created_at', label: 'Newly added' },
     { id: 'views_7d', label: 'Views (7d)' },
     { id: 'views_30d', label: 'Views (30d)' },
-    { id: 'views_365d', label: 'Views (365d)' },
+    { id: 'views_90d', label: 'Views (90d)' },
+    { id: 'views_total', label: 'Views (all time)' },
     { id: 'follows_total', label: 'Follows' },
     { id: 'title', label: 'Title' },
 ]
 
 const COMIX_TAB_IDS = new Set(COMIX_TABS.map((tab) => tab.id))
 const COMIX_SOURCE_TYPE_BY_TAB = Object.fromEntries(COMIX_TABS.map((tab) => [tab.id, tab.type]))
+const COMIX_FOLDER_DEFAULT_ORDER = {
+    hot: { key: 'views_7d', dir: 'desc' },
+    new: { key: 'created_at', dir: 'desc' },
+    recent: { key: 'chapter_updated_at', dir: 'desc' },
+    popular: { key: 'follows_total', dir: 'desc' },
+}
 
 function defaultTabForSource(src) {
     if (src === 'comix') return 'manga'
@@ -2014,8 +2021,11 @@ export default function LifeSyncManga() {
             qs.set('folder', comixFolder)
             qs.append('types[]', tabType)
             if (comixCommittedSearch.trim()) qs.set('keyword', comixCommittedSearch.trim())
-            if (comixOrderKey && comixOrderKey !== 'default') {
-                qs.set(`order[${comixOrderKey}]`, comixOrderDir === 'asc' ? 'asc' : 'desc')
+            const folderDefaultOrder = COMIX_FOLDER_DEFAULT_ORDER[comixFolder] || COMIX_FOLDER_DEFAULT_ORDER.hot
+            const orderKey = comixOrderKey || folderDefaultOrder.key
+            const orderDir = comixOrderKey ? (comixOrderDir === 'asc' ? 'asc' : 'desc') : folderDefaultOrder.dir
+            if (orderKey) {
+                qs.set(`order[${orderKey}]`, orderDir)
             }
             comixIncludeGenres.forEach((row) => qs.append('genres[]', String(row)))
             comixExcludeGenres.forEach((row) => qs.append('exclude_genres[]', String(row)))
@@ -2246,6 +2256,38 @@ export default function LifeSyncManga() {
         setComixExcludeDemographics((prev) => prev.filter((row) => row !== token))
         setComixIncludeDemographics((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
     }, [])
+
+    const cycleComixGenre = useCallback((value) => {
+        const token = String(value || '').trim()
+        if (!token) return
+        const included = comixIncludeGenres.includes(token)
+        const excluded = comixExcludeGenres.includes(token)
+        if (!included && !excluded) {
+            toggleComixGenre(token, 'include')
+            return
+        }
+        if (included) {
+            toggleComixGenre(token, 'exclude')
+            return
+        }
+        setComixExcludeGenres((prev) => prev.filter((row) => row !== token))
+    }, [comixExcludeGenres, comixIncludeGenres, toggleComixGenre])
+
+    const cycleComixDemographic = useCallback((value) => {
+        const token = String(value || '').trim()
+        if (!token) return
+        const included = comixIncludeDemographics.includes(token)
+        const excluded = comixExcludeDemographics.includes(token)
+        if (!included && !excluded) {
+            toggleComixDemographic(token, 'include')
+            return
+        }
+        if (included) {
+            toggleComixDemographic(token, 'exclude')
+            return
+        }
+        setComixExcludeDemographics((prev) => prev.filter((row) => row !== token))
+    }, [comixExcludeDemographics, comixIncludeDemographics, toggleComixDemographic])
 
     const toggleComixStatus = useCallback((value) => {
         const token = String(value || '').trim()
@@ -2488,7 +2530,7 @@ export default function LifeSyncManga() {
                     <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync / Anime</p>
                     <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Manga</h1>
                     <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-                        Browse Comix and Manga District, read chapters here, and resume where you left off.
+                        Browse manga, manhwa and manhua, find chapters here and starts here.
                     </p>
                 </div>
                 <Link
@@ -2818,21 +2860,6 @@ export default function LifeSyncManga() {
                         </button>
                     </form>
 
-                    <LifeSyncSectionNav
-                        size="dense"
-                        ariaLabel="Comix latest updates"
-                        layoutId="lifesync-manga-comix-folder"
-                        items={COMIX_FOLDER_TABS.map((row) => ({ id: row.id, label: row.label }))}
-                        activeId={comixFolder}
-                        onSelect={(id) => {
-                            setComixFolder(id)
-                            setComixPage(1)
-                            if (route.src === 'comix') {
-                                navigate(`${basePath}/comix/${route.tab || 'manga'}/page/1${location.search || ''}`)
-                            }
-                        }}
-                    />
-
                     <AnimatePresence initial={false}>
                         {comixFiltersOpen && (
                             <MotionDiv
@@ -2939,7 +2966,7 @@ export default function LifeSyncManga() {
                                                     <button
                                                         key={`cg-${key}`}
                                                         type="button"
-                                                        onClick={() => toggleComixGenre(key, excluded ? 'exclude' : 'include')}
+                                                        onClick={() => cycleComixGenre(key)}
                                                         onContextMenu={(event) => {
                                                             event.preventDefault()
                                                             toggleComixGenre(key, 'exclude')
@@ -2957,7 +2984,7 @@ export default function LifeSyncManga() {
                                                 )
                                             })}
                                         </div>
-                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Tap = include. Right-click = exclude.</p>
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Tap cycles include → exclude → clear. Right-click toggles exclude.</p>
                                     </div>
 
                                     <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
@@ -2973,7 +3000,7 @@ export default function LifeSyncManga() {
                                                     <button
                                                         key={`cd-${key}`}
                                                         type="button"
-                                                        onClick={() => toggleComixDemographic(key, excluded ? 'exclude' : 'include')}
+                                                        onClick={() => cycleComixDemographic(key)}
                                                         onContextMenu={(event) => {
                                                             event.preventDefault()
                                                             toggleComixDemographic(key, 'exclude')
@@ -2991,6 +3018,7 @@ export default function LifeSyncManga() {
                                                 )
                                             })}
                                         </div>
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Tap cycles include → exclude → clear. Right-click toggles exclude.</p>
                                         <div className="flex flex-wrap gap-1">
                                             {comixStatusTerms.map((status) => {
                                                 const key = String(status.id || status.slug || status.title || '').trim()
@@ -3172,15 +3200,37 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {/* Content tabs (Legacy only; Manga District uses search + filters without tabs) */}
+            {/* Content tabs (Legacy + Comix type tabs) */}
             {tabs.length > 0 && (
                 <LifeSyncSectionNav
-                    ariaLabel="Legacy lists"
+                    ariaLabel={source === 'comix' ? 'Comix type tabs' : 'Legacy lists'}
                     layoutId="lifesync-manga-dex-tab"
                     items={tabs.map(t => ({ id: t.id, label: t.label }))}
                     activeId={tab}
                     onSelect={(id) => goToTab(id)}
                 />
+            )}
+
+            {source === 'comix' && (
+                <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">Browse order</p>
+                    <LifeSyncSectionNav
+                        size="dense"
+                        ariaLabel="Comix browse order"
+                        layoutId="lifesync-manga-comix-folder"
+                        items={COMIX_FOLDER_TABS.map((row) => ({ id: row.id, label: row.label }))}
+                        activeId={comixFolder}
+                        onSelect={(id) => {
+                            setComixFolder(id)
+                            setComixOrderKey('')
+                            setComixOrderDir('desc')
+                            setComixPage(1)
+                            if (route.src === 'comix') {
+                                navigate(`${basePath}/comix/${route.tab || 'manga'}/page/1${location.search || ''}`)
+                            }
+                        }}
+                    />
+                </div>
             )}
 
             {source === 'legacy' && tab === 'library' && (

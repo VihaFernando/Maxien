@@ -160,15 +160,17 @@ const POOL = {
         'https://cdn.myanimelist.net/images/anime/10/78745.jpg',
         'https://cdn.myanimelist.net/images/anime/1015/138006.jpg',
         'https://cdn.myanimelist.net/images/anime/1806/126216.jpg',
-        'https://cdn.myanimelist.net/images/anime/1223/96541.jpg',
+        'https://cdn.myanimelist.net/images/anime/1223/96541.jpg'
     ],
     manga: [
-        'https://picsum.photos/seed/lifesync-manga-1/512/768',
-        'https://picsum.photos/seed/lifesync-manga-2/512/768',
-        'https://picsum.photos/seed/lifesync-manga-3/512/768',
-        'https://picsum.photos/seed/lifesync-manga-4/512/768',
-        'https://picsum.photos/seed/lifesync-manga-5/512/768',
-        'https://picsum.photos/seed/lifesync-manga-6/512/768',
+        'https://static.comix.to/c9c8/i/b/b6/68e121be6ed89@280.jpg',
+        'https://static.comix.to/7e11/i/a/2c/68de7df78456e@280.jpg',
+        'https://static.comix.to/42c2/i/a/59/68de7a7941f40@280.jpg',
+        'https://static.comix.to/c32a/i/d/dc/68e0957e2f38a@280.jpg',
+        'https://static.comix.to/b6d4/i/4/df/68de759b28ee4@280.jpg',
+        'https://static.comix.to/9a48/i/d/45/68de753270514@280.jpg',
+        'https://static.comix.to/6941/i/0/c5/68de6bed96e7b@280.jpg',
+        'https://static.comix.to/52fd/i/7/bc/68de7ab171b14@280.jpg'
     ],
     hentai: [
         'https://watchhentai.net/uploads/2022/11/boy-meets-harem-the-animation/poster.jpg',
