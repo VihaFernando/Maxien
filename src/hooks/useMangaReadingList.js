@@ -67,7 +67,7 @@ function summarizeEntries(entries) {
 
 function normalizePageInfo(pageInfo, fallbackTotal, fallbackLimit) {
     const total = Number(pageInfo?.total ?? fallbackTotal ?? 0)
-    const perPage = Math.max(1, Number(pageInfo?.perPage ?? fallbackLimit ?? 24))
+    const perPage = Math.max(1, Number(pageInfo?.perPage ?? fallbackLimit ?? 25))
     const totalPages = Math.max(1, Number(pageInfo?.totalPages ?? (Math.ceil(total / perPage) || 1)))
     const page = Math.min(Math.max(1, Number(pageInfo?.page || 1)), totalPages)
     return {
@@ -157,7 +157,7 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
     const [entries, setEntries] = useState([])
     const [summary, setSummary] = useState(EMPTY_SUMMARY)
     const [totalSummary, setTotalSummary] = useState(EMPTY_SUMMARY)
-    const [pageInfo, setPageInfo] = useState(normalizePageInfo(null, 0, filters?.limit || 24))
+    const [pageInfo, setPageInfo] = useState(normalizePageInfo(null, 0, filters?.limit || 25))
     const [error, setError] = useState('')
     const [initialLoading, setInitialLoading] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
@@ -177,7 +177,7 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
                 setEntries([])
                 setSummary(EMPTY_SUMMARY)
                 setTotalSummary(EMPTY_SUMMARY)
-                setPageInfo(normalizePageInfo(null, 0, filters?.limit || 24))
+                setPageInfo(normalizePageInfo(null, 0, filters?.limit || 25))
                 setError('')
                 setInitialLoading(false)
                 setRefreshing(false)
@@ -198,14 +198,14 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
                 setEntries(rows)
                 setSummary(data?.summary || summarizeEntries(rows))
                 setTotalSummary(data?.totalSummary || data?.summary || summarizeEntries(rows))
-                setPageInfo(normalizePageInfo(data?.pageInfo, rows.length, filters?.limit || 24))
+                setPageInfo(normalizePageInfo(data?.pageInfo, rows.length, filters?.limit || 25))
             } catch (err) {
                 if (requestId !== requestIdRef.current) return
                 setError(String(err?.message || 'Failed to load reading history'))
                 setEntries([])
                 setSummary(EMPTY_SUMMARY)
                 setTotalSummary(EMPTY_SUMMARY)
-                setPageInfo(normalizePageInfo(null, 0, filters?.limit || 24))
+                setPageInfo(normalizePageInfo(null, 0, filters?.limit || 25))
             } finally {
                 if (requestId !== requestIdRef.current) return
                 setInitialLoading(false)

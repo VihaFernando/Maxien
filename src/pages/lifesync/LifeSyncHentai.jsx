@@ -42,6 +42,123 @@ function seriesMixOrderKey(seriesKey) {
     return h >>> 0
 }
 
+function normalizeGenreToken(value) {
+    return String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+}
+
+function toGenreSet(value) {
+    const rows = Array.isArray(value) ? value : []
+    const out = new Set()
+    for (const row of rows) {
+        const token = normalizeGenreToken(row)
+        if (token) out.add(token)
+    }
+    return out
+}
+
+function seriesEpisodeCount(series) {
+    const direct = Number(series?.episodeCount)
+    if (Number.isFinite(direct) && direct > 0) return Math.floor(direct)
+    const episodes = Array.isArray(series?.episodes) ? series.episodes : []
+    return episodes.length
+}
+
+function seriesNewestEpisodeTime(series) {
+    const episodes = Array.isArray(series?.episodes) ? series.episodes : []
+    let newest = 0
+    for (const ep of episodes) {
+        const pub = String(ep?.pubDate || '').trim()
+        if (!pub) continue
+        const ts = Date.parse(pub)
+        if (Number.isFinite(ts)) newest = Math.max(newest, ts)
+    }
+    return newest
+}
+
+function pickSuggestionEpisode(series) {
+    const episodes = Array.isArray(series?.episodes) ? series.episodes : []
+    if (!episodes.length) return null
+    const withPoster = episodes.find((ep) => hentaiEpisodeThumbnailUrl(ep) || ep?.posterUrl)
+    return withPoster || episodes[0] || null
+}
+
+function buildSeriesRecommendations({ currentSeries, allSeries, seriesGenresMap, limit = 12 }) {
+    const rows = Array.isArray(allSeries) ? allSeries : []
+    if (!rows.length) return []
+
+    const currentKey = String(currentSeries?.seriesKey || '').trim()
+    const currentGenres = toGenreSet(seriesGenresMap?.get?.(currentKey))
+    const currentEpisodeCount = seriesEpisodeCount(currentSeries)
+    const currentNewestTime = seriesNewestEpisodeTime(currentSeries)
+
+    const ranked = []
+    const seen = new Set(currentKey ? [currentKey] : [])
+
+    for (let i = 0; i < rows.length; i += 1) {
+        const candidate = rows[i]
+        const key = String(candidate?.seriesKey || '').trim()
+        if (!key || seen.has(key)) continue
+        seen.add(key)
+
+        const firstEp = pickSuggestionEpisode(candidate)
+        if (!firstEp) continue
+
+        const candidateGenres = toGenreSet(seriesGenresMap?.get?.(key))
+        let sharedGenres = 0
+        if (currentGenres.size > 0 && candidateGenres.size > 0) {
+            for (const token of currentGenres) {
+                if (candidateGenres.has(token)) sharedGenres += 1
+            }
+        }
+
+        const candidateEpisodeCount = seriesEpisodeCount(candidate)
+        const candidateNewestTime = seriesNewestEpisodeTime(candidate)
+        const isUpcoming = Boolean(candidate?.isUpcoming)
+        const currentUpcoming = Boolean(currentSeries?.isUpcoming)
+
+        let score = 0
+        score += sharedGenres * 140
+
+        if (currentEpisodeCount > 0 && candidateEpisodeCount > 0) {
+            const countGap = Math.abs(currentEpisodeCount - candidateEpisodeCount)
+            score += Math.max(0, 28 - countGap * 4)
+        }
+
+        if (candidateNewestTime > 0) {
+            const ageDays = Math.max(0, (Date.now() - candidateNewestTime) / 86400000)
+            score += Math.max(0, 30 - ageDays / 8)
+        }
+        if (currentNewestTime > 0 && candidateNewestTime > 0) {
+            const distanceDays = Math.abs(currentNewestTime - candidateNewestTime) / 86400000
+            score += Math.max(0, 18 - distanceDays / 20)
+        }
+
+        if (isUpcoming && !currentUpcoming) score -= 14
+        else if (isUpcoming && currentUpcoming) score += 10
+
+        score += Math.max(0, 8 - i * 0.35)
+        score += (seriesMixOrderKey(key) % 1000) / 1000
+
+        ranked.push({
+            ...candidate,
+            _firstEp: firstEp,
+            _sharedGenres: sharedGenres,
+            _score: score,
+        })
+    }
+
+    ranked.sort((a, b) => {
+        if (b._score !== a._score) return b._score - a._score
+        if (b._sharedGenres !== a._sharedGenres) return b._sharedGenres - a._sharedGenres
+        return seriesMixOrderKey(a.seriesKey) - seriesMixOrderKey(b.seriesKey)
+    })
+
+    return ranked.slice(0, Math.max(1, Number(limit) || 12))
+}
+
 function formatEpisodeDate(pubDate) {
     if (!pubDate || typeof pubDate !== 'string') return null
     const t = Date.parse(pubDate)
@@ -146,7 +263,17 @@ function pickQualityOption(options, preferredId, iosDevice) {
 
 /* ─── Fullscreen Player Popup (watch layout) ───────────────────────────── */
 
-function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSelectQuality, allSeries, onPlayFromSeries, onVideoFailure }) {
+function StreamPlayerPopup({
+    playerState,
+    source,
+    onClose,
+    onChangeEpisode,
+    onSelectQuality,
+    allSeries,
+    seriesGenresMap,
+    onPlayFromSeries,
+    onVideoFailure,
+}) {
     const { stream, series, episodeIndex } = playerState
     const episodes = useMemo(() => series?.episodes || [], [series])
     const prevEp = episodeIndex > 0 ? episodes[episodeIndex - 1] : null
@@ -155,28 +282,49 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
     const qualityOptions = Array.isArray(stream?.qualityOptions) ? stream.qualityOptions : []
     const canSelectQuality = Boolean(stream?.videoUrl && qualityOptions.length > 1)
     const playingRef = useRef(null)
+    const [isDarkTheme, setIsDarkTheme] = useState(() => {
+        if (typeof document === 'undefined') return false
+        return document.documentElement?.dataset?.maxienTheme === 'dark'
+    })
 
-    const shuffledPool = useMemo(() => {
-        if (!allSeries?.length) return []
-        return [...allSeries].sort((a, b) => seriesMixOrderKey(a.seriesKey) - seriesMixOrderKey(b.seriesKey))
-    }, [allSeries])
+    useEffect(() => {
+        if (typeof document === 'undefined') return undefined
+        const root = document.documentElement
+        const syncTheme = () => setIsDarkTheme(root?.dataset?.maxienTheme === 'dark')
+        syncTheme()
+        const observer = new MutationObserver(syncTheme)
+        observer.observe(root, {
+            attributes: true,
+            attributeFilter: ['data-maxien-theme'],
+        })
+        return () => observer.disconnect()
+    }, [])
 
     const recommendations = useMemo(() => {
-        const out = []
-        const pool = shuffledPool.length ? shuffledPool : allSeries || []
-        if (!pool.length) return out
-        const seen = new Set()
-        if (series?.seriesKey) seen.add(series.seriesKey)
-        for (const s of pool) {
-            if (seen.has(s.seriesKey)) continue
-            seen.add(s.seriesKey)
-            const ep = s.episodes?.[0]
-            if (!ep) continue
-            out.push({ ...s, _firstEp: ep })
-            if (out.length >= 12) break
-        }
-        return out
-    }, [series, allSeries, shuffledPool])
+        return buildSeriesRecommendations({
+            currentSeries: series,
+            allSeries,
+            seriesGenresMap,
+            limit: 12,
+        })
+    }, [allSeries, series, seriesGenresMap])
+
+    const popupRootClass = isDarkTheme
+        ? 'bg-[var(--mx-color-020202)] text-white'
+        : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]'
+    const popupHeaderClass = isDarkTheme
+        ? 'border-b border-[var(--color-border-strong)]/10 bg-black/40'
+        : 'border-b border-[var(--mx-color-d2d2d7)]/70 bg-[var(--color-surface)]/90'
+    const popupPanelClass = isDarkTheme
+        ? 'border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.04]'
+        : 'border border-[var(--mx-color-d2d2d7)]/70 bg-[var(--color-surface)]'
+    const popupSoftPanelClass = isDarkTheme
+        ? 'border border-[var(--color-border-strong)]/10 bg-black/35'
+        : 'border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f8f8fb)]'
+    const popupMutedTextClass = isDarkTheme ? 'text-white/60' : 'text-[var(--mx-color-86868b)]'
+    const popupSubtleTextClass = isDarkTheme ? 'text-white/45' : 'text-[var(--mx-color-86868b)]'
+    const popupTitleTextClass = isDarkTheme ? 'text-white' : 'text-[var(--mx-color-1d1d1f)]'
+    const popupAccentTextClass = isDarkTheme ? 'text-[var(--mx-color-c6ff00)]' : 'text-[var(--mx-color-1d1d1f)]'
 
     useEffect(() => {
         const el = playingRef.current
@@ -200,35 +348,53 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden bg-[var(--mx-color-020202)] text-white"
+            className={`fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-x-hidden overflow-y-hidden ${popupRootClass}`}
         >
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[var(--mx-color-c6ff00)]/12 blur-[120px]" />
-                <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[var(--mx-color-37c9ff)]/8 blur-[135px]" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08)_0%,rgba(2,2,2,0)_48%)]" />
+                {isDarkTheme ? (
+                    <>
+                        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[var(--mx-color-c6ff00)]/12 blur-[120px]" />
+                        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[var(--mx-color-37c9ff)]/8 blur-[135px]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08)_0%,rgba(2,2,2,0)_48%)]" />
+                    </>
+                ) : (
+                    <>
+                        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[var(--mx-color-c6ff00)]/18 blur-[120px]" />
+                        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[var(--mx-color-37c9ff)]/10 blur-[135px]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0)_58%)]" />
+                    </>
+                )}
             </div>
 
             <header
-                className="relative flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border-strong)]/10 bg-black/40 py-2.5 pl-3 pr-3 backdrop-blur-xl sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-3"
+                className={`relative flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 py-2.5 pl-3 pr-3 backdrop-blur-xl sm:flex-nowrap sm:gap-3 sm:px-4 sm:py-3 ${popupHeaderClass}`}
             >
                 <div className="flex min-w-0 items-center gap-2.5">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="inline-flex min-w-0 shrink items-center gap-2 rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-3 py-1.5 text-[12px] font-semibold text-white/85 transition-colors hover:border-[var(--color-border-strong)]/30 hover:bg-[var(--color-surface)]/10 hover:text-white"
+                        className={`inline-flex min-w-0 shrink items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                            isDarkTheme
+                                ? 'border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 text-white/85 hover:border-[var(--color-border-strong)]/30 hover:bg-[var(--color-surface)]/10 hover:text-white'
+                                : 'border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)]'
+                        }`}
                     >
                         <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                         <span className="truncate">Back</span>
                     </button>
                     <div className="hidden min-w-0 sm:block">
-                        <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/45">Now Streaming</p>
-                        <p className="truncate text-[12px] font-medium text-white/75">{series?.title || 'LifeSync Stream'}</p>
+                        <p className={`text-[9px] font-semibold uppercase tracking-[0.18em] ${popupSubtleTextClass}`}>Now Streaming</p>
+                        <p className={`truncate text-[12px] font-medium ${popupMutedTextClass}`}>{series?.title || 'LifeSync Stream'}</p>
                     </div>
                 </div>
 
                 <div className="flex min-w-0 items-center gap-2">
                     {progressLabel && (
-                        <span className="hidden rounded-full border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.06] px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/75 sm:inline-flex">
+                        <span className={`hidden rounded-full border px-2.5 py-1 text-[10px] font-semibold tabular-nums sm:inline-flex ${
+                            isDarkTheme
+                                ? 'border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.06] text-white/75'
+                                : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-5b5670)]'
+                        }`}>
                             {progressLabel}
                         </span>
                     )}
@@ -238,7 +404,11 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                             target="_blank"
                             rel="noreferrer"
                             title="Open on source site"
-                            className="inline-flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center gap-1.5 rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-2.5 py-1.5 text-[10px] font-medium text-white/70 transition-colors hover:border-[var(--mx-color-c6ff00)]/45 hover:text-[var(--mx-color-c6ff00)] sm:max-w-none sm:px-3 sm:text-[11px]"
+                            className={`inline-flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-medium transition-colors sm:max-w-none sm:px-3 sm:text-[11px] ${
+                                isDarkTheme
+                                    ? 'border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 text-white/70 hover:border-[var(--mx-color-c6ff00)]/45 hover:text-[var(--mx-color-c6ff00)]'
+                                    : 'border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] text-[var(--mx-color-5b5670)] hover:border-[var(--mx-color-c6ff00)]/60 hover:text-[var(--mx-color-1d1d1f)]'
+                            }`}
                         >
                             <span className="truncate sm:whitespace-nowrap">Open source</span>
                             <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
@@ -252,7 +422,11 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
             >
                 <div className="mx-auto grid w-full min-w-0 max-w-[1680px] gap-4 px-3 py-4 sm:px-4 lg:h-[calc(100dvh-6rem)] lg:grid-cols-[minmax(0,1.55fr)_minmax(310px,0.85fr)] lg:gap-5 lg:px-6">
                     <section className="min-w-0 space-y-4 lg:flex lg:h-full lg:flex-col lg:gap-4 lg:space-y-0">
-                        <div className="relative w-full min-w-0 shrink-0 overflow-hidden rounded-2xl border border-[var(--color-border-strong)]/15 bg-black shadow-[0_28px_80px_rgba(0,0,0,0.5)]">
+                        <div className={`relative w-full min-w-0 shrink-0 overflow-hidden rounded-2xl border shadow-[0_28px_80px_rgba(0,0,0,0.5)] ${
+                            isDarkTheme
+                                ? 'border-[var(--color-border-strong)]/15 bg-black'
+                                : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-111)]'
+                        }`}>
                             <div className="relative aspect-video w-full">
                                 <div className="absolute inset-0">
                                     {stream.resolving ? (
@@ -277,41 +451,41 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                         />
                                     ) : (
                                         <div className="flex h-full w-full items-center justify-center bg-[var(--mx-color-111)]">
-                                            <p className="text-[14px] text-white/35">No stream available.</p>
+                                            <p className={`text-[14px] ${isDarkTheme ? 'text-white/35' : 'text-white/75'}`}>No stream available.</p>
                                         </div>
                                     )}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="min-w-0 shrink-0 rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.04] p-4 sm:p-5">
+                        <div className={`min-w-0 shrink-0 rounded-2xl p-4 sm:p-5 ${popupPanelClass}`}>
                             <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                 <div className="min-w-0 flex-1">
-                                    <h1 className="wrap-anywhere text-[17px] font-bold leading-snug tracking-tight text-white sm:text-[21px]">{stream.title}</h1>
+                                    <h1 className={`wrap-anywhere text-[17px] font-bold leading-snug tracking-tight sm:text-[21px] ${popupTitleTextClass}`}>{stream.title}</h1>
                                     <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
                                         {series && (
-                                            <span className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border border-[var(--color-border-strong)]/10 bg-black/35 px-3 py-1.5 text-[11px] text-white/65">
+                                            <span className={`inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] ${isDarkTheme ? 'border-[var(--color-border-strong)]/10 bg-black/35 text-white/65' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-5b5670)]'}`}>
                                                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]" aria-hidden />
                                                 <span className="min-w-0 truncate">{series.title}</span>
                                             </span>
                                         )}
                                         {progressLabel && (
-                                            <span className="inline-flex rounded-full border border-[var(--color-border-strong)]/10 bg-black/35 px-2.5 py-1 text-[10px] font-semibold tabular-nums text-white/62">
+                                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold tabular-nums ${isDarkTheme ? 'border-[var(--color-border-strong)]/10 bg-black/35 text-white/62' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-5b5670)]'}`}>
                                                 Episode {progressLabel}
                                             </span>
                                         )}
                                         {activeEpisode?.pubDate && (
-                                            <span className="inline-flex rounded-full border border-[var(--color-border-strong)]/10 bg-black/35 px-2.5 py-1 text-[10px] text-white/55">
+                                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] ${isDarkTheme ? 'border-[var(--color-border-strong)]/10 bg-black/35 text-white/55' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)]'}`}>
                                                 {formatEpisodeDate(activeEpisode.pubDate) || activeEpisode.pubDate}
                                             </span>
                                         )}
                                         {canSelectQuality && (
-                                            <label className="inline-flex items-center gap-1 rounded-full border border-[var(--color-border-strong)]/12 bg-black/35 px-2.5 py-1">
-                                                <span className="text-[10px] font-semibold uppercase tracking-wide text-white/55">Quality</span>
+                                            <label className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${isDarkTheme ? 'border-[var(--color-border-strong)]/12 bg-black/35' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)]'}`}>
+                                                <span className={`text-[10px] font-semibold uppercase tracking-wide ${isDarkTheme ? 'text-white/55' : 'text-[var(--mx-color-86868b)]'}`}>Quality</span>
                                                 <select
                                                     value={stream.activeQuality || qualityOptions[0]?.id || ''}
                                                     onChange={e => onSelectQuality?.(e.target.value)}
-                                                    className="rounded bg-transparent text-[10px] font-semibold text-white outline-none"
+                                                    className={`rounded bg-transparent text-[10px] font-semibold outline-none ${isDarkTheme ? 'text-white' : 'text-[var(--mx-color-1d1d1f)]'}`}
                                                 >
                                                     {qualityOptions.map(opt => (
                                                         <option key={opt.id} value={opt.id} className="text-black">
@@ -329,7 +503,11 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                         type="button"
                                         disabled={!prevEp}
                                         onClick={() => prevEp && onChangeEpisode(episodeIndex - 1)}
-                                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 px-3 text-[12px] font-medium text-white/80 transition-colors hover:bg-[var(--color-surface)]/10 disabled:opacity-25 sm:min-w-[118px]"
+                                        className={`inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors disabled:opacity-25 sm:min-w-[118px] ${
+                                            isDarkTheme
+                                                ? 'border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 text-white/80 hover:bg-[var(--color-surface)]/10'
+                                                : 'border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)]'
+                                        }`}
                                     >
                                         <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                                         <span className="truncate">Previous</span>
@@ -338,7 +516,11 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                         type="button"
                                         disabled={!nextEp}
                                         onClick={() => nextEp && onChangeEpisode(episodeIndex + 1)}
-                                        className="inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--mx-color-c6ff00)]/45 bg-[var(--mx-color-c6ff00)]/18 px-3 text-[12px] font-semibold text-[var(--mx-color-c6ff00)] transition-colors hover:bg-[var(--mx-color-c6ff00)]/28 disabled:opacity-25 sm:min-w-[118px]"
+                                        className={`inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--mx-color-c6ff00)]/45 px-3 text-[12px] font-semibold transition-colors disabled:opacity-25 sm:min-w-[118px] ${
+                                            isDarkTheme
+                                                ? 'bg-[var(--mx-color-c6ff00)]/18 text-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-c6ff00)]/28'
+                                                : 'bg-[var(--mx-color-c6ff00)]/45 text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-c6ff00)]/65'
+                                        }`}
                                     >
                                         <span className="truncate">Next</span>
                                         <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
@@ -347,9 +529,9 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                             </div>
 
                             {episodes.length > 1 && (
-                                <div className="mt-4 rounded-xl border border-[var(--color-border-strong)]/10 bg-black/35 px-3.5 py-3">
-                                    <p className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/45">Up Next</p>
-                                    <p className="mt-1 line-clamp-2 text-[12px] font-medium leading-snug text-white/85">
+                                <div className={`mt-4 rounded-xl px-3.5 py-3 ${popupSoftPanelClass}`}>
+                                    <p className={`text-[9px] font-semibold uppercase tracking-[0.16em] ${popupSubtleTextClass}`}>Up Next</p>
+                                    <p className={`mt-1 line-clamp-2 text-[12px] font-medium leading-snug ${popupTitleTextClass}`}>
                                         {nextEp ? nextEp.title : 'You reached the final episode in this series.'}
                                     </p>
                                 </div>
@@ -357,13 +539,13 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                         </div>
 
                         {episodes.length > 0 && (
-                            <div className="min-w-0 rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.04] p-3 sm:p-4 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+                            <div className={`min-w-0 rounded-2xl p-3 sm:p-4 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col ${popupPanelClass}`}>
                                 <div className="mb-3 flex min-w-0 items-start justify-between gap-2">
                                     <div className="min-w-0">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/42">Episode Queue</p>
-                                        <p className="mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug text-white/90">{series?.title}</p>
+                                        <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${popupSubtleTextClass}`}>Episode Queue</p>
+                                        <p className={`mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug ${popupTitleTextClass}`}>{series?.title}</p>
                                     </div>
-                                    <span className="shrink-0 rounded-md border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.06] px-2 py-1 text-[10px] font-medium tabular-nums text-white/55">{episodes.length}</span>
+                                    <span className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium tabular-nums ${isDarkTheme ? 'border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.06] text-white/55' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)]'}`}>{episodes.length}</span>
                                 </div>
 
                                 <div className={`max-h-[42dvh] overflow-y-auto pr-1 lg:min-h-0 lg:max-h-none lg:flex-1 ${hideScroll}`}>
@@ -382,19 +564,21 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                                         className={`group flex w-full min-w-0 items-center gap-2.5 rounded-xl border px-2 py-2 text-left transition-all ${
                                                             isCurrent
                                                                 ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-c6ff00)]/14'
-                                                                : 'border-[var(--color-border-strong)]/10 bg-black/30 hover:border-[var(--color-border-strong)]/20 hover:bg-[var(--color-surface)]/[0.06]'
+                                                                : isDarkTheme
+                                                                  ? 'border-[var(--color-border-strong)]/10 bg-black/30 hover:border-[var(--color-border-strong)]/20 hover:bg-[var(--color-surface)]/[0.06]'
+                                                                  : 'border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] hover:border-[var(--mx-color-d2d2d7)] hover:bg-[var(--color-surface)]'
                                                         }`}
                                                     >
-                                                        <div className="relative h-12 w-[4.4rem] shrink-0 overflow-hidden rounded-lg bg-black/45">
+                                                        <div className={`relative h-12 w-[4.4rem] shrink-0 overflow-hidden rounded-lg ${isDarkTheme ? 'bg-black/45' : 'bg-[var(--mx-color-e5e5ea)]'}`}>
                                                             {queueThumb ? (
                                                                 <LifesyncEpisodeThumbnail
                                                                     src={queueThumb}
-                                                                    dark
+                                                                    dark={isDarkTheme}
                                                                     className="absolute inset-0 h-full w-full"
                                                                     imgClassName="h-full w-full object-cover"
                                                                 />
                                                             ) : (
-                                                                <div className="flex h-full w-full items-center justify-center text-white/20">
+                                                                <div className={`flex h-full w-full items-center justify-center ${isDarkTheme ? 'text-white/20' : 'text-[var(--mx-color-86868b)]'}`}>
                                                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                                                 </div>
                                                             )}
@@ -406,10 +590,10 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                                         </div>
 
                                                         <div className="min-w-0 flex-1">
-                                                            <p className={`line-clamp-2 text-[11px] font-semibold leading-snug ${isCurrent ? 'text-[var(--mx-color-c6ff00)]' : 'text-white/88'}`}>
+                                                            <p className={`line-clamp-2 text-[11px] font-semibold leading-snug ${isCurrent ? popupAccentTextClass : popupTitleTextClass}`}>
                                                                 {ep.title}
                                                             </p>
-                                                            <p className="mt-1 text-[9px] text-white/42">
+                                                            <p className={`mt-1 text-[9px] ${popupSubtleTextClass}`}>
                                                                 {epLabel}{dateLabel ? ` · ${dateLabel}` : ''}
                                                             </p>
                                                         </div>
@@ -424,8 +608,8 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                     </section>
 
                     <aside className="min-w-0 lg:h-full">
-                        <div className="min-w-0 rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.03] p-3 sm:p-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col">
-                            <p className="px-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/45">Suggested</p>
+                        <div className={`min-w-0 rounded-2xl p-3 sm:p-4 lg:flex lg:h-full lg:min-h-0 lg:flex-col ${popupPanelClass}`}>
+                            <p className={`px-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${popupSubtleTextClass}`}>Suggested</p>
                             {recommendations.length > 0 ? (
                                 <div className={`mt-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1 ${hideScroll}`}>
                                     <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-1">
@@ -436,32 +620,41 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                                 <button
                                                     type="button"
                                                     onClick={() => onPlayFromSeries?.(rec, 0)}
-                                                    className="flex w-full gap-3 rounded-xl border border-transparent bg-black/25 p-2 text-left transition-colors hover:border-[var(--color-border-strong)]/10 hover:bg-[var(--color-surface)]/[0.06]"
+                                                    className={`flex w-full gap-3 rounded-xl border p-2 text-left transition-colors ${
+                                                        isDarkTheme
+                                                            ? 'border-transparent bg-black/25 hover:border-[var(--color-border-strong)]/10 hover:bg-[var(--color-surface)]/[0.06]'
+                                                            : 'border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f8f8fb)] hover:border-[var(--mx-color-d2d2d7)] hover:bg-[var(--color-surface)]'
+                                                    }`}
                                                 >
-                                                    <div className="relative h-[4.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-lg bg-black/30">
+                                                    <div className={`relative h-[4.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-lg ${isDarkTheme ? 'bg-black/30' : 'bg-[var(--mx-color-e5e5ea)]'}`}>
                                                         {sugThumb ? (
                                                             <LifesyncEpisodeThumbnail
                                                                 src={sugThumb}
-                                                                dark
+                                                                dark={isDarkTheme}
                                                                 className="absolute inset-0 h-full w-full"
                                                                 imgClassName="h-full w-full object-cover"
                                                             />
                                                         ) : (
-                                                            <div className="flex h-full w-full items-center justify-center text-white/12">
+                                                            <div className={`flex h-full w-full items-center justify-center ${isDarkTheme ? 'text-white/12' : 'text-[var(--mx-color-86868b)]'}`}>
                                                                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                                             </div>
                                                         )}
                                                         {rec.episodeCount > 1 && (
-                                                            <span className="absolute bottom-1 right-1 rounded bg-black/75 px-1 py-px text-[8px] font-bold text-white">
+                                                            <span className={`absolute bottom-1 right-1 rounded px-1 py-px text-[8px] font-bold ${isDarkTheme ? 'bg-black/75 text-white' : 'bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-d2d2d7)]'}`}>
                                                                 {rec.episodeCount} ep
                                                             </span>
                                                         )}
                                                     </div>
                                                     <div className="min-w-0 flex-1 py-0.5">
-                                                        <p className="line-clamp-2 text-[12px] font-semibold leading-snug text-white/92">{rec.title}</p>
-                                                        <p className="mt-1 text-[10px] text-white/38">
+                                                        <p className={`line-clamp-2 text-[12px] font-semibold leading-snug ${popupTitleTextClass}`}>{rec.title}</p>
+                                                        <p className={`mt-1 text-[10px] ${popupSubtleTextClass}`}>
                                                             {rec.episodeCount === 1 ? 'One episode' : `${rec.episodeCount} episodes`}
                                                         </p>
+                                                        {rec._sharedGenres > 0 ? (
+                                                            <p className={`mt-0.5 text-[9px] font-semibold ${popupAccentTextClass}`}>
+                                                                {rec._sharedGenres} shared genre{rec._sharedGenres === 1 ? '' : 's'}
+                                                            </p>
+                                                        ) : null}
                                                     </div>
                                                 </button>
                                             </li>
@@ -470,7 +663,7 @@ function StreamPlayerPopup({ playerState, source, onClose, onChangeEpisode, onSe
                                     </ul>
                                 </div>
                             ) : (
-                                <p className="mt-6 px-1 pb-4 text-center text-[12px] text-white/30">Nothing else to suggest right now.</p>
+                                <p className={`mt-6 px-1 pb-4 text-center text-[12px] ${popupMutedTextClass}`}>Nothing else to suggest right now.</p>
                             )}
                         </div>
                     </aside>
@@ -843,6 +1036,7 @@ export default function LifeSyncHentai() {
     const [sortOrder, setSortOrder] = useState('random')
 
     const [knownGenres, setKnownGenres] = useState([])
+    const [seriesGenreVersion, setSeriesGenreVersion] = useState(0)
     const seriesGenresRef = useRef(new Map())
     const pageMountedRef = useRef(true)
     useEffect(() => {
@@ -916,10 +1110,15 @@ export default function LifeSyncHentai() {
         const map = seriesGenresRef.current
         if (map.has(seriesKey)) return
         map.set(seriesKey, genres)
+        setSeriesGenreVersion((prev) => prev + 1)
         const all = new Set()
         for (const arr of map.values()) arr.forEach(g => all.add(g))
         setKnownGenres([...all].sort())
     }, [])
+
+    const seriesGenresSnapshot = useMemo(() => (
+        new Map(seriesGenresRef.current)
+    ), [seriesGenreVersion])
 
     const resolveStream = useCallback(async (ep, preferredQuality = null) => {
         const slug = slugFromItem(ep)
@@ -1253,6 +1452,7 @@ export default function LifeSyncHentai() {
                     onChangeEpisode={idx => void changePlayerEpisode(idx)}
                     onSelectQuality={selectStreamQuality}
                     allSeries={seriesList}
+                    seriesGenresMap={seriesGenresSnapshot}
                     onPlayFromSeries={(ser, epIdx) => void playEpisode(ser, ser.episodes[epIdx], epIdx)}
                     onVideoFailure={fallbackStreamQuality}
                 />

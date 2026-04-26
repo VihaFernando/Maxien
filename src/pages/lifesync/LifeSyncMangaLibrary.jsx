@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { FaBookOpen, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTrashAlt } from 'react-icons/fa'
@@ -27,6 +27,8 @@ const SOURCE_OPTIONS = [
     { id: 'comix', label: 'Comix' },
     { id: 'mangadistrict', label: 'Manga District' },
 ]
+const PAGE_SIZE = 25
+const SYNC_POLL_INTERVAL_MS = 1000
 
 const STATUS_OPTIONS = [
     { id: 'all', label: 'Any status' },
@@ -176,6 +178,49 @@ function progressDetailLabel(entry) {
     return entry?.needsSync ? 'Latest chapter needs sync' : 'Latest chapter unavailable'
 }
 
+function isSyncTerminal(status) {
+    const s = String(status || '').trim().toLowerCase()
+    return s === 'completed' || s === 'completed_with_errors' || s === 'failed'
+}
+
+function syncStateLabel(state) {
+    const s = String(state || '').trim().toLowerCase()
+    if (s === 'queued') return 'Queued'
+    if (s === 'syncing') return 'Syncing'
+    if (s === 'done') return 'Done'
+    if (s === 'error') return 'Error'
+    if (s === 'skipped') return 'Skipped'
+    return ''
+}
+
+function syncStateClass(state) {
+    const s = String(state || '').trim().toLowerCase()
+    if (s === 'queued') return 'border-slate-300 bg-slate-100 text-slate-700'
+    if (s === 'syncing') return 'border-blue-300 bg-blue-100 text-blue-700'
+    if (s === 'done') return 'border-lime-300 bg-lime-100 text-lime-700'
+    if (s === 'error') return 'border-red-300 bg-red-100 text-red-700'
+    if (s === 'skipped') return 'border-amber-300 bg-amber-100 text-amber-700'
+    return 'border-slate-300 bg-slate-100 text-slate-700'
+}
+
+function normalizeSyncJobPayload(raw) {
+    if (!raw || typeof raw !== 'object') return null
+    const source = raw.job && typeof raw.job === 'object' ? raw.job : raw
+    const jobId = String(source.jobId || '').trim()
+    if (!jobId) return null
+    return source
+}
+
+function syncJobStatusLabel(status) {
+    const s = String(status || '').trim().toLowerCase()
+    if (s === 'queued') return 'Queued'
+    if (s === 'running') return 'Running'
+    if (s === 'completed') return 'Completed'
+    if (s === 'completed_with_errors') return 'Completed with errors'
+    if (s === 'failed') return 'Failed'
+    return 'Idle'
+}
+
 function StatusSelect({ value, onChange, disabled, className = '' }) {
     return (
         <select
@@ -248,6 +293,8 @@ function LibraryMangaCard({
     selected,
     busy,
     removeBusy,
+    syncState,
+    syncMessage,
     onToggleSelect,
     onStatusChange,
     onRequestRemove,
@@ -293,6 +340,14 @@ function LibraryMangaCard({
                     </button>
                     {entry.hasNewChapter ? (
                         <span className="lifesync-manga-history-accent rounded-full bg-[var(--mx-color-c6ff00)] px-2 py-0.5 text-[9px] font-bold text-slate-900">New</span>
+                    ) : null}
+                    {syncState ? (
+                        <span
+                            className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${syncStateClass(syncState)}`}
+                            title={syncMessage || syncStateLabel(syncState)}
+                        >
+                            {syncStateLabel(syncState)}
+                        </span>
                     ) : null}
                 </div>
 
@@ -388,9 +443,13 @@ export default function LifeSyncMangaLibrary() {
     const [sortBy, setSortBy] = useState('updatedAt')
     const [sortOrder, setSortOrder] = useState('desc')
     const [page, setPage] = useState(1)
-    const [limit, setLimit] = useState(24)
+    const limit = PAGE_SIZE
 
     const [syncBusy, setSyncBusy] = useState(false)
+    const [syncJob, setSyncJob] = useState(null)
+    const [syncError, setSyncError] = useState('')
+    const syncPollingBusyRef = useRef(false)
+    const syncTerminalRefreshKeyRef = useRef('')
     const [actionBusyKeys, setActionBusyKeys] = useState(() => new Set())
     const [removeBusyKey, setRemoveBusyKey] = useState('')
     const [bulkBusy, setBulkBusy] = useState(false)
@@ -416,7 +475,7 @@ export default function LifeSyncMangaLibrary() {
 
     useEffect(() => {
         setPage(1)
-    }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, limit])
+    }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder])
 
     useEffect(() => {
         if (!hManhwaEnabled && sourceFilter === 'mangadistrict') {
@@ -441,7 +500,7 @@ export default function LifeSyncMangaLibrary() {
     const {
         entries: listEntries,
         visibleEntries,
-        summary,
+        visibleSummary,
         pageInfo,
         error,
         initialLoading,
@@ -461,9 +520,9 @@ export default function LifeSyncMangaLibrary() {
 
 
     useEffect(() => {
-        if (!pageInfo?.page) return
-        if (page !== pageInfo.page) setPage(pageInfo.page)
-    }, [page, pageInfo?.page])
+        const totalPages = Math.max(1, Number(pageInfo?.totalPages || 1))
+        if (page > totalPages) setPage(totalPages)
+    }, [page, pageInfo?.totalPages])
 
     const selectableEntries = useMemo(() => {
         const byKey = new Map()
@@ -491,10 +550,75 @@ export default function LifeSyncMangaLibrary() {
     const hiddenByPreferencesCount = Math.max(0, listEntries.length - visibleEntries.length)
 
     const anyRefreshing = refreshing
+    const syncStatus = String(syncJob?.status || '').trim().toLowerCase()
+    const syncRunning = syncStatus === 'queued' || syncStatus === 'running'
+    const syncTotal = Math.max(0, Number(syncJob?.total || 0))
+    const syncProcessed = Math.max(0, Number(syncJob?.processed || 0))
+    const syncPercent = Math.max(0, Math.min(100, Number(syncJob?.percent || 0)))
+    const syncItemStates = syncJob?.itemStates && typeof syncJob.itemStates === 'object' ? syncJob.itemStates : {}
 
     const refreshAll = useCallback(async () => {
         await refreshList()
     }, [refreshList])
+
+    useEffect(() => {
+        if (!isLifeSyncConnected || !mangaPluginOn) return
+        let cancelled = false
+        ;(async () => {
+            try {
+                const data = await lifesyncFetch('/api/v1/manga/reading/sync/jobs/current?view=full')
+                if (cancelled) return
+                const next = normalizeSyncJobPayload(data)
+                setSyncJob(next || null)
+                if (next) setSyncError('')
+            } catch {
+                if (!cancelled) setSyncJob(null)
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [isLifeSyncConnected, mangaPluginOn])
+
+    useEffect(() => {
+        const jobId = String(syncJob?.jobId || '').trim()
+        if (!jobId || isSyncTerminal(syncJob?.status)) return
+        let cancelled = false
+        const poll = async () => {
+            if (cancelled || syncPollingBusyRef.current) return
+            syncPollingBusyRef.current = true
+            try {
+                const data = await lifesyncFetch(`/api/v1/manga/reading/sync/jobs/${encodeURIComponent(jobId)}?view=full`)
+                if (cancelled) return
+                const next = normalizeSyncJobPayload(data)
+                if (next) {
+                    setSyncJob(next)
+                    setSyncError('')
+                }
+            } catch (err) {
+                if (!cancelled) setSyncError(String(err?.message || 'Failed to fetch sync progress'))
+            } finally {
+                syncPollingBusyRef.current = false
+            }
+        }
+        const timer = window.setInterval(() => {
+            void poll()
+        }, SYNC_POLL_INTERVAL_MS)
+        void poll()
+        return () => {
+            cancelled = true
+            window.clearInterval(timer)
+        }
+    }, [syncJob?.jobId, syncJob?.status])
+
+    useEffect(() => {
+        const jobId = String(syncJob?.jobId || '').trim()
+        if (!jobId || !isSyncTerminal(syncJob?.status)) return
+        const marker = `${jobId}:${String(syncJob?.status || '')}`
+        if (syncTerminalRefreshKeyRef.current === marker) return
+        syncTerminalRefreshKeyRef.current = marker
+        void refreshAll()
+    }, [syncJob?.jobId, syncJob?.status, refreshAll])
 
     const runEntryAction = useCallback(async (entry, action) => {
         const key = entryKey(entry)
@@ -564,17 +688,23 @@ export default function LifeSyncMangaLibrary() {
     }, [deleteConfirmation.entry, onRemove])
 
     const onSync = useCallback(async () => {
-        if (syncBusy) return
+        if (syncBusy || syncRunning) return
         setSyncBusy(true)
+        setSyncError('')
+        syncTerminalRefreshKeyRef.current = ''
         try {
-            await lifesyncFetch('/api/v1/manga/reading/sync', { method: 'POST', json: {} })
-            await refreshAll()
-        } catch {
-            // ignored here; list hook handles fetch errors on next refresh
+            const data = await lifesyncFetch('/api/v1/manga/reading/sync?mode=async&view=full', {
+                method: 'POST',
+                json: {},
+            })
+            const next = normalizeSyncJobPayload(data)
+            if (next) setSyncJob(next)
+        } catch (err) {
+            setSyncError(String(err?.message || 'Failed to start sync'))
         } finally {
             setSyncBusy(false)
         }
-    }, [refreshAll, syncBusy])
+    }, [syncBusy, syncRunning])
 
     const onToggleSelect = useCallback((entry) => {
         const key = entryKey(entry)
@@ -666,11 +796,11 @@ export default function LifeSyncMangaLibrary() {
                         <button
                             type="button"
                             onClick={() => void onSync()}
-                            disabled={syncBusy || anyRefreshing || summary.total === 0}
+                            disabled={syncBusy || syncRunning || anyRefreshing || Number(pageInfo?.total || 0) === 0}
                             className="lifesync-manga-history-accent inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-3 text-[12px] font-bold text-slate-900 transition hover:brightness-95 disabled:opacity-50"
                         >
-                            <FaSyncAlt className={`h-3 w-3 ${syncBusy ? 'animate-spin' : ''}`} />
-                            {syncBusy ? 'Syncing' : 'Sync'}
+                            <FaSyncAlt className={`h-3 w-3 ${syncBusy || syncRunning ? 'animate-spin' : ''}`} />
+                            {syncBusy ? 'Starting sync' : syncRunning ? `Syncing ${Math.round(syncPercent)}%` : 'Sync latest'}
                         </button>
                         <button
                             type="button"
@@ -683,17 +813,45 @@ export default function LifeSyncMangaLibrary() {
                     </div>
                 </div>
 
+                {syncJob ? (
+                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                            <p className="font-semibold text-slate-700">
+                                Sync {syncJobStatusLabel(syncJob.status)} · {syncProcessed}/{syncTotal}
+                            </p>
+                            <p className="font-semibold text-slate-600">{Math.round(syncPercent)}%</p>
+                        </div>
+                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-200">
+                            <div
+                                className={`h-full rounded-full ${syncRunning ? 'animate-pulse' : ''}`}
+                                style={{ width: `${syncPercent}%`, backgroundColor: 'var(--mx-color-c6ff00)' }}
+                            />
+                        </div>
+                        {Number(syncJob?.errorCount || 0) > 0 ? (
+                            <p className="mt-1 text-[10px] font-semibold text-amber-700">
+                                {Number(syncJob.errorCount)} item{Number(syncJob.errorCount) === 1 ? '' : 's'} failed
+                            </p>
+                        ) : null}
+                    </div>
+                ) : null}
+
+                {syncError ? (
+                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700">
+                        {syncError}
+                    </div>
+                ) : null}
+
                 <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center">
-                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : summary.total}</p>
+                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : visibleEntries.length}</p>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Visible</p>
                     </div>
                     <div className="rounded-xl border border-lime-200 bg-lime-50 px-3 py-2.5 text-center">
-                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : summary.withNewChapter}</p>
+                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : visibleSummary.withNewChapter}</p>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-lime-700">New</p>
                     </div>
                     <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-center">
-                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : summary.needsSync}</p>
+                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : visibleSummary.needsSync}</p>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">Needs sync</p>
                     </div>
                 </div>
@@ -775,16 +933,9 @@ export default function LifeSyncMangaLibrary() {
                     >
                         Order: {sortOrder === 'desc' ? 'Desc' : 'Asc'}
                     </button>
-                    <select
-                        value={String(limit)}
-                        onChange={(event) => setLimit(Number(event.target.value) || 24)}
-                        className="min-h-[34px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
-                    >
-                        <option value="12">12 per page</option>
-                        <option value="24">24 per page</option>
-                        <option value="36">36 per page</option>
-                        <option value="48">48 per page</option>
-                    </select>
+                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
+                        25 per page
+                    </span>
                     {hiddenByPreferencesCount > 0 ? (
                         <span className="ml-auto rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-800">
                             {hiddenByPreferencesCount} hidden by preferences
@@ -843,7 +994,7 @@ export default function LifeSyncMangaLibrary() {
                 </section>
             ) : null}
 
-            {initialLoading && visibleEntries.length === 0 ? (
+            {initialLoading && listEntries.length === 0 ? (
                 <div className="rounded-2xl border border-slate-100 bg-[var(--color-surface)]/60 p-5 sm:p-6">
                     <LifesyncMediaLibraryPageSkeleton
                         gridCount={Math.max(8, limit)}
@@ -868,7 +1019,7 @@ export default function LifeSyncMangaLibrary() {
                         Retry
                     </button>
                 </MotionDiv>
-            ) : visibleEntries.length === 0 ? (
+            ) : listEntries.length === 0 ? (
                 <MotionDiv
                     className="rounded-2xl border border-dashed border-amber-200 bg-gradient-to-br from-[var(--color-surface)] via-amber-50/40 to-lime-50/25 px-6 py-14 text-center"
                     initial={{ opacity: 0, scale: 0.98 }}
@@ -891,6 +1042,41 @@ export default function LifeSyncMangaLibrary() {
                         Browse popular manga
                     </Link>
                 </MotionDiv>
+            ) : visibleEntries.length === 0 ? (
+                <div className="space-y-3">
+                    <MotionDiv
+                        className="rounded-2xl border border-amber-200 bg-amber-50/70 px-6 py-10 text-center"
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    >
+                        <p className="text-[17px] font-bold text-amber-900">This page is hidden by your preferences</p>
+                        <p className="mx-auto mt-2 max-w-md text-[13px] text-amber-800">
+                            Move to another page, change source filters, or enable Manga District in preferences.
+                        </p>
+                    </MotionDiv>
+                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-[var(--color-surface)] px-4 py-3 shadow-sm">
+                        <button
+                            type="button"
+                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                            disabled={pageInfo.page <= 1 || refreshing}
+                            className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+                        >
+                            Previous
+                        </button>
+                        <p className="text-[12px] font-semibold text-slate-700">
+                            Page {pageInfo.page} of {pageInfo.totalPages}
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => setPage((prev) => prev + 1)}
+                            disabled={!pageInfo.hasMore || refreshing}
+                            className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
             ) : (
                 <>
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-slate-600">
@@ -923,6 +1109,7 @@ export default function LifeSyncMangaLibrary() {
                     >
                         {visibleEntries.map((entry) => {
                             const key = entryKey(entry)
+                            const itemState = syncItemStates[key]
                             return (
                                 <LibraryMangaCard
                                     key={key}
@@ -931,6 +1118,8 @@ export default function LifeSyncMangaLibrary() {
                                     selected={selectedKeys.has(key)}
                                     busy={actionBusyKeys.has(key)}
                                     removeBusy={removeBusyKey === key}
+                                    syncState={itemState?.state}
+                                    syncMessage={itemState?.message}
                                     onToggleSelect={onToggleSelect}
                                     onStatusChange={onStatusChange}
                                     onRequestRemove={onRequestDelete}

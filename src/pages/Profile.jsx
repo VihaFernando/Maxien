@@ -252,7 +252,6 @@ export default function Profile() {
     const [comixExcludeGendersInput, setComixExcludeGendersInput] = useState("")
     const [comixExcludeGenresInput, setComixExcludeGenresInput] = useState("")
     const [comixColoredGenresInput, setComixColoredGenresInput] = useState("")
-    const [mangaLastRouteInput, setMangaLastRouteInput] = useState("")
 
     const [fullName, setFullName] = useState("")
     const [username, setUsername] = useState("")
@@ -301,10 +300,8 @@ export default function Profile() {
         setComixExcludeGendersInput(Array.isArray(pref?.excludeGenders) ? pref.excludeGenders.join(", ") : "")
         setComixExcludeGenresInput(Array.isArray(pref?.excludeGenres) ? pref.excludeGenres.join(", ") : "")
         setComixColoredGenresInput(formatColoredGenresInput(pref?.coloredGenres))
-        setMangaLastRouteInput(String(lifeSyncUser?.preferences?.mangaLastRoute || ""))
     }, [
         lifeSyncUser?.preferences?.comixFilterPrefs,
-        lifeSyncUser?.preferences?.mangaLastRoute,
     ])
 
     useEffect(() => {
@@ -711,21 +708,6 @@ export default function Profile() {
             await lifeSyncUpdatePreferences(payload)
         } catch (e) {
             setError(e?.message || "Could not save Comix defaults")
-        } finally {
-            setPrefsBusy(false)
-        }
-    }
-
-    const saveMangaLastRoute = async (nextRouteRaw) => {
-        if (!lifeSyncUser) return
-        const nextRoute = String(nextRouteRaw || "").trim()
-        setPrefsBusy(true)
-        setError("")
-        try {
-            await lifeSyncUpdatePreferences({ mangaLastRoute: nextRoute })
-            setMangaLastRouteInput(nextRoute)
-        } catch (e) {
-            setError(e?.message || "Could not save remembered manga route")
         } finally {
             setPrefsBusy(false)
         }
@@ -1353,44 +1335,6 @@ export default function Profile() {
                                                             className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-5b5670)] hover:bg-[var(--mx-color-ebebed)] disabled:opacity-50"
                                                         >
                                                             Clear form
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </li>
-                                        <li className="px-6 sm:px-8 py-5">
-                                            <div className="flex flex-col gap-3">
-                                                <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Remembered Manga landing route</p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
-                                                        Default route used when you open Manga without a subpath.
-                                                    </p>
-                                                </div>
-                                                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
-                                                    <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-center">
-                                                        <input
-                                                            type="text"
-                                                            value={mangaLastRouteInput}
-                                                            onChange={(e) => setMangaLastRouteInput(e.target.value)}
-                                                            placeholder="/dashboard/lifesync/anime/manga/comix/manga/page/1"
-                                                            disabled={prefsBusy || !lifeSyncUser}
-                                                            className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            disabled={prefsBusy || !lifeSyncUser}
-                                                            onClick={() => void saveMangaLastRoute(mangaLastRouteInput)}
-                                                            className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)] disabled:opacity-50"
-                                                        >
-                                                            Save route
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            disabled={prefsBusy || !lifeSyncUser}
-                                                            onClick={() => void saveMangaLastRoute("")}
-                                                            className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 text-[11px] font-semibold text-[var(--mx-color-5b5670)] hover:bg-[var(--mx-color-ebebed)] disabled:opacity-50"
-                                                        >
-                                                            Clear
                                                         </button>
                                                     </div>
                                                 </div>
