@@ -6,9 +6,11 @@ import { decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 
 const MANGA_PROGRESS_QUEUE_KEY = 'lifesync:manga-progress-queue:v1'
 const MANGA_PROGRESS_LOCAL_SAVE_MS = 8000
+const MANGA_PROGRESS_REMOTE_FLUSH_DEBOUNCE_MS = 6000
 const MANGA_PROGRESS_FLUSH_BATCH = 16
 const MANGA_PROGRESS_SOURCES = new Set(['mangadistrict', 'comix', 'hentaifox'])
 const MANGA_READER_INITIAL_PAGE_BURST = 4
+const MANGA_ZOOM_TRANSITION_MS = 180
 
 function compareChapters(a, b) {
     const av = a?.volume != null && a.volume !== '' ? Number(a.volume) : null
@@ -287,7 +289,11 @@ export default function LifeSyncMangaRead() {
     const pagesInnerRef = useRef(null)
     const scrollRafRef = useRef(null)
 
-    const mdReadSyncTimer = useRef(null)
+    const remoteFlushTimerRef = useRef(null)
+    const zoomChangingRef = useRef(false)
+    const zoomResetTimerRef = useRef(null)
+    const zoomPrevPctRef = useRef(100)
+    const chapterReadProgressRef = useRef(0)
     const resumeRestoreKeyRef = useRef('')
     const latestProgressRef = useRef({ manga: null, chapter: null, percent: 0 })
     const lastFlushedSignatureRef = useRef('')
@@ -383,11 +389,22 @@ export default function LifeSyncMangaRead() {
         }
     }, [buildProgressPayload, persistCurrentProgressLocal])
 
+    const scheduleRemoteProgressFlush = useCallback(() => {
+        if (!isLifeSyncConnected) return
+        if (remoteFlushTimerRef.current) window.clearTimeout(remoteFlushTimerRef.current)
+        remoteFlushTimerRef.current = window.setTimeout(() => {
+            remoteFlushTimerRef.current = null
+            void flushReadingProgress({ queueFirst: true })
+            void flushQueuedProgress({ maxItems: 4 })
+        }, MANGA_PROGRESS_REMOTE_FLUSH_DEBOUNCE_MS)
+    }, [flushQueuedProgress, flushReadingProgress, isLifeSyncConnected])
+
     useEffect(
         () => () => {
-            if (mdReadSyncTimer.current) clearTimeout(mdReadSyncTimer.current)
+            if (remoteFlushTimerRef.current) window.clearTimeout(remoteFlushTimerRef.current)
+            if (zoomResetTimerRef.current) window.clearTimeout(zoomResetTimerRef.current)
         },
-        []
+        [],
     )
 
     useEffect(() => {
@@ -514,11 +531,17 @@ export default function LifeSyncMangaRead() {
 
     useLayoutEffect(() => {
         const el = scrollRef.current
+        zoomChangingRef.current = false
+        if (zoomResetTimerRef.current) {
+            window.clearTimeout(zoomResetTimerRef.current)
+            zoomResetTimerRef.current = null
+        }
         if (el) el.scrollTop = 0
         setChapterReadProgress(0)
     }, [chapter?.id])
 
     const updateScrollProgress = useCallback(() => {
+        if (zoomChangingRef.current) return
         const el = scrollRef.current
         if (!el) return
         const { scrollTop, scrollHeight, clientHeight } = el
@@ -548,6 +571,40 @@ export default function LifeSyncMangaRead() {
 
     const urls = useMemo(() => (pack?.pages?.length ? pack.pages : []), [pack])
     const zoomScale = useMemo(() => Math.min(2, Math.max(0.5, Number(zoomPct) / 100)), [zoomPct])
+
+    useEffect(() => {
+        chapterReadProgressRef.current = chapterReadProgress
+    }, [chapterReadProgress])
+
+    useLayoutEffect(() => {
+        const el = scrollRef.current
+        const previousZoomPct = zoomPrevPctRef.current
+        if (!el || previousZoomPct === zoomPct) {
+            zoomPrevPctRef.current = zoomPct
+            return
+        }
+
+        const oldMax = Math.max(0, el.scrollHeight - el.clientHeight)
+        const oldProgress =
+            oldMax > 0
+                ? Math.min(1, Math.max(0, el.scrollTop / oldMax))
+                : Math.min(1, Math.max(0, chapterReadProgressRef.current))
+
+        zoomChangingRef.current = true
+        if (zoomResetTimerRef.current) window.clearTimeout(zoomResetTimerRef.current)
+
+        const raf = requestAnimationFrame(() => {
+            const newMax = Math.max(0, el.scrollHeight - el.clientHeight)
+            el.scrollTop = newMax * oldProgress
+            zoomResetTimerRef.current = window.setTimeout(() => {
+                zoomChangingRef.current = false
+                scheduleProgressUpdate()
+            }, MANGA_ZOOM_TRANSITION_MS + 30)
+        })
+
+        zoomPrevPctRef.current = zoomPct
+        return () => cancelAnimationFrame(raf)
+    }, [zoomPct, scheduleProgressUpdate])
 
     const onPageImageLoad = useCallback(() => {
         scheduleProgressUpdate()
@@ -608,6 +665,11 @@ export default function LifeSyncMangaRead() {
     }, [chapterReadProgress, chapter, manga, resumeChapterId, resumePercent])
 
     useEffect(() => {
+        if (!isLifeSyncConnected || !manga?.id || !chapter?.id) return
+        scheduleRemoteProgressFlush()
+    }, [chapter?.id, chapterReadProgress, isLifeSyncConnected, manga?.id, scheduleRemoteProgressFlush])
+
+    useEffect(() => {
         if (!manga?.id || !chapter?.id) return
         persistCurrentProgressLocal()
         const id = window.setInterval(() => {
@@ -646,6 +708,10 @@ export default function LifeSyncMangaRead() {
         return () => {
             window.removeEventListener('pagehide', onPageHide)
             window.removeEventListener('beforeunload', onBeforeUnload)
+            if (remoteFlushTimerRef.current) {
+                window.clearTimeout(remoteFlushTimerRef.current)
+                remoteFlushTimerRef.current = null
+            }
             persistCurrentProgressLocal()
             void flushReadingProgress({ queueFirst: true })
             void flushQueuedProgress({ maxItems: 6 })
@@ -739,7 +805,7 @@ export default function LifeSyncMangaRead() {
                             type="range"
                             min={50}
                             max={200}
-                            step={5}
+                            step={1}
                             value={zoomPct}
                             onChange={(e) => setZoomPct(Number(e.target.value))}
                             className="w-28 accent-[var(--mx-color-c6ff00)]"
@@ -815,7 +881,12 @@ export default function LifeSyncMangaRead() {
                 <div
                     ref={pagesInnerRef}
                     className="lifesync-manga-read-media mx-auto max-w-3xl pb-8 pt-2"
-                    style={{ transform: `scale(${zoomScale})`, transformOrigin: 'top center' }}
+                    style={{
+                        transform: `scale(${zoomScale})`,
+                        transformOrigin: 'top center',
+                        transition: `transform ${MANGA_ZOOM_TRANSITION_MS}ms cubic-bezier(0.2, 0, 0, 1)`,
+                        willChange: 'transform',
+                    }}
                 >
                     {urls.map((src, i) => (
                         <div

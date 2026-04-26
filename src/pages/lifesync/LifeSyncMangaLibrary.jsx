@@ -29,6 +29,10 @@ const SOURCE_OPTIONS = [
 ]
 const PAGE_SIZE = 25
 const SYNC_POLL_INTERVAL_MS = 1000
+const SYNC_SCOPE_OPTIONS = [
+    { id: 'needs_sync', label: 'Needs sync only' },
+    { id: 'all', label: 'All titles' },
+]
 
 const STATUS_OPTIONS = [
     { id: 'all', label: 'Any status' },
@@ -219,6 +223,10 @@ function syncJobStatusLabel(status) {
     if (s === 'completed_with_errors') return 'Completed with errors'
     if (s === 'failed') return 'Failed'
     return 'Idle'
+}
+
+function syncScopeLabel(scope) {
+    return String(scope || '').trim().toLowerCase() === 'needs_sync' ? 'Needs sync only' : 'All titles'
 }
 
 function StatusSelect({ value, onChange, disabled, className = '' }) {
@@ -448,6 +456,7 @@ export default function LifeSyncMangaLibrary() {
     const [syncBusy, setSyncBusy] = useState(false)
     const [syncJob, setSyncJob] = useState(null)
     const [syncError, setSyncError] = useState('')
+    const [syncScope, setSyncScope] = useState('needs_sync')
     const syncPollingBusyRef = useRef(false)
     const syncTerminalRefreshKeyRef = useRef('')
     const [actionBusyKeys, setActionBusyKeys] = useState(() => new Set())
@@ -693,7 +702,12 @@ export default function LifeSyncMangaLibrary() {
         setSyncError('')
         syncTerminalRefreshKeyRef.current = ''
         try {
-            const data = await lifesyncFetch('/api/v1/manga/reading/sync?mode=async&view=full', {
+            const query = new URLSearchParams({
+                mode: 'async',
+                view: 'full',
+                scope: syncScope === 'all' ? 'all' : 'needs_sync',
+            })
+            const data = await lifesyncFetch(`/api/v1/manga/reading/sync?${query.toString()}`, {
                 method: 'POST',
                 json: {},
             })
@@ -704,7 +718,7 @@ export default function LifeSyncMangaLibrary() {
         } finally {
             setSyncBusy(false)
         }
-    }, [syncBusy, syncRunning])
+    }, [syncBusy, syncRunning, syncScope])
 
     const onToggleSelect = useCallback((entry) => {
         const key = entryKey(entry)
@@ -792,7 +806,22 @@ export default function LifeSyncMangaLibrary() {
                         <h1 className="text-[22px] font-black leading-tight text-slate-900">Reading History</h1>
                         <p className="mt-1 text-[13px] text-slate-600">Track progress, manage status, and continue reading quickly.</p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                        <label className="sr-only" htmlFor="manga-sync-scope">Sync scope</label>
+                        <select
+                            id="manga-sync-scope"
+                            value={syncScope}
+                            onChange={(event) => setSyncScope(event.target.value)}
+                            disabled={syncBusy || syncRunning || anyRefreshing || Number(pageInfo?.total || 0) === 0}
+                            className="min-h-[40px] rounded-xl border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:opacity-50"
+                            title="Choose what to sync"
+                        >
+                            {SYNC_SCOPE_OPTIONS.map((opt) => (
+                                <option key={opt.id} value={opt.id}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
                         <button
                             type="button"
                             onClick={() => void onSync()}
@@ -817,7 +846,7 @@ export default function LifeSyncMangaLibrary() {
                     <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
                         <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
                             <p className="font-semibold text-slate-700">
-                                Sync {syncJobStatusLabel(syncJob.status)} · {syncProcessed}/{syncTotal}
+                                Sync {syncJobStatusLabel(syncJob.status)} ({syncScopeLabel(syncJob.scope)}) · {syncProcessed}/{syncTotal}
                             </p>
                             <p className="font-semibold text-slate-600">{Math.round(syncPercent)}%</p>
                         </div>
