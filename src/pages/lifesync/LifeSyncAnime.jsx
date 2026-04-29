@@ -37,6 +37,8 @@ import {
   lifeSyncSectionPresenceTransition,
   lifeSyncSectionPresenceVariants,
   lifeSyncSharedLayoutTransitionProps,
+  lifeSyncStaggerContainer,
+  lifeSyncStaggerItem,
   lifeSyncStaggerEpisodeGrid,
   lifeSyncStaggerEpisodeGridItem,
   MotionDiv,
@@ -436,6 +438,19 @@ function DetailWatchSection({
     [streamData, thumbMap],
   );
 
+  const dubAvailabilityLabel = useMemo(() => {
+    if (!streamEps.length) return "Dub: —";
+    let hasSignal = false;
+    let anyDub = false;
+    for (const ep of streamEps) {
+      if (typeof ep?.hasDub !== "boolean") continue;
+      hasSignal = true;
+      if (ep.hasDub) anyDub = true;
+    }
+    if (!hasSignal) return "Dub: Unknown";
+    return anyDub ? "Dub: Available" : "Dub: Not available";
+  }, [streamEps]);
+
   const resumeIndex =
     resumeLastEp != null
       ? streamEps.findIndex((e) => e.number === resumeLastEp)
@@ -471,9 +486,14 @@ function DetailWatchSection({
 
   return (
     <div className=" pt-4 space-y-3">
-      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)]">
-        Watch
-      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)]">
+          Watch
+        </p>
+        <span className="inline-flex items-center rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-5b5670)]">
+          {dubAvailabilityLabel}
+        </span>
+      </div>
       <AnimatePresence mode="sync" initial={false}>
         {streamBusy ? (
           <MotionDiv
@@ -1733,11 +1753,14 @@ export default function LifeSyncAnime() {
         ) : null}
       </AnimatePresence>
 
-      <div
+      <MotionDiv
         className="flex flex-col gap-5 sm:gap-6"
         style={{ pointerEvents: detailId ? "none" : undefined }}
+        variants={lifeSyncStaggerContainer}
+        initial="hidden"
+        animate="show"
       >
-      <div className="flex items-start justify-between gap-3 sm:gap-4">
+      <MotionDiv className="flex items-start justify-between gap-3 sm:gap-4" variants={lifeSyncStaggerItem}>
         <div className="min-w-0">
           <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">
             LifeSync / Anime
@@ -1777,7 +1800,7 @@ export default function LifeSyncAnime() {
             </button>
           )}
         </div>
-      </div>
+      </MotionDiv>
 
       {oauthMsg && !error && (
         <div className="bg-green-50 text-green-700 text-[12px] font-medium px-4 py-3 rounded-xl border border-green-100">
@@ -1791,6 +1814,9 @@ export default function LifeSyncAnime() {
         </div>
       )}
 
+      <MotionDiv
+        variants={lifeSyncStaggerItem}
+      >
       <form
         onSubmit={handleSearch}
         className="flex flex-col gap-2 items-stretch sm:flex-row sm:flex-wrap"
@@ -1810,7 +1836,9 @@ export default function LifeSyncAnime() {
           {searching ? "Searching..." : "Search"}
         </button>
       </form>
+      </MotionDiv>
 
+      <MotionDiv variants={lifeSyncStaggerItem}>
       <LifeSyncSectionNav
         ariaLabel="Anime lists"
         layoutId="lifesync-anime-main-tab"
@@ -1818,6 +1846,7 @@ export default function LifeSyncAnime() {
         activeId={tab}
         onSelect={(id) => goToTab(id)}
       />
+      </MotionDiv>
 
       {tab === "seasonal" && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap -mt-2">
@@ -1891,16 +1920,17 @@ export default function LifeSyncAnime() {
       )}
 
       {/* List + pager only — tab filters above stay put */}
-      <AnimatePresence mode="wait">
-        <MotionDiv
-          key={tab}
-          className="space-y-4"
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          variants={lifeSyncSectionPresenceVariants}
-          transition={lifeSyncSectionPresenceTransition}
-        >
+      <MotionDiv variants={lifeSyncStaggerItem}>
+        <AnimatePresence mode="wait">
+          <MotionDiv
+            key={tab}
+            className="space-y-4"
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            variants={lifeSyncSectionPresenceVariants}
+            transition={lifeSyncSectionPresenceTransition}
+          >
       {tab === "mylist" && currentItems.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {currentItems.map((item) => (
@@ -1990,10 +2020,11 @@ export default function LifeSyncAnime() {
           </div>
         </div>
       )}
-        </MotionDiv>
-      </AnimatePresence>
+          </MotionDiv>
+        </AnimatePresence>
+      </MotionDiv>
 
-      </div>
+      </MotionDiv>
     </MotionDiv>
   );
 }

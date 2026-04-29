@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { FaBookOpen, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTrashAlt } from 'react-icons/fa'
+import { FaBookOpen, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
@@ -12,7 +12,9 @@ import {
     MotionDiv,
     lifeSyncEaseOut,
     lifeSyncPageTransition,
+    lifeSyncStaggerContainer,
     lifeSyncStaggerContainerDense,
+    lifeSyncStaggerItem,
     lifeSyncStaggerItemFade,
 } from '../../lib/lifesyncMotion'
 
@@ -98,6 +100,53 @@ function relativeTouch(iso) {
     }
 }
 
+function formatDateLabel(iso) {
+    if (!iso) return '—'
+    try {
+        return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
+    } catch {
+        return '—'
+    }
+}
+
+function parseIsoTime(value) {
+    const t = Date.parse(String(value || ''))
+    return Number.isFinite(t) ? t : 0
+}
+
+function latestChapterReleaseAt(entry) {
+    const candidates = [
+        entry?.remoteLatestChapterReleaseAt,
+        entry?.remoteLatestChapterReadableAt,
+        entry?.remoteLatestChapterPublishAt,
+    ]
+    let bestIso = ''
+    let bestTime = 0
+    for (const iso of candidates) {
+        const t = parseIsoTime(iso)
+        if (!t) continue
+        if (t >= bestTime) {
+            bestTime = t
+            bestIso = String(iso)
+        }
+    }
+    return bestIso
+}
+
+function collectEntryTags(entry, limit = 8) {
+    const raw = Array.isArray(entry?.tags) ? entry.tags : []
+    const seen = new Set()
+    const out = []
+    for (const row of raw) {
+        const text = String(row || '').trim()
+        if (!text || seen.has(text)) continue
+        seen.add(text)
+        out.push(text)
+        if (out.length >= limit) break
+    }
+    return out
+}
+
 function isFinishedManga(entry) {
     return entry?.seriesEnded === true
 }
@@ -137,6 +186,113 @@ function resumeTarget(entry, browseTranslatedLang) {
     }
 }
 
+function DetailModal({ entry, onClose, onContinue }) {
+    if (!entry) return null
+    const tags = collectEntryTags(entry, 18)
+    const latestReleaseDate = latestChapterReleaseAt(entry)
+    const chapterProgress = chapterProgressSnapshot(entry)
+    const heroImageUrl = entry.backgroundImageUrl || entry.coverUrl || ''
+    return (
+        <MotionDiv
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+        >
+            <MotionDiv
+                className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-[var(--color-surface)] shadow-2xl"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 18 }}
+                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="relative aspect-[3/1] overflow-hidden bg-slate-100">
+                    {heroImageUrl ? (
+                        <LifesyncEpisodeThumbnail
+                            src={heroImageUrl}
+                            className="absolute inset-0 h-full w-full"
+                            imgClassName="h-full w-full object-cover"
+                            imgProps={mangaImageProps(heroImageUrl)}
+                        />
+                    ) : null}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/20" />
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white hover:bg-black/65"
+                        aria-label="Close"
+                    >
+                        <FaTimes className="h-4 w-4" />
+                    </button>
+                    <div className="absolute bottom-3 left-3 right-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/85">{sourceLabel(entry.source)}</p>
+                        <h2 className="mt-1 line-clamp-2 text-[18px] font-bold leading-tight text-white">
+                            {decodeHtmlEntities(entry.title) || 'Untitled'}
+                        </h2>
+                    </div>
+                </div>
+                <div className="space-y-3 p-4">
+                    <div className="grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-3">
+                        <div className="rounded-lg bg-slate-50 p-2">
+                            <p className="text-slate-500">Last read</p>
+                            <p className="mt-0.5 font-semibold text-slate-900">{entry.lastChapterLabel || '—'}</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 p-2">
+                            <p className="text-slate-500">Latest</p>
+                            <p className="mt-0.5 font-semibold text-slate-900">{entry.remoteLatestChapterLabel || '—'}</p>
+                        </div>
+                        <div className="rounded-lg bg-slate-50 p-2">
+                            <p className="text-slate-500">Last release</p>
+                            <p className="mt-0.5 font-semibold text-slate-900">{formatDateLabel(latestReleaseDate)}</p>
+                        </div>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                        <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700">
+                            <span>Current: {chapterProgress.currentLabel}</span>
+                            <span>Latest: {chapterProgress.latestLabel}</span>
+                        </div>
+                        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                            <div
+                                className="lifesync-manga-history-progress-fill h-full rounded-full"
+                                style={{ width: `${chapterProgress.percent}%`, backgroundColor: 'var(--mx-color-c6ff00)' }}
+                            />
+                        </div>
+                    </div>
+                    {tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                            {tags.map((tag) => (
+                                <span
+                                    key={tag}
+                                    className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-1 text-[10px] font-semibold text-slate-700"
+                                >
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                    ) : null}
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => onContinue(entry)}
+                            className="inline-flex min-h-[42px] flex-1 items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-4 text-[13px] font-bold text-slate-900 hover:brightness-95"
+                        >
+                            Continue
+                        </button>
+                        <Link
+                            to={MANGA_BASE}
+                            className="inline-flex min-h-[42px] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-[var(--color-surface)] px-4 text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                            Browse
+                        </Link>
+                    </div>
+                </div>
+            </MotionDiv>
+        </MotionDiv>
+    )
+}
+
 function statusLabel(status) {
     if (!status) return 'No status'
     const row = STATUS_OPTIONS.find((opt) => opt.id === status)
@@ -170,6 +326,24 @@ function calculateProgressPercent(entry) {
 
     if (entry?.caughtUp && !entry?.hasNewChapter) return 100
     return clampPercent(Number(entry?.lastReadPercent || 0))
+}
+
+function chapterProgressSnapshot(entry) {
+    const lastNum = parseChapterNum(entry?.lastChapterLabel)
+    const latestNum = parseChapterNum(entry?.remoteLatestChapterLabel)
+    if (Number.isFinite(lastNum) && Number.isFinite(latestNum) && latestNum > 0) {
+        const normalizedCurrent = Math.min(lastNum, latestNum)
+        return {
+            currentLabel: `Ch ${formatChapterNum(normalizedCurrent)}`,
+            latestLabel: `Ch ${formatChapterNum(latestNum)}`,
+            percent: Math.round(clampPercent((normalizedCurrent / latestNum) * 100) * 10) / 10,
+        }
+    }
+    return {
+        currentLabel: entry?.lastChapterLabel || '—',
+        latestLabel: entry?.remoteLatestChapterLabel || (entry?.needsSync ? 'Sync needed' : '—'),
+        percent: calculateProgressPercent(entry),
+    }
 }
 
 function progressDetailLabel(entry) {
@@ -306,18 +480,22 @@ function LibraryMangaCard({
     onToggleSelect,
     onStatusChange,
     onRequestRemove,
+    onOpenDetail,
 }) {
     const { to, state } = resumeTarget(entry, browseTranslatedLang)
     const progressPercent = calculateProgressPercent(entry)
+    const chapterProgress = chapterProgressSnapshot(entry)
+    const latestReleaseDate = latestChapterReleaseAt(entry)
+    const cardTags = collectEntryTags(entry, 5)
 
     return (
         <MotionLi
             variants={lifeSyncStaggerItemFade}
-            className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-[var(--color-surface)] shadow-sm transition hover:shadow-md"
+            className="group relative flex min-w-0 flex-col overflow-visible rounded-2xl border border-slate-200 bg-[var(--color-surface)] shadow-sm transition hover:shadow-md"
             whileHover={{ y: -2, transition: { type: 'tween', duration: 0.2, ease: lifeSyncEaseOut } }}
         >
             <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-100">
-                <Link to={to} state={state} className="absolute inset-0 block">
+                <button type="button" onClick={() => onOpenDetail(entry)} className="absolute inset-0 block text-left">
                     {entry.coverUrl ? (
                         <LifesyncEpisodeThumbnail
                             src={entry.coverUrl}
@@ -331,7 +509,7 @@ function LibraryMangaCard({
                         </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                </Link>
+                </button>
 
                 <div className="absolute left-2 top-2 z-20 flex items-center gap-1.5">
                     <button
@@ -375,8 +553,6 @@ function LibraryMangaCard({
                     </h3>
                     <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-white/85">{sourceLabel(entry.source)}</p>
                 </div>
-
-                {entry.seriesEnded ? <SeriesCompleteBadge /> : null}
             </div>
 
             <div className="flex flex-1 flex-col gap-2 border-t border-slate-100 px-3 pb-2 pt-3">
@@ -385,6 +561,10 @@ function LibraryMangaCard({
                     <div className="flex items-center justify-between gap-2 text-[10px] font-semibold">
                         <span className="text-slate-600">{statusLabel(entry.readingStatus)}</span>
                         <span className="text-slate-800">{Math.round(progressPercent)}%</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[9px] font-medium text-slate-500">
+                        <span className="truncate">Current: {chapterProgress.currentLabel}</span>
+                        <span className="truncate text-right">Latest: {chapterProgress.latestLabel}</span>
                     </div>
                     <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
                         <div
@@ -407,9 +587,26 @@ function LibraryMangaCard({
                         <p className="mt-0.5 truncate text-slate-700 font-medium">
                             {entry.remoteLatestChapterLabel || (entry.needsSync ? 'Sync needed' : '—')}
                         </p>
-                        <p className="text-slate-400">{entry.needsSync ? 'pending' : 'up to date'}</p>
+                        <p className="text-slate-400">{latestReleaseDate ? formatDateLabel(latestReleaseDate) : (entry.needsSync ? 'pending' : 'up to date')}</p>
                     </div>
                 </div>
+                {cardTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                        {cardTags.slice(0, 4).map((tag) => (
+                            <span
+                                key={tag}
+                                className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-semibold text-slate-600"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                        {cardTags.length > 4 ? (
+                            <span className="rounded-full border border-slate-200 bg-[var(--color-surface)] px-2 py-0.5 text-[9px] font-semibold text-slate-500">
+                                +{cardTags.length - 4}
+                            </span>
+                        ) : null}
+                    </div>
+                ) : null}
 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 gap-1.5 pt-1">
@@ -465,6 +662,7 @@ export default function LifeSyncMangaLibrary() {
     const [selectedKeys, setSelectedKeys] = useState(() => new Set())
 
     const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, entry: null })
+    const [detailEntry, setDetailEntry] = useState(null)
 
     const sourceOptions = useMemo(() => {
         if (hManhwaEnabled) return SOURCE_OPTIONS
@@ -663,6 +861,17 @@ export default function LifeSyncMangaLibrary() {
     const onRequestDelete = useCallback((entry) => {
         setDeleteConfirmation({ isOpen: true, entry })
     }, [])
+    const onOpenDetail = useCallback((entry) => {
+        setDetailEntry(entry || null)
+    }, [])
+    const onCloseDetail = useCallback(() => {
+        setDetailEntry(null)
+    }, [])
+    const onContinueFromDetail = useCallback((entry) => {
+        const { to, state } = resumeTarget(entry, browseTranslatedLang)
+        setDetailEntry(null)
+        navigate(to, { state: state || undefined })
+    }, [browseTranslatedLang, navigate])
 
     const onCancelDelete = useCallback(() => {
         setDeleteConfirmation({ isOpen: false, entry: null })
@@ -799,6 +1008,13 @@ export default function LifeSyncMangaLibrary() {
             animate={{ opacity: 1, y: 0 }}
             transition={lifeSyncPageTransition}
         >
+            <MotionDiv
+                className="space-y-4"
+                variants={lifeSyncStaggerContainer}
+                initial="hidden"
+                animate="show"
+            >
+            <MotionDiv variants={lifeSyncStaggerItem}>
             <section className="rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
@@ -885,7 +1101,9 @@ export default function LifeSyncMangaLibrary() {
                     </div>
                 </div>
             </section>
+            </MotionDiv>
 
+            <MotionDiv variants={lifeSyncStaggerItem}>
             <section className="rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
                 <div className="flex items-center justify-between gap-2">
                     <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-600">
@@ -972,6 +1190,7 @@ export default function LifeSyncMangaLibrary() {
                     ) : null}
                 </div>
             </section>
+            </MotionDiv>
 
             {anyRefreshing && !initialLoading ? (
                 <div className="overflow-hidden rounded-lg border border-amber-100 bg-[var(--color-surface)]">
@@ -1023,6 +1242,7 @@ export default function LifeSyncMangaLibrary() {
                 </section>
             ) : null}
 
+            <MotionDiv variants={lifeSyncStaggerItem}>
             {initialLoading && listEntries.length === 0 ? (
                 <div className="rounded-2xl border border-slate-100 bg-[var(--color-surface)]/60 p-5 sm:p-6">
                     <LifesyncMediaLibraryPageSkeleton
@@ -1152,6 +1372,7 @@ export default function LifeSyncMangaLibrary() {
                                     onToggleSelect={onToggleSelect}
                                     onStatusChange={onStatusChange}
                                     onRequestRemove={onRequestDelete}
+                                    onOpenDetail={onOpenDetail}
                                 />
                             )
                         })}
@@ -1180,6 +1401,7 @@ export default function LifeSyncMangaLibrary() {
                     </div>
                 </>
             )}
+            </MotionDiv>
 
             <ConfirmationModal
                 isOpen={deleteConfirmation.isOpen}
@@ -1190,6 +1412,16 @@ export default function LifeSyncMangaLibrary() {
                 onConfirm={onConfirmDelete}
                 onCancel={onCancelDelete}
             />
+            <AnimatePresence>
+                {detailEntry ? (
+                    <DetailModal
+                        entry={detailEntry}
+                        onClose={onCloseDetail}
+                        onContinue={onContinueFromDetail}
+                    />
+                ) : null}
+            </AnimatePresence>
+            </MotionDiv>
         </MotionDiv>
     )
 }

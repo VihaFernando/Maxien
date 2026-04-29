@@ -1574,9 +1574,9 @@ export default function LifeSyncManga() {
         try {
             const lastChapterId = String(entry?.lastChapterId || '').trim()
             const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
-            const openLatest = Boolean(entry?.hasNewChapter) && latestChapterId && latestChapterId !== lastChapterId
-            const preferredChapterId = openLatest ? latestChapterId : lastChapterId
-            const preferredResumePercent = openLatest ? 0 : Number(entry?.lastReadPercent || 0)
+            // Keep user position stable: continue from the last saved chapter first.
+            const preferredChapterId = lastChapterId || latestChapterId
+            const preferredResumePercent = Number(entry?.lastReadPercent || 0)
 
             if (
                 !hManhwaEnabled &&

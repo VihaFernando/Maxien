@@ -151,6 +151,22 @@ export default function LifeSyncAdmin() {
     const [capabilities, setCapabilities] = useState(null)
     const [health, setHealth] = useState(null)
     const [healthBusy, setHealthBusy] = useState(false)
+    const [animeDb, setAnimeDb] = useState(null)
+    const [animeDbBusy, setAnimeDbBusy] = useState(false)
+    const [animeDbError, setAnimeDbError] = useState('')
+    const [auditSummary, setAuditSummary] = useState(null)
+    const [auditBusy, setAuditBusy] = useState(false)
+    const [auditError, setAuditError] = useState('')
+    const [cacheFlushBusy, setCacheFlushBusy] = useState(false)
+    const [animeCleanupBusy, setAnimeCleanupBusy] = useState(false)
+    const [opsMessage, setOpsMessage] = useState('')
+    const [opsError, setOpsError] = useState('')
+
+    const [maintenanceUserId, setMaintenanceUserId] = useState('')
+    const [maintenanceBusy, setMaintenanceBusy] = useState(false)
+    const [maintenanceError, setMaintenanceError] = useState('')
+    const [maintenanceResult, setMaintenanceResult] = useState(null)
+    const [unlinkIntegration, setUnlinkIntegration] = useState('mal')
 
     const [activityAnime, setActivityAnime] = useState(null)
     const [activityManga, setActivityManga] = useState(null)
@@ -158,6 +174,11 @@ export default function LifeSyncAdmin() {
     const [activityError, setActivityError] = useState('')
     const [v1Health, setV1Health] = useState(null)
     const [v1HealthError, setV1HealthError] = useState('')
+
+    const [malCheckId, setMalCheckId] = useState('')
+    const [malCheckBusy, setMalCheckBusy] = useState(false)
+    const [malCheckResult, setMalCheckResult] = useState(null)
+
 
     const hasToken = Boolean(getLifesyncToken())
     const allowed = isLifeSyncAdmin(lifeSyncUser)
@@ -197,6 +218,20 @@ export default function LifeSyncAdmin() {
                 setHealth(await lifesyncFetch('/api/v1/admin/health', { method: 'GET' }))
             } catch {
                 setHealth(null)
+            }
+            try {
+                setAnimeDb(await lifesyncFetch('/api/v1/admin/anime-db/summary', { method: 'GET' }))
+                setAnimeDbError('')
+            } catch (e) {
+                setAnimeDb(null)
+                setAnimeDbError(e?.message || 'Could not load anime DB summary.')
+            }
+            try {
+                setAuditSummary(await lifesyncFetch('/api/v1/admin/audit/summary', { method: 'GET' }))
+                setAuditError('')
+            } catch (e) {
+                setAuditSummary(null)
+                setAuditError(e?.message || 'Could not load audit summary.')
             }
         } catch (e) {
             if (e.status === 403) {
@@ -241,6 +276,62 @@ export default function LifeSyncAdmin() {
         }
     }
 
+    const refreshAnimeDb = async () => {
+        setAnimeDbBusy(true)
+        setAnimeDbError('')
+        try {
+            setAnimeDb(await lifesyncFetch('/api/v1/admin/anime-db/summary', { method: 'GET' }))
+        } catch (e) {
+            setAnimeDb(null)
+            setAnimeDbError(e?.message || 'Could not load anime DB summary.')
+        } finally {
+            setAnimeDbBusy(false)
+        }
+    }
+
+    const refreshAudit = async () => {
+        setAuditBusy(true)
+        setAuditError('')
+        try {
+            setAuditSummary(await lifesyncFetch('/api/v1/admin/audit/summary', { method: 'GET' }))
+        } catch (e) {
+            setAuditSummary(null)
+            setAuditError(e?.message || 'Could not load audit summary.')
+        } finally {
+            setAuditBusy(false)
+        }
+    }
+
+    const runCacheFlush = async () => {
+        setOpsMessage('')
+        setOpsError('')
+        setCacheFlushBusy(true)
+        try {
+            const data = await lifesyncFetch('/api/v1/admin/cache/flush', { method: 'POST' })
+            const flushed = Array.isArray(data?.flushed) ? data.flushed.join(', ') : 'cache flush complete'
+            setOpsMessage(`Flushed: ${flushed}`)
+        } catch (e) {
+            setOpsError(e?.message || 'Cache flush failed.')
+        } finally {
+            setCacheFlushBusy(false)
+        }
+    }
+
+    const runAnimeCleanup = async () => {
+        setOpsMessage('')
+        setOpsError('')
+        setAnimeCleanupBusy(true)
+        try {
+            const data = await lifesyncFetch('/api/v1/admin/anime-db/cleanup', { method: 'POST' })
+            const modified = data?.modified ?? 0
+            setOpsMessage(`Anime cache cleanup updated ${modified} rows.`)
+        } catch (e) {
+            setOpsError(e?.message || 'Anime cache cleanup failed.')
+        } finally {
+            setAnimeCleanupBusy(false)
+        }
+    }
+
     const runLookup = async () => {
         const q = lookupEmail.trim()
         if (!q) {
@@ -282,6 +373,61 @@ export default function LifeSyncAdmin() {
             setLookupIdResult({ error: e?.message || 'Lookup failed.' })
         } finally {
             setLookupIdBusy(false)
+        }
+    }
+
+    const runUserMaintenance = async (path, options = {}) => {
+        const id = maintenanceUserId.trim()
+        if (!id) {
+            setMaintenanceError('Enter a user id to run maintenance actions.')
+            return
+        }
+        if (!/^[a-fA-F0-9]{24}$/.test(id)) {
+            setMaintenanceError('User id must be 24 hex characters (Mongo ObjectId).')
+            return
+        }
+        setMaintenanceBusy(true)
+        setMaintenanceError('')
+        setMaintenanceResult(null)
+        try {
+            const data = await lifesyncFetch(`/api/v1/admin/users/${encodeURIComponent(id)}/${path}`, {
+                method: 'POST',
+                ...options,
+            })
+            setMaintenanceResult(data)
+        } catch (e) {
+            setMaintenanceError(e?.message || 'Maintenance action failed.')
+        } finally {
+            setMaintenanceBusy(false)
+        }
+    }
+
+    const runUnlinkIntegration = async () => {
+        await runUserMaintenance('unlink', { json: { integration: unlinkIntegration } })
+    }
+
+
+    const runMalCheck = async () => {
+        const id = malCheckId.trim()
+        if (!id) {
+            setMalCheckResult({ error: 'Enter a MAL anime id.' })
+            return
+        }
+        if (!/^\d+$/.test(id)) {
+            setMalCheckResult({ error: 'MAL id must be numeric.' })
+            return
+        }
+        setMalCheckBusy(true)
+        setMalCheckResult(null)
+        try {
+            const data = await lifesyncFetch(`/api/v1/admin/mal/check?malId=${encodeURIComponent(id)}`, {
+                method: 'GET',
+            })
+            setMalCheckResult(data)
+        } catch (e) {
+            setMalCheckResult({ error: e?.message || 'MAL check failed.' })
+        } finally {
+            setMalCheckBusy(false)
         }
     }
 
@@ -396,6 +542,29 @@ export default function LifeSyncAdmin() {
     const recent = Array.isArray(overview?.recentSignups) ? overview.recentSignups : []
     const animeRows = Array.isArray(activityAnime?.rows) ? activityAnime.rows : []
     const mangaRows = Array.isArray(activityManga?.rows) ? activityManga.rows : []
+    const auditAnimeSample = Array.isArray(auditSummary?.progressOrphans?.anime?.sample)
+        ? auditSummary.progressOrphans.anime.sample
+        : []
+    const auditMangaSample = Array.isArray(auditSummary?.progressOrphans?.manga?.sample)
+        ? auditSummary.progressOrphans.manga.sample
+        : []
+    const maintenanceSummary = (() => {
+        if (!maintenanceResult) return ''
+        if (maintenanceResult.ok) {
+            if (typeof maintenanceResult.cleared === 'number') {
+                return `Cleared ${maintenanceResult.cleared} entries.`
+            }
+            if (typeof maintenanceResult.deleted === 'number') {
+                return `Deleted ${maintenanceResult.deleted} wishlist items.`
+            }
+            if (maintenanceResult.integration) {
+                return `Unlinked ${maintenanceResult.integration}.`
+            }
+            return 'Action completed.'
+        }
+        if (maintenanceResult.found === false && maintenanceResult.message) return maintenanceResult.message
+        return ''
+    })()
 
     return (
         <div className="mx-auto max-w-6xl px-2 pb-12 sm:px-0">
@@ -638,6 +807,225 @@ export default function LifeSyncAdmin() {
                     </Panel>
 
                     <Panel>
+                        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                            <SectionIntro title="Anime DB snapshot">
+                                Cache coverage for AnimeData (stream pointers + MAL detail).
+                            </SectionIntro>
+                            <button
+                                type="button"
+                                disabled={animeDbBusy}
+                                onClick={refreshAnimeDb}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[11px] font-semibold text-apple-text disabled:opacity-50"
+                            >
+                                {animeDbBusy ? 'Refreshing…' : 'Refresh'}
+                            </button>
+                        </div>
+                        {animeDbError ? (
+                            <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                                {animeDbError}
+                            </p>
+                        ) : null}
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <MetricCard label="AnimeData rows" value={animeDb?.totals?.totalRows} />
+                            <MetricCard
+                                label="Stale rows"
+                                value={animeDb?.totals?.staleRows}
+                                hint={
+                                    animeDb?.window?.staleAfterDays
+                                        ? `>${animeDb.window.staleAfterDays} days`
+                                        : undefined
+                                }
+                            />
+                            <MetricCard label="With streams" value={animeDb?.totals?.withStreams} />
+                            <MetricCard label="With MAL detail" value={animeDb?.totals?.withMalDetail} />
+                        </div>
+                        <div className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
+                            <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Newest</p>
+                                <p className="mt-1 font-mono text-apple-text">
+                                    {animeDb?.newest?.malId ? `MAL ${animeDb.newest.malId}` : '—'}
+                                </p>
+                                <p className="mt-1 text-apple-subtext">{animeDb?.newest?.title || '—'}</p>
+                                <p className="mt-1 font-mono text-[11px] text-apple-subtext">
+                                    {animeDb?.newest?.fetchedAt || '—'}
+                                </p>
+                            </div>
+                            <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Oldest</p>
+                                <p className="mt-1 font-mono text-apple-text">
+                                    {animeDb?.oldest?.malId ? `MAL ${animeDb.oldest.malId}` : '—'}
+                                </p>
+                                <p className="mt-1 text-apple-subtext">{animeDb?.oldest?.title || '—'}</p>
+                                <p className="mt-1 font-mono text-[11px] text-apple-subtext">
+                                    {animeDb?.oldest?.fetchedAt || '—'}
+                                </p>
+                            </div>
+                        </div>
+                    </Panel>
+
+                    <Panel>
+                        <SectionIntro title="MAL id check">
+                            Validate a MAL anime id against the cache and the MAL API.
+                        </SectionIntro>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                            <input
+                                autoComplete="off"
+                                placeholder="MAL anime id"
+                                value={malCheckId}
+                                onChange={(e) => setMalCheckId(e.target.value.trim())}
+                                className="min-w-0 flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
+                            />
+                            <button
+                                type="button"
+                                disabled={malCheckBusy}
+                                onClick={runMalCheck}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-4 py-2.5 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                            >
+                                {malCheckBusy ? 'Checking…' : 'Check'}
+                            </button>
+                        </div>
+                        {malCheckResult?.error ? (
+                            <p className="mt-2 text-[12px] text-amber-800">{malCheckResult.error}</p>
+                        ) : null}
+                        {malCheckResult && !malCheckResult.error ? (
+                            <div className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Cache</p>
+                                    <p className="mt-1 text-apple-text">
+                                        {malCheckResult.db?.found ? 'Found' : 'Not found'}
+                                    </p>
+                                    <p className="mt-1 font-mono text-[11px] text-apple-subtext">
+                                        {malCheckResult.db?.malId ? `MAL ${malCheckResult.db.malId}` : '—'}
+                                    </p>
+                                    <p className="mt-1 text-apple-subtext">{malCheckResult.db?.title || '—'}</p>
+                                    <p className="mt-1 text-apple-subtext">
+                                        Streams: {malCheckResult.db?.hasStreams ? 'yes' : 'no'}
+                                    </p>
+                                    <p className="mt-1 text-apple-subtext">
+                                        MAL detail: {malCheckResult.db?.malDetailCached ? 'yes' : 'no'}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">MAL</p>
+                                    {malCheckResult.mal?.ok ? (
+                                        <>
+                                            <p className="mt-1 text-apple-text">OK</p>
+                                            <p className="mt-1 font-mono text-[11px] text-apple-subtext">
+                                                {malCheckResult.mal?.id ? `MAL ${malCheckResult.mal.id}` : '—'}
+                                            </p>
+                                            <p className="mt-1 text-apple-subtext">{malCheckResult.mal?.title || '—'}</p>
+                                            <p className="mt-1 text-apple-subtext">
+                                                Status: {malCheckResult.mal?.status || '—'}
+                                            </p>
+                                            <p className="mt-1 text-apple-subtext">
+                                                Episodes: {malCheckResult.mal?.numEpisodes ?? '—'}
+                                            </p>
+                                        </>
+                                    ) : (
+                                        <p className="mt-1 text-amber-800">
+                                            {malCheckResult.mal?.error || 'MAL lookup failed.'}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        ) : null}
+                    </Panel>
+
+                    <Panel>
+                        <SectionIntro title="Maintenance actions">
+                            Run cache and system maintenance tasks.
+                        </SectionIntro>
+                        {opsError ? (
+                            <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                                {opsError}
+                            </p>
+                        ) : null}
+                        {opsMessage ? (
+                            <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] text-emerald-900">
+                                {opsMessage}
+                            </p>
+                        ) : null}
+                        <div className="flex flex-wrap gap-2">
+                            <button
+                                type="button"
+                                disabled={cacheFlushBusy}
+                                onClick={runCacheFlush}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                            >
+                                {cacheFlushBusy ? 'Flushing…' : 'Flush caches'}
+                            </button>
+                            <button
+                                type="button"
+                                disabled={animeCleanupBusy}
+                                onClick={runAnimeCleanup}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                            >
+                                {animeCleanupBusy ? 'Cleaning…' : 'Anime cache cleanup'}
+                            </button>
+                        </div>
+                    </Panel>
+
+                    <Panel>
+                        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                            <SectionIntro title="Data audits">
+                                Cache coverage and orphan checks (sampled when large).
+                            </SectionIntro>
+                            <button
+                                type="button"
+                                disabled={auditBusy}
+                                onClick={refreshAudit}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[11px] font-semibold text-apple-text disabled:opacity-50"
+                            >
+                                {auditBusy ? 'Refreshing…' : 'Refresh'}
+                            </button>
+                        </div>
+                        {auditError ? (
+                            <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                                {auditError}
+                            </p>
+                        ) : null}
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <MetricCard label="Anime cache total" value={auditSummary?.animeCache?.total} />
+                            <MetricCard label="Anime missing streams" value={auditSummary?.animeCache?.missingStreams} />
+                            <MetricCard label="Anime missing MAL" value={auditSummary?.animeCache?.missingMalDetail} />
+                            <MetricCard label="Anime stale" value={auditSummary?.animeCache?.stale} />
+                            <MetricCard label="Manga cache total" value={auditSummary?.mangaCache?.total} />
+                            <MetricCard label="Manga missing details" value={auditSummary?.mangaCache?.missingDetails} />
+                            <MetricCard label="Manga details stale" value={auditSummary?.mangaCache?.staleDetails} />
+                        </div>
+                        <div className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
+                            <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Anime progress orphans</p>
+                                <p className="mt-1 text-apple-text">
+                                    Missing: {auditSummary?.progressOrphans?.anime?.missingCount ?? '—'}
+                                </p>
+                                <p className="mt-1 text-[11px] text-apple-subtext">
+                                    Sampled: {auditSummary?.progressOrphans?.anime?.sampled ? 'yes' : 'no'}
+                                </p>
+                                {auditAnimeSample.length ? (
+                                    <p className="mt-2 font-mono text-[11px] text-apple-subtext">
+                                        {auditAnimeSample.join(', ')}
+                                    </p>
+                                ) : null}
+                            </div>
+                            <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Manga progress orphans</p>
+                                <p className="mt-1 text-apple-text">
+                                    Missing: {auditSummary?.progressOrphans?.manga?.missingCount ?? '—'}
+                                </p>
+                                <p className="mt-1 text-[11px] text-apple-subtext">
+                                    Sampled: {auditSummary?.progressOrphans?.manga?.sampled ? 'yes' : 'no'}
+                                </p>
+                                {auditMangaSample.length ? (
+                                    <p className="mt-2 font-mono text-[11px] text-apple-subtext">
+                                        {auditMangaSample.map((row) => `${row.source}:${row.mangaId}`).join(', ')}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                    </Panel>
+
+                    <Panel>
                         <SectionIntro title="API & deployment">Static flags from the last overview request.</SectionIntro>
                         <div className="flex flex-wrap gap-2">
                             <BoolPill ok={s?.mongoReady} label={s?.mongoReady ? 'Mongo ready' : 'Mongo not ready'} />
@@ -697,7 +1085,7 @@ export default function LifeSyncAdmin() {
                                 <thead className="bg-apple-bg text-[10px] font-bold uppercase tracking-wider text-apple-subtext">
                                     <tr>
                                         <th className="px-3 py-2">When</th>
-                                        <th className="px-3 py-2">User</th>
+                                        <th className="px-3 py-2">User id</th>
                                         <th className="px-3 py-2">MAL</th>
                                         <th className="px-3 py-2">Episode</th>
                                         <th className="px-3 py-2">Actions</th>
@@ -722,7 +1110,9 @@ export default function LifeSyncAdmin() {
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px] text-apple-subtext">
                                                     {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
                                                 </td>
-                                                <td className="px-3 py-2 text-apple-subtext">{row.emailMasked}</td>
+                                                <td className="max-w-40 truncate px-3 py-2 font-mono text-[11px] text-apple-subtext">
+                                                    {row.userId || '—'}
+                                                </td>
                                                 <td className="px-3 py-2 font-mono text-[11px]">{row.malId || '—'}</td>
                                                 <td className="px-3 py-2 tabular-nums">{row.lastEpisodeNumber ?? '—'}</td>
                                                 <td className="px-2 py-2">
@@ -757,8 +1147,8 @@ export default function LifeSyncAdmin() {
                                         </p>
                                         <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
                                             <div>
-                                                <p className="text-[10px] uppercase tracking-wide text-apple-subtext">User</p>
-                                                <p className="truncate text-apple-text">{row.emailMasked || '—'}</p>
+                                                <p className="text-[10px] uppercase tracking-wide text-apple-subtext">User id</p>
+                                                <p className="truncate font-mono text-apple-text">{row.userId || '—'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">MAL</p>
@@ -791,7 +1181,7 @@ export default function LifeSyncAdmin() {
                                 <thead className="bg-apple-bg text-[10px] font-bold uppercase tracking-wider text-apple-subtext">
                                     <tr>
                                         <th className="px-3 py-2">When</th>
-                                        <th className="px-3 py-2">User</th>
+                                        <th className="px-3 py-2">User id</th>
                                         <th className="px-3 py-2">Source</th>
                                         <th className="px-3 py-2">Title</th>
                                         <th className="px-3 py-2">Chapter</th>
@@ -817,8 +1207,8 @@ export default function LifeSyncAdmin() {
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px] text-apple-subtext">
                                                     {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
                                                 </td>
-                                                <td className="max-w-30 truncate px-3 py-2 text-apple-subtext">
-                                                    {row.emailMasked}
+                                                <td className="max-w-40 truncate px-3 py-2 font-mono text-[11px] text-apple-subtext">
+                                                    {row.userId || '—'}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px]">
                                                     {row.source || '—'}
@@ -861,8 +1251,8 @@ export default function LifeSyncAdmin() {
                                         </p>
                                         <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
                                             <div>
-                                                <p className="text-[10px] uppercase tracking-wide text-apple-subtext">User</p>
-                                                <p className="truncate text-apple-text">{row.emailMasked || '—'}</p>
+                                                <p className="text-[10px] uppercase tracking-wide text-apple-subtext">User id</p>
+                                                <p className="truncate font-mono text-apple-text">{row.userId || '—'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Source</p>
@@ -965,7 +1355,89 @@ export default function LifeSyncAdmin() {
                     </Panel>
 
                     <Panel>
-                        <SectionIntro title="Recent signups">Newest LifeSync accounts (masked email).</SectionIntro>
+                        <SectionIntro title="User maintenance">
+                            Clear stored user data or unlink integrations (affects the user immediately).
+                        </SectionIntro>
+                        <div className="grid gap-4 lg:grid-cols-3">
+                            <div className="lg:col-span-2">
+                                <label className="text-[11px] font-semibold text-apple-subtext">Target user id</label>
+                                <input
+                                    autoComplete="off"
+                                    placeholder="674a1b2c3d4e5f6789012345"
+                                    value={maintenanceUserId}
+                                    onChange={(e) => setMaintenanceUserId(e.target.value.trim())}
+                                    className="mt-2 w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
+                                />
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    <button
+                                        type="button"
+                                        disabled={maintenanceBusy}
+                                        onClick={() => runUserMaintenance('clear-anime-progress')}
+                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                                    >
+                                        Clear anime progress
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={maintenanceBusy}
+                                        onClick={() => runUserMaintenance('clear-manga-progress')}
+                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                                    >
+                                        Clear manga progress
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={maintenanceBusy}
+                                        onClick={() => runUserMaintenance('clear-anime-pins')}
+                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                                    >
+                                        Clear anime pins
+                                    </button>
+                                    <button
+                                        type="button"
+                                        disabled={maintenanceBusy}
+                                        onClick={() => runUserMaintenance('clear-wishlist')}
+                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                                    >
+                                        Clear wishlist
+                                    </button>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[11px] font-semibold text-apple-subtext">Unlink integration</label>
+                                <div className="mt-2 flex flex-col gap-2">
+                                    <select
+                                        value={unlinkIntegration}
+                                        onChange={(e) => setUnlinkIntegration(e.target.value)}
+                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[12px] text-apple-text"
+                                    >
+                                        <option value="mal">MAL</option>
+                                        <option value="steam">Steam</option>
+                                        <option value="google">Google</option>
+                                        <option value="animeschedule">AnimeSchedule</option>
+                                        <option value="all">All integrations</option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        disabled={maintenanceBusy}
+                                        onClick={runUnlinkIntegration}
+                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                                    >
+                                        Unlink
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {maintenanceError ? (
+                            <p className="mt-3 text-[12px] text-amber-800">{maintenanceError}</p>
+                        ) : null}
+                        {maintenanceSummary ? (
+                            <p className="mt-2 text-[12px] text-apple-subtext">{maintenanceSummary}</p>
+                        ) : null}
+                    </Panel>
+
+                    <Panel>
+                        <SectionIntro title="Recent signups">Newest LifeSync accounts (email shown).</SectionIntro>
                         <div className="hidden overflow-x-auto rounded-xl border border-[var(--mx-color-f0f0f0)] md:block">
                             <table className="min-w-full text-left text-[12px]">
                                 <thead className="bg-apple-bg text-[10px] font-bold uppercase tracking-wider text-apple-subtext">
@@ -989,7 +1461,7 @@ export default function LifeSyncAdmin() {
                                         recent.map((row) => (
                                             <tr key={row.id} className="hover:bg-apple-bg/60">
                                                 <td className="max-w-35 truncate px-3 py-2 font-mono text-[11px]">{row.id}</td>
-                                                <td className="px-3 py-2">{row.emailMasked}</td>
+                                                <td className="px-3 py-2">{row.email || row.emailMasked || '—'}</td>
                                                 <td className="max-w-30 truncate px-3 py-2">{row.name || '—'}</td>
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px] text-apple-subtext">
                                                     {row.createdAt ? row.createdAt.slice(0, 10) : '—'}
@@ -1029,7 +1501,7 @@ export default function LifeSyncAdmin() {
                                         <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
                                             <div className="col-span-2">
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Email</p>
-                                                <p className="text-apple-text">{row.emailMasked || '—'}</p>
+                                                <p className="text-apple-text">{row.email || row.emailMasked || '—'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Name</p>
@@ -1082,8 +1554,8 @@ function UserSummaryCard({ user }) {
                 </dd>
             </div>
             <div>
-                <dt className="text-apple-subtext">Email (masked)</dt>
-                <dd className="mt-0.5">{user.emailMasked}</dd>
+                <dt className="text-apple-subtext">Email</dt>
+                <dd className="mt-0.5">{user.email || user.emailMasked || '—'}</dd>
             </div>
             <div>
                 <dt className="text-apple-subtext">Name</dt>

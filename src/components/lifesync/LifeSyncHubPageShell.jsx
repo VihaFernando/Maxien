@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
+import { useAppTheme } from '../../context/AppThemeContext'
 import { lifesyncResolveYouTubeLoopSource } from '../../lib/lifesyncApi'
 import {
     ANIME_STOCK_IMAGE_POOL,
@@ -27,20 +28,131 @@ import {
 const shellInnerClass =
     'relative mx-auto w-full max-w-[min(100%,88rem)] px-4 pt-5 sm:px-6 sm:pt-6 md:px-8 lg:px-10 lg:pt-7 xl:px-12'
 
+const loadedBackgroundImages = new Set()
+let lastDisplayedBackgroundMedia = null
+const AREA_KEYS = ['games', 'anime']
+const LIFESYNC_SCENE_BG_CACHE_KEY = 'maxien_lifesync_scene_background_cache_v1'
+
+function normalizeBackgroundMediaPayload(media) {
+    if (!media || typeof media !== 'object') return null
+    const kindRaw = String(media.kind || '').trim().toLowerCase()
+    const kind = kindRaw === 'image' || kindRaw === 'youtube_embed' ? kindRaw : 'video'
+    const imageUrl = sanitizeBackgroundUrl(media.imageUrl)
+    const posterUrl = sanitizeBackgroundUrl(media.posterUrl)
+    const videoWebmUrl = sanitizeBackgroundUrl(media.videoWebmUrl)
+    const videoMp4Url = sanitizeBackgroundUrl(media.videoMp4Url)
+    const embedUrl = sanitizeBackgroundUrl(media.embedUrl)
+
+    if (!imageUrl && !posterUrl && !videoWebmUrl && !videoMp4Url && !embedUrl) return null
+
+    if (kind === 'image' && !imageUrl) {
+        if (posterUrl) {
+            return {
+                kind: 'image',
+                imageUrl: posterUrl,
+                posterUrl: '',
+                videoWebmUrl: '',
+                videoMp4Url: '',
+                embedUrl: '',
+            }
+        }
+        return null
+    }
+
+    if (kind === 'youtube_embed' && !embedUrl) return null
+
+    return {
+        kind,
+        imageUrl,
+        posterUrl,
+        videoWebmUrl,
+        videoMp4Url,
+        embedUrl,
+    }
+}
+
+function readSceneBackgroundCache() {
+    if (typeof localStorage === 'undefined') return { games: null, anime: null }
+    try {
+        const raw = localStorage.getItem(LIFESYNC_SCENE_BG_CACHE_KEY)
+        if (!raw) return { games: null, anime: null }
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object') return { games: null, anime: null }
+        return {
+            games: normalizeBackgroundMediaPayload(parsed.games),
+            anime: normalizeBackgroundMediaPayload(parsed.anime),
+        }
+    } catch {
+        return { games: null, anime: null }
+    }
+}
+
+function writeSceneBackgroundCache(cache) {
+    if (typeof localStorage === 'undefined') return
+    try {
+        localStorage.setItem(
+            LIFESYNC_SCENE_BG_CACHE_KEY,
+            JSON.stringify({
+                games: normalizeBackgroundMediaPayload(cache?.games),
+                anime: normalizeBackgroundMediaPayload(cache?.anime),
+            }),
+        )
+    } catch {
+        // ignore storage failures
+    }
+}
+
+let areaSceneBackgroundCache = readSceneBackgroundCache()
+
+function getAreaSceneBackground(area) {
+    if (!AREA_KEYS.includes(area)) return null
+    return normalizeBackgroundMediaPayload(areaSceneBackgroundCache?.[area])
+}
+
+function rememberAreaSceneBackground(area, media) {
+    if (!AREA_KEYS.includes(area)) return
+    const next = normalizeBackgroundMediaPayload(media)
+    areaSceneBackgroundCache = {
+        ...areaSceneBackgroundCache,
+        [area]: next,
+    }
+    writeSceneBackgroundCache(areaSceneBackgroundCache)
+}
+
+function backgroundMediaKey(media) {
+    if (!media || typeof media !== 'object') return ''
+    return [
+        String(media.kind || ''),
+        String(media.videoWebmUrl || ''),
+        String(media.videoMp4Url || ''),
+        String(media.imageUrl || ''),
+        String(media.posterUrl || ''),
+        String(media.embedUrl || ''),
+    ].join('|')
+}
+
+function hasBackgroundMediaPayload(media) {
+    return Boolean(
+        media?.imageUrl ||
+        media?.embedUrl ||
+        media?.videoMp4Url ||
+        media?.videoWebmUrl,
+    )
+}
+
 /** Pass `staticInnerChrome` for layouts that own section chrome and only swap an inner `<Outlet />`. */
 export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
     const { pathname, search } = useLocation()
+    const { resolvedTheme } = useAppTheme()
     const pathnameLower = String(pathname || '').toLowerCase()
     const {
         lifeSyncUser,
+        lifeSyncLoading,
         lifeSyncSteamProfile,
         refreshLifeSyncSteamProfile,
     } = useLifeSync()
     const routeKey = `${pathname}${search}`
-    const [isDarkTheme, setIsDarkTheme] = useState(() => {
-        if (typeof document === 'undefined') return false
-        return document.documentElement?.dataset?.maxienTheme === 'dark'
-    })
+    const isDarkTheme = resolvedTheme === 'dark'
     const isGameRoute = pathname.startsWith('/dashboard/lifesync/games')
     const isAnimeRoute = pathname.startsWith('/dashboard/lifesync/anime')
     const isAnimeMediaWatchRoute = (
@@ -58,6 +170,11 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
         lifeSyncUser?.preferences?.animeBackgroundMode,
     )
     const [youtubeLoopResolution, setYouTubeLoopResolution] = useState(null)
+    const [displayBackgroundMedia, setDisplayBackgroundMedia] = useState(() => (
+        lastDisplayedBackgroundMedia || (activeArea ? getAreaSceneBackground(activeArea) : null)
+    ))
+    const [pendingBackgroundMedia, setPendingBackgroundMedia] = useState(null)
+    const [readyBackgroundMediaKey, setReadyBackgroundMediaKey] = useState('')
 
     const shouldUseSteamBackground = Boolean(
         activeArea === 'games' &&
@@ -71,18 +188,11 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
     }, [shouldUseSteamBackground, refreshLifeSyncSteamProfile])
 
     useEffect(() => {
-        if (typeof document === 'undefined') return undefined
-        const root = document.documentElement
-        const syncTheme = () => setIsDarkTheme(root?.dataset?.maxienTheme === 'dark')
-        syncTheme()
-
-        const observer = new MutationObserver(syncTheme)
-        observer.observe(root, {
-            attributes: true,
-            attributeFilter: ['data-maxien-theme'],
-        })
-        return () => observer.disconnect()
-    }, [])
+        if (!activeArea) return
+        const cached = getAreaSceneBackground(activeArea)
+        if (!cached) return
+        setDisplayBackgroundMedia((prev) => prev || cached)
+    }, [activeArea])
 
     useEffect(() => {
         const activeBackgroundMode = activeArea === 'games'
@@ -198,7 +308,7 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
             if (gamesBackgroundMode === 'stock_image') {
                 const picked = pickDeterministicFromPool(
                     GAMES_STOCK_IMAGE_POOL,
-                    `${lifeSyncUser?.id || 'anon'}:games:${pathname}`,
+                    `${lifeSyncUser?.id || 'anon'}:games:stock-image`,
                 )
                 const image = sanitizeBackgroundUrl(picked)
                 if (!image) return null
@@ -214,7 +324,7 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
             if (gamesBackgroundMode === 'stock_video') {
                 const picked = pickDeterministicFromPool(
                     GAMES_STOCK_VIDEO_POOL,
-                    `${lifeSyncUser?.id || 'anon'}:games:video:${pathname}`,
+                    `${lifeSyncUser?.id || 'anon'}:games:stock-video`,
                 )
                 if (!picked || typeof picked !== 'object') return null
                 const videoWebm = sanitizeBackgroundUrl(picked.webm)
@@ -302,7 +412,7 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
             if (animeBackgroundMode === 'stock_image') {
                 const picked = pickDeterministicFromPool(
                     ANIME_STOCK_IMAGE_POOL,
-                    `${lifeSyncUser?.id || 'anon'}:anime:${pathname}`,
+                    `${lifeSyncUser?.id || 'anon'}:anime:stock-image`,
                 )
                 const image = sanitizeBackgroundUrl(picked)
                 if (!image) return null
@@ -318,7 +428,7 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
             if (animeBackgroundMode === 'stock_video') {
                 const picked = pickDeterministicFromPool(
                     ANIME_STOCK_VIDEO_POOL,
-                    `${lifeSyncUser?.id || 'anon'}:anime:video:${pathname}`,
+                    `${lifeSyncUser?.id || 'anon'}:anime:stock-video`,
                 )
                 if (!picked || typeof picked !== 'object') return null
                 const videoWebm = sanitizeBackgroundUrl(picked.webm)
@@ -410,7 +520,6 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
         lifeSyncUser?.preferences?.gamesBackgroundCustomVideoUrl,
         lifeSyncUser?.preferences?.animeBackgroundCustomImageUrl,
         lifeSyncUser?.preferences?.animeBackgroundCustomVideoUrl,
-        pathname,
         steamTheme?.backgroundVideoWebmUrl,
         steamTheme?.backgroundVideoMp4Url,
         steamTheme?.backgroundVideoPosterUrl,
@@ -418,16 +527,114 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
         youtubeLoopResolution,
     ])
 
-    const hasBackgroundMedia = Boolean(
-        backgroundMedia?.imageUrl ||
-        backgroundMedia?.embedUrl ||
-        backgroundMedia?.videoMp4Url ||
-        backgroundMedia?.videoWebmUrl,
-    )
+    const hasBackgroundMedia = hasBackgroundMediaPayload(backgroundMedia)
     const backgroundActive = isDarkTheme && hasBackgroundMedia
 
+    useEffect(() => {
+        const targetMedia = backgroundActive ? backgroundMedia : null
+        if (!targetMedia) {
+            setPendingBackgroundMedia(null)
+            if (activeArea && lifeSyncLoading) {
+                const cached = getAreaSceneBackground(activeArea)
+                if (cached && backgroundMediaKey(cached) !== backgroundMediaKey(displayBackgroundMedia)) {
+                    setDisplayBackgroundMedia(cached)
+                    lastDisplayedBackgroundMedia = cached
+                }
+                return
+            }
+            if (activeArea && !lifeSyncLoading) {
+                setDisplayBackgroundMedia(null)
+                setReadyBackgroundMediaKey('')
+            }
+            return
+        }
+
+        const nextKey = backgroundMediaKey(targetMedia)
+        const currentKey = backgroundMediaKey(displayBackgroundMedia)
+        if (nextKey && nextKey === currentKey) {
+            setPendingBackgroundMedia(null)
+            return
+        }
+
+        if (!displayBackgroundMedia) {
+            setPendingBackgroundMedia(null)
+            setDisplayBackgroundMedia(targetMedia)
+            lastDisplayedBackgroundMedia = targetMedia
+            if (activeArea) rememberAreaSceneBackground(activeArea, targetMedia)
+            return
+        }
+
+        if (targetMedia.kind === 'youtube_embed') {
+            setPendingBackgroundMedia(targetMedia)
+            return
+        }
+
+        let cancelled = false
+        const commitNext = () => {
+            if (cancelled) return
+            setPendingBackgroundMedia(null)
+            setDisplayBackgroundMedia(targetMedia)
+            lastDisplayedBackgroundMedia = targetMedia
+            if (activeArea) rememberAreaSceneBackground(activeArea, targetMedia)
+        }
+
+        const preloadUrl = sanitizeBackgroundUrl(
+            targetMedia.kind === 'image'
+                ? targetMedia.imageUrl
+                : targetMedia.posterUrl,
+        )
+
+        if (preloadUrl && !loadedBackgroundImages.has(preloadUrl)) {
+            const probe = new Image()
+            probe.onload = () => {
+                loadedBackgroundImages.add(preloadUrl)
+                commitNext()
+            }
+            probe.onerror = commitNext
+            probe.src = preloadUrl
+            return () => {
+                cancelled = true
+            }
+        }
+
+        commitNext()
+        return () => {
+            cancelled = true
+        }
+    }, [activeArea, backgroundActive, backgroundMedia, displayBackgroundMedia, lifeSyncLoading])
+
+    const renderedBackgroundMedia = backgroundActive
+        ? (displayBackgroundMedia || backgroundMedia)
+        : null
+    const visibleBackgroundActive = hasBackgroundMediaPayload(renderedBackgroundMedia)
+    const renderedBackgroundMediaKey = backgroundMediaKey(renderedBackgroundMedia)
+    const renderedBackgroundPosterUrl = sanitizeBackgroundUrl(
+        renderedBackgroundMedia?.kind === 'image'
+            ? renderedBackgroundMedia?.imageUrl
+            : renderedBackgroundMedia?.posterUrl,
+    )
+    const isBackgroundVisualReady = (
+        !renderedBackgroundMedia ||
+        renderedBackgroundMedia?.kind === 'image' ||
+        readyBackgroundMediaKey === renderedBackgroundMediaKey
+    )
+
+    useEffect(() => {
+        if (!renderedBackgroundMedia) {
+            setReadyBackgroundMediaKey('')
+            return
+        }
+        if (renderedBackgroundMedia.kind === 'image') {
+            setReadyBackgroundMediaKey(renderedBackgroundMediaKey)
+            return
+        }
+        setReadyBackgroundMediaKey((prev) => (
+            prev === renderedBackgroundMediaKey ? prev : ''
+        ))
+    }, [renderedBackgroundMedia, renderedBackgroundMediaKey])
+
     const identityChip = useMemo(() => {
-        if (!backgroundActive || activeArea !== 'games' || gamesBackgroundMode !== 'steam' || !steamProfile) return null
+        if (!visibleBackgroundActive || activeArea !== 'games' || gamesBackgroundMode !== 'steam' || !steamProfile) return null
         const level = Number(steamProfile?.steamLevel)
         const badges = Number(steamProfile?.badges?.count)
         return {
@@ -438,7 +645,7 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
             steamLevel: Number.isFinite(level) ? level : null,
             badgesCount: Number.isFinite(badges) ? badges : null,
         }
-    }, [backgroundActive, activeArea, gamesBackgroundMode, steamProfile])
+    }, [visibleBackgroundActive, activeArea, gamesBackgroundMode, steamProfile])
 
     const innerStyle = identityChip
         ? { paddingTop: 'max(4.25rem, env(safe-area-inset-top))' }
@@ -447,45 +654,97 @@ export function LifeSyncHubPageShell({ children, staticInnerChrome = false }) {
     return (
         <div
             className={`lifesync-theme-surface relative min-h-full overflow-x-hidden bg-transparent pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))] ${
-                backgroundActive ? 'lifesync-scene-bg-active' : ''
+                visibleBackgroundActive ? 'lifesync-scene-bg-active' : ''
             }`}
         >
-            {backgroundActive && (
+            {visibleBackgroundActive && (
                 <div className="pointer-events-none fixed inset-0 overflow-hidden">
-                    {backgroundMedia?.kind === 'youtube_embed' ? (
-                        <iframe
-                            title="YouTube background"
-                            src={backgroundMedia?.embedUrl}
-                            className="absolute inset-0 h-full w-full border-0"
-                            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                            referrerPolicy="strict-origin-when-cross-origin"
-                            tabIndex={-1}
-                        />
-                    ) : backgroundMedia?.kind === 'video' ? (
-                        <video
-                            className="absolute inset-0 h-full w-full object-cover object-center"
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            poster={backgroundMedia?.posterUrl || undefined}
-                        >
-                            {backgroundMedia?.videoWebmUrl && (
-                                <source src={backgroundMedia.videoWebmUrl} type="video/webm" />
-                            )}
-                            {backgroundMedia?.videoMp4Url && (
-                                <source src={backgroundMedia.videoMp4Url} type="video/mp4" />
-                            )}
-                        </video>
+                    {renderedBackgroundMedia?.kind === 'youtube_embed' ? (
+                        <>
+                            {renderedBackgroundPosterUrl ? (
+                                <img
+                                    src={renderedBackgroundPosterUrl}
+                                    alt=""
+                                    className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ${
+                                        isBackgroundVisualReady ? 'opacity-0' : 'opacity-100'
+                                    }`}
+                                    loading="eager"
+                                    decoding="async"
+                                />
+                            ) : null}
+                            <iframe
+                                title="YouTube background"
+                                src={renderedBackgroundMedia?.embedUrl}
+                                className={`absolute inset-0 h-full w-full border-0 transition-opacity duration-300 ${
+                                    isBackgroundVisualReady ? 'opacity-100' : 'opacity-0'
+                                }`}
+                                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                                referrerPolicy="strict-origin-when-cross-origin"
+                                tabIndex={-1}
+                                onLoad={() => setReadyBackgroundMediaKey(renderedBackgroundMediaKey)}
+                            />
+                        </>
+                    ) : renderedBackgroundMedia?.kind === 'video' ? (
+                        <>
+                            {renderedBackgroundPosterUrl ? (
+                                <img
+                                    src={renderedBackgroundPosterUrl}
+                                    alt=""
+                                    className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ${
+                                        isBackgroundVisualReady ? 'opacity-0' : 'opacity-100'
+                                    }`}
+                                    loading="eager"
+                                    decoding="async"
+                                />
+                            ) : null}
+                            <video
+                                className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-300 ${
+                                    isBackgroundVisualReady ? 'opacity-100' : 'opacity-0'
+                                }`}
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                poster={renderedBackgroundMedia?.posterUrl || undefined}
+                                onLoadedData={() => setReadyBackgroundMediaKey(renderedBackgroundMediaKey)}
+                                onCanPlay={() => setReadyBackgroundMediaKey(renderedBackgroundMediaKey)}
+                            >
+                                {renderedBackgroundMedia?.videoWebmUrl && (
+                                    <source src={renderedBackgroundMedia.videoWebmUrl} type="video/webm" />
+                                )}
+                                {renderedBackgroundMedia?.videoMp4Url && (
+                                    <source src={renderedBackgroundMedia.videoMp4Url} type="video/mp4" />
+                                )}
+                            </video>
+                        </>
                     ) : (
                         <img
-                            src={backgroundMedia?.imageUrl}
+                            src={renderedBackgroundMedia?.imageUrl}
                             alt=""
                             className="absolute inset-0 h-full w-full object-cover object-center"
                             loading="eager"
                             decoding="async"
                         />
                     )}
+                    {pendingBackgroundMedia?.kind === 'youtube_embed' &&
+                        backgroundMediaKey(pendingBackgroundMedia) !== backgroundMediaKey(renderedBackgroundMedia) && (
+                            <iframe
+                                title="YouTube background preload"
+                                src={pendingBackgroundMedia?.embedUrl}
+                                className="absolute inset-0 h-full w-full border-0 opacity-0"
+                                allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                                referrerPolicy="strict-origin-when-cross-origin"
+                                tabIndex={-1}
+                                onLoad={() => {
+                                    const nextKey = backgroundMediaKey(pendingBackgroundMedia)
+                                    if (nextKey) setReadyBackgroundMediaKey(nextKey)
+                                    setDisplayBackgroundMedia(pendingBackgroundMedia)
+                                    lastDisplayedBackgroundMedia = pendingBackgroundMedia
+                                    if (activeArea) rememberAreaSceneBackground(activeArea, pendingBackgroundMedia)
+                                    setPendingBackgroundMedia(null)
+                                }}
+                            />
+                        )}
                     <div className="absolute inset-0 bg-[linear-gradient(168deg,rgba(6,7,15,0.66)_0%,rgba(11,14,25,0.58)_36%,rgba(20,25,38,0.46)_100%)]" />
                     <div className="absolute inset-0 bg-[radial-gradient(120%_55%_at_15%_5%,rgba(173,216,255,0.24),transparent),radial-gradient(85%_48%_at_90%_10%,rgba(198,255,0,0.16),transparent)]" />
                 </div>

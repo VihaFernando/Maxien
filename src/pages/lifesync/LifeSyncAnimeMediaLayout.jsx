@@ -3,19 +3,51 @@ import { FaChevronLeft } from 'react-icons/fa'
 import { LifeSyncHubPageShell } from '../../components/lifesync/LifeSyncHubPageShell'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncAnimeNavVisible } from '../../lib/lifesyncApi'
-import { LayoutGroup } from '../../lib/lifesyncMotion'
+import { AnimatePresence, LayoutGroup, lifeSyncPageTransition, lifeSyncPageVariants, MotionDiv } from '../../lib/lifesyncMotion'
 
 const ANIME_HUB = '/dashboard/lifesync/anime'
 
 /**
- * One `LayoutGroup` for shared `layoutId` (e.g. anime poster → detail / watch) without an extra
- * `AnimatePresence` + motion wrapper on the outlet — that layer fought page dolly + section motion.
+ * Route buckets for media-area transitions from hub → anime/manga/hentai/library.
+ * Keep the key stable inside each area so detail modals/tabs don't retrigger full page transitions.
  */
+function animeMediaRouteTransitionKey(pathname) {
+    const path = pathname === `${ANIME_HUB}/` ? ANIME_HUB : pathname
+    if (path === ANIME_HUB) return 'hub'
+    if (path.startsWith(`${ANIME_HUB}/manga/library`)) return 'library'
+    if (path.startsWith(`${ANIME_HUB}/anime`)) return 'anime'
+    if (path.startsWith(`${ANIME_HUB}/manga`)) return 'manga'
+    if (path.startsWith(`${ANIME_HUB}/hentai`)) return 'hentai'
+    return path
+}
+
 function AnimeMediaOutlet() {
+    const { pathname } = useLocation()
     const outlet = useOutlet()
+    const routeKey = animeMediaRouteTransitionKey(pathname)
     return (
         <LayoutGroup id="lifesync-anime-media">
-            <div className="min-w-0 flex-1">{outlet}</div>
+            <div className="relative min-w-0 flex-1">
+                <AnimatePresence initial={false} mode="sync">
+                    <MotionDiv
+                        key={routeKey}
+                        className="min-w-0 flex-1"
+                        initial="initial"
+                        animate="animate"
+                        exit={{
+                            opacity: 0,
+                            y: -8,
+                            position: 'absolute',
+                            inset: 0,
+                            width: '100%',
+                        }}
+                        variants={lifeSyncPageVariants}
+                        transition={lifeSyncPageTransition}
+                    >
+                        {outlet}
+                    </MotionDiv>
+                </AnimatePresence>
+            </div>
         </LayoutGroup>
     )
 }

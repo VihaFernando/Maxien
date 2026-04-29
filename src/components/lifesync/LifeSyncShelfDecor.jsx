@@ -4,10 +4,10 @@ import { MotionDiv } from '../../lib/lifesyncMotion'
 export function SeriesCompleteBadge({ className = '' }) {
     return (
         <div
-            className={`pointer-events-none absolute -bottom-3 left-1/2 z-20 -translate-x-1/2 ${className}`}
+            className={`pointer-events-none absolute -bottom-3 left-1/2 z-50 -translate-x-1/2 ${className}`}
             aria-hidden
         >
-            <div className="flex items-center gap-1.5 rounded-full border border-emerald-800/25 bg-gradient-to-r from-emerald-50 via-[var(--color-surface)] to-teal-50 px-3 py-1.5 shadow-[0_4px_16px_-4px_rgba(6,95,70,0.28)] ring-[3px] ring-[var(--color-border-strong)]">
+            <div className="flex items-center gap-1.5 rounded-full border border-emerald-800/25 bg-gradient-to-r from-black-500 via-[var(--color-surface)] to-black-200 px-3 py-1.5 shadow-[0_4px_16px_-4px_rgba(6,95,70,0.28)]">
                 <svg className="h-3.5 w-3.5 shrink-0 text-emerald-600" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
                     <path
                         fillRule="evenodd"

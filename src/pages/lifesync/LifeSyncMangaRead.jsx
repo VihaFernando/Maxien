@@ -25,6 +25,13 @@ function compareChapters(a, b) {
     return String(a?.id || '').localeCompare(String(b?.id || ''))
 }
 
+function pickLatestChapter(chapters) {
+    const list = Array.isArray(chapters) ? [...chapters] : []
+    if (!list.length) return null
+    list.sort(compareChapters)
+    return list[list.length - 1] || null
+}
+
 function formatChapterLabel(ch) {
     if (!ch) return ''
     const bits = []
@@ -99,6 +106,27 @@ function writeProgressQueue(queue) {
     } catch {
         // ignore localStorage failures
     }
+}
+
+function mergeProgressPayload(prevRaw, nextPayload) {
+    const prev = sanitizeProgressPayload(prevRaw)
+    if (!prev) return nextPayload
+    if (
+        String(prev.source || '') !== String(nextPayload.source || '') ||
+        String(prev.mangaId || '') !== String(nextPayload.mangaId || '') ||
+        String(prev.lastChapterId || '') !== String(nextPayload.lastChapterId || '')
+    ) {
+        return nextPayload
+    }
+    const prevPercent = normalizeReadPercent(prev.lastReadPercent)
+    const nextPercent = normalizeReadPercent(nextPayload.lastReadPercent)
+    if (nextPercent < prevPercent) {
+        return {
+            ...nextPayload,
+            lastReadPercent: prevPercent,
+        }
+    }
+    return nextPayload
 }
 
 function pickQueuedResumeCandidate(mangaId, preferredSource = '') {
@@ -329,9 +357,10 @@ export default function LifeSyncMangaRead() {
         const key = queueKeyForPayload(payload)
         if (!key || key === ':') return null
         const queue = readProgressQueue()
-        queue[key] = { ...payload, savedAt: new Date().toISOString() }
+        const merged = mergeProgressPayload(queue[key], payload)
+        queue[key] = { ...merged, savedAt: new Date().toISOString() }
         writeProgressQueue(queue)
-        return payload
+        return merged
     }, [buildProgressPayload])
 
     const flushQueuedProgress = useCallback(async ({ keepalive = false, maxItems = MANGA_PROGRESS_FLUSH_BATCH } = {}) => {
@@ -418,7 +447,7 @@ export default function LifeSyncMangaRead() {
                     const data = await lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(mangaId)}?view=full`)
                     const list = [...(data?.chapters || [])]
                     list.sort(compareChapters)
-                    const ch = list.find(c => String(c?.id) === chapterId) || (list.length ? list[list.length - 1] : null)
+                    const ch = list.find(c => String(c?.id) === chapterId) || pickLatestChapter(list)
                     if (!ch) throw new Error('No chapters available.')
                     if (!cancelled) {
                         setManga({ ...data, source: 'mangadistrict' })
@@ -429,7 +458,7 @@ export default function LifeSyncMangaRead() {
                     const data = await lifesyncFetch(`/api/v1/manga/comix/info/${encodeURIComponent(mangaId)}?view=full`)
                     const list = [...(data?.chapters || [])]
                     list.sort(compareChapters)
-                    const ch = list.find(c => String(c?.id) === chapterId) || (list.length ? list[list.length - 1] : null)
+                    const ch = list.find(c => String(c?.id) === chapterId) || pickLatestChapter(list)
                     if (!ch) throw new Error('No chapters available.')
                     if (!cancelled) {
                         setManga({ ...data, source: 'comix' })
@@ -660,6 +689,15 @@ export default function LifeSyncMangaRead() {
         let percent = normalizeReadPercent(chapterReadProgress * 100)
         if (percent <= 0 && resumeChapterId && String(chapter.id) === resumeChapterId && resumePercent > 0) {
             percent = resumePercent
+        }
+        const prev = latestProgressRef.current
+        if (
+            prev?.manga?.id === manga.id &&
+            prev?.chapter?.id === chapter.id &&
+            percent <= 0 &&
+            Number(prev?.percent || 0) > 0
+        ) {
+            percent = Number(prev.percent)
         }
         latestProgressRef.current = { manga, chapter, percent }
     }, [chapterReadProgress, chapter, manga, resumeChapterId, resumePercent])
