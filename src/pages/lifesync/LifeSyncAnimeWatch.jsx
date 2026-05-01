@@ -641,12 +641,26 @@ export default function LifeSyncAnimeWatch() {
         if (!el) return
         if (!document.fullscreenElement) {
             if (el.requestFullscreen) {
-                el.requestFullscreen().catch(() => {})
+                el.requestFullscreen()
+                    .then(() => {
+                        if (typeof window === 'undefined') return
+                        window.setTimeout(() => {
+                            focusIframeForControllerInput(streamIframeRef.current)
+                        }, 60)
+                    })
+                    .catch(() => {})
             }
             return
         }
         if (document.exitFullscreen) {
-            document.exitFullscreen().catch(() => {})
+            document.exitFullscreen()
+                .then(() => {
+                    if (typeof window === 'undefined') return
+                    window.setTimeout(() => {
+                        focusIframeForControllerInput(streamIframeRef.current)
+                    }, 30)
+                })
+                .catch(() => {})
         }
     }, [])
 
@@ -700,6 +714,27 @@ export default function LifeSyncAnimeWatch() {
             focusIframeForControllerInput(streamIframeRef.current)
         }, 180)
         return () => window.clearTimeout(id)
+    }, [stream?.iframeUrl])
+
+    useEffect(() => {
+        if (!stream?.iframeUrl || typeof window === 'undefined') return undefined
+        const onFullscreenChange = () => {
+            const container = streamIframeContainerRef.current
+            const fullscreenEl = document.fullscreenElement
+            if (!container || !fullscreenEl) return
+            const isAnimePlayerFullscreen =
+                fullscreenEl === container || container.contains(fullscreenEl)
+            if (!isAnimePlayerFullscreen) return
+            window.setTimeout(() => {
+                focusIframeForControllerInput(streamIframeRef.current)
+            }, 60)
+        }
+        document.addEventListener('fullscreenchange', onFullscreenChange)
+        document.addEventListener('webkitfullscreenchange', onFullscreenChange)
+        return () => {
+            document.removeEventListener('fullscreenchange', onFullscreenChange)
+            document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
+        }
     }, [stream?.iframeUrl])
 
     if (!isLifeSyncConnected) {
