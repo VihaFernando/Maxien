@@ -26,8 +26,9 @@ import {
     MotionDiv,
 } from '../../lib/lifesyncMotion'
 import {
-    dispatchBestEffortIframeMediaKeys,
+    executeIframeControllerAction,
     focusIframeForControllerInput,
+    IFRAME_CONTROLLER_ACTIONS,
     XBOX_GAMEPAD_BUTTONS,
 } from '../../lib/lifeSyncControllerInput'
 
@@ -636,6 +637,13 @@ export default function LifeSyncAnimeWatch() {
           ? 'Dub'
           : `Auto (${streamAudioType === 'dub' ? 'Dub' : 'Sub'})`
 
+    const queueIframeFocus = useCallback((delayMs = 60) => {
+        if (typeof window === 'undefined') return null
+        return window.setTimeout(() => {
+            focusIframeForControllerInput(streamIframeRef.current)
+        }, delayMs)
+    }, [])
+
     const toggleIframeContainerFullscreen = useCallback(() => {
         const el = streamIframeContainerRef.current
         if (!el) return
@@ -643,10 +651,7 @@ export default function LifeSyncAnimeWatch() {
             if (el.requestFullscreen) {
                 el.requestFullscreen()
                     .then(() => {
-                        if (typeof window === 'undefined') return
-                        window.setTimeout(() => {
-                            focusIframeForControllerInput(streamIframeRef.current)
-                        }, 60)
+                        queueIframeFocus(60)
                     })
                     .catch(() => {})
             }
@@ -655,37 +660,34 @@ export default function LifeSyncAnimeWatch() {
         if (document.exitFullscreen) {
             document.exitFullscreen()
                 .then(() => {
-                    if (typeof window === 'undefined') return
-                    window.setTimeout(() => {
-                        focusIframeForControllerInput(streamIframeRef.current)
-                    }, 30)
+                    queueIframeFocus(30)
                 })
                 .catch(() => {})
         }
-    }, [])
+    }, [queueIframeFocus])
 
     const iframeGamepadHandlers = useMemo(() => ({
         [XBOX_GAMEPAD_BUTTONS.A]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'Spacebar', 'MediaPlayPause'])
+            executeIframeControllerAction(streamIframeRef.current, IFRAME_CONTROLLER_ACTIONS.TOGGLE_PLAY)
         },
         [XBOX_GAMEPAD_BUTTONS.Y]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'MediaPlay', 'MediaPlayPause'])
+            executeIframeControllerAction(streamIframeRef.current, IFRAME_CONTROLLER_ACTIONS.PLAY)
         },
         [XBOX_GAMEPAD_BUTTONS.X]: () => {
             toggleIframeContainerFullscreen()
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['f'])
+            executeIframeControllerAction(streamIframeRef.current, IFRAME_CONTROLLER_ACTIONS.TOGGLE_FULLSCREEN)
         },
         [XBOX_GAMEPAD_BUTTONS.LT]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['j', 'ArrowLeft'])
+            executeIframeControllerAction(streamIframeRef.current, IFRAME_CONTROLLER_ACTIONS.SEEK_BACK_10)
         },
         [XBOX_GAMEPAD_BUTTONS.RT]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['l', 'ArrowRight'])
+            executeIframeControllerAction(streamIframeRef.current, IFRAME_CONTROLLER_ACTIONS.SEEK_FORWARD_10)
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowUp'])
+            executeIframeControllerAction(streamIframeRef.current, IFRAME_CONTROLLER_ACTIONS.VOLUME_UP)
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowDown'])
+            executeIframeControllerAction(streamIframeRef.current, IFRAME_CONTROLLER_ACTIONS.VOLUME_DOWN)
         },
         [XBOX_GAMEPAD_BUTTONS.LB]: () => {
             if (!canPrev) return
@@ -710,11 +712,11 @@ export default function LifeSyncAnimeWatch() {
 
     useEffect(() => {
         if (!stream?.iframeUrl || typeof window === 'undefined') return undefined
-        const id = window.setTimeout(() => {
-            focusIframeForControllerInput(streamIframeRef.current)
-        }, 180)
-        return () => window.clearTimeout(id)
-    }, [stream?.iframeUrl])
+        const id = queueIframeFocus(180)
+        return () => {
+            if (id != null) window.clearTimeout(id)
+        }
+    }, [queueIframeFocus, stream?.iframeUrl])
 
     useEffect(() => {
         if (!stream?.iframeUrl || typeof window === 'undefined') return undefined
@@ -725,9 +727,7 @@ export default function LifeSyncAnimeWatch() {
             const isAnimePlayerFullscreen =
                 fullscreenEl === container || container.contains(fullscreenEl)
             if (!isAnimePlayerFullscreen) return
-            window.setTimeout(() => {
-                focusIframeForControllerInput(streamIframeRef.current)
-            }, 60)
+            queueIframeFocus(60)
         }
         document.addEventListener('fullscreenchange', onFullscreenChange)
         document.addEventListener('webkitfullscreenchange', onFullscreenChange)
@@ -735,7 +735,7 @@ export default function LifeSyncAnimeWatch() {
             document.removeEventListener('fullscreenchange', onFullscreenChange)
             document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
         }
-    }, [stream?.iframeUrl])
+    }, [queueIframeFocus, stream?.iframeUrl])
 
     if (!isLifeSyncConnected) {
         return (

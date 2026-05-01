@@ -11,6 +11,70 @@ export const XBOX_GAMEPAD_BUTTONS = Object.freeze({
     DPAD_DOWN: 13,
 })
 
+export const IFRAME_CONTROLLER_ACTIONS = Object.freeze({
+    TOGGLE_PLAY: 'togglePlay',
+    PLAY: 'play',
+    TOGGLE_FULLSCREEN: 'toggleFullscreen',
+    SEEK_BACK_10: 'seekBack10',
+    SEEK_FORWARD_10: 'seekForward10',
+    VOLUME_UP: 'volumeUp',
+    VOLUME_DOWN: 'volumeDown',
+})
+
+const IFRAME_ACTION_FALLBACK_KEYS = Object.freeze({
+    [IFRAME_CONTROLLER_ACTIONS.TOGGLE_PLAY]: Object.freeze(['k', ' ', 'Spacebar', 'MediaPlayPause']),
+    [IFRAME_CONTROLLER_ACTIONS.PLAY]: Object.freeze(['MediaPlay', 'k', ' ', 'MediaPlayPause']),
+    [IFRAME_CONTROLLER_ACTIONS.TOGGLE_FULLSCREEN]: Object.freeze(['f']),
+    [IFRAME_CONTROLLER_ACTIONS.SEEK_BACK_10]: Object.freeze(['j', 'ArrowLeft']),
+    [IFRAME_CONTROLLER_ACTIONS.SEEK_FORWARD_10]: Object.freeze(['l', 'ArrowRight']),
+    [IFRAME_CONTROLLER_ACTIONS.VOLUME_UP]: Object.freeze(['ArrowUp']),
+    [IFRAME_CONTROLLER_ACTIONS.VOLUME_DOWN]: Object.freeze(['ArrowDown']),
+})
+
+const DIRECT_MEDIA_ACTIONS = Object.freeze({
+    [IFRAME_CONTROLLER_ACTIONS.TOGGLE_PLAY]: 'toggle-playback',
+    [IFRAME_CONTROLLER_ACTIONS.PLAY]: 'play',
+    [IFRAME_CONTROLLER_ACTIONS.TOGGLE_FULLSCREEN]: 'toggle-fullscreen',
+    [IFRAME_CONTROLLER_ACTIONS.SEEK_BACK_10]: 'seek-backward',
+    [IFRAME_CONTROLLER_ACTIONS.SEEK_FORWARD_10]: 'seek-forward',
+    [IFRAME_CONTROLLER_ACTIONS.VOLUME_UP]: 'volume-up',
+    [IFRAME_CONTROLLER_ACTIONS.VOLUME_DOWN]: 'volume-down',
+})
+
+const DIRECT_MEDIA_SEEK_SECONDS = 10
+const DIRECT_MEDIA_VOLUME_STEP = 0.08
+
+function normalizeControllerAction(action) {
+    const raw = String(action || '').trim()
+    return Object.values(IFRAME_CONTROLLER_ACTIONS).includes(raw) ? raw : null
+}
+
+function normalizeKeyName(rawKeyName) {
+    const raw = String(rawKeyName || '')
+    return raw === 'Spacebar' ? ' ' : raw
+}
+
+function inferControllerActionFromKey(rawKeyName) {
+    const key = normalizeKeyName(rawKeyName)
+    if (key === 'k' || key === 'K' || key === ' ' || key === 'MediaPlayPause') {
+        return IFRAME_CONTROLLER_ACTIONS.TOGGLE_PLAY
+    }
+    if (key === 'MediaPlay') return IFRAME_CONTROLLER_ACTIONS.PLAY
+    if (key === 'f' || key === 'F') return IFRAME_CONTROLLER_ACTIONS.TOGGLE_FULLSCREEN
+    if (key === 'j' || key === 'J' || key === 'ArrowLeft') return IFRAME_CONTROLLER_ACTIONS.SEEK_BACK_10
+    if (key === 'l' || key === 'L' || key === 'ArrowRight') return IFRAME_CONTROLLER_ACTIONS.SEEK_FORWARD_10
+    if (key === 'ArrowUp') return IFRAME_CONTROLLER_ACTIONS.VOLUME_UP
+    if (key === 'ArrowDown') return IFRAME_CONTROLLER_ACTIONS.VOLUME_DOWN
+    return null
+}
+
+export function getIframeControllerActionFallbackKeys(action) {
+    const normalized = normalizeControllerAction(action)
+    if (!normalized) return []
+    const keys = IFRAME_ACTION_FALLBACK_KEYS[normalized]
+    return Array.isArray(keys) ? [...keys] : []
+}
+
 function focusIframeElement(iframeEl) {
     if (!iframeEl) return
     try {
@@ -25,8 +89,7 @@ function focusIframeElement(iframeEl) {
 }
 
 function keyboardMetaForKey(rawKeyName) {
-    const raw = String(rawKeyName || '')
-    const keyName = raw === 'Spacebar' ? ' ' : raw
+    const keyName = normalizeKeyName(rawKeyName)
     if (keyName === ' ') return { key: ' ', code: 'Space', keyCode: 32 }
     if (keyName === 'k' || keyName === 'K') return { key: String(keyName).toLowerCase(), code: 'KeyK', keyCode: 75 }
     if (keyName === 'j' || keyName === 'J') return { key: String(keyName).toLowerCase(), code: 'KeyJ', keyCode: 74 }
@@ -132,66 +195,181 @@ function runPlay(mediaEl) {
     }
 }
 
-function normalizeMediaActionFromKey(keyName) {
-    const key = String(keyName || '')
-    if (!key) return null
-    if (key === 'k' || key === ' ' || key === 'Spacebar' || key === 'MediaPlayPause') return 'toggle-playback'
-    if (key === 'MediaPlay') return 'play'
-    if (key === 'MediaPause') return 'pause'
-    if (key === 'j' || key === 'ArrowLeft') return 'seek-backward'
-    if (key === 'l' || key === 'ArrowRight') return 'seek-forward'
-    if (key === 'ArrowUp') return 'volume-up'
-    if (key === 'ArrowDown') return 'volume-down'
-    if (key === 'f') return 'toggle-fullscreen'
-    return null
-}
-
-function tryControlIframeMediaElement(iframeEl, action) {
-    if (!iframeEl || !action) return false
+function runDirectMediaAction(iframeEl, action) {
+    const internalAction = DIRECT_MEDIA_ACTIONS[action]
+    if (!iframeEl || !internalAction) return { handled: false, via: null }
     const doc = getIframeDocument(iframeEl)
-    if (!doc) return false
+    if (!doc) return { handled: false, via: null }
     const mediaEl = findMediaElementInDocument(doc)
-    if (!mediaEl) return false
+    if (!mediaEl) return { handled: false, via: null }
 
-    if (action === 'toggle-playback') {
+    if (internalAction === 'toggle-playback') {
         if (mediaEl.paused) runPlay(mediaEl)
         else mediaEl.pause?.()
-        return true
+        return { handled: true, via: 'same-origin-media' }
     }
-    if (action === 'play') {
+    if (internalAction === 'play') {
         runPlay(mediaEl)
-        return true
+        return { handled: true, via: 'same-origin-media' }
     }
-    if (action === 'pause') {
-        mediaEl.pause?.()
-        return true
-    }
-    if (action === 'seek-backward' || action === 'seek-forward') {
-        const direction = action === 'seek-forward' ? 1 : -1
+    if (internalAction === 'seek-backward' || internalAction === 'seek-forward') {
+        const direction = internalAction === 'seek-forward' ? 1 : -1
         const cur = Number(mediaEl.currentTime)
-        if (!Number.isFinite(cur)) return false
-        mediaEl.currentTime = Math.max(0, cur + direction * 10)
-        return true
+        if (!Number.isFinite(cur)) return { handled: false, via: null }
+        mediaEl.currentTime = Math.max(0, cur + (direction * DIRECT_MEDIA_SEEK_SECONDS))
+        return { handled: true, via: 'same-origin-media' }
     }
-    if (action === 'volume-up' || action === 'volume-down') {
+    if (internalAction === 'volume-up' || internalAction === 'volume-down') {
         const cur = Number(mediaEl.volume)
-        if (!Number.isFinite(cur)) return false
-        const delta = action === 'volume-up' ? 0.08 : -0.08
+        if (!Number.isFinite(cur)) return { handled: false, via: null }
+        const delta = internalAction === 'volume-up' ? DIRECT_MEDIA_VOLUME_STEP : -DIRECT_MEDIA_VOLUME_STEP
         const next = Math.max(0, Math.min(1, cur + delta))
         mediaEl.volume = next
         if (mediaEl.muted && next > 0) mediaEl.muted = false
-        return true
+        return { handled: true, via: 'same-origin-media' }
     }
-    if (action === 'toggle-fullscreen') {
+    if (internalAction === 'toggle-fullscreen') {
         const target = mediaEl.requestFullscreen ? mediaEl : iframeEl
         if (!document.fullscreenElement) {
             target.requestFullscreen?.().catch?.(() => {})
-            return true
+        } else {
+            document.exitFullscreen?.().catch?.(() => {})
         }
-        document.exitFullscreen?.().catch?.(() => {})
-        return true
+        return { handled: true, via: 'same-origin-media' }
     }
-    return false
+
+    return { handled: false, via: null }
+}
+
+function getKeyboardDispatchTargets(iframeEl) {
+    const raw = []
+
+    try {
+        const win = iframeEl?.contentWindow
+        raw.push(['iframeWindow', win])
+        const doc = win?.document
+        raw.push(['iframeDocument', doc])
+        raw.push(['iframeBody', doc?.body])
+    } catch {
+        // cross-origin access is expected to fail on many providers
+    }
+
+    raw.push(['iframeElement', iframeEl])
+    raw.push(['fullscreenElement', document?.fullscreenElement])
+    raw.push(['activeElement', document?.activeElement])
+    raw.push(['document', document])
+    raw.push(['window', window])
+
+    const targets = []
+    const seen = new Set()
+    for (const [label, target] of raw) {
+        if (!target || seen.has(target)) continue
+        seen.add(target)
+        targets.push({ label, target })
+    }
+    return targets
+}
+
+function dispatchKeysAcrossTargets(targets, keys) {
+    const targetHits = {}
+    const dispatchedKeys = []
+    let handled = false
+
+    const safeKeys = Array.isArray(keys)
+        ? keys.map((key) => String(key || '').trim()).filter(Boolean)
+        : []
+
+    for (const key of safeKeys) {
+        let keyHandled = false
+        for (const { label, target } of targets) {
+            if (!fireKeyEventTarget(target, key)) continue
+            handled = true
+            keyHandled = true
+            targetHits[label] = (targetHits[label] || 0) + 1
+        }
+        if (keyHandled) dispatchedKeys.push(key)
+    }
+
+    return {
+        handled,
+        dispatchedKeys,
+        targetHits,
+        targetOrder: targets.map((row) => row.label),
+    }
+}
+
+function createExecutionResult({ action, keys }) {
+    return {
+        action: action || null,
+        fallbackKeys: Array.isArray(keys) ? [...keys] : [],
+        handled: false,
+        handledBy: null,
+        stages: {
+            focus: {
+                attempted: false,
+                handled: false,
+            },
+            directMedia: {
+                attempted: false,
+                handled: false,
+                strategy: null,
+            },
+            keyboard: {
+                attempted: false,
+                handled: false,
+                dispatchedKeys: [],
+                targetHits: {},
+                targetOrder: [],
+            },
+        },
+    }
+}
+
+function executeIframeDispatchPipeline({
+    iframeEl,
+    action = null,
+    keys = [],
+    skipKeyboardWhenDirectHandled = false,
+}) {
+    const result = createExecutionResult({ action, keys })
+    if (!iframeEl) return result
+
+    result.stages.focus.attempted = true
+    result.stages.focus.handled = focusIframeForControllerInput(iframeEl)
+
+    if (action) {
+        result.stages.directMedia.attempted = true
+        const direct = runDirectMediaAction(iframeEl, action)
+        result.stages.directMedia.handled = direct.handled
+        result.stages.directMedia.strategy = direct.via
+        if (direct.handled) {
+            result.handled = true
+            result.handledBy = 'direct-media'
+        }
+    }
+
+    const safeKeys = Array.isArray(keys)
+        ? keys.map((key) => String(key || '').trim()).filter(Boolean)
+        : []
+
+    const shouldRunKeyboard =
+        safeKeys.length > 0 &&
+        (!skipKeyboardWhenDirectHandled || !result.stages.directMedia.handled)
+
+    if (shouldRunKeyboard) {
+        result.stages.keyboard.attempted = true
+        const keyboard = dispatchKeysAcrossTargets(getKeyboardDispatchTargets(iframeEl), safeKeys)
+        result.stages.keyboard.handled = keyboard.handled
+        result.stages.keyboard.dispatchedKeys = keyboard.dispatchedKeys
+        result.stages.keyboard.targetHits = keyboard.targetHits
+        result.stages.keyboard.targetOrder = keyboard.targetOrder
+        if (keyboard.handled && !result.handled) {
+            result.handled = true
+            result.handledBy = 'keyboard'
+        }
+    }
+
+    return result
 }
 
 /**
@@ -217,47 +395,43 @@ export function focusIframeForControllerInput(iframeEl) {
     return focused
 }
 
-/**
- * Cross-origin iframe inputs are not fully controllable from the parent page.
- * This is best-effort only and may be ignored by providers/browsers.
- */
-export function dispatchBestEffortIframeMediaKey(iframeEl, key) {
-    if (!iframeEl || !key) return false
+export function executeIframeControllerAction(iframeEl, action) {
+    const normalizedAction = normalizeControllerAction(action)
+    const keys = normalizedAction ? getIframeControllerActionFallbackKeys(normalizedAction) : []
+    if (!normalizedAction) return createExecutionResult({ action: null, keys: [] })
 
-    let dispatched = false
-    const keyName = String(key)
-    const action = normalizeMediaActionFromKey(keyName)
+    const skipKeyboardWhenDirectHandled =
+        normalizedAction !== IFRAME_CONTROLLER_ACTIONS.TOGGLE_FULLSCREEN
 
-    if (action && tryControlIframeMediaElement(iframeEl, action)) {
-        dispatched = true
-    }
-
-    focusIframeForControllerInput(iframeEl)
-
-    try {
-        const win = iframeEl.contentWindow
-        if (fireKeyEventTarget(win, keyName)) dispatched = true
-        const doc = win?.document
-        if (fireKeyEventTarget(doc, keyName)) dispatched = true
-        if (fireKeyEventTarget(doc?.activeElement, keyName)) dispatched = true
-        if (fireKeyEventTarget(doc?.body, keyName)) dispatched = true
-    } catch {
-        // cross-origin access is expected to fail on many providers
-    }
-
-    if (fireKeyEventTarget(iframeEl, keyName)) dispatched = true
-    if (fireKeyEventTarget(iframeEl?.parentElement, keyName)) dispatched = true
-    if (fireKeyEventTarget(document?.fullscreenElement, keyName)) dispatched = true
-    if (fireKeyEventTarget(window, keyName)) dispatched = true
-    if (fireKeyEventTarget(document, keyName)) dispatched = true
-    if (fireKeyEventTarget(document?.activeElement, keyName)) dispatched = true
-
-    return dispatched
+    return executeIframeDispatchPipeline({
+        iframeEl,
+        action: normalizedAction,
+        keys,
+        skipKeyboardWhenDirectHandled,
+    })
 }
 
 /**
- * Fires several candidate keys in order to increase compatibility between
- * different third-party players inside cross-origin iframes.
+ * Cross-origin iframe inputs are not fully controllable from the parent page.
+ * This is best-effort only and may be ignored by providers/browsers.
+ *
+ * Back-compat wrapper: returns `boolean` instead of structured result.
+ */
+export function dispatchBestEffortIframeMediaKey(iframeEl, key) {
+    if (!iframeEl || !key) return false
+    const keyName = String(key)
+    const inferredAction = inferControllerActionFromKey(keyName)
+    const result = executeIframeDispatchPipeline({
+        iframeEl,
+        action: inferredAction,
+        keys: [keyName],
+        skipKeyboardWhenDirectHandled: false,
+    })
+    return result.handled
+}
+
+/**
+ * Back-compat wrapper for a sequence of candidate keys.
  */
 export function dispatchBestEffortIframeMediaKeys(iframeEl, keys) {
     const list = Array.isArray(keys) ? keys : [keys]
