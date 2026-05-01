@@ -111,6 +111,29 @@ const COMIX_TYPE_PREF_OPTIONS = [
     { id: "other", label: "Oneshot / Other" },
 ]
 
+const CONTROLLER_INPUT_LAYOUT = [
+    {
+        title: "Anime + Hentai video",
+        rows: [
+            { button: "Y", action: "Play" },
+            { button: "A", action: "Pause / Resume" },
+            { button: "X", action: "Fullscreen toggle" },
+            { button: "LT / RT", action: "Seek -10s / +10s" },
+            { button: "D-pad Up / Down", action: "Volume up / down" },
+            { button: "LB / RB", action: "Previous / Next episode" },
+        ],
+    },
+    {
+        title: "Manga reader",
+        rows: [
+            { button: "X", action: "Fullscreen toggle" },
+            { button: "LT / RT", action: "Zoom out / in" },
+            { button: "LB / RB", action: "Previous / Next chapter" },
+            { button: "B", action: "Exit fullscreen, then back" },
+        ],
+    },
+]
+
 function parseCommaOrLineList(value, { maxItems = 200, maxLen = 80 } = {}) {
     const rows = String(value || "")
         .split(/[\n,]/)
@@ -1045,6 +1068,37 @@ export default function Profile() {
                                                 />
                                             </button>
                                         </div>
+                                        {controllerSupportEnabled ? (
+                                            <div className="mt-4 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f8f8fb)] p-3 sm:p-4">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--mx-color-86868b)]">
+                                                    Controller input layout
+                                                </p>
+                                                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                                    {CONTROLLER_INPUT_LAYOUT.map((section) => (
+                                                        <div
+                                                            key={section.title}
+                                                            className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-3"
+                                                        >
+                                                            <p className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">
+                                                                {section.title}
+                                                            </p>
+                                                            <dl className="mt-2 space-y-1.5">
+                                                                {section.rows.map((row) => (
+                                                                    <div key={`${section.title}-${row.button}`} className="flex items-center justify-between gap-3 text-[11px]">
+                                                                        <dt className="font-semibold text-[var(--mx-color-5b5670)]">
+                                                                            {row.button}
+                                                                        </dt>
+                                                                        <dd className="text-right text-[var(--mx-color-86868b)]">
+                                                                            {row.action}
+                                                                        </dd>
+                                                                    </div>
+                                                                ))}
+                                                            </dl>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : null}
 
                                         <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--mx-color-f5f5f7)] pt-6">
                                             <div className="min-w-0">

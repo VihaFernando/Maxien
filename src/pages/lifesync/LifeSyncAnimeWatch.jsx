@@ -25,7 +25,11 @@ import {
     lifeSyncSharedLayoutTransitionProps,
     MotionDiv,
 } from '../../lib/lifesyncMotion'
-import { dispatchBestEffortIframeMediaKey, XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
+import {
+    dispatchBestEffortIframeMediaKeys,
+    focusIframeForControllerInput,
+    XBOX_GAMEPAD_BUTTONS,
+} from '../../lib/lifeSyncControllerInput'
 
 function clampPage(n) {
     const v = Number.parseInt(String(n || '1'), 10)
@@ -648,26 +652,26 @@ export default function LifeSyncAnimeWatch() {
 
     const iframeGamepadHandlers = useMemo(() => ({
         [XBOX_GAMEPAD_BUTTONS.A]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'k')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'Spacebar', 'MediaPlayPause'])
         },
         [XBOX_GAMEPAD_BUTTONS.Y]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'MediaPlay')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'MediaPlay', 'MediaPlayPause'])
         },
         [XBOX_GAMEPAD_BUTTONS.X]: () => {
             toggleIframeContainerFullscreen()
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'f')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['f'])
         },
         [XBOX_GAMEPAD_BUTTONS.LT]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowLeft')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['j', 'ArrowLeft'])
         },
         [XBOX_GAMEPAD_BUTTONS.RT]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowRight')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['l', 'ArrowRight'])
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowUp')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowUp'])
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowDown')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowDown'])
         },
         [XBOX_GAMEPAD_BUTTONS.LB]: () => {
             if (!canPrev) return
@@ -689,6 +693,14 @@ export default function LifeSyncAnimeWatch() {
             XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
         ],
     })
+
+    useEffect(() => {
+        if (!stream?.iframeUrl || typeof window === 'undefined') return undefined
+        const id = window.setTimeout(() => {
+            focusIframeForControllerInput(streamIframeRef.current)
+        }, 180)
+        return () => window.clearTimeout(id)
+    }, [stream?.iframeUrl])
 
     if (!isLifeSyncConnected) {
         return (
@@ -859,6 +871,10 @@ export default function LifeSyncAnimeWatch() {
                                                     key={stream.iframeUrl}
                                                     title={stream.title || 'Episode'}
                                                     src={stream.iframeUrl}
+                                                    tabIndex={0}
+                                                    onLoad={() => {
+                                                        focusIframeForControllerInput(streamIframeRef.current)
+                                                    }}
                                                     className="lifesync-anime-watch-media h-full w-full border-0 bg-black"
                                                     allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
                                                     {...streamIframeSandboxProps(stream.iframeUrl, {

@@ -13,7 +13,11 @@ import {
     LifesyncTextLinesSkeleton,
 } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { dispatchBestEffortIframeMediaKey, XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
+import {
+    dispatchBestEffortIframeMediaKeys,
+    focusIframeForControllerInput,
+    XBOX_GAMEPAD_BUTTONS,
+} from '../../lib/lifeSyncControllerInput'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
 import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lifeSyncDetailBodyRevealTransition, lifeSyncDetailOverlayFadeTransition, lifeSyncDetailSheetEnterAnimate, lifeSyncDetailSheetEnterInitial, lifeSyncDetailSheetExitVariant, lifeSyncDetailSheetMainTransition, lifeSyncDollyPageTransition, lifeSyncDollyPageVariants, lifeSyncSharedLayoutTransitionProps, MotionDiv } from '../../lib/lifesyncMotion'
 
@@ -370,26 +374,26 @@ function StreamPlayerPopup({
 
     const iframeGamepadHandlers = useMemo(() => ({
         [XBOX_GAMEPAD_BUTTONS.A]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'k')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'Spacebar', 'MediaPlayPause'])
         },
         [XBOX_GAMEPAD_BUTTONS.Y]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'MediaPlay')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'MediaPlay', 'MediaPlayPause'])
         },
         [XBOX_GAMEPAD_BUTTONS.X]: () => {
             toggleIframeContainerFullscreen()
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'f')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['f'])
         },
         [XBOX_GAMEPAD_BUTTONS.LT]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowLeft')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['j', 'ArrowLeft'])
         },
         [XBOX_GAMEPAD_BUTTONS.RT]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowRight')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['l', 'ArrowRight'])
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowUp')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowUp'])
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
-            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowDown')
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowDown'])
         },
         [XBOX_GAMEPAD_BUTTONS.LB]: () => {
             if (!canPrevEpisode) return
@@ -411,6 +415,14 @@ function StreamPlayerPopup({
             XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
         ],
     })
+
+    useEffect(() => {
+        if (!stream?.embedUrl || typeof window === 'undefined') return undefined
+        const id = window.setTimeout(() => {
+            focusIframeForControllerInput(streamIframeRef.current)
+        }, 180)
+        return () => window.clearTimeout(id)
+    }, [stream?.embedUrl])
 
     return createPortal(
         <div
@@ -515,6 +527,10 @@ function StreamPlayerPopup({
                                             ref={streamIframeRef}
                                             title={stream.title}
                                             src={stream.embedUrl}
+                                            tabIndex={0}
+                                            onLoad={() => {
+                                                focusIframeForControllerInput(streamIframeRef.current)
+                                            }}
                                             className="h-full w-full border-0"
                                             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                                             allowFullScreen
