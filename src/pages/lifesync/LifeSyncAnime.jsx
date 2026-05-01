@@ -8,7 +8,6 @@ import {
 import { LifeSyncSectionNav } from "../../components/lifesync/LifeSyncSectionNav";
 import { useLifeSync } from "../../context/LifeSyncContext";
 import {
-  ANIPUB_API_REFERENCE_URL,
   getAnimeStreamAudio,
   getLifesyncApiBase,
   lifesyncFetch,
@@ -357,7 +356,7 @@ function DetailWatchSection({
     const audio = animeStreamAudio === "dub" ? "dub" : "sub";
 
     lifesyncFetch(
-      `/api/v1/anime/stream/info/by-mal/${encodeURIComponent(animeId)}?view=full`,
+      `/api/v1/anime/stream/info/by-mal/${encodeURIComponent(animeId)}?view=full${malTitle ? `&title=${encodeURIComponent(String(malTitle))}` : ''}`,
       { signal },
     )
       .then((res) => {
@@ -407,7 +406,7 @@ function DetailWatchSection({
       cancelled = true;
       ac.abort();
     };
-  }, [animeId, animeStreamAudio]);
+  }, [animeId, animeStreamAudio, malTitle]);
 
   const catalogWarmTimerRef = useRef(null);
   const warmStreamCatalog = useCallback(() => {
@@ -1433,7 +1432,9 @@ export default function LifeSyncAnime() {
         episodes: Array.isArray(series.episodes) ? series.episodes : [],
         stream: { ...resolved, resolving: false },
       });
-      void fetchStreamInfoByMalWithCache(String(series.malId), lifesyncFetch)
+      void fetchStreamInfoByMalWithCache(String(series.malId), lifesyncFetch, undefined, {
+        title: String(series?.title || ''),
+      })
         .then((body) => {
           if (body?.data != null)
             writeLifesyncStreamCatalogByMal(series.malId, body);
@@ -1442,7 +1443,7 @@ export default function LifeSyncAnime() {
       const ep1 = clampPage(epIndex + 1);
       const fromPath = `${listPath.replace(location.search || "", "")}${location.search || ""}`;
       const target = `/dashboard/lifesync/anime/anime/watch/${encodeURIComponent(String(series.malId))}/${ep1}`;
-      const nextState = { from: fromPath, handoffId };
+      const nextState = { from: fromPath, handoffId, title: String(series?.title || '') };
       const go = () => navigate(target, { state: nextState });
       if (typeof document !== "undefined" && document.startViewTransition) {
         document.startViewTransition(() => {

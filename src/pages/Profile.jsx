@@ -29,6 +29,12 @@ import {
     readPwaEngagementNotificationsEnabled,
     writePwaEngagementNotificationsEnabled,
 } from "../lib/pwaNotifications"
+import {
+    CONTROLLER_SUPPORT_PREFERENCE_CHANGED,
+    CONTROLLER_SUPPORT_STORAGE_KEY,
+    readControllerSupportEnabled,
+    writeControllerSupportEnabled,
+} from "../lib/lifeSyncControllerPreference"
 import useTimeoutRegistry from "../hooks/useTimeoutRegistry"
 const NAV = [
     {
@@ -240,6 +246,7 @@ export default function Profile() {
     const [prefsBusy, setPrefsBusy] = useState(false)
     const [backgroundPrefsBusy, setBackgroundPrefsBusy] = useState(false)
     const [engageNotifs, setEngageNotifs] = useState(() => readPwaEngagementNotificationsEnabled())
+    const [controllerSupportEnabled, setControllerSupportEnabled] = useState(() => readControllerSupportEnabled())
     const [engageBusy, setEngageBusy] = useState(false)
     const { registerTimeout } = useTimeoutRegistry()
     const [gamesCustomImageUrlInput, setGamesCustomImageUrlInput] = useState("")
@@ -276,6 +283,20 @@ export default function Profile() {
         const onChange = () => setEngageNotifs(readPwaEngagementNotificationsEnabled())
         window.addEventListener("pwa-engagement-notifications-changed", onChange)
         return () => window.removeEventListener("pwa-engagement-notifications-changed", onChange)
+    }, [])
+
+    useEffect(() => {
+        const sync = () => setControllerSupportEnabled(readControllerSupportEnabled())
+        const onStorage = (e) => {
+            if (e?.key && e.key !== CONTROLLER_SUPPORT_STORAGE_KEY) return
+            sync()
+        }
+        window.addEventListener(CONTROLLER_SUPPORT_PREFERENCE_CHANGED, sync)
+        window.addEventListener("storage", onStorage)
+        return () => {
+            window.removeEventListener(CONTROLLER_SUPPORT_PREFERENCE_CHANGED, sync)
+            window.removeEventListener("storage", onStorage)
+        }
     }, [])
 
     useEffect(() => {
@@ -994,6 +1015,33 @@ export default function Profile() {
                                             >
                                                 <span
                                                     className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
+                                                />
+                                            </button>
+                                        </div>
+
+                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--mx-color-f5f5f7)] pt-6">
+                                            <div className="min-w-0">
+                                                <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Controller support</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                    Enable Xbox controller mappings for LifeSync anime watch, hentai player, and manga reader.
+                                                </p>
+                                                <p className="mt-1 text-[11px] text-[var(--mx-color-9b9ba1)]">
+                                                    Local device only. This setting is not synced to your account.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                role="switch"
+                                                aria-checked={controllerSupportEnabled}
+                                                onClick={() => {
+                                                    const next = !controllerSupportEnabled
+                                                    writeControllerSupportEnabled(next)
+                                                    setControllerSupportEnabled(next)
+                                                }}
+                                                className={`relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors ${controllerSupportEnabled ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"}`}
+                                            >
+                                                <span
+                                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${controllerSupportEnabled ? "translate-x-5" : ""}`}
                                                 />
                                             </button>
                                         </div>

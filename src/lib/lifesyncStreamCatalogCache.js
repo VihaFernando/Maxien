@@ -103,7 +103,7 @@ export function invalidateLifesyncStreamCatalogByMal(malId, mirror) {
  * @param {string|number} malId
  * @param {(path: string, init?: RequestInit) => Promise<unknown>} fetcher — e.g. lifesyncFetch
  * @param {RequestInit} [init]
- * @param {{ mirror?: string, forceRefresh?: boolean, fromResumeDeck?: boolean }} [opts]
+ * @param {{ mirror?: string, forceRefresh?: boolean, fromResumeDeck?: boolean, title?: string }} [opts]
  * @returns {Promise<{ data?: unknown, cached?: boolean } | null>}
  */
 export async function fetchStreamInfoByMalWithCache(malId, fetcher, init, opts = {}) {
@@ -112,13 +112,20 @@ export async function fetchStreamInfoByMalWithCache(malId, fetcher, init, opts =
   const mirror = normalizeMirror(opts.mirror)
   const forceRefresh = opts?.forceRefresh === true
   const fromResumeDeck = opts?.fromResumeDeck === true
+  const title = String(opts?.title ?? '').trim()
+  const titleKey = title.toLowerCase()
   if (!forceRefresh) {
     const hit = readLifesyncStreamCatalogByMal(id, mirror)
-    if (hit) return hit
+    if (hit) {
+      if (!titleKey) return hit
+      const cachedTitle = String(hit?.data?.searchTitleQuery ?? '').trim().toLowerCase()
+      if (cachedTitle && cachedTitle === titleKey) return hit
+    }
   }
   const qs = new URLSearchParams({ view: 'full' })
   if (mirror === 'kickassanime') qs.set('mirror', 'kickassanime')
   if (fromResumeDeck) qs.set('fromResumeDeck', '1')
+  if (title) qs.set('title', title)
   const res = await fetcher(`/api/v1/anime/stream/info/by-mal/${encodeURIComponent(id)}?${qs.toString()}`, init).catch(() => null)
   const body = res && typeof res === 'object' ? res : null
   if (body?.data != null) writeLifesyncStreamCatalogByMal(id, body, mirror)

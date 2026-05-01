@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import AdvancedVideoPlayer from '../../components/lifesync/AdvancedVideoPlayer'
 import { FadeInImg } from '../../components/lifesync/FadeInImg'
+import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import {
     LifesyncEpisodeThumbnail,
     LifesyncHentaiCatalogGridSkeleton,
@@ -11,6 +13,7 @@ import {
     LifesyncTextLinesSkeleton,
 } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import { useLifeSync } from '../../context/LifeSyncContext'
+import { dispatchBestEffortIframeMediaKey, XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
 import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lifeSyncDetailBodyRevealTransition, lifeSyncDetailOverlayFadeTransition, lifeSyncDetailSheetEnterAnimate, lifeSyncDetailSheetEnterInitial, lifeSyncDetailSheetExitVariant, lifeSyncDetailSheetMainTransition, lifeSyncDollyPageTransition, lifeSyncDollyPageVariants, lifeSyncSharedLayoutTransitionProps, MotionDiv } from '../../lib/lifesyncMotion'
 
@@ -282,6 +285,9 @@ function StreamPlayerPopup({
     const qualityOptions = Array.isArray(stream?.qualityOptions) ? stream.qualityOptions : []
     const canSelectQuality = Boolean(stream?.videoUrl && qualityOptions.length > 1)
     const playingRef = useRef(null)
+    const streamIframeContainerRef = useRef(null)
+    const streamIframeRef = useRef(null)
+    const controllerSupportEnabled = useControllerSupportEnabled()
     const [isDarkTheme, setIsDarkTheme] = useState(() => {
         if (typeof document === 'undefined') return false
         return document.documentElement?.dataset?.maxienTheme === 'dark'
@@ -345,6 +351,66 @@ function StreamPlayerPopup({
 
     const hideScroll = '[scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
     const progressLabel = episodes.length > 0 ? `${Math.min(episodes.length, episodeIndex + 1)} / ${episodes.length}` : null
+    const canPrevEpisode = Boolean(prevEp)
+    const canNextEpisode = Boolean(nextEp)
+
+    const toggleIframeContainerFullscreen = useCallback(() => {
+        const el = streamIframeContainerRef.current
+        if (!el) return
+        if (!document.fullscreenElement) {
+            if (el.requestFullscreen) {
+                el.requestFullscreen().catch(() => {})
+            }
+            return
+        }
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {})
+        }
+    }, [])
+
+    const iframeGamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'k')
+        },
+        [XBOX_GAMEPAD_BUTTONS.Y]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'MediaPlay')
+        },
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            toggleIframeContainerFullscreen()
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'f')
+        },
+        [XBOX_GAMEPAD_BUTTONS.LT]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowLeft')
+        },
+        [XBOX_GAMEPAD_BUTTONS.RT]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowRight')
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowUp')
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowDown')
+        },
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+            if (!canPrevEpisode) return
+            onChangeEpisode(episodeIndex - 1)
+        },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+            if (!canNextEpisode) return
+            onChangeEpisode(episodeIndex + 1)
+        },
+    }), [canNextEpisode, canPrevEpisode, episodeIndex, onChangeEpisode, toggleIframeContainerFullscreen])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabled && Boolean(stream?.embedUrl) && !stream?.videoUrl,
+        handlers: iframeGamepadHandlers,
+        repeatableButtons: [
+            XBOX_GAMEPAD_BUTTONS.LT,
+            XBOX_GAMEPAD_BUTTONS.RT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+            XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+        ],
+    })
 
     return createPortal(
         <div
@@ -427,7 +493,7 @@ function StreamPlayerPopup({
                                 ? 'border-[var(--color-border-strong)]/15 bg-black'
                                 : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-111)]'
                         }`}>
-                            <div className="relative aspect-video w-full">
+                            <div ref={streamIframeContainerRef} className="relative aspect-video w-full">
                                 <div className="absolute inset-0">
                                     {stream.resolving ? (
                                         <LifesyncStreamPlayerResolvingSkeleton />
@@ -435,6 +501,10 @@ function StreamPlayerPopup({
                                         <AdvancedVideoPlayer
                                             key={stream.videoUrl}
                                             src={stream.videoUrl}
+                                            onPrevEpisode={canPrevEpisode ? () => onChangeEpisode(episodeIndex - 1) : undefined}
+                                            onNextEpisode={canNextEpisode ? () => onChangeEpisode(episodeIndex + 1) : undefined}
+                                            canPrevEpisode={canPrevEpisode}
+                                            canNextEpisode={canNextEpisode}
                                             onEnded={() => nextEp && onChangeEpisode(episodeIndex + 1)}
                                             onError={() => {
                                                 onVideoFailure?.()
@@ -442,6 +512,7 @@ function StreamPlayerPopup({
                                         />
                                     ) : stream.embedUrl ? (
                                         <iframe
+                                            ref={streamIframeRef}
                                             title={stream.title}
                                             src={stream.embedUrl}
                                             className="h-full w-full border-0"

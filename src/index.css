@@ -768,6 +768,10 @@ html[data-maxien-theme='dark'] .lifesync-detail-hero-fallback {
   box-sizing: border-box;
 }
 
+:where(button, [role='button'], a[href], summary):not(:disabled):not([aria-disabled='true']) {
+  cursor: pointer;
+}
+
 img,
 video,
 canvas,

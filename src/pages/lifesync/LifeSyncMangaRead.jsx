@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import { useLifeSync } from '../../context/LifeSyncContext'
+import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { lifesyncFetch } from '../../lib/lifesyncApi'
 import { decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 
@@ -11,6 +14,12 @@ const MANGA_PROGRESS_FLUSH_BATCH = 16
 const MANGA_PROGRESS_SOURCES = new Set(['mangadistrict', 'comix', 'hentaifox'])
 const MANGA_READER_INITIAL_PAGE_BURST = 4
 const MANGA_ZOOM_TRANSITION_MS = 180
+const MANGA_ZOOM_STEP = 10
+const MANGA_FULLSCREEN_ZOOM_STEP = 2
+const MANGA_ZOOM_MIN = 50
+const MANGA_ZOOM_MAX = 200
+const MANGA_FULLSCREEN_ZOOM_MIN = 20
+const MANGA_FULLSCREEN_ZOOM_MAX = 80
 
 function compareChapters(a, b) {
     const av = a?.volume != null && a.volume !== '' ? Number(a.volume) : null
@@ -47,6 +56,14 @@ function normalizeReadPercent(value) {
     const n = Number(value)
     if (!Number.isFinite(n)) return 0
     return Math.min(100, Math.max(0, Math.round(n * 10) / 10))
+}
+
+function clampZoomPct(value, { fullscreen = false } = {}) {
+    const n = Number(value)
+    const next = Number.isFinite(n) ? n : 100
+    const min = fullscreen ? MANGA_FULLSCREEN_ZOOM_MIN : MANGA_ZOOM_MIN
+    const max = fullscreen ? MANGA_FULLSCREEN_ZOOM_MAX : MANGA_ZOOM_MAX
+    return Math.min(max, Math.max(min, next))
 }
 
 function normalizeMangaSource(value) {
@@ -312,10 +329,13 @@ export default function LifeSyncMangaRead() {
     const [chapterReadProgress, setChapterReadProgress] = useState(0)
     const [navBusy, setNavBusy] = useState(false)
     const [zoomPct, setZoomPct] = useState(100)
+    const [readerFullscreen, setReaderFullscreen] = useState(false)
+    const controllerSupportEnabled = useControllerSupportEnabled()
 
     const scrollRef = useRef(null)
     const pagesInnerRef = useRef(null)
     const scrollRafRef = useRef(null)
+    const readerRootRef = useRef(null)
 
     const remoteFlushTimerRef = useRef(null)
     const zoomChangingRef = useRef(false)
@@ -599,7 +619,10 @@ export default function LifeSyncMangaRead() {
     )
 
     const urls = useMemo(() => (pack?.pages?.length ? pack.pages : []), [pack])
-    const zoomScale = useMemo(() => Math.min(2, Math.max(0.5, Number(zoomPct) / 100)), [zoomPct])
+    const zoomScale = useMemo(
+        () => clampZoomPct(zoomPct, { fullscreen: readerFullscreen }) / 100,
+        [readerFullscreen, zoomPct]
+    )
 
     useEffect(() => {
         chapterReadProgressRef.current = chapterReadProgress
@@ -795,6 +818,79 @@ export default function LifeSyncMangaRead() {
         )
     }, [browseTranslatedLang, closeTo, flushReadingProgress, location.state, mangaId, navBusy, navigate, persistCurrentProgressLocal, readerSearch, source])
 
+    const closeReader = useCallback(() => {
+        persistCurrentProgressLocal()
+        void flushReadingProgress({ keepalive: true, queueFirst: true })
+        void flushQueuedProgress({ maxItems: 6 })
+        navigate(closeTo)
+    }, [closeTo, flushQueuedProgress, flushReadingProgress, navigate, persistCurrentProgressLocal])
+
+    const adjustZoom = useCallback((direction) => {
+        const sign = Number(direction) >= 0 ? 1 : -1
+        const step = readerFullscreen ? MANGA_FULLSCREEN_ZOOM_STEP : MANGA_ZOOM_STEP
+        setZoomPct((prev) => clampZoomPct(prev + (sign * step), { fullscreen: readerFullscreen }))
+    }, [readerFullscreen])
+
+    const requestReaderFullscreen = useCallback(async () => {
+        if (typeof document === 'undefined') return false
+        const el = readerRootRef.current
+        if (!el) return false
+
+        if (document.fullscreenElement === el || document.webkitFullscreenElement === el) {
+            return true
+        }
+
+        try {
+            if (typeof el.requestFullscreen === 'function') {
+                await el.requestFullscreen({ navigationUI: 'hide' })
+                return true
+            }
+        } catch {
+            // ignore
+        }
+
+        try {
+            if (typeof el.webkitRequestFullscreen === 'function') {
+                el.webkitRequestFullscreen()
+                return true
+            }
+        } catch {
+            // ignore
+        }
+
+        return false
+    }, [])
+
+    const exitReaderFullscreen = useCallback(async () => {
+        if (typeof document === 'undefined') return false
+        const isActive = document.fullscreenElement || document.webkitFullscreenElement
+        if (!isActive) return true
+
+        try {
+            if (typeof document.exitFullscreen === 'function') {
+                await document.exitFullscreen()
+                return true
+            }
+        } catch {
+            // ignore
+        }
+
+        try {
+            if (typeof document.webkitExitFullscreen === 'function') {
+                document.webkitExitFullscreen()
+                return true
+            }
+        } catch {
+            // ignore
+        }
+
+        return false
+    }, [])
+
+    const enterReaderFullscreen = useCallback(() => {
+        void requestReaderFullscreen()
+    }, [requestReaderFullscreen])
+
     useEffect(() => {
         // Unlock nav after the route-driven chapter switch has landed.
         if (navBusy && String(chapterIdParam || '').trim()) setNavBusy(false)
@@ -806,20 +902,98 @@ export default function LifeSyncMangaRead() {
         }
     }, [isLifeSyncConnected, navigate])
 
+    useEffect(() => {
+        if (typeof document === 'undefined') return undefined
+
+        const syncFullscreenState = () => {
+            const el = readerRootRef.current
+            const active = Boolean(el) && (
+                document.fullscreenElement === el ||
+                document.webkitFullscreenElement === el
+            )
+            setReaderFullscreen(active)
+        }
+
+        syncFullscreenState()
+        document.addEventListener('fullscreenchange', syncFullscreenState)
+        document.addEventListener('webkitfullscreenchange', syncFullscreenState)
+        return () => {
+            document.removeEventListener('fullscreenchange', syncFullscreenState)
+            document.removeEventListener('webkitfullscreenchange', syncFullscreenState)
+        }
+    }, [])
+
+    useEffect(() => {
+        setZoomPct((prev) => clampZoomPct(prev, { fullscreen: readerFullscreen }))
+    }, [readerFullscreen])
+
+    useEffect(() => {
+        const onKey = (e) => {
+            if (e.key !== 'Escape') return
+            if (readerFullscreen) {
+                e.preventDefault()
+                void exitReaderFullscreen()
+                return
+            }
+            closeReader()
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [closeReader, exitReaderFullscreen, readerFullscreen])
+
+    const mangaControllerHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+            if (!prevCh || navBusy || busy || loadingPages) return
+            goToChapter(prevCh)
+        },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+            if (!nextCh || navBusy || busy || loadingPages) return
+            goToChapter(nextCh)
+        },
+        [XBOX_GAMEPAD_BUTTONS.LT]: () => {
+            adjustZoom(-1)
+        },
+        [XBOX_GAMEPAD_BUTTONS.RT]: () => {
+            adjustZoom(1)
+        },
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            if (readerFullscreen) {
+                void exitReaderFullscreen()
+                return
+            }
+            void requestReaderFullscreen()
+        },
+        [XBOX_GAMEPAD_BUTTONS.B]: () => {
+            if (readerFullscreen) {
+                void exitReaderFullscreen()
+                return
+            }
+            closeReader()
+        },
+    }), [adjustZoom, busy, closeReader, exitReaderFullscreen, goToChapter, loadingPages, navBusy, nextCh, prevCh, readerFullscreen, requestReaderFullscreen])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabled,
+        handlers: mangaControllerHandlers,
+        repeatableButtons: [
+            XBOX_GAMEPAD_BUTTONS.LT,
+            XBOX_GAMEPAD_BUTTONS.RT,
+        ],
+    })
+
     if (!isLifeSyncConnected) return null
 
     return (
-        <div className="lifesync-manga-read fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-hidden bg-[var(--mx-color-0a0a0a)]">
+        <div
+            ref={readerRootRef}
+            className="lifesync-manga-read fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-hidden bg-[var(--mx-color-0a0a0a)]"
+        >
+            {!readerFullscreen ? (
             <header className="shrink-0 border-b border-[var(--color-border-strong)]/10 bg-black/70 px-2 py-2 backdrop-blur-xl">
                 <div className="mx-auto flex w-full max-w-5xl items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => {
-                            persistCurrentProgressLocal()
-                            void flushReadingProgress({ keepalive: true, queueFirst: true })
-                            void flushQueuedProgress({ maxItems: 6 })
-                            navigate(closeTo)
-                        }}
+                        onClick={closeReader}
                         className="inline-flex items-center gap-2 rounded-lg border border-[var(--mx-color-3a3a3c)] bg-[var(--mx-color-1c1c1e)] px-2.5 py-2 text-[11px] font-semibold text-white hover:bg-[var(--mx-color-2c2c2e)]"
                         title="Back to list"
                     >
@@ -841,11 +1015,11 @@ export default function LifeSyncMangaRead() {
                         <input
                             id="manga-reader-zoom"
                             type="range"
-                            min={50}
-                            max={200}
+                            min={MANGA_ZOOM_MIN}
+                            max={MANGA_ZOOM_MAX}
                             step={1}
                             value={zoomPct}
-                            onChange={(e) => setZoomPct(Number(e.target.value))}
+                            onChange={(e) => setZoomPct(clampZoomPct(Number(e.target.value), { fullscreen: false }))}
                             className="w-28 accent-[var(--mx-color-c6ff00)]"
                         />
                     </div>
@@ -897,8 +1071,20 @@ export default function LifeSyncMangaRead() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                     </button>
+                    <button
+                        type="button"
+                        onClick={enterReaderFullscreen}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--mx-color-3a3a3c)] bg-[var(--mx-color-1c1c1e)] px-2.5 py-2 text-[11px] font-semibold text-white hover:bg-[var(--mx-color-2c2c2e)]"
+                        title="Fullscreen reader"
+                    >
+                        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75h5.5m-5.5 0v5.5m0-5.5L9 9.25m11.25-5.5h-5.5m5.5 0v5.5m0-5.5L15 9.25M3.75 20.25h5.5m-5.5 0v-5.5m0 5.5L9 14.75m11.25 5.5h-5.5m5.5 0v-5.5m0 5.5L15 14.75" />
+                        </svg>
+                        <span className="hidden sm:inline">Fullscreen</span>
+                    </button>
                 </div>
             </header>
+            ) : null}
 
             <div
                 ref={scrollRef}
@@ -918,7 +1104,7 @@ export default function LifeSyncMangaRead() {
                 )}
                 <div
                     ref={pagesInnerRef}
-                    className="lifesync-manga-read-media mx-auto max-w-3xl pb-8 pt-2"
+                    className={`lifesync-manga-read-media mx-auto pb-8 ${readerFullscreen ? 'max-w-none pt-0' : 'max-w-3xl pt-2'}`}
                     style={{
                         transform: `scale(${zoomScale})`,
                         transformOrigin: 'top center',
@@ -960,9 +1146,51 @@ export default function LifeSyncMangaRead() {
                         />
                     </div>
                     <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-[var(--mx-color-86868b)]">
-                        <span>
-                            {urls.length > 0 ? `${urls.length} page${urls.length === 1 ? '' : 's'}` : loadingPages ? '…' : '—'}
-                        </span>
+                        {!readerFullscreen ? (
+                            <span>
+                                {urls.length > 0 ? `${urls.length} page${urls.length === 1 ? '' : 's'}` : loadingPages ? '…' : '—'}
+                            </span>
+                        ) : (
+                            <div className="inline-flex items-center gap-1.5 text-[10px] text-white/80">
+                                <button
+                                    type="button"
+                                    onClick={() => adjustZoom(-1)}
+                                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--color-border-strong)]/20 bg-black/40 text-[12px] font-bold text-white transition-colors hover:bg-black/55"
+                                    title="Zoom out"
+                                >
+                                    −
+                                </button>
+                                <span className="rounded border border-[var(--color-border-strong)]/18 bg-black/35 px-2 py-0.5 tabular-nums">
+                                    Zoom {Math.round(zoomScale * 100)}%
+                                </span>
+                                <input
+                                    type="range"
+                                    min={MANGA_FULLSCREEN_ZOOM_MIN}
+                                    max={MANGA_FULLSCREEN_ZOOM_MAX}
+                                    step={1}
+                                    value={clampZoomPct(zoomPct, { fullscreen: true })}
+                                    onChange={(e) => setZoomPct(clampZoomPct(Number(e.target.value), { fullscreen: true }))}
+                                    className="w-28 accent-[var(--mx-color-c6ff00)]"
+                                    aria-label="Fullscreen zoom"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => adjustZoom(1)}
+                                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-[var(--color-border-strong)]/20 bg-black/40 text-[12px] font-bold text-white transition-colors hover:bg-black/55"
+                                    title="Zoom in"
+                                >
+                                    +
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => void exitReaderFullscreen()}
+                                    className="inline-flex items-center rounded border border-[var(--color-border-strong)]/20 bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white transition-colors hover:bg-black/55"
+                                    title="Exit fullscreen"
+                                >
+                                    Exit
+                                </button>
+                            </div>
+                        )}
                         <span className="tabular-nums text-[var(--mx-color-a1a1a6)]">
                             {Math.round(chapterReadProgress * 100)}% through chapter
                         </span>

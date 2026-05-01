@@ -1,5 +1,5 @@
 /**
- * Embed iframe policy for LifeSync anime streams (AniPub + Anitaku mirrors).
+ * Embed iframe policy for LifeSync anime streams across multiple mirrors.
  *
  * - Default: tight sandbox (no allow-popups*) to cut pop-up / pop-under ads from cooperative embeds.
  * - Exceptions: omit `sandbox` only when the mirror host or label is known to refuse sandboxed frames.

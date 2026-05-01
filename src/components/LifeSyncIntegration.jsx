@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import { useLifeSync } from '../context/LifeSyncContext'
 import useTimeoutRegistry from '../hooks/useTimeoutRegistry'
 import {
-    ANIPUB_API_REFERENCE_URL,
     isPluginEnabled,
     lifesyncFetch,
     lifesyncOAuthStartUrl,

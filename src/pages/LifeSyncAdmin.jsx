@@ -178,6 +178,11 @@ export default function LifeSyncAdmin() {
     const [malCheckId, setMalCheckId] = useState('')
     const [malCheckBusy, setMalCheckBusy] = useState(false)
     const [malCheckResult, setMalCheckResult] = useState(null)
+    const [malMapId, setMalMapId] = useState('')
+    const [malMapSlug, setMalMapSlug] = useState('')
+    const [malMapSearchTitle, setMalMapSearchTitle] = useState('')
+    const [malMapBusy, setMalMapBusy] = useState(false)
+    const [malMapResult, setMalMapResult] = useState(null)
 
 
     const hasToken = Boolean(getLifesyncToken())
@@ -428,6 +433,40 @@ export default function LifeSyncAdmin() {
             setMalCheckResult({ error: e?.message || 'MAL check failed.' })
         } finally {
             setMalCheckBusy(false)
+        }
+    }
+
+    const runMalMap = async () => {
+        const id = malMapId.trim()
+        if (!id) {
+            setMalMapResult({ error: 'Enter a MAL anime id.' })
+            return
+        }
+        if (!/^\d+$/.test(id)) {
+            setMalMapResult({ error: 'MAL id must be numeric.' })
+            return
+        }
+        const title = malMapSearchTitle.trim()
+        const slug = malMapSlug.trim().replace(/^\/+|\/+$/g, '')
+        setMalMapBusy(true)
+        setMalMapResult(null)
+        try {
+            const data = await lifesyncFetch('/api/v1/admin/anime-db/map-mal-to-anitaku', {
+                method: 'POST',
+                json: {
+                    malId: id,
+                    ...(title ? { searchTitle: title } : {}),
+                    ...(!title && slug ? { anitakuSlug: slug } : {}),
+                },
+            })
+            setMalMapResult(data)
+            setMalCheckId(id)
+            setMalCheckResult(null)
+            refreshAnimeDb().catch(() => {})
+        } catch (e) {
+            setMalMapResult({ error: e?.message || 'MAL to Anitaku mapping failed.' })
+        } finally {
+            setMalMapBusy(false)
         }
     }
 
@@ -928,6 +967,104 @@ export default function LifeSyncAdmin() {
                                     )}
                                 </div>
                             </div>
+                        ) : null}
+                    </Panel>
+
+                    <Panel>
+                        <SectionIntro title="MAL → Anitaku map">
+                            Map by MAL id using either an Anitaku slug or search text, then persist the mapping.
+                        </SectionIntro>
+                        <div className="grid gap-2 sm:grid-cols-[minmax(120px,180px)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                            <input
+                                autoComplete="off"
+                                placeholder="MAL anime id"
+                                value={malMapId}
+                                onChange={(e) => setMalMapId(e.target.value.trim())}
+                                className="min-w-0 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
+                            />
+                            <input
+                                autoComplete="off"
+                                placeholder="Optional Anitaku slug (category slug)"
+                                value={malMapSlug}
+                                onChange={(e) => setMalMapSlug(e.target.value.trim())}
+                                className="min-w-0 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
+                            />
+                            <input
+                                autoComplete="off"
+                                placeholder="Optional search title override"
+                                value={malMapSearchTitle}
+                                onChange={(e) => {
+                                    const next = e.target.value
+                                    setMalMapSearchTitle(next)
+                                    if (next.trim()) setMalMapSlug('')
+                                }}
+                                className="min-w-0 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[12px] text-apple-text"
+                            />
+                            <button
+                                type="button"
+                                disabled={malMapBusy}
+                                onClick={runMalMap}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-4 py-2.5 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                            >
+                                {malMapBusy ? 'Mapping…' : 'Map & save'}
+                            </button>
+                        </div>
+                        <p className="mt-2 text-[11px] text-apple-subtext">
+                            Enter slug or search text. If you type search text, slug is reset automatically.
+                        </p>
+                        {malMapResult?.error ? (
+                            <p className="mt-2 text-[12px] text-amber-800">{malMapResult.error}</p>
+                        ) : null}
+                        {malMapResult && !malMapResult.error ? (
+                            <div className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Mapped</p>
+                                    <p className="mt-1 text-apple-text">{malMapResult.mapped?.title || '—'}</p>
+                                    <p className="mt-1 font-mono text-[11px] text-apple-subtext">
+                                        {malMapResult.mapped?.anitakuSlug
+                                            ? `anitaku:${malMapResult.mapped.anitakuSlug}`
+                                            : '—'}
+                                    </p>
+                                    <p className="mt-1 text-apple-subtext">
+                                        Episodes: {malMapResult.mapped?.episodeCount ?? '—'}
+                                    </p>
+                                    <p className="mt-1 text-apple-subtext">
+                                        Search match: {malMapResult.mapped?.matchedStreamTitle || '—'}
+                                    </p>
+                                    <p className="mt-1 text-apple-subtext">
+                                        Mode: {malMapResult.mappingMode || 'search'}
+                                    </p>
+                                    <p className="mt-1 text-apple-subtext">
+                                        MAL lookup: {malMapResult.mal?.ok ? 'ok' : (malMapResult.mal?.error || 'failed')}
+                                    </p>
+                                </div>
+                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Saved row</p>
+                                    <p className="mt-1 text-apple-text">
+                                        {malMapResult.db?.found ? 'Found' : 'Not found'}
+                                    </p>
+                                    <p className="mt-1 font-mono text-[11px] text-apple-subtext">
+                                        {malMapResult.db?.malId ? `MAL ${malMapResult.db.malId}` : '—'}
+                                    </p>
+                                    <p className="mt-1 text-apple-subtext">{malMapResult.db?.title || '—'}</p>
+                                    <p className="mt-1 text-apple-subtext">
+                                        Slug: {malMapResult.db?.anitakuSlug || '—'}
+                                    </p>
+                                    <p className="mt-1 text-apple-subtext">
+                                        DB episodes: {malMapResult.db?.epCount ?? '—'}
+                                    </p>
+                                    {malMapResult.db?.mirrorEpisodeCount != null ? (
+                                        <p className="mt-1 text-apple-subtext">
+                                            Mirror episodes: {malMapResult.db.mirrorEpisodeCount}
+                                        </p>
+                                    ) : null}
+                                </div>
+                            </div>
+                        ) : null}
+                        {Array.isArray(malMapResult?.titlesTried) && malMapResult.titlesTried.length ? (
+                            <p className="mt-2 text-[11px] text-apple-subtext">
+                                Titles used: {malMapResult.titlesTried.slice(0, 5).join(' · ')}
+                            </p>
                         ) : null}
                     </Panel>
 

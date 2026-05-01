@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { getAnimeStreamAudio, getLifesyncApiBase, lifesyncFetch } from '../../lib/lifesyncApi'
+import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import { MalListStatusControl } from './malListStatusUi'
 import {
     fetchStreamInfoByMalWithCache,
@@ -23,6 +25,7 @@ import {
     lifeSyncSharedLayoutTransitionProps,
     MotionDiv,
 } from '../../lib/lifesyncMotion'
+import { dispatchBestEffortIframeMediaKey, XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 
 function clampPage(n) {
     const v = Number.parseInt(String(n || '1'), 10)
@@ -63,6 +66,43 @@ function normalizeStreamEpisodesForPlayer(list, episodeThumbnails = {}) {
 
 function safeText(x) {
     return x == null ? '' : String(x)
+}
+
+function parseEpisodeNumber(epObj, fallbackEpisodeNumber) {
+    const fromRow = Number(epObj?.number ?? epObj?.episode)
+    if (Number.isFinite(fromRow) && fromRow > 0) return Math.round(fromRow * 1000) / 1000
+    const fromFallback = Number(fallbackEpisodeNumber)
+    if (Number.isFinite(fromFallback) && fromFallback > 0) return Math.round(fromFallback * 1000) / 1000
+    return 1
+}
+
+function normalizeAniSkipSegments(payload) {
+    const list = Array.isArray(payload?.results) ? payload.results : []
+    const out = []
+    for (const raw of list) {
+        if (!raw || typeof raw !== 'object') continue
+        const startRaw = Number(raw.startTime)
+        const endRaw = Number(raw.endTime)
+        if (!Number.isFinite(startRaw) || !Number.isFinite(endRaw) || endRaw <= startRaw) continue
+        const skipType = String(raw.skipType || '').trim().toLowerCase()
+        if (!skipType) continue
+        const labelRaw = String(raw.label || '').trim()
+        out.push({
+            id: String(raw.skipId || `${skipType}:${startRaw}:${endRaw}`),
+            skipType,
+            label:
+                labelRaw ||
+                (skipType === 'op' || skipType === 'mixed-op'
+                    ? 'Skip Intro'
+                    : skipType === 'ed' || skipType === 'mixed-ed'
+                      ? 'Skip Outro'
+                      : 'Skip Recap'),
+            startTime: startRaw,
+            endTime: endRaw,
+        })
+    }
+    out.sort((a, b) => a.startTime - b.startTime || a.endTime - b.endTime)
+    return out
 }
 
 function formatStartSeason(anime) {
@@ -118,6 +158,7 @@ export default function LifeSyncAnimeWatch() {
     const streamAudioType = getAnimeStreamAudio(lifeSyncUser?.preferences)
 
     const from = location.state?.from
+    const titleHintFromState = typeof location.state?.title === 'string' ? location.state.title.trim() : ''
     const closeTo =
         typeof from === 'string' && from.startsWith('/dashboard/lifesync/anime/anime')
             ? from
@@ -131,8 +172,7 @@ export default function LifeSyncAnimeWatch() {
     const [episodes, setEpisodes] = useState([])
     const [busy, setBusy] = useState(true)
     const [stream, setStream] = useState(null)
-    /** From `/stream/info/by-mal`: AniPub catalog id when provider is AniPub. */
-    const [streamCatalogMeta, setStreamCatalogMeta] = useState(() => (/** @type {{ anipubId: number | null, provider: string | null }} | null */ (null)))
+    const [skipSegments, setSkipSegments] = useState([])
     const [anime, setAnime] = useState(null)
     const [episodeIdx, setEpisodeIdx] = useState(episodeIndex)
     const [audioOverride, setAudioOverride] = useState(null) // 'sub' | 'dub' | null
@@ -153,6 +193,9 @@ export default function LifeSyncAnimeWatch() {
         return typeof m === 'string' && m.toLowerCase() === 'kickassanime' ? 'kickassanime' : ''
     })
     const shouldForceCatalogRefreshRef = useRef(fromResumeDeck)
+    const streamIframeContainerRef = useRef(null)
+    const streamIframeRef = useRef(null)
+    const controllerSupportEnabled = useControllerSupportEnabled()
 
     const bumpWatchHistory = useCallback(() => {
         try {
@@ -388,7 +431,6 @@ export default function LifeSyncAnimeWatch() {
         const quiet = seedCatalogQuietRef.current
         if (!quiet) {
             setBusy(true)
-            setStreamCatalogMeta(null)
         }
 
         ;(async () => {
@@ -403,6 +445,7 @@ export default function LifeSyncAnimeWatch() {
                     fetchStreamInfoByMalWithCache(malId, lifesyncFetch, { signal: ac.signal }, {
                         mirror: streamCatalogMirror === 'kickassanime' ? 'kickassanime' : '',
                         ...(forceCatalogRefresh ? { forceRefresh: true, fromResumeDeck: true } : {}),
+                        title: typeof anime?.title === 'string' && anime.title.trim() ? anime.title : titleHintFromState,
                     }).catch(() => null),
                     lifesyncFetch(
                         `/api/v1/anime/mal-episode-thumbnails/${encodeURIComponent(malId)}?audio=${audio}&view=compact`,
@@ -421,10 +464,6 @@ export default function LifeSyncAnimeWatch() {
                 const thumbMap =
                     thumbs?.thumbnails && typeof thumbs.thumbnails === 'object' ? thumbs.thumbnails : {}
                 const catalog = streamInfo?.data && typeof streamInfo.data === 'object' ? streamInfo.data : null
-                const aidRaw = catalog?.anipub_id != null ? Number(catalog.anipub_id) : null
-                const anipubId = Number.isFinite(aidRaw) && aidRaw > 0 ? aidRaw : null
-                const provider = typeof catalog?.provider === 'string' ? catalog.provider : null
-                setStreamCatalogMeta({ anipubId, provider })
                 const eps = normalizeStreamEpisodesForPlayer(catalog?.episodes, thumbMap)
                 if (eps.length > 0) setEpisodes(eps)
             } finally {
@@ -439,7 +478,7 @@ export default function LifeSyncAnimeWatch() {
         return () => {
             ac.abort()
         }
-    }, [isLifeSyncConnected, malId, streamAudioType, streamCatalogMirror])
+    }, [anime?.title, isLifeSyncConnected, malId, streamAudioType, streamCatalogMirror, titleHintFromState])
 
     useEffect(() => {
         if (!isLifeSyncConnected) return
@@ -488,6 +527,43 @@ export default function LifeSyncAnimeWatch() {
             ac.abort()
         }
     }, [episodes, episodeIdx, isLifeSyncConnected, resolveAnimeStream, audioOverride, mirrorOverrideId, bumpWatchHistory])
+
+    useEffect(() => {
+        if (!isLifeSyncConnected) return
+        if (!malId) {
+            setSkipSegments([])
+            return
+        }
+        if (!stream?.videoUrl || stream?.resolving) {
+            setSkipSegments([])
+            return
+        }
+
+        const epObj = episodes?.[episodeIdx]
+        if (!epObj) {
+            setSkipSegments([])
+            return
+        }
+
+        const episodeNumber = parseEpisodeNumber(epObj, episodeIdx + 1)
+        const ac = new AbortController()
+
+        ;(async () => {
+            try {
+                const raw = await lifesyncFetch(
+                    `/api/v1/anime/stream/skip-times/${encodeURIComponent(malId)}/${encodeURIComponent(String(episodeNumber))}?episodeLength=0&view=full`,
+                    { signal: ac.signal }
+                )
+                if (ac.signal.aborted) return
+                setSkipSegments(normalizeAniSkipSegments(raw))
+            } catch {
+                if (ac.signal.aborted) return
+                setSkipSegments([])
+            }
+        })()
+
+        return () => ac.abort()
+    }, [episodes, episodeIdx, isLifeSyncConnected, malId, stream?.resolving, stream?.videoUrl])
 
     // Persist “continue watching” progress (single slot per MAL title).
     useEffect(() => {
@@ -538,17 +614,6 @@ export default function LifeSyncAnimeWatch() {
         [closeTo, episodes?.length, malId, navigate]
     )
 
-    if (!isLifeSyncConnected) {
-        return (
-        <div className="lifesync-anime-watch fixed inset-0 z-9999 flex h-dvh w-full items-center justify-center bg-[var(--mx-color-020202)] text-white">
-                <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/5 px-6 py-5 text-center">
-                    <p className="text-[13px] font-semibold text-white/90">Connecting LifeSync…</p>
-                    <p className="mt-1 text-[12px] text-white/50">Please wait.</p>
-                </div>
-            </div>
-        )
-    }
-
     const epObj = episodes?.[episodeIdx]
     const canPrev = episodeIdx > 0
     const canNext = episodeIdx < (episodes?.length || 0) - 1
@@ -566,6 +631,75 @@ export default function LifeSyncAnimeWatch() {
         : dubOnlyTrack
           ? 'Dub'
           : `Auto (${streamAudioType === 'dub' ? 'Dub' : 'Sub'})`
+
+    const toggleIframeContainerFullscreen = useCallback(() => {
+        const el = streamIframeContainerRef.current
+        if (!el) return
+        if (!document.fullscreenElement) {
+            if (el.requestFullscreen) {
+                el.requestFullscreen().catch(() => {})
+            }
+            return
+        }
+        if (document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {})
+        }
+    }, [])
+
+    const iframeGamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'k')
+        },
+        [XBOX_GAMEPAD_BUTTONS.Y]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'MediaPlay')
+        },
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            toggleIframeContainerFullscreen()
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'f')
+        },
+        [XBOX_GAMEPAD_BUTTONS.LT]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowLeft')
+        },
+        [XBOX_GAMEPAD_BUTTONS.RT]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowRight')
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowUp')
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+            dispatchBestEffortIframeMediaKey(streamIframeRef.current, 'ArrowDown')
+        },
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+            if (!canPrev) return
+            goEpisode(episodeIdx - 1)
+        },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+            if (!canNext) return
+            goEpisode(episodeIdx + 1)
+        },
+    }), [canNext, canPrev, episodeIdx, goEpisode, toggleIframeContainerFullscreen])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabled && Boolean(stream?.iframeUrl),
+        handlers: iframeGamepadHandlers,
+        repeatableButtons: [
+            XBOX_GAMEPAD_BUTTONS.LT,
+            XBOX_GAMEPAD_BUTTONS.RT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+            XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+        ],
+    })
+
+    if (!isLifeSyncConnected) {
+        return (
+        <div className="lifesync-anime-watch fixed inset-0 z-9999 flex h-dvh w-full items-center justify-center bg-[var(--mx-color-020202)] text-white">
+                <div className="rounded-2xl border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/5 px-6 py-5 text-center">
+                    <p className="text-[13px] font-semibold text-white/90">Connecting LifeSync…</p>
+                    <p className="mt-1 text-[12px] text-white/50">Please wait.</p>
+                </div>
+            </div>
+        )
+    }
 
     return (
         <MotionDiv
@@ -682,7 +816,7 @@ export default function LifeSyncAnimeWatch() {
                             >
                                 <main className="min-w-0 space-y-3 sm:space-y-4">
                                     <div className="lifesync-anime-watch-media overflow-hidden rounded-3xl border border-[var(--color-border-strong)]/12 bg-black">
-                                        <div className="relative aspect-video w-full">
+                                        <div ref={streamIframeContainerRef} className="relative aspect-video w-full">
                                             {stream?.resolving ? (
                                                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                                                     <div className="w-[min(520px,92vw)] rounded-3xl border border-[var(--color-border-strong)]/10 bg-[var(--mx-color-0b0b0d)]/90 p-5">
@@ -721,6 +855,7 @@ export default function LifeSyncAnimeWatch() {
                                                 </div>
                                             ) : stream?.iframeUrl ? (
                                                 <iframe
+                                                    ref={streamIframeRef}
                                                     key={stream.iframeUrl}
                                                     title={stream.title || 'Episode'}
                                                     src={stream.iframeUrl}
@@ -738,6 +873,11 @@ export default function LifeSyncAnimeWatch() {
                                                     src={stream.videoUrl}
                                                     preload={videoPreload}
                                                     textTracks={stream.textTracks || []}
+                                                    skipSegments={skipSegments}
+                                                    onPrevEpisode={canPrev ? () => goEpisode(episodeIdx - 1) : undefined}
+                                                    onNextEpisode={canNext ? () => goEpisode(episodeIdx + 1) : undefined}
+                                                    canPrevEpisode={canPrev}
+                                                    canNextEpisode={canNext}
                                                     onEnded={() => {
                                                         if (canNext) goEpisode(episodeIdx + 1)
                                                     }}
@@ -845,13 +985,6 @@ export default function LifeSyncAnimeWatch() {
                                                                     MAL {malId}
                                                                 </span>
                                                             </li>
-                                                            {streamCatalogMeta?.anipubId != null ? (
-                                                                <li>
-                                                                    <span className="inline-flex items-center rounded-lg border border-sky-400/25 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-sky-100/95 sm:text-[11px]">
-                                                                        AniPub {streamCatalogMeta.anipubId}
-                                                                    </span>
-                                                                </li>
-                                                            ) : null}
                                                             <li>
                                                                 <span className="inline-flex items-center rounded-lg border border-[var(--color-border-strong)]/12 bg-black/35 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/70 sm:text-[11px]">
                                                                     {epObj?.number != null ? `Ep ${epObj.number}` : `Ep ${episodeIdx + 1}`}

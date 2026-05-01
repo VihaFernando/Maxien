@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
+import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 const SKIP_SEC = 10
@@ -29,6 +32,10 @@ export default function AdvancedVideoPlayer({
     src,
     onEnded,
     onError,
+    onPrevEpisode,
+    onNextEpisode,
+    canPrevEpisode = false,
+    canNextEpisode = false,
     autoPlay = false,
     textTracks = [],
     /** @type {'none' | 'metadata' | 'auto'} */
@@ -53,6 +60,7 @@ export default function AdvancedVideoPlayer({
     const [isSeeking, setIsSeeking] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [pipActive, setPipActive] = useState(false)
+    const controllerSupportEnabled = useControllerSupportEnabled()
 
     const resetIdle = useCallback(() => {
         setShowControls(true)
@@ -243,6 +251,13 @@ export default function AdvancedVideoPlayer({
         resetIdle()
     }, [resetIdle])
 
+    const playOnly = useCallback(() => {
+        const v = videoRef.current
+        if (!v || !v.paused) return
+        v.play().catch(() => {})
+        resetIdle()
+    }, [resetIdle])
+
     const seek = useCallback((t) => {
         const v = videoRef.current
         if (!v || !Number.isFinite(t)) return
@@ -307,6 +322,68 @@ export default function AdvancedVideoPlayer({
             else await v.requestPictureInPicture()
         } catch { /* PiP not supported */ }
     }, [])
+
+    const gamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            togglePlay()
+        },
+        [XBOX_GAMEPAD_BUTTONS.Y]: () => {
+            playOnly()
+        },
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            toggleFullscreen()
+        },
+        [XBOX_GAMEPAD_BUTTONS.LT]: () => {
+            skip(-SKIP_SEC)
+        },
+        [XBOX_GAMEPAD_BUTTONS.RT]: () => {
+            skip(SKIP_SEC)
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+            const v = videoRef.current
+            if (!v) return
+            changeVolume(v.volume + 0.1)
+            resetIdle()
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+            const v = videoRef.current
+            if (!v) return
+            changeVolume(v.volume - 0.1)
+            resetIdle()
+        },
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+            if (!canPrevEpisode) return
+            onPrevEpisode?.()
+            resetIdle()
+        },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+            if (!canNextEpisode) return
+            onNextEpisode?.()
+            resetIdle()
+        },
+    }), [
+        canNextEpisode,
+        canPrevEpisode,
+        changeVolume,
+        onNextEpisode,
+        onPrevEpisode,
+        playOnly,
+        resetIdle,
+        skip,
+        toggleFullscreen,
+        togglePlay,
+    ])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabled,
+        handlers: gamepadHandlers,
+        repeatableButtons: [
+            XBOX_GAMEPAD_BUTTONS.LT,
+            XBOX_GAMEPAD_BUTTONS.RT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+            XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+        ],
+    })
 
     useEffect(() => {
         const onKey = (e) => {

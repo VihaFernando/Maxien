@@ -5,9 +5,6 @@
 
 export const LIFESYNC_TOKEN_KEY = 'lifesync_token'
 
-/** [AniPub API reference](https://api.anipub.xyz/) — LifeSync anime streaming uses this ecosystem (JSON typically from `https://anipub.xyz`, configurable on the server). */
-export const ANIPUB_API_REFERENCE_URL = 'https://api.anipub.xyz/'
-
 export function getLifesyncApiBase() {
     const raw = import.meta.env.VITE_API_URL
     if (raw != null && String(raw).trim() !== '') {
