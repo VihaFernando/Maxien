@@ -24,79 +24,15 @@ function focusIframeElement(iframeEl) {
     }
 }
 
-function keyboardMetaForKey(rawKeyName) {
-    const raw = String(rawKeyName || '')
-    const keyName = raw === 'Spacebar' ? ' ' : raw
-    if (keyName === ' ') return { key: ' ', code: 'Space', keyCode: 32 }
-    if (keyName === 'k' || keyName === 'K') return { key: String(keyName).toLowerCase(), code: 'KeyK', keyCode: 75 }
-    if (keyName === 'j' || keyName === 'J') return { key: String(keyName).toLowerCase(), code: 'KeyJ', keyCode: 74 }
-    if (keyName === 'l' || keyName === 'L') return { key: String(keyName).toLowerCase(), code: 'KeyL', keyCode: 76 }
-    if (keyName === 'f' || keyName === 'F') return { key: String(keyName).toLowerCase(), code: 'KeyF', keyCode: 70 }
-    if (keyName === 'ArrowLeft') return { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 }
-    if (keyName === 'ArrowUp') return { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 }
-    if (keyName === 'ArrowRight') return { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 }
-    if (keyName === 'ArrowDown') return { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 }
-    if (keyName === 'MediaPlayPause') return { key: 'MediaPlayPause', code: 'MediaPlayPause', keyCode: 179 }
-    if (keyName === 'MediaPlay') return { key: 'MediaPlay', code: 'MediaPlayPause', keyCode: 179 }
-    if (keyName === 'MediaPause') return { key: 'MediaPause', code: 'MediaPlayPause', keyCode: 179 }
-    if (keyName.length === 1) {
-        const upper = keyName.toUpperCase()
-        return {
-            key: keyName,
-            code: `Key${upper}`,
-            keyCode: upper.charCodeAt(0),
-        }
-    }
-    return { key: keyName, code: keyName, keyCode: 0 }
-}
-
-function patchLegacyKeyboardFields(event, meta) {
-    if (!event || !meta) return
-    const keyCode = Number(meta.keyCode)
-    const hasCode = Number.isFinite(keyCode) && keyCode > 0
-    const charCode = typeof meta.key === 'string' && meta.key.length === 1 ? meta.key.charCodeAt(0) : 0
-    const entries = [
-        ['keyCode', hasCode ? keyCode : 0],
-        ['which', hasCode ? keyCode : 0],
-        ['charCode', Number.isFinite(charCode) ? charCode : 0],
-    ]
-    for (const [name, value] of entries) {
-        try {
-            Object.defineProperty(event, name, {
-                configurable: true,
-                enumerable: true,
-                get: () => value,
-            })
-        } catch {
-            // ignore readonly engine behavior
-        }
-    }
-}
-
-function createKeyboardEvent(type, keyName) {
-    const meta = keyboardMetaForKey(keyName)
-    const event = new KeyboardEvent(type, {
-        key: meta.key,
-        code: meta.code,
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-    })
-    patchLegacyKeyboardFields(event, meta)
-    return { event, meta }
-}
-
 function fireKeyEventTarget(target, keyName) {
     if (!target?.dispatchEvent) return false
-    const { event: downEvent, meta } = createKeyboardEvent('keydown', keyName)
-    target.dispatchEvent(downEvent)
-    const shouldEmitKeyPress = typeof meta?.key === 'string' && (meta.key === ' ' || meta.key.length === 1)
-    if (shouldEmitKeyPress) {
-        const { event: pressEvent } = createKeyboardEvent('keypress', keyName)
-        target.dispatchEvent(pressEvent)
-    }
-    const { event: upEvent } = createKeyboardEvent('keyup', keyName)
-    target.dispatchEvent(upEvent)
+    const makeEvent = (type) => new KeyboardEvent(type, {
+        key: keyName,
+        bubbles: true,
+        cancelable: true,
+    })
+    target.dispatchEvent(makeEvent('keydown'))
+    target.dispatchEvent(makeEvent('keyup'))
     return true
 }
 
@@ -246,8 +182,6 @@ export function dispatchBestEffortIframeMediaKey(iframeEl, key) {
     }
 
     if (fireKeyEventTarget(iframeEl, keyName)) dispatched = true
-    if (fireKeyEventTarget(iframeEl?.parentElement, keyName)) dispatched = true
-    if (fireKeyEventTarget(document?.fullscreenElement, keyName)) dispatched = true
     if (fireKeyEventTarget(window, keyName)) dispatched = true
     if (fireKeyEventTarget(document, keyName)) dispatched = true
     if (fireKeyEventTarget(document?.activeElement, keyName)) dispatched = true
