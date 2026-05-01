@@ -331,6 +331,7 @@ export default function LifeSyncMangaRead() {
     const [zoomPct, setZoomPct] = useState(100)
     const [readerFullscreen, setReaderFullscreen] = useState(false)
     const controllerSupportEnabled = useControllerSupportEnabled()
+    const hideCursorInFullscreen = readerFullscreen && controllerSupportEnabled
 
     const scrollRef = useRef(null)
     const pagesInnerRef = useRef(null)
@@ -986,7 +987,9 @@ export default function LifeSyncMangaRead() {
     return (
         <div
             ref={readerRootRef}
-            className="lifesync-manga-read fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-hidden bg-[var(--mx-color-0a0a0a)]"
+            className={`lifesync-manga-read fixed inset-0 z-[9999] flex h-dvh max-h-dvh w-full max-w-[100vw] flex-col overflow-hidden bg-[var(--mx-color-0a0a0a)] ${
+                hideCursorInFullscreen ? 'cursor-none' : ''
+            }`}
         >
             {!readerFullscreen ? (
             <header className="shrink-0 border-b border-[var(--color-border-strong)]/10 bg-black/70 px-2 py-2 backdrop-blur-xl">
