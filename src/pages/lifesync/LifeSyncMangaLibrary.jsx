@@ -22,7 +22,7 @@ const MotionLi = motion.li
 const MotionUl = motion.ul
 
 const MANGA_BASE = '/dashboard/lifesync/anime/manga'
-const MANGA_READING_HISTORY_PATH = `${MANGA_BASE}/history`
+const MANGA_LIBRARY_PATH = `${MANGA_BASE}/library`
 
 const SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
@@ -171,7 +171,7 @@ function resumeTarget(entry, browseTranslatedLang) {
         return {
             to: `${MANGA_BASE}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(chapterId)}?${readerQuery}`,
             state: {
-                from: MANGA_READING_HISTORY_PATH,
+                from: MANGA_LIBRARY_PATH,
                 source: entry.source,
                 browseTranslatedLang,
                 resumeChapterId,
