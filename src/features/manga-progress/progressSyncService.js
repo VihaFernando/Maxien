@@ -27,6 +27,16 @@ let hydrating = null
 let flushTimer = null
 let intervalTimer = null
 
+function progressFingerprint(payload) {
+    const source = normalizeSource(payload?.source)
+    const mangaId = String(payload?.mangaId || '').trim()
+    const chapterId = String(payload?.lastChapterId || payload?.locator?.chapterId || '').trim()
+    const pageRaw = Number(payload?.locator?.page)
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : null
+    const pct = normalizePercent(payload?.lastReadPercent ?? payload?.progressPct)
+    return JSON.stringify({ source, mangaId, chapterId, page, pct })
+}
+
 function normalizePercent(value) {
     const n = Number(value)
     if (!Number.isFinite(n)) return 0
@@ -169,11 +179,26 @@ export async function flushProgressQueue({ keepalive = false, maxItems = FLUSH_B
     if (!rows.length) return { sent: 0 }
 
     const slice = rows.slice(0, Math.max(1, maxItems))
-    const items = slice
-        .map((row) => toProgressWritePayload(row))
-        .filter(Boolean)
+    const candidates = slice.map((row) => {
+        const payload = toProgressWritePayload(row)
+        const key = toBookId(row)
+        const fingerprint = progressFingerprint(row)
+        const current = key ? getProgressEntry(key) : null
+        const lastSyncedFingerprint = String(current?.lastSyncedFingerprint || '')
+        const changed = Boolean(payload) && fingerprint !== lastSyncedFingerprint
+        return { row, key, payload, fingerprint, changed }
+    })
 
-    if (!items.length) return { sent: 0 }
+    const items = candidates.filter((c) => c.changed && c.payload).map((c) => c.payload)
+
+    if (!items.length) {
+        for (const c of candidates) {
+            if (!c.key) continue
+            markProgressSynced(c.key, c.fingerprint)
+            await deleteQueueRow(c.key)
+        }
+        return { sent: 0 }
+    }
 
     await lifesyncFetch('/api/v1/progress/batch', {
         method: 'POST',
@@ -181,14 +206,13 @@ export async function flushProgressQueue({ keepalive = false, maxItems = FLUSH_B
         ...(keepalive ? { keepalive: true } : {}),
     })
 
-    for (const row of slice) {
-        const key = toBookId(row)
-        if (!key) continue
-        markProgressSynced(key)
-        await deleteQueueRow(key)
+    for (const c of candidates) {
+        if (!c.key) continue
+        markProgressSynced(c.key, c.fingerprint)
+        await deleteQueueRow(c.key)
     }
 
-    return { sent: slice.length }
+    return { sent: items.length }
 }
 
 export function scheduleProgressFlush() {

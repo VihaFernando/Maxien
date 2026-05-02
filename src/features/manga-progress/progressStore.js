@@ -96,9 +96,17 @@ export function upsertProgressLocal(payload, { savedAt } = {}) {
     return next
 }
 
-export function markProgressSynced(bookId) {
+export function markProgressSynced(bookId, syncFingerprint = '') {
     const key = String(bookId || '').trim()
     if (!key) return
+    const row = progressByBookId.get(key)
+    if (row) {
+        progressByBookId.set(key, {
+            ...row,
+            lastSyncedFingerprint: String(syncFingerprint || row.lastSyncedFingerprint || ''),
+            lastSyncedAt: new Date().toISOString(),
+        })
+    }
     if (!queueByBookId.has(key)) return
     queueByBookId.delete(key)
     emit()
