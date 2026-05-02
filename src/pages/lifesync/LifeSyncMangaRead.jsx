@@ -6,8 +6,9 @@ import { useLifeSync } from '../../context/LifeSyncContext'
 import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { lifesyncFetch } from '../../lib/lifesyncApi'
 import { decodeHtmlEntities } from '../../lib/mangaChapterUtils'
+import { useMangaProgress } from '../../features/manga-progress/useMangaProgress'
+import { readProgressQueueSync, writeProgressQueueSync } from '../../features/manga-progress/progressSyncService'
 
-const MANGA_PROGRESS_QUEUE_KEY = 'lifesync:manga-progress-queue:v1'
 const MANGA_PROGRESS_LOCAL_SAVE_MS = 8000
 const MANGA_PROGRESS_REMOTE_FLUSH_DEBOUNCE_MS = 6000
 const MANGA_PROGRESS_FLUSH_BATCH = 16
@@ -104,25 +105,11 @@ function queueKeyForPayload(payload) {
 }
 
 function readProgressQueue() {
-    if (typeof window === 'undefined') return {}
-    try {
-        const raw = window.localStorage.getItem(MANGA_PROGRESS_QUEUE_KEY)
-        if (!raw) return {}
-        const parsed = JSON.parse(raw)
-        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
-        return parsed
-    } catch {
-        return {}
-    }
+    return readProgressQueueSync()
 }
 
 function writeProgressQueue(queue) {
-    if (typeof window === 'undefined') return
-    try {
-        window.localStorage.setItem(MANGA_PROGRESS_QUEUE_KEY, JSON.stringify(queue))
-    } catch {
-        // ignore localStorage failures
-    }
+    writeProgressQueueSync(queue)
 }
 
 function mergeProgressPayload(prevRaw, nextPayload) {
@@ -248,6 +235,12 @@ export default function LifeSyncMangaRead() {
     const location = useLocation()
     const navigate = useNavigate()
     const { isLifeSyncConnected } = useLifeSync()
+    const {
+        ready: progressReady,
+        persistLocal: persistLocalProgress,
+        flushNow: flushProgressNow,
+        scheduleFlush: scheduleProgressFlushService,
+    } = useMangaProgress({ enabled: isLifeSyncConnected })
 
     const mangaId = useMemo(() => String(mangaIdParam || '').trim(), [mangaIdParam])
     const chapterId = useMemo(() => String(chapterIdParam || '').trim(), [chapterIdParam])
@@ -370,6 +363,21 @@ export default function LifeSyncMangaRead() {
         })
     }, [])
 
+    const toProgressWritePayload = useCallback((payload, savedAt) => {
+        const clean = sanitizeProgressPayload(payload)
+        if (!clean) return null
+        return {
+            bookId: `${clean.source}:${clean.mangaId}`,
+            source: clean.source,
+            mangaId: clean.mangaId,
+            progressPct: normalizeReadPercent(clean.lastReadPercent),
+            locator: {
+                chapterId: clean.lastChapterId,
+            },
+            updatedAt: String(savedAt || new Date().toISOString()),
+        }
+    }, [])
+
     const persistCurrentProgressLocal = useCallback(() => {
         const payload = buildProgressPayload(latestProgressRef.current)
         if (!payload) return null
@@ -378,44 +386,18 @@ export default function LifeSyncMangaRead() {
         if (!key || key === ':') return null
         const queue = readProgressQueue()
         const merged = mergeProgressPayload(queue[key], payload)
-        queue[key] = { ...merged, savedAt: new Date().toISOString() }
+        const savedAt = new Date().toISOString()
+        const next = { ...merged, savedAt }
+        queue[key] = next
         writeProgressQueue(queue)
-        return merged
-    }, [buildProgressPayload])
+        persistLocalProgress(next)
+        return next
+    }, [buildProgressPayload, persistLocalProgress])
 
     const flushQueuedProgress = useCallback(async ({ keepalive = false, maxItems = MANGA_PROGRESS_FLUSH_BATCH } = {}) => {
         if (!isLifeSyncConnected) return
-        const queue = readProgressQueue()
-        const entries = Object.entries(queue)
-            .map(([key, value]) => {
-                const payload = sanitizeProgressPayload(value)
-                if (!payload) return null
-                const savedAt = Date.parse(String(value?.savedAt || ''))
-                return { key, payload, savedAt: Number.isFinite(savedAt) ? savedAt : 0 }
-            })
-            .filter(Boolean)
-            .sort((a, b) => a.savedAt - b.savedAt)
-
-        if (!entries.length) return
-
-        const remaining = { ...queue }
-        let attempts = 0
-        for (const row of entries) {
-            if (attempts >= maxItems) break
-            attempts += 1
-            try {
-                await lifesyncFetch('/api/v1/manga/reading', {
-                    method: 'PUT',
-                    json: row.payload,
-                    ...(keepalive ? { keepalive: true } : {}),
-                })
-                delete remaining[row.key]
-            } catch {
-                if (keepalive) break
-            }
-        }
-        writeProgressQueue(remaining)
-    }, [isLifeSyncConnected])
+        await flushProgressNow({ keepalive, maxItems })
+    }, [flushProgressNow, isLifeSyncConnected])
 
     const flushReadingProgress = useCallback(async ({ keepalive = false, queueFirst = true } = {}) => {
         let payload = buildProgressPayload(latestProgressRef.current)
@@ -426,7 +408,9 @@ export default function LifeSyncMangaRead() {
         const signature = `${payload.source}:${payload.mangaId}:${payload.lastChapterId}:${payload.lastReadPercent}`
         if (lastFlushedSignatureRef.current === signature) return true
         try {
-            await lifesyncFetch('/api/v1/manga/reading', { method: 'PUT', json: payload, keepalive })
+            const body = toProgressWritePayload(payload, payload.savedAt || new Date().toISOString())
+            if (!body) return false
+            await lifesyncFetch('/api/v1/progress', { method: 'POST', json: body, keepalive })
             lastFlushedSignatureRef.current = signature
             const queue = readProgressQueue()
             delete queue[queueKeyForPayload(payload)]
@@ -436,7 +420,7 @@ export default function LifeSyncMangaRead() {
             persistCurrentProgressLocal()
             return false
         }
-    }, [buildProgressPayload, persistCurrentProgressLocal])
+    }, [buildProgressPayload, persistCurrentProgressLocal, toProgressWritePayload])
 
     const scheduleRemoteProgressFlush = useCallback(() => {
         if (!isLifeSyncConnected) return
@@ -445,8 +429,9 @@ export default function LifeSyncMangaRead() {
             remoteFlushTimerRef.current = null
             void flushReadingProgress({ queueFirst: true })
             void flushQueuedProgress({ maxItems: 4 })
+            scheduleProgressFlushService()
         }, MANGA_PROGRESS_REMOTE_FLUSH_DEBOUNCE_MS)
-    }, [flushQueuedProgress, flushReadingProgress, isLifeSyncConnected])
+    }, [flushQueuedProgress, flushReadingProgress, isLifeSyncConnected, scheduleProgressFlushService])
 
     useEffect(
         () => () => {
@@ -501,7 +486,7 @@ export default function LifeSyncMangaRead() {
     }, [flushQueuedProgress, isLifeSyncConnected])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || !mangaId) return
+        if (!isLifeSyncConnected || !mangaId || !progressReady) return
         let cancelled = false
 
         const queuedCandidate = pickQueuedResumeCandidate(mangaId, sourceHint)
@@ -526,7 +511,7 @@ export default function LifeSyncMangaRead() {
                 })
                 if (sourceHint) params.set('source', sourceHint)
 
-                const data = await lifesyncFetch(`/api/v1/manga/reading?${params.toString()}`)
+                const data = await lifesyncFetch(`/api/v1/progress?${params.toString()}`)
                 if (cancelled) return
 
                 const rows = Array.isArray(data) ? data : (Array.isArray(data?.entries) ? data.entries : [])
@@ -551,7 +536,7 @@ export default function LifeSyncMangaRead() {
         return () => {
             cancelled = true
         }
-    }, [isLifeSyncConnected, mangaId, sourceHint])
+    }, [isLifeSyncConnected, mangaId, progressReady, sourceHint])
 
     useEffect(() => {
         if (!manga?.id || !chapter?.id) return

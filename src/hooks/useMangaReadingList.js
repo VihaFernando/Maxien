@@ -141,6 +141,38 @@ function applyLocalPatch(entry, patch) {
     return next
 }
 
+function toProgressUpsertBody(entry, patch = {}) {
+    const source = String(entry?.source || '').trim().toLowerCase()
+    const mangaId = String(entry?.mangaId || '').trim()
+    const chapterId = String(entry?.lastChapterId || entry?.remoteLatestChapterId || '').trim()
+    if (!source || !mangaId || !chapterId) return null
+
+    const readingStatus = patch?.readingStatus !== undefined ? patch.readingStatus : entry?.readingStatus
+    const isPinned = patch?.isPinned !== undefined ? Boolean(patch.isPinned) : Boolean(entry?.isPinned)
+    const labels = patch?.labels !== undefined ? (Array.isArray(patch.labels) ? patch.labels : []) : (Array.isArray(entry?.labels) ? entry.labels : [])
+    const note = patch?.note !== undefined ? (patch.note || null) : (entry?.note || null)
+    const lastOpenedAt = patch?.lastOpenedAt !== undefined ? patch.lastOpenedAt : entry?.lastOpenedAt
+
+    const status = {}
+    if (readingStatus !== undefined) status.readingStatus = readingStatus || null
+    status.isPinned = isPinned
+    status.labels = labels
+    status.note = note
+    if (lastOpenedAt) status.lastOpenedAt = lastOpenedAt
+
+    return {
+        bookId: String(entry?.bookId || `${source}:${mangaId}`),
+        source,
+        mangaId,
+        progressPct: Number(entry?.lastReadPercent || 0),
+        locator: {
+            chapterId,
+        },
+        updatedAt: new Date().toISOString(),
+        status,
+    }
+}
+
 /**
  * @param {{
  *   enabled: boolean,
@@ -191,7 +223,7 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
             else setRefreshing(true)
 
             try {
-                const data = await lifesyncFetch(`/api/v1/manga/reading?${queryString}`)
+                const data = await lifesyncFetch(`/api/v1/progress?${queryString}`)
                 if (requestId !== requestIdRef.current) return
 
                 const rows = dedupeEntries(Array.isArray(data) ? data : data?.entries || [])
@@ -227,10 +259,9 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
                 setEntries((prev) => prev.map((row) => (entryKey(row) === key ? applyLocalPatch(row, patch) : row)))
             }
             try {
-                await lifesyncFetch(
-                    `/api/v1/manga/reading/${encodeURIComponent(entry.source)}/${encodeURIComponent(entry.mangaId)}`,
-                    { method: 'PATCH', json: patch },
-                )
+                const payload = toProgressUpsertBody(entry, patch)
+                if (!payload) throw new Error('Missing progress locator')
+                await lifesyncFetch('/api/v1/progress', { method: 'POST', json: payload })
             } catch (err) {
                 await refresh()
                 throw err
@@ -241,10 +272,17 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
 
     const removeEntry = useCallback(
         async (entry) => {
-            await lifesyncFetch(
-                `/api/v1/manga/reading/${encodeURIComponent(entry.source)}/${encodeURIComponent(entry.mangaId)}`,
-                { method: 'DELETE' },
-            )
+            await lifesyncFetch('/api/v1/progress/batch', {
+                method: 'POST',
+                json: {
+                    items: [{
+                        delete: true,
+                        bookId: String(entry?.bookId || `${entry?.source || ''}:${entry?.mangaId || ''}`),
+                        source: entry?.source,
+                        mangaId: entry?.mangaId,
+                    }],
+                },
+            })
             await refresh()
         },
         [refresh],
@@ -255,13 +293,12 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
             const rows = Array.isArray(items) ? items : []
             if (rows.length === 0) return { matched: 0, modified: 0 }
             const payload = {
-                items: rows.map((row) => ({
-                    source: row.source,
-                    mangaId: row.mangaId,
-                    patch,
-                })),
+                items: rows
+                    .map((row) => toProgressUpsertBody(row, patch))
+                    .filter(Boolean),
             }
-            const result = await lifesyncFetch('/api/v1/manga/reading/bulk/patch', {
+            if (!payload.items.length) return { matched: 0, modified: 0 }
+            const result = await lifesyncFetch('/api/v1/progress/batch', {
                 method: 'POST',
                 json: payload,
             })
@@ -277,11 +314,13 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
             if (rows.length === 0) return { deleted: 0 }
             const payload = {
                 items: rows.map((row) => ({
+                    delete: true,
+                    bookId: String(row?.bookId || `${row?.source || ''}:${row?.mangaId || ''}`),
                     source: row.source,
                     mangaId: row.mangaId,
                 })),
             }
-            const result = await lifesyncFetch('/api/v1/manga/reading/bulk/delete', {
+            const result = await lifesyncFetch('/api/v1/progress/batch', {
                 method: 'POST',
                 json: payload,
             })

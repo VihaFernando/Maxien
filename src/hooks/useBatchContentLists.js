@@ -13,7 +13,7 @@ const CONTENT_LISTS_QUERY_KEY = lifeSyncQueryKeys.contentLists()
 async function fetchBatchContentLists() {
     const [animeRes, mangaRes] = await Promise.all([
         lifesyncFetch('/api/v1/anime/watch-history?limit=100&view=standard').catch(() => ({ entries: [] })),
-        lifesyncFetch('/api/v1/manga/reading?view=standard').catch(() => ({ entries: [] })),
+        lifesyncFetch('/api/v1/progress?view=standard').catch(() => ({ entries: [] })),
     ])
 
     return {

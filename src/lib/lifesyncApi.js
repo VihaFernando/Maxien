@@ -94,8 +94,8 @@ function remapToV1Path(path) {
     ) {
         return pathname.replace('/api/manga', '/api/v1/manga') + suffix
     }
-    if (pathname.startsWith('/api/manga/reading')) {
-        return pathname.replace('/api/manga', '/api/v1/manga') + suffix
+    if (pathname.startsWith('/api/progress')) {
+        return pathname.replace('/api/progress', '/api/v1/progress') + suffix
     }
 
     // Xbox OpenXBL
