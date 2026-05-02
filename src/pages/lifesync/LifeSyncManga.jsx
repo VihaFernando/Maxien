@@ -2020,7 +2020,8 @@ export default function LifeSyncManga() {
             qs.set('limit', '24')
             qs.set('folder', comixFolder)
             qs.append('types[]', tabType)
-            if (comixCommittedSearch.trim()) qs.set('keyword', comixCommittedSearch.trim())
+            const keyword = comixCommittedSearch.trim()
+            if (keyword) qs.set('keyword', keyword)
             const folderDefaultOrder = COMIX_FOLDER_DEFAULT_ORDER[comixFolder] || COMIX_FOLDER_DEFAULT_ORDER.hot
             const orderKey = comixOrderKey || folderDefaultOrder.key
             const orderDir = comixOrderKey ? (comixOrderDir === 'asc' ? 'asc' : 'desc') : folderDefaultOrder.dir
@@ -2096,7 +2097,20 @@ export default function LifeSyncManga() {
 
     function handleComixSearch(e) {
         e.preventDefault()
-        setComixCommittedSearch(comixSearchQ.trim())
+        const keyword = comixSearchQ.trim()
+        if (keyword) {
+            setComixIncludeGenres([])
+            setComixExcludeGenres([])
+            setComixIncludeDemographics([])
+            setComixExcludeDemographics([])
+            setComixStatuses([])
+            setComixAuthorsInput('')
+            setComixArtistsInput('')
+            setComixMinchap('')
+            setComixYearFrom('')
+            setComixYearTo('')
+        }
+        setComixCommittedSearch(keyword)
         setComixPage(1)
         if (route.src !== 'comix') return
         navigate(`${basePath}/comix/${route.tab || 'manga'}/page/1${location.search || ''}`)
