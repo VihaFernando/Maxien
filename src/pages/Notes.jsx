@@ -281,9 +281,9 @@ export default function Notes() {
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] rounded-xl font-bold text-[13px] sm:text-[14px] transition-all active:scale-[0.98] shadow-sm"
+                    className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black rounded-xl font-bold text-[13px] sm:text-[14px] transition-all active:scale-[0.98] shadow-sm"
                 >
-                    <FaPlus className="w-3 h-3" />
+                    <FaPlus className="w-3 h-3 text-black" />
                     New Note
                 </button>
             </div>

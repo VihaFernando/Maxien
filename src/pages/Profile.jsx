@@ -180,7 +180,7 @@ function ModePreviewMedia({ preview, className = "" }) {
     const hasVideo = Boolean(preview?.kind === "video" && (preview?.videoMp4Url || preview?.videoWebmUrl))
     const hasImage = Boolean(preview?.imageUrl)
     return (
-        <div className={`relative overflow-hidden rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] ${className}`}>
+        <div className={`relative overflow-hidden rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] ${className}`}>
             {hasVideo ? (
                 <video
                     className="absolute inset-0 h-full w-full object-cover"
@@ -202,7 +202,7 @@ function ModePreviewMedia({ preview, className = "" }) {
                     decoding="async"
                 />
             ) : (
-                <div className="absolute inset-0 grid place-items-center text-[11px] font-semibold text-[var(--mx-color-86868b)]">
+                <div className="absolute inset-0 grid place-items-center text-[11px] font-semibold text-[var(--color-text-secondary)]">
                     {preview?.placeholder || "No preview"}
                 </div>
             )}
@@ -231,14 +231,14 @@ function BackgroundModeCard({
             onClick={onClick}
             className={`group flex items-center gap-3 overflow-hidden rounded-xl border p-2 text-left transition-all ${
                 active
-                    ? "border-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f8f8fb)] shadow-sm"
-                    : "border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] hover:border-[var(--mx-color-c9c9cf)] hover:shadow-sm"
+                    ? "border-[var(--color-text-primary)] bg-[var(--color-surface-muted)] shadow-sm"
+                    : "border-[var(--color-border-soft)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)] hover:shadow-sm"
             } disabled:opacity-50`}
         >
-            <ModePreviewMedia preview={preview} className="h-14 w-24 shrink-0 rounded-lg border-[var(--mx-color-d2d2d7)]" />
+            <ModePreviewMedia preview={preview} className="h-14 w-24 shrink-0 rounded-lg border-[var(--color-border-strong)]" />
             <div className="min-w-0">
-                <p className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">{label}</p>
-                <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[var(--mx-color-86868b)]">{description}</p>
+                <p className="text-[12px] font-semibold text-[var(--color-text-primary)]">{label}</p>
+                <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-[var(--color-text-secondary)]">{description}</p>
             </div>
         </button>
     )
@@ -762,12 +762,12 @@ export default function Profile() {
 
             {/* Page header */}
             <div className="shrink-0 mb-4 px-0.5">
-                <h1 className="text-[18px] sm:text-[22px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">Settings</h1>
-                <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5">You can find all settings here</p>
+                <h1 className="text-[18px] sm:text-[22px] font-bold text-[var(--color-text-primary)] tracking-tight">Settings</h1>
+                <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">You can find all settings here</p>
             </div>
 
             {/* Mobile tab bar */}
-            <div className="shrink-0 md:hidden -mx-4 px-4 pb-3 mb-3 border-b border-[var(--mx-color-e5e5ea)] overflow-x-auto hide-scrollbar">
+            <div className="shrink-0 md:hidden -mx-4 px-4 pb-3 mb-3 border-b border-[var(--color-border-soft)] overflow-x-auto hide-scrollbar">
                 <div className="flex gap-2 min-w-max">
                     {NAV.map((n) => (
                         <button
@@ -775,12 +775,12 @@ export default function Profile() {
                             type="button"
                             onClick={() => setActiveTab(n.id)}
                             className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-[12px] font-semibold whitespace-nowrap border transition-colors ${activeTab === n.id
-                                ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
-                                : "bg-[var(--color-surface)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)] hover:text-[var(--mx-color-1d1d1f)]"
+                                ? "bg-[var(--color-text-primary)] text-white border-[var(--color-text-primary)]"
+                                : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] border-[var(--color-border-soft)] hover:text-[var(--color-text-primary)]"
                                 }`}
                         >
                             <svg
-                                className={`w-4 h-4 ${activeTab === n.id ? "text-white" : "text-[var(--mx-color-86868b)]"}`}
+                                className={`w-4 h-4 ${activeTab === n.id ? "text-white" : "text-[var(--color-text-secondary)]"}`}
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -798,18 +798,18 @@ export default function Profile() {
 
                 {/* Left sidebar nav */}
                 <div className="hidden md:block w-full md:w-[200px] lg:w-[220px] flex-shrink-0 bg-[var(--color-surface)] rounded-[20px] shadow-sm p-3">
-                    <p className="text-[10px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-widest px-3 pt-1 pb-2">Account</p>
+                    <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest px-3 pt-1 pb-2">Account</p>
                     <div className="space-y-0.5">
                         {NAV.map(n => (
                             <button
                                 key={n.id}
                                 onClick={() => setActiveTab(n.id)}
                                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left transition-all duration-150 ${activeTab === n.id
-                                    ? "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)] font-semibold"
-                                    : "text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] font-medium"
+                                    ? "bg-[var(--color-surface-muted)] text-[var(--color-text-primary)] font-semibold"
+                                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-medium"
                                     }`}
                             >
-                                <svg className={`w-4 h-4 flex-shrink-0 ${activeTab === n.id ? "text-[var(--mx-color-1d1d1f)]" : "text-[var(--mx-color-86868b)]"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
+                                <svg className={`w-4 h-4 flex-shrink-0 ${activeTab === n.id ? "text-[var(--color-text-primary)]" : "text-[var(--color-text-secondary)]"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8">
                                     {n.icon}
                                 </svg>
                                 <span className="text-[13px]">{n.label}</span>
@@ -822,11 +822,11 @@ export default function Profile() {
                 <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${isAppleDevice ? "overflow-hidden" : "overflow-visible"}`}>
                     <div className={`min-h-0 flex-1 pr-0.5 ${isAppleDevice ? "overflow-y-auto overscroll-contain hide-scrollbar" : "overflow-visible"}`}>
                         {activeTab === "profile" && (
-                            <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
+                            <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm overflow-hidden">
 
                                 {/* Section header */}
-                                <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--mx-color-f0f0f0)]">
-                                    <h2 className="text-[16px] font-bold text-[var(--mx-color-1d1d1f)]">Profile Information</h2>
+                                <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--color-border-soft)]">
+                                    <h2 className="text-[16px] font-bold text-[var(--color-text-primary)]">Profile Information</h2>
                                 </div>
 
                                 {/* Cover banner + avatar */}
@@ -836,7 +836,7 @@ export default function Profile() {
                                         <div className="absolute inset-0 bg-gradient-to-r from-[var(--mx-color-c6ff00)]/20 via-transparent to-[var(--mx-color-a8d8ff)]/30"></div>
                                         <div className="absolute -top-8 -right-8 w-48 h-48 rounded-full bg-[var(--mx-color-c6ff00)]/20 blur-3xl"></div>
                                         <div className="absolute bottom-0 left-24 w-32 h-32 rounded-full bg-[var(--color-surface)]/30 blur-2xl"></div>
-                                        <button className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-[var(--color-surface)]/80 backdrop-blur-sm text-[var(--mx-color-1d1d1f)] text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-[var(--color-border-strong)]/60 hover:bg-[var(--color-surface)] transition-all shadow-sm">
+                                        <button className="absolute bottom-3 right-4 flex items-center gap-1.5 bg-[var(--color-surface)]/80 backdrop-blur-sm text-[var(--color-text-primary)] text-[11px] font-semibold px-3 py-1.5 rounded-lg border border-[var(--color-border-strong)]/60 hover:bg-[var(--color-surface)] transition-all shadow-sm">
                                             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                             Edit Cover
                                         </button>
@@ -854,12 +854,12 @@ export default function Profile() {
                                                     onError={() => setImgError(true)}
                                                 />
                                             ) : (
-                                                <div className="w-[80px] h-[80px] sm:w-[92px] sm:h-[92px] rounded-full bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] border-4 border-[var(--color-border-strong)] shadow-lg flex items-center justify-center text-[var(--mx-color-1d1d1f)] text-[22px] font-black">
+                                                <div className="w-[80px] h-[80px] sm:w-[92px] sm:h-[92px] rounded-full bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] border-4 border-[var(--color-border-strong)] shadow-lg flex items-center justify-center text-[var(--color-text-primary)] text-[22px] font-black">
                                                     {initials}
                                                 </div>
                                             )}
-                                            <button className="absolute bottom-0.5 right-0.5 w-6 h-6 bg-[var(--color-surface)] rounded-full flex items-center justify-center shadow-md border border-[var(--mx-color-d2d2d7)]/60 hover:scale-110 transition-transform">
-                                                <svg className="w-3 h-3 text-[var(--mx-color-1d1d1f)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                            <button className="absolute bottom-0.5 right-0.5 w-6 h-6 bg-[var(--color-surface)] rounded-full flex items-center justify-center shadow-md border border-[var(--color-border-soft)] hover:scale-110 transition-transform">
+                                                <svg className="w-3 h-3 text-[var(--color-text-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                                             </button>
                                         </div>
                                     </div>
@@ -870,10 +870,10 @@ export default function Profile() {
 
                                 {/* Profile details form */}
                                 <div className="px-4 sm:px-6 pb-5">
-                                    <div className="border border-[var(--mx-color-e5e5ea)] rounded-2xl px-5 py-4">
+                                    <div className="border border-[var(--color-border-soft)] rounded-2xl px-5 py-4">
                                         <div className="mb-3">
-                                            <h3 className="text-[15px] font-bold text-[var(--mx-color-1d1d1f)]">Profile Details</h3>
-                                            <p className="text-[12px] text-[var(--mx-color-86868b)] mt-0.5">Enter your basic personal information for identification and contact purposes</p>
+                                            <h3 className="text-[15px] font-bold text-[var(--color-text-primary)]">Profile Details</h3>
+                                            <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">Enter your basic personal information for identification and contact purposes</p>
                                         </div>
 
                                         {error && (
@@ -893,72 +893,72 @@ export default function Profile() {
                                             {/* Row 1: First Name + Last Name */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className="block text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] mb-1.5 uppercase tracking-wide">First Name</label>
+                                                    <label className="block text-[11px] font-semibold text-[var(--color-text-primary)] mb-1.5 uppercase tracking-wide">First Name</label>
                                                     <input
                                                         type="text"
                                                         value={firstName}
                                                         onChange={(e) => setFullName(e.target.value + (lastName ? " " + lastName : ""))}
                                                         placeholder="First name"
-                                                        className="w-full px-3.5 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-transparent focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] placeholder-[var(--mx-color-86868b)] focus:outline-none transition-all duration-200"
+                                                        className="w-full px-3.5 py-2.5 bg-[var(--color-surface-muted)] border border-transparent focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none transition-all duration-200"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] mb-1.5 uppercase tracking-wide">Last Name</label>
+                                                    <label className="block text-[11px] font-semibold text-[var(--color-text-primary)] mb-1.5 uppercase tracking-wide">Last Name</label>
                                                     <input
                                                         type="text"
                                                         value={lastName}
                                                         onChange={(e) => setFullName((firstName ? firstName + " " : "") + e.target.value)}
                                                         placeholder="Last name"
-                                                        className="w-full px-3.5 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-transparent focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] placeholder-[var(--mx-color-86868b)] focus:outline-none transition-all duration-200"
+                                                        className="w-full px-3.5 py-2.5 bg-[var(--color-surface-muted)] border border-transparent focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none transition-all duration-200"
                                                     />
                                                 </div>
                                             </div>
 
                                             {/* Row 2: Username */}
                                             <div>
-                                                <label className="block text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] mb-1.5 uppercase tracking-wide">Username</label>
+                                                <label className="block text-[11px] font-semibold text-[var(--color-text-primary)] mb-1.5 uppercase tracking-wide">Username</label>
                                                 <input
                                                     type="text"
                                                     value={username}
                                                     onChange={(e) => setUsername(e.target.value)}
                                                     placeholder="username"
-                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-transparent focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] placeholder-[var(--mx-color-86868b)] focus:outline-none transition-all duration-200"
+                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[var(--color-surface-muted)] border border-transparent focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none transition-all duration-200"
                                                 />
                                             </div>
 
                                             {/* Row 3: Email Address */}
                                             <div>
-                                                <label className="block text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] mb-1.5 uppercase tracking-wide">Email Address</label>
+                                                <label className="block text-[11px] font-semibold text-[var(--color-text-primary)] mb-1.5 uppercase tracking-wide">Email Address</label>
                                                 <input
                                                     type="email"
                                                     value={user?.email || ""}
                                                     disabled
-                                                    className="w-full px-3.5 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-transparent rounded-xl text-[13px] text-[var(--mx-color-86868b)] cursor-not-allowed"
+                                                    className="w-full px-3.5 py-2.5 bg-[var(--color-surface-muted)] border border-transparent rounded-xl text-[13px] text-[var(--color-text-secondary)] cursor-not-allowed"
                                                 />
-                                                <p className="text-[11px] text-[var(--mx-color-86868b)] mt-1">Email cannot be changed for security reasons.</p>
+                                                <p className="text-[11px] text-[var(--color-text-secondary)] mt-1">Email cannot be changed for security reasons.</p>
                                             </div>
 
                                             {/* Row 4: Phone */}
                                             <div>
-                                                <label className="block text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] mb-1.5 uppercase tracking-wide">Phone</label>
+                                                <label className="block text-[11px] font-semibold text-[var(--color-text-primary)] mb-1.5 uppercase tracking-wide">Phone</label>
                                                 <input
                                                     type="tel"
                                                     value={phone}
                                                     onChange={(e) => setPhone(e.target.value)}
                                                     placeholder="+1 000 000 0000"
-                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-transparent focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] placeholder-[var(--mx-color-86868b)] focus:outline-none transition-all duration-200"
+                                                    className="w-full sm:w-1/2 px-3.5 py-2.5 bg-[var(--color-surface-muted)] border border-transparent focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none transition-all duration-200"
                                                 />
                                             </div>
 
                                             {/* Row 5: Bio */}
                                             <div>
-                                                <label className="block text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] mb-1.5 uppercase tracking-wide">Bio</label>
+                                                <label className="block text-[11px] font-semibold text-[var(--color-text-primary)] mb-1.5 uppercase tracking-wide">Bio</label>
                                                 <textarea
                                                     value={bio}
                                                     onChange={(e) => setBio(e.target.value)}
                                                     rows={2}
                                                     placeholder="Tell us about yourself"
-                                                    className="w-full px-3.5 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-transparent   focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] placeholder-[var(--mx-color-86868b)] focus:outline-none transition-all duration-200 resize-none"
+                                                    className="w-full px-3.5 py-2.5 bg-[var(--color-surface-muted)] border border-transparent   focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--color-text-primary)] placeholder-[var(--color-text-secondary)] focus:outline-none transition-all duration-200 resize-none"
                                                 />
                                             </div>
 
@@ -967,7 +967,7 @@ export default function Profile() {
                                                 <button
                                                     type="submit"
                                                     disabled={loading}
-                                                    className="bg-[var(--mx-color-1d1d1f)] hover:bg-black text-white font-semibold py-2.5 px-7 rounded-xl text-[13px] transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50"
+                                                    className="bg-[var(--color-text-primary)] hover:bg-black text-white font-semibold py-2.5 px-7 rounded-xl text-[13px] transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50"
                                                 >
                                                     {loading ? "Saving..." : "Save Changes"}
                                                 </button>
@@ -979,26 +979,26 @@ export default function Profile() {
                         )}
 
                         {activeTab === "security" && (
-                            <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
-                                <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--mx-color-f0f0f0)]">
-                                    <h2 className="text-[16px] font-bold text-[var(--mx-color-1d1d1f)]">Security</h2>
+                            <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm overflow-hidden">
+                                <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--color-border-soft)]">
+                                    <h2 className="text-[16px] font-bold text-[var(--color-text-primary)]">Security</h2>
                                 </div>
                                 <div className="px-6 sm:px-8 py-10 flex flex-col items-center justify-center gap-3 text-center">
-                                    <div className="w-12 h-12 rounded-2xl bg-[var(--mx-color-f5f5f7)] flex items-center justify-center">
-                                        <svg className="w-6 h-6 text-[var(--mx-color-86868b)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                    <div className="w-12 h-12 rounded-2xl bg-[var(--color-surface-muted)] flex items-center justify-center">
+                                        <svg className="w-6 h-6 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                                     </div>
-                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Security settings coming soon</p>
-                                    <p className="text-[12px] text-[var(--mx-color-86868b)]">Password and 2FA management will be available here.</p>
+                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Security settings coming soon</p>
+                                    <p className="text-[12px] text-[var(--color-text-secondary)]">Password and 2FA management will be available here.</p>
                                 </div>
                             </div>
                         )}
 
                         {activeTab === "preferences" && (
                             <div className="space-y-5 sm:space-y-6">
-                                <div className="lifesync-soft-borders bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
-                                    <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--mx-color-f0f0f0)]">
-                                        <h2 className="text-[16px] font-bold text-[var(--mx-color-1d1d1f)]">Preferences</h2>
-                                        <p className="mt-0.5 text-[12px] text-[var(--mx-color-86868b)]">
+                                <div className="lifesync-soft-borders bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm overflow-hidden">
+                                    <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--color-border-soft)]">
+                                        <h2 className="text-[16px] font-bold text-[var(--color-text-primary)]">Preferences</h2>
+                                        <p className="mt-0.5 text-[12px] text-[var(--color-text-secondary)]">
                                             App preferences apply immediately. LifeSync preferences sync only when your account is connected.
                                         </p>
                                     </div>
@@ -1006,9 +1006,9 @@ export default function Profile() {
                                     <div className="px-6 sm:px-8 py-5">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="min-w-0">
-                                                <p className="text-[12px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-widest">App</p>
-                                                <p className="mt-1 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Reduce animations</p>
-                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                <p className="text-[12px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest">App</p>
+                                                <p className="mt-1 text-[13px] font-semibold text-[var(--color-text-primary)]">Reduce animations</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                     Turns off transitions and decorative motion app-wide for less CPU/GPU use and a calmer UI.
                                                 </p>
                                             </div>
@@ -1042,13 +1042,13 @@ export default function Profile() {
                                             </button>
                                         </div>
 
-                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--mx-color-f5f5f7)] pt-6">
+                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--color-border-soft)] pt-6">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Controller support</p>
-                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Controller support</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                     Enable Xbox controller mappings for LifeSync anime watch, hentai player, and manga reader.
                                                 </p>
-                                                <p className="mt-1 text-[11px] text-[var(--mx-color-9b9ba1)]">
+                                                <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
                                                     Local device only. This setting is not synced to your account.
                                                 </p>
                                             </div>
@@ -1069,26 +1069,26 @@ export default function Profile() {
                                             </button>
                                         </div>
                                         {controllerSupportEnabled ? (
-                                            <div className="mt-4 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f8f8fb)] p-3 sm:p-4">
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--mx-color-86868b)]">
+                                            <div className="mt-4 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] p-3 sm:p-4">
+                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
                                                     Controller input layout
                                                 </p>
                                                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                                                     {CONTROLLER_INPUT_LAYOUT.map((section) => (
                                                         <div
                                                             key={section.title}
-                                                            className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-3"
+                                                            className="rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3"
                                                         >
-                                                            <p className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">
+                                                            <p className="text-[12px] font-semibold text-[var(--color-text-primary)]">
                                                                 {section.title}
                                                             </p>
                                                             <dl className="mt-2 space-y-1.5">
                                                                 {section.rows.map((row) => (
                                                                     <div key={`${section.title}-${row.button}`} className="flex items-center justify-between gap-3 text-[11px]">
-                                                                        <dt className="font-semibold text-[var(--mx-color-5b5670)]">
+                                                                        <dt className="font-semibold text-[var(--color-text-secondary)]">
                                                                             {row.button}
                                                                         </dt>
-                                                                        <dd className="text-right text-[var(--mx-color-86868b)]">
+                                                                        <dd className="text-right text-[var(--color-text-secondary)]">
                                                                             {row.action}
                                                                         </dd>
                                                                     </div>
@@ -1100,18 +1100,18 @@ export default function Profile() {
                                             </div>
                                         ) : null}
 
-                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--mx-color-f5f5f7)] pt-6">
+                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--color-border-soft)] pt-6">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Appearance theme</p>
-                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Appearance theme</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                     Choose Light, Dark, or follow your system setting.
                                                 </p>
-                                                <p className="mt-1 text-[11px] text-[var(--mx-color-9b9ba1)]">
+                                                <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
                                                     Active: {resolvedAppTheme === 'dark' ? 'Dark' : 'Light'}
                                                 </p>
                                             </div>
                                             <div
-                                                className="inline-flex shrink-0 self-end rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] p-0.5 sm:self-auto"
+                                                className="inline-flex shrink-0 self-end rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] p-0.5 sm:self-auto"
                                                 role="group"
                                                 aria-label="App theme preference"
                                             >
@@ -1146,8 +1146,8 @@ export default function Profile() {
                                                                 }
                                                             }}
                                                             className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${active
-                                                                ? "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] shadow-sm"
-                                                                : "text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
+                                                                ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-sm"
+                                                                : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                                                                 } disabled:opacity-50`}
                                                         >
                                                             {label}
@@ -1157,10 +1157,10 @@ export default function Profile() {
                                             </div>
                                         </div>
 
-                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--mx-color-f5f5f7)] pt-6">
+                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--color-border-soft)] pt-6">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Tips & reminders</p>
-                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Tips & reminders</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                     Occasional nudges for manga, anime, and Steam wishlist deals. They only
                                                     appear while Maxien has an open tab and your browser allows notifications.
                                                 </p>
@@ -1246,12 +1246,12 @@ export default function Profile() {
                                     </div>
                                 </div>
 
-                                <div className="lifesync-soft-borders bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
-                                    <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--mx-color-f0f0f0)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="lifesync-soft-borders bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm overflow-hidden">
+                                    <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--color-border-soft)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="min-w-0">
-                                            <p className="text-[12px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync</p>
-                                            <h3 className="mt-1 text-[15px] font-bold text-[var(--mx-color-1d1d1f)]">LifeSync preferences</h3>
-                                            <p className="mt-0.5 text-[12px] text-[var(--mx-color-86868b)]">
+                                            <p className="text-[12px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest">LifeSync</p>
+                                            <h3 className="mt-1 text-[15px] font-bold text-[var(--color-text-primary)]">LifeSync preferences</h3>
+                                            <p className="mt-0.5 text-[12px] text-[var(--color-text-secondary)]">
                                                 NSFW access, manga source defaults, and default anime audio.
                                             </p>
                                         </div>
@@ -1263,13 +1263,13 @@ export default function Profile() {
                                                 </span>
                                             ) : (
                                                 <>
-                                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-1 text-[11px] font-bold text-[var(--mx-color-86868b)]">
+                                                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] px-3 py-1 text-[11px] font-bold text-[var(--color-text-secondary)]">
                                                         Not connected
                                                     </span>
                                                     <button
                                                         type="button"
                                                         onClick={() => setActiveTab("integrations")}
-                                                        className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] whitespace-nowrap"
+                                                        className="text-[12px] font-semibold text-[var(--color-text-primary)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface)] px-3 py-2 rounded-xl border border-[var(--color-border-soft)] whitespace-nowrap"
                                                     >
                                                         Connect LifeSync
                                                     </button>
@@ -1282,8 +1282,8 @@ export default function Profile() {
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">NSFW content</p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">NSFW content</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                         Allow mature catalog areas (e.g. Hentai Ocean, NSFW manga sources) when those plugins are enabled.
                                                     </p>
                                                 </div>
@@ -1317,8 +1317,8 @@ export default function Profile() {
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">English manga only</p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">English manga only</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                         In LifeSync Manga, only list and search titles that have English chapter releases.
                                                     </p>
                                                 </div>
@@ -1352,14 +1352,14 @@ export default function Profile() {
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3">
                                                 <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Comix default filters</p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Comix default filters</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                         Account-level Comix exclusions shared across devices (Manga / Manhwa / Manhua / Oneshot tabs).
                                                     </p>
                                                 </div>
-                                                <div className="space-y-3 rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
+                                                <div className="space-y-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-soft)] p-3">
                                                     <div className="space-y-1">
-                                                        <p className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">Exclude types</p>
+                                                        <p className="text-[11px] font-semibold text-[var(--color-text-primary)]">Exclude types</p>
                                                         <div className="flex flex-wrap gap-1.5">
                                                             {COMIX_TYPE_PREF_OPTIONS.map((row) => {
                                                                 const active = comixExcludeTypesInput.includes(row.id)
@@ -1371,8 +1371,8 @@ export default function Profile() {
                                                                         onClick={() => toggleComixExcludeType(row.id)}
                                                                         className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors ${
                                                                             active
-                                                                                ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/45"
-                                                                                : "bg-[var(--color-surface)] text-[var(--mx-color-5b5670)] ring-1 ring-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-f5f5f7)]"
+                                                                                ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--color-text-primary)] ring-1 ring-[var(--mx-color-c6ff00)]/45"
+                                                                                : "bg-[var(--color-surface)] text-[var(--color-text-secondary)] ring-1 ring-[var(--color-border-soft)] hover:bg-[var(--color-surface-muted)]"
                                                                         } disabled:opacity-50`}
                                                                     >
                                                                         {row.label}
@@ -1383,37 +1383,37 @@ export default function Profile() {
                                                     </div>
                                                     <div className="grid gap-3 md:grid-cols-2">
                                                         <label className="flex min-w-0 flex-col gap-1">
-                                                            <span className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">Exclude demographics</span>
+                                                            <span className="text-[11px] font-semibold text-[var(--color-text-primary)]">Exclude demographics</span>
                                                             <input
                                                                 type="text"
                                                                 value={comixExcludeGendersInput}
                                                                 onChange={(e) => setComixExcludeGendersInput(e.target.value)}
                                                                 placeholder="shounen, seinen"
                                                                 disabled={prefsBusy || !lifeSyncUser}
-                                                                className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
+                                                                className="h-10 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
                                                             />
                                                         </label>
                                                         <label className="flex min-w-0 flex-col gap-1">
-                                                            <span className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">Exclude genres</span>
+                                                            <span className="text-[11px] font-semibold text-[var(--color-text-primary)]">Exclude genres</span>
                                                             <input
                                                                 type="text"
                                                                 value={comixExcludeGenresInput}
                                                                 onChange={(e) => setComixExcludeGenresInput(e.target.value)}
                                                                 placeholder="adult, ecchi, mature"
                                                                 disabled={prefsBusy || !lifeSyncUser}
-                                                                className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
+                                                                className="h-10 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
                                                             />
                                                         </label>
                                                     </div>
                                                     <label className="flex min-w-0 flex-col gap-1">
-                                                        <span className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">Colored genres map</span>
+                                                        <span className="text-[11px] font-semibold text-[var(--color-text-primary)]">Colored genres map</span>
                                                         <textarea
                                                             value={comixColoredGenresInput}
                                                             onChange={(e) => setComixColoredGenresInput(e.target.value)}
                                                             placeholder={"genre-slug:color-name\nromance:pink"}
                                                             rows={3}
                                                             disabled={prefsBusy || !lifeSyncUser}
-                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
+                                                            className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 py-2 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
                                                         />
                                                     </label>
                                                     <div className="flex flex-wrap gap-2">
@@ -1421,7 +1421,7 @@ export default function Profile() {
                                                             type="button"
                                                             disabled={prefsBusy || !lifeSyncUser}
                                                             onClick={() => void saveComixFilterPrefs()}
-                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)] disabled:opacity-50"
+                                                            className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] disabled:opacity-50"
                                                         >
                                                             Save Comix defaults
                                                         </button>
@@ -1434,7 +1434,7 @@ export default function Profile() {
                                                                 setComixExcludeGenresInput("")
                                                                 setComixColoredGenresInput("")
                                                             }}
-                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-5b5670)] hover:bg-[var(--mx-color-ebebed)] disabled:opacity-50"
+                                                            className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] disabled:opacity-50"
                                                         >
                                                             Clear form
                                                         </button>
@@ -1445,13 +1445,13 @@ export default function Profile() {
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Anime default audio</p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Anime default audio</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                         Prefer subtitled (Japanese) or dubbed streams when the catalog offers both.
                                                     </p>
                                                 </div>
                                                 <div
-                                                    className="inline-flex shrink-0 self-end rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] p-0.5 sm:self-auto"
+                                                    className="inline-flex shrink-0 self-end rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] p-0.5 sm:self-auto"
                                                     role="group"
                                                     aria-label="Default anime audio"
                                                     title={!lifeSyncUser ? "Connect LifeSync under Integrations to edit" : undefined}
@@ -1478,8 +1478,8 @@ export default function Profile() {
                                                                     }
                                                                 }}
                                                                 className={`rounded-lg px-3.5 py-1.5 text-[11px] font-semibold transition-colors ${active
-                                                                    ? "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] shadow-sm"
-                                                                    : "text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
+                                                                    ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-sm"
+                                                                    : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
                                                                     } disabled:opacity-50`}
                                                             >
                                                                 {mode === "sub" ? "Sub" : "Dub"}
@@ -1492,12 +1492,12 @@ export default function Profile() {
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3">
                                                 <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Games page background</p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Games page background</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                         Pick a visual style with live previews. Custom video accepts MP4/WEBM and YouTube links.
                                                     </p>
                                                     {!lifeSyncUser?.integrations?.steam && (
-                                                        <p className="mt-1 text-[11px] text-[var(--mx-color-9ca3af)]">
+                                                        <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
                                                             Steam mode requires linking Steam in Integrations.
                                                         </p>
                                                     )}
@@ -1527,7 +1527,7 @@ export default function Profile() {
                                                     })}
                                                 </div>
                                                 {(gamesBackgroundMode === "custom_image" || gamesBackgroundMode === "custom_video") && (
-                                                    <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
+                                                    <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-soft)] p-3">
                                                         <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
                                                             <input
                                                                 type="url"
@@ -1538,7 +1538,7 @@ export default function Profile() {
                                                                     else setGamesCustomVideoUrlInput(v)
                                                                 }}
                                                                 placeholder={gamesBackgroundMode === "custom_image" ? "https://example.com/background.jpg" : "https://youtube.com/watch?v=... or https://example.com/background.mp4"}
-                                                                className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60"
+                                                                className="h-10 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--mx-color-0071e3)]/60"
                                                                 disabled={backgroundPrefsBusy || !lifeSyncUser}
                                                             />
                                                             <button
@@ -1554,13 +1554,13 @@ export default function Profile() {
                                                                             : gamesCustomVideoUrlInput,
                                                                     )
                                                                 }}
-                                                                className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-50"
+                                                                className="h-10 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-50"
                                                             >
                                                                 Save URL
                                                             </button>
                                                         </div>
                                                         {gamesBackgroundMode === "custom_video" ? (
-                                                            <p className="mt-2 text-[11px] text-[var(--mx-color-86868b)]">
+                                                            <p className="mt-2 text-[11px] text-[var(--color-text-secondary)]">
                                                                 YouTube links are resolved to direct MP4/WEBM video streams for looping backgrounds.
                                                             </p>
                                                         ) : null}
@@ -1572,8 +1572,8 @@ export default function Profile() {
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3">
                                                 <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">Anime page background</p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--mx-color-86868b)]">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Anime page background</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                                                         Applied to anime pages except dedicated Anime Watch, Manga Read, and hentai watch routes.
                                                     </p>
                                                 </div>
@@ -1600,7 +1600,7 @@ export default function Profile() {
                                                     })}
                                                 </div>
                                                 {(animeBackgroundMode === "custom_image" || animeBackgroundMode === "custom_video") && (
-                                                    <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fbfbfd)] p-3">
+                                                    <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-soft)] p-3">
                                                         
                                                         <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
                                                             <input
@@ -1612,7 +1612,7 @@ export default function Profile() {
                                                                     else setAnimeCustomVideoUrlInput(v)
                                                                 }}
                                                                 placeholder={animeBackgroundMode === "custom_image" ? "https://example.com/anime-bg.jpg" : "https://youtube.com/watch?v=... or https://example.com/anime-bg.mp4"}
-                                                                className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--mx-color-1d1d1f)] outline-none focus:border-[var(--mx-color-0071e3)]/60"
+                                                                className="h-10 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--mx-color-0071e3)]/60"
                                                                 disabled={backgroundPrefsBusy || !lifeSyncUser}
                                                             />
                                                             <button
@@ -1628,13 +1628,13 @@ export default function Profile() {
                                                                             : animeCustomVideoUrlInput,
                                                                     )
                                                                 }}
-                                                                className="h-10 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-50"
+                                                                className="h-10 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-[var(--color-text-primary)] transition hover:border-[var(--mx-color-0071e3)] disabled:opacity-50"
                                                             >
                                                                 Save URL
                                                             </button>
                                                         </div>
                                                         {animeBackgroundMode === "custom_video" ? (
-                                                            <p className="mt-2 text-[11px] text-[var(--mx-color-86868b)]">
+                                                            <p className="mt-2 text-[11px] text-[var(--color-text-secondary)]">
                                                                 YouTube links are resolved to direct MP4/WEBM video streams for looping backgrounds.
                                                             </p>
                                                         ) : null}
@@ -1647,10 +1647,10 @@ export default function Profile() {
                             </div>
                         )}
                         {activeTab === "integrations" && (
-                            <div className="min-w-0 rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm sm:rounded-[24px]">
-                                <div className="border-b border-[var(--mx-color-f0f0f0)] px-4 pt-5 pb-4 sm:px-8 sm:pt-6">
-                                    <h2 className="text-[16px] font-bold text-[var(--mx-color-1d1d1f)]">Integrations</h2>
-                                    <p className="mt-0.5 text-[12px] text-[var(--mx-color-86868b)]">
+                            <div className="min-w-0 rounded-[20px] border border-[var(--color-border-soft)] bg-[var(--color-surface)] shadow-sm sm:rounded-[24px]">
+                                <div className="border-b border-[var(--color-border-soft)] px-4 pt-5 pb-4 sm:px-8 sm:pt-6">
+                                    <h2 className="text-[16px] font-bold text-[var(--color-text-primary)]">Integrations</h2>
+                                    <p className="mt-0.5 text-[12px] text-[var(--color-text-secondary)]">
                                         Link LifeSync, GitHub, and external services.
                                     </p>
                                 </div>

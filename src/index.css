@@ -69,6 +69,95 @@ html[data-maxien-theme='dark'] body {
   color: var(--color-text-primary);
 }
 
+.sub-urgency-critical {
+  background-color: var(--mx-color-fef2f2);
+  border: 1px solid var(--mx-color-fecaca);
+  color: var(--mx-color-b91c1c);
+}
+html[data-maxien-theme='dark'] .sub-urgency-critical {
+  background-color: color-mix(in srgb, var(--mx-color-b91c1c) 15%, transparent);
+  border-color: color-mix(in srgb, var(--mx-color-b91c1c) 30%, transparent);
+  color: color-mix(in srgb, var(--mx-color-fecaca) 90%, white);
+}
+
+.sub-urgency-warning {
+  background-color: var(--mx-color-fefce8);
+  border: 1px solid var(--mx-color-fde68a);
+  color: var(--mx-color-92400e);
+}
+html[data-maxien-theme='dark'] .sub-urgency-warning {
+  background-color: color-mix(in srgb, var(--mx-color-f59e0b) 15%, transparent);
+  border-color: color-mix(in srgb, var(--mx-color-f59e0b) 30%, transparent);
+  color: color-mix(in srgb, var(--mx-color-fde68a) 90%, white);
+}
+
+.sub-delete-btn {
+  background-color: var(--mx-color-fff1f2);
+  color: var(--mx-color-b91c1c);
+}
+.sub-delete-btn:hover {
+  background-color: var(--mx-color-fee2e2);
+}
+html[data-maxien-theme='dark'] .sub-delete-btn {
+  background-color: color-mix(in srgb, var(--mx-color-b91c1c) 15%, transparent);
+  color: color-mix(in srgb, var(--mx-color-fecaca) 90%, white);
+}
+html[data-maxien-theme='dark'] .sub-delete-btn:hover {
+  background-color: color-mix(in srgb, var(--mx-color-b91c1c) 22%, transparent);
+}
+
+.focus-stat-blue {
+  background-color: var(--mx-color-e0f2ff);
+  border: 1px solid color-mix(in srgb, var(--mx-color-bfdbfe) 40%, transparent);
+}
+.focus-stat-blue:hover { background-color: color-mix(in srgb, var(--mx-color-bfdbfe) 40%, transparent); }
+html[data-maxien-theme='dark'] .focus-stat-blue {
+  background-color: color-mix(in srgb, var(--mx-color-3b82f6) 15%, transparent);
+  border-color: color-mix(in srgb, var(--mx-color-3b82f6) 25%, transparent);
+}
+html[data-maxien-theme='dark'] .focus-stat-blue:hover {
+  background-color: color-mix(in srgb, var(--mx-color-3b82f6) 22%, transparent);
+}
+
+.focus-stat-red {
+  background-color: var(--mx-color-fee2e2);
+  border: 1px solid color-mix(in srgb, var(--mx-color-fecaca) 40%, transparent);
+}
+html[data-maxien-theme='dark'] .focus-stat-red {
+  background-color: color-mix(in srgb, var(--mx-color-dc2626) 15%, transparent);
+  border-color: color-mix(in srgb, var(--mx-color-dc2626) 25%, transparent);
+}
+
+.focus-stat-green {
+  background-color: var(--mx-color-f0fdf4);
+  border: 1px solid color-mix(in srgb, var(--mx-color-bbf7d0) 40%, transparent);
+}
+html[data-maxien-theme='dark'] .focus-stat-green {
+  background-color: color-mix(in srgb, var(--mx-color-16a34a) 15%, transparent);
+  border-color: color-mix(in srgb, var(--mx-color-16a34a) 25%, transparent);
+}
+
+.focus-stat-orange {
+  background-color: var(--mx-color-fff7ed);
+  border: 1px solid color-mix(in srgb, var(--mx-color-fed7aa) 40%, transparent);
+}
+html[data-maxien-theme='dark'] .focus-stat-orange {
+  background-color: color-mix(in srgb, var(--mx-color-f97316) 15%, transparent);
+  border-color: color-mix(in srgb, var(--mx-color-f97316) 25%, transparent);
+}
+
+.dashboard-hero-banner {
+  background: linear-gradient(to bottom right, var(--mx-color-f5faeb), var(--mx-color-f0f7e5), var(--mx-color-e8f5d0));
+  border-color: color-mix(in srgb, var(--mx-color-c8e87a) 40%, transparent);
+}
+html[data-maxien-theme='dark'] .dashboard-hero-banner {
+  background: linear-gradient(to bottom right,
+    color-mix(in srgb, var(--mx-color-c6ff00) 8%, var(--color-surface)),
+    color-mix(in srgb, var(--mx-color-c6ff00) 5%, var(--color-surface-muted)),
+    var(--color-surface-muted));
+  border-color: color-mix(in srgb, var(--mx-color-c6ff00) 18%, transparent);
+}
+
 .dashboard-sidebar-surface {
   background-color: var(--mx-color-ffffff);
   border-color: transparent;

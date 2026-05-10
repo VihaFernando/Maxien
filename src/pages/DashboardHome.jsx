@@ -209,12 +209,12 @@ export default function DashboardHome() {
             {/* Top Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-1 mb-6 sm:mb-8 px-0.5">
                 <div>
-                    <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest mb-1">Overview</p>
-                    <h1 className="text-[20px] sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-tight">
+                    <p className="text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-1">Overview</p>
+                    <h1 className="text-[20px] sm:text-[24px] font-bold text-[var(--color-text-primary)] tracking-tight leading-tight">
                         {greeting}, {firstName}
                     </h1>
                 </div>
-                <p className="text-[12px] font-medium text-[var(--mx-color-86868b)] sm:pb-0.5">{currentDate}</p>
+                <p className="text-[12px] font-medium text-[var(--color-text-secondary)] sm:pb-0.5">{currentDate}</p>
             </div>
 
             {loading ? (
@@ -228,7 +228,7 @@ export default function DashboardHome() {
                     <div className="lg:col-span-8 flex flex-col gap-5 sm:gap-6">
 
                         {/* Hero Banner with progress ring + stats */}
-                        <div className="relative rounded-[22px] sm:rounded-[28px] overflow-hidden bg-gradient-to-br from-[var(--mx-color-f5faeb)] via-[var(--mx-color-f0f7e5)] to-[var(--mx-color-e8f5d0)] border border-[var(--mx-color-c8e87a)]/40 p-5 sm:p-7">
+                        <div className="dashboard-hero-banner relative rounded-[22px] sm:rounded-[28px] overflow-hidden border p-5 sm:p-7">
                             <div className="absolute -top-12 -right-12 w-52 h-52 rounded-full bg-[var(--mx-color-c6ff00)]/15 blur-3xl pointer-events-none"></div>
                             <div className="absolute bottom-0 left-20 w-36 h-36 rounded-full bg-[var(--mx-color-c6ff00)]/10 blur-2xl pointer-events-none"></div>
 
@@ -237,7 +237,7 @@ export default function DashboardHome() {
                                 <div className="hidden sm:flex flex-col items-center gap-1.5 flex-shrink-0">
                                     <div className="relative w-[88px] h-[88px]">
                                         <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
-                                            <circle cx="18" cy="18" r="14" fill="none" stroke="var(--mx-color-e5efd0)" strokeWidth="3.5" />
+                                            <circle cx="18" cy="18" r="14" fill="none" stroke="var(--color-border-soft)" strokeWidth="3.5" />
                                             <circle
                                                 cx="18" cy="18" r="14" fill="none"
                                                 stroke="var(--mx-color-c6ff00)" strokeWidth="3.5"
@@ -246,10 +246,10 @@ export default function DashboardHome() {
                                             />
                                         </svg>
                                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-[16px] font-bold text-[var(--mx-color-1d1d1f)] leading-none">{stats.completionRate}%</span>
+                                            <span className="text-[16px] font-bold text-[var(--color-text-primary)] leading-none">{stats.completionRate}%</span>
                                         </div>
                                     </div>
-                                    <span className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide">Done</span>
+                                    <span className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide">Done</span>
                                 </div>
 
                                 {/* Stats grid */}
@@ -261,7 +261,7 @@ export default function DashboardHome() {
                                         { label: "Overdue", value: stats.overdue, color: "var(--mx-color-ef4444)", section: "overdue" },
                                     ].map(s => (
                                         <Link key={s.label} to={`/dashboard/tasks${s.section ? `?section=${s.section}` : ""}`} className="w-full bg-[var(--color-surface)]/70 backdrop-blur-sm rounded-xl px-3 sm:px-4 py-3 sm:py-2.5 border border-[var(--color-border-strong)]/80 hover:bg-[var(--color-surface)]/90 hover:shadow-sm transition-all duration-150 cursor-pointer">
-                                            <p className="text-[9px] sm:text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide mb-0.5">{s.label}</p>
+                                            <p className="text-[9px] sm:text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-0.5">{s.label}</p>
                                             <p className="text-[18px] sm:text-[22px] font-bold leading-tight" style={{ color: s.color }}>{s.value}</p>
                                         </Link>
                                     ))}
@@ -270,7 +270,7 @@ export default function DashboardHome() {
 
                             {/* Progress bar */}
                             <div className="relative mt-5">
-                                <div className="flex justify-between text-[11px] font-medium text-[var(--mx-color-86868b)] mb-1.5">
+                                <div className="flex justify-between text-[11px] font-medium text-[var(--color-text-secondary)] mb-1.5">
                                     <span>Overall completion</span>
                                     <span>{stats.completed} / {stats.total} tasks</span>
                                 </div>
@@ -284,13 +284,13 @@ export default function DashboardHome() {
                         </div>
 
                         {/* Projects Overview */}
-                        <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-5 sm:p-6">
+                        <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm p-5 sm:p-6">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)] flex items-center gap-2">
+                                <h2 className="text-[14px] font-bold text-[var(--color-text-primary)] flex items-center gap-2">
                                     <FaFolder className="w-4 h-4 text-[var(--mx-color-c6ff00)]" />
                                     Projects Overview
                                 </h2>
-                                <Link to="/dashboard/projects" className="text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] transition-colors flex items-center gap-1">
+                                <Link to="/dashboard/projects" className="text-[11px] font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors flex items-center gap-1">
                                     All projects
                                     <FaChevronRight className="w-3 h-3" />
                                 </Link>
@@ -298,8 +298,8 @@ export default function DashboardHome() {
 
                             {projects.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center py-8 gap-2">
-                                    <FaFolder className="w-10 h-10 text-[var(--mx-color-d2d2d7)]" />
-                                    <p className="text-[12px] text-[var(--mx-color-86868b)]">No projects yet</p>
+                                    <FaFolder className="w-10 h-10 text-[var(--color-border-strong)]" />
+                                    <p className="text-[12px] text-[var(--color-text-secondary)]">No projects yet</p>
                                     <Link to="/dashboard/projects" className="text-[11px] font-semibold text-[var(--mx-color-c6ff00)] hover:underline">
                                         Create your first project
                                     </Link>
@@ -314,8 +314,8 @@ export default function DashboardHome() {
                                             { label: "Completed", value: projectStats.completed, color: "var(--mx-color-10b981)" },
                                             { label: "On Hold", value: projectStats.onHold, color: "var(--mx-color-f59e0b)" },
                                         ].map(s => (
-                                            <div key={s.label} className="bg-[var(--mx-color-f9f9fb)] rounded-xl px-3 py-2.5 border border-[var(--mx-color-f0f0f0)]">
-                                                <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide mb-0.5">{s.label}</p>
+                                            <div key={s.label} className="bg-[var(--color-surface-muted)] rounded-xl px-3 py-2.5 border border-[var(--color-border-soft)]">
+                                                <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-0.5">{s.label}</p>
                                                 <p className="text-[18px] sm:text-[20px] font-bold leading-tight" style={{ color: s.color }}>{s.value}</p>
                                             </div>
                                         ))}
@@ -327,10 +327,10 @@ export default function DashboardHome() {
                         </div>
 
                         {/* Activity Graph */}
-                        <div className="flex-1 bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-5 sm:p-6">
+                        <div className="flex-1 bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm p-5 sm:p-6">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)]">Activity Graph</h2>
-                                <span className="text-[11px] font-medium text-[var(--mx-color-86868b)]">Task activity</span>
+                                <h2 className="text-[14px] font-bold text-[var(--color-text-primary)]">Activity Graph</h2>
+                                <span className="text-[11px] font-medium text-[var(--color-text-secondary)]">Task activity</span>
                             </div>
 
                             {/* Mobile graph: last 16 cols */}
@@ -344,7 +344,7 @@ export default function DashboardHome() {
                                             const lbl = monthLabels.find(m => m.col === srcIdx)
                                             return (
                                                 <div key={i} className="flex-1 relative h-4 min-w-0">
-                                                    {lbl && <span className="absolute top-0 left-0 text-[9px] text-[var(--mx-color-86868b)] font-medium whitespace-nowrap">{lbl.label}</span>}
+                                                    {lbl && <span className="absolute top-0 left-0 text-[9px] text-[var(--color-text-secondary)] font-medium whitespace-nowrap">{lbl.label}</span>}
                                                 </div>
                                             )
                                         })}
@@ -355,7 +355,7 @@ export default function DashboardHome() {
                                             <div className="flex flex-col gap-[2px] w-5 mr-1 flex-shrink-0 h-full">
                                                 {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
                                                     <div key={i} className="flex items-center justify-center flex-1">
-                                                        <span className="text-[9px] text-[var(--mx-color-86868b)] font-medium">{i % 2 === 0 ? d : ""}</span>
+                                                        <span className="text-[9px] text-[var(--color-text-secondary)] font-medium">{i % 2 === 0 ? d : ""}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -364,7 +364,7 @@ export default function DashboardHome() {
                                                     {col.map((level, j) => {
                                                         // Map level to exact color
                                                         const levelColors = [
-                                                            "var(--mx-color-f0f0f0)", // 0
+                                                            "var(--color-border-soft)", // 0
                                                             "var(--mx-color-dff5a0)", // 1
                                                             "var(--mx-color-c8ef52)", // 2
                                                             "var(--mx-color-b8e616)", // 3
@@ -385,13 +385,13 @@ export default function DashboardHome() {
                                     </div>
                                     {/* Legend */}
                                     <div className="flex items-center gap-1.5 mt-3">
-                                        <span className="text-[10px] text-[var(--mx-color-86868b)] font-medium mr-0.5">Less</span>
+                                        <span className="text-[10px] text-[var(--color-text-secondary)] font-medium mr-0.5">Less</span>
                                         {[
-                                            "var(--mx-color-f0f0f0)", "var(--mx-color-dff5a0)", "var(--mx-color-c8ef52)", "var(--mx-color-b8e616)", "var(--mx-color-c6ff00)"
+                                            "var(--color-border-soft)", "var(--mx-color-dff5a0)", "var(--mx-color-c8ef52)", "var(--mx-color-b8e616)", "var(--mx-color-c6ff00)"
                                         ].map((color, i) => (
                                             <div key={i} className="w-[10px] h-[10px] rounded-[2px]" style={{ backgroundColor: color }}></div>
                                         ))}
-                                        <span className="text-[10px] text-[var(--mx-color-86868b)] font-medium ml-0.5">More</span>
+                                        <span className="text-[10px] text-[var(--color-text-secondary)] font-medium ml-0.5">More</span>
                                     </div>
                                 </div>
                             ))}
@@ -403,23 +403,23 @@ export default function DashboardHome() {
                     <div className="lg:col-span-4 flex flex-col gap-5 sm:gap-6">
 
                         {/* Focus Today - Compact & Responsive */}
-                        <div className="flex-1 flex flex-col bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-3 sm:p-6">
+                        <div className="flex-1 flex flex-col bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm p-3 sm:p-6">
                             {/* Header + Stats */}
-                            <div className="mb-2.5 sm:mb-4 pb-2.5 sm:pb-4 border-b border-[var(--mx-color-f0f0f0)]">
+                            <div className="mb-2.5 sm:mb-4 pb-2.5 sm:pb-4 border-b border-[var(--color-border-soft)]">
                                 <div className="flex items-center justify-between mb-1.5 sm:mb-3">
-                                    <h2 className="text-[12px] sm:text-[14px] font-bold text-[var(--mx-color-1d1d1f)]">Focus Today</h2>
-                                    <Link to="/dashboard/tasks" className="text-[9px] sm:text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] transition-colors">See all</Link>
+                                    <h2 className="text-[12px] sm:text-[14px] font-bold text-[var(--color-text-primary)]">Focus Today</h2>
+                                    <Link to="/dashboard/tasks" className="text-[9px] sm:text-[11px] font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors">See all</Link>
                                 </div>
                                 {/* Inline Stats - Responsive */}
                                 <div className="flex gap-1.5 sm:gap-3">
-                                    <Link to="/dashboard/tasks?section=today" className="flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg bg-[var(--mx-color-e0f2ff)] border border-[var(--mx-color-bfdbfe)]/40 hover:bg-[var(--mx-color-bfdbfe)]/40 transition-colors cursor-pointer">
+                                    <Link to="/dashboard/tasks?section=today" className="focus-stat-blue flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg transition-colors cursor-pointer">
                                         <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--mx-color-3b82f6)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                         <div className="min-w-0">
                                             <p className="text-[7px] sm:text-[10px] font-semibold text-[var(--mx-color-3b82f6)] uppercase leading-none">Due Today</p>
-                                            <p className="text-[12px] sm:text-[15px] font-bold text-[var(--mx-color-1d1d1f)] leading-none mt-0.5">{stats.dueToday}</p>
+                                            <p className="text-[12px] sm:text-[15px] font-bold text-[var(--color-text-primary)] leading-none mt-0.5">{stats.dueToday}</p>
                                         </div>
                                     </Link>
-                                    <Link to="/dashboard/tasks?section=overdue" className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg border hover:opacity-80 transition-opacity cursor-pointer ${stats.overdue > 0 ? "bg-[var(--mx-color-fee2e2)] border-[var(--mx-color-fecaca)]/40" : "bg-[var(--mx-color-f0fdf4)] border-[var(--mx-color-bbf7d0)]/40"}`}>
+                                    <Link to="/dashboard/tasks?section=overdue" className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${stats.overdue > 0 ? "focus-stat-red" : "focus-stat-green"}`}>
                                         {stats.overdue > 0
                                             ? <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--mx-color-dc2626)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                             : <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--mx-color-16a34a)] flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
@@ -429,11 +429,11 @@ export default function DashboardHome() {
                                             <p className={`text-[12px] sm:text-[15px] font-bold leading-none mt-0.5 ${stats.overdue > 0 ? "text-[var(--mx-color-dc2626)]" : "text-[var(--mx-color-16a34a)]"}`}>{stats.overdue > 0 ? stats.overdue : "—"}</p>
                                         </div>
                                     </Link>
-                                    <Link to="/dashboard/tasks" className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${stats.highPriority > 0 ? "bg-[var(--mx-color-fff7ed)] border border-[var(--mx-color-fed7aa)]/40" : "bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-d1d5db)]/50"}`}>
+                                    <Link to="/dashboard/tasks" className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${stats.highPriority > 0 ? "focus-stat-orange" : "border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]"}`}>
                                         <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--mx-color-f97316)] flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M5 3l14 9-14 9V3z" /></svg>
                                         <div className="min-w-0">
                                             <p className="text-[7px] sm:text-[10px] font-semibold text-[var(--mx-color-f97316)] uppercase leading-none">Urg/High</p>
-                                            <p className="text-[12px] sm:text-[15px] font-bold text-[var(--mx-color-1d1d1f)] leading-none mt-0.5">{stats.highPriority}</p>
+                                            <p className="text-[12px] sm:text-[15px] font-bold text-[var(--color-text-primary)] leading-none mt-0.5">{stats.highPriority}</p>
                                         </div>
                                     </Link>
                                 </div>
@@ -441,17 +441,17 @@ export default function DashboardHome() {
 
                             {/* Upcoming Tasks - Scrollable, fills all space */}
                             <div className="flex-1 flex flex-col min-h-0">
-                                <p className="text-[9px] sm:text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wide mb-1.5 sm:mb-2.5">Upcoming</p>
+                                <p className="text-[9px] sm:text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5 sm:mb-2.5">Upcoming</p>
                                 {upcomingItems.length === 0 ? (
                                     <div className="flex items-center justify-center flex-1 py-6">
                                         <div className="text-center">
-                                            <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[var(--mx-color-d2d2d7)] mx-auto mb-2 sm:mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            <p className="text-[11px] sm:text-[12px] font-semibold text-[var(--mx-color-86868b)] mb-0.5">All caught up!</p>
-                                            <p className="text-[9px] sm:text-[10px] text-[var(--mx-color-d2d2d7)]">No upcoming items</p>
+                                            <svg className="w-8 h-8 sm:w-10 sm:h-10 text-[var(--color-border-strong)] mx-auto mb-2 sm:mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            <p className="text-[11px] sm:text-[12px] font-semibold text-[var(--color-text-secondary)] mb-0.5">All caught up!</p>
+                                            <p className="text-[9px] sm:text-[10px] text-[var(--color-border-strong)]">No upcoming items</p>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-0.5 sm:space-y-1 scrollbar-thin scrollbar-thumb-[var(--mx-color-d2d2d7)] scrollbar-track-transparent hover:scrollbar-thumb-[var(--mx-color-86868b)]">
+                                    <div className="flex-1 overflow-y-auto min-h-0 pr-1 space-y-0.5 sm:space-y-1 scrollbar-thin scrollbar-thumb-[var(--color-border-strong)] scrollbar-track-transparent hover:scrollbar-thumb-[var(--color-text-secondary)]">
                                         {upcomingItems.slice(0, 3).map((item) => {
                                             const isTask = item.type === "task"
                                             const task = isTask ? item.payload : null
@@ -465,24 +465,21 @@ export default function DashboardHome() {
                                                 <Link
                                                     key={`${item.type}-${item.id}`}
                                                     to={isTask ? `/dashboard/tasks?task=${task.id}` : "/dashboard/subscriptions"}
-                                                    className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2.5 rounded-lg transition-colors duration-200 group border border-[var(--mx-color-d2d2d7)]/30"
-                                                    style={{ backgroundColor: 'var(--mx-color-fafbfc)' }}
-                                                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--mx-color-f5f6fa)'}
-                                                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--mx-color-fafbfc)'}
+                                                    className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2.5 rounded-lg transition-colors duration-200 group border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] hover:bg-[var(--color-surface)]"
                                                 >
-                                                    <div className="bg-[var(--mx-color-f5f5f7)] group-hover:bg-[var(--color-surface)] rounded-lg flex flex-col items-center justify-center w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 transition-colors border border-[var(--mx-color-d2d2d7)]/40 text-[8px] sm:text-[10px]">
+                                                    <div className="bg-[var(--color-surface-muted)] group-hover:bg-[var(--color-surface)] rounded-lg flex flex-col items-center justify-center w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 transition-colors border border-[var(--color-border-soft)] text-[8px] sm:text-[10px]">
                                                         {hasDueDate ? (
                                                             <>
-                                                                <span className="font-bold text-[var(--mx-color-86868b)] leading-none">{mon}</span>
-                                                                <span className="font-bold text-[var(--mx-color-1d1d1f)] leading-none">{day}</span>
+                                                                <span className="font-bold text-[var(--color-text-secondary)] leading-none">{mon}</span>
+                                                                <span className="font-bold text-[var(--color-text-primary)] leading-none">{day}</span>
                                                             </>
                                                         ) : (
-                                                            <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--mx-color-86868b)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                                                            <svg className="w-3 h-3 sm:w-4 sm:h-4 text-[var(--color-text-secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                                                         )}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                                                            <p className="text-[10px] sm:text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] truncate leading-tight">{isTask ? task.title : subscription.name}</p>
+                                                            <p className="text-[10px] sm:text-[12px] font-semibold text-[var(--color-text-primary)] truncate leading-tight">{isTask ? task.title : subscription.name}</p>
                                                             {isTask && isOverdueTask(task) && <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-red-100 text-red-600 flex-shrink-0 whitespace-nowrap">OVERDUE</span>}
                                                             {isTask && !isOverdueTask(task) && isOverdueSoon(task) && <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-600 flex-shrink-0 whitespace-nowrap">DUE SOON</span>}
                                                             {!isTask && <span className="text-[7px] sm:text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-100 text-yellow-700 flex-shrink-0 whitespace-nowrap">SUBSCRIPTION</span>}
@@ -491,15 +488,15 @@ export default function DashboardHome() {
                                                             <span className={`inline-block text-[7px] sm:text-[9px] font-bold px-1 py-0.5 rounded ${task.priority === "Urgent" ? "bg-red-50 text-red-600" :
                                                                 task.priority === "High" ? "bg-orange-50 text-orange-600" :
                                                                     task.priority === "Medium" ? "bg-blue-50 text-blue-600" :
-                                                                        "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)]"
+                                                                        "bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)]"
                                                                 }`}>{task.priority || "—"}</span>
                                                         ) : (
-                                                            <span className="inline-block text-[7px] sm:text-[9px] font-bold px-1 py-0.5 rounded bg-[var(--mx-color-fefce8)] text-[var(--mx-color-92400e)]">Due in {item.daysUntil} day{item.daysUntil === 1 ? "" : "s"}</span>
+                                                            <span className="sub-urgency-warning inline-block text-[7px] sm:text-[9px] font-bold px-1 py-0.5 rounded">Due in {item.daysUntil} day{item.daysUntil === 1 ? "" : "s"}</span>
                                                         )}
                                                     </div>
                                                     {hasDueDate && time && (
                                                         <div className="flex-shrink-0 text-right">
-                                                            <p className="text-[8px] sm:text-[10px] font-semibold text-[var(--mx-color-86868b)]">{time}</p>
+                                                            <p className="text-[8px] sm:text-[10px] font-semibold text-[var(--color-text-secondary)]">{time}</p>
                                                         </div>
                                                     )}
                                                 </Link>
@@ -511,26 +508,26 @@ export default function DashboardHome() {
                         </div>
 
                         {/* Priority Breakdown */}
-                        <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-5 sm:p-6">
+                        <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm p-5 sm:p-6">
                             <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)]">Priority Breakdown</h2>
-                                <Link to="/dashboard/tasks" className="text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)] transition-colors flex items-center gap-1">
+                                <h2 className="text-[14px] font-bold text-[var(--color-text-primary)]">Priority Breakdown</h2>
+                                <Link to="/dashboard/tasks" className="text-[11px] font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors flex items-center gap-1">
                                     View all
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path d="M9 5l7 7-7 7" /></svg>
                                 </Link>
                             </div>
                             {tasks.length === 0 ? (
-                                <p className="text-[12px] text-[var(--mx-color-86868b)] text-center py-4">
+                                <p className="text-[12px] text-[var(--color-text-secondary)] text-center py-4">
                                     No tasks yet.{" "}
                                     <Link to="/dashboard/tasks" className="text-[var(--mx-color-86b300)] font-semibold hover:underline">Create one</Link>
                                 </p>
                             ) : (
                                 <div className="space-y-3">
                                     {[
-                                        { label: "Urgent", color: "var(--mx-color-ef4444)", bg: "var(--mx-color-fef2f2)", trackBg: "var(--mx-color-fecaca55)" },
-                                        { label: "High", color: "var(--mx-color-f97316)", bg: "var(--mx-color-fff7ed)", trackBg: "var(--mx-color-fed7aa55)" },
-                                        { label: "Medium", color: "var(--mx-color-3b82f6)", bg: "var(--mx-color-eff6ff)", trackBg: "var(--mx-color-bfdbfe55)" },
-                                        { label: "Low", color: "var(--mx-color-86868b)", bg: "var(--mx-color-f5f5f7)", trackBg: "var(--mx-color-d1d5db55)" },
+                                        { label: "Urgent", color: "var(--mx-color-ef4444)", trackBg: "color-mix(in srgb, var(--mx-color-ef4444) 20%, transparent)" },
+                                        { label: "High", color: "var(--mx-color-f97316)", trackBg: "color-mix(in srgb, var(--mx-color-f97316) 20%, transparent)" },
+                                        { label: "Medium", color: "var(--mx-color-3b82f6)", trackBg: "color-mix(in srgb, var(--mx-color-3b82f6) 20%, transparent)" },
+                                        { label: "Low", color: "var(--color-text-secondary)", bg: "var(--color-surface-muted)", trackBg: "var(--color-border-soft)" },
                                     ].map(row => {
                                         const total = tasks.filter(t => t.priority === row.label).length
                                         const done = tasks.filter(t => t.priority === row.label && t.status === "Done").length
@@ -539,14 +536,14 @@ export default function DashboardHome() {
                                             <div key={row.label} className="flex items-center gap-3">
                                                 <div className="flex items-center gap-2 w-[68px] flex-shrink-0">
                                                     <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: row.color }}></div>
-                                                    <span className="text-[11px] font-semibold text-[var(--mx-color-86868b)]">{row.label}</span>
+                                                    <span className="text-[11px] font-semibold text-[var(--color-text-secondary)]">{row.label}</span>
                                                 </div>
                                                 <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: row.trackBg }}>
                                                     <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: row.color + "cc" }}></div>
                                                 </div>
                                                 <div className="w-[52px] flex-shrink-0 text-right">
-                                                    <span className="text-[12px] font-bold text-[var(--mx-color-1d1d1f)]">{done}</span>
-                                                    <span className="text-[11px] text-[var(--mx-color-86868b)]"> / {total}</span>
+                                                    <span className="text-[12px] font-bold text-[var(--color-text-primary)]">{done}</span>
+                                                    <span className="text-[11px] text-[var(--color-text-secondary)]"> / {total}</span>
                                                 </div>
                                             </div>
                                         )

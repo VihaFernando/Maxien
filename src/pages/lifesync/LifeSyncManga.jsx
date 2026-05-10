@@ -654,10 +654,11 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
     )
 })
 
-function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, browseTranslatedLang = 'en' }) {
+function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, browseTranslatedLang = 'en', isLifeSyncConnected = false }) {
     const [detail, setDetail] = useState(null)
     const [chapters, setChapters] = useState(null)
     const [chapBusy, setChapBusy] = useState(false)
+    const [currentChapterId, setCurrentChapterId] = useState('')
     const [descExpanded, setDescExpanded] = useState(false)
     const [dexStats, setDexStats] = useState(null)
     const [isDexFollowing, setIsDexFollowing] = useState(null)
@@ -667,6 +668,9 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
     const [chapterLang, setChapterLang] = useState(() => (browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang))
     /** `asc` = chapter 1 at top; `desc` = latest chapter at top */
     const [chapterOrder, setChapterOrder] = useState('asc')
+    const chapterListRef = useRef(null)
+    const currentChapterButtonRef = useRef(null)
+    const didAutoScrollCurrentChapterRef = useRef(false)
 
     useEffect(() => {
         setChapterLang(browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang)
@@ -675,6 +679,44 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
     useEffect(() => {
         setChapterOrder('asc')
     }, [manga?.id])
+
+    useEffect(() => {
+        didAutoScrollCurrentChapterRef.current = false
+        setCurrentChapterId('')
+    }, [manga?.id, manga?.source])
+
+    useEffect(() => {
+        if (!manga?.id || !isLifeSyncConnected) return
+        let cancelled = false
+        const sourceHint = String(manga.source || source || '').trim().toLowerCase()
+        ;(async () => {
+            try {
+                const params = new URLSearchParams({
+                    view: 'standard',
+                    sortBy: 'updatedAt',
+                    order: 'desc',
+                    page: '1',
+                    limit: '100',
+                })
+                if (sourceHint) params.set('source', sourceHint)
+                const data = await lifesyncFetch(`/api/v1/progress?${params.toString()}`)
+                if (cancelled) return
+                const rows = Array.isArray(data) ? data : (Array.isArray(data?.entries) ? data.entries : [])
+                const match = rows.find((row) => {
+                    if (String(row?.mangaId || '').trim() !== String(manga.id)) return false
+                    if (!sourceHint) return true
+                    return String(row?.source || '').trim().toLowerCase() === sourceHint
+                })
+                const chapterId = String(match?.lastChapterId || '').trim()
+                if (chapterId) setCurrentChapterId(chapterId)
+            } catch {
+                // ignore: current chapter highlight falls back to local detail payload
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [isLifeSyncConnected, manga?.id, manga?.source, source])
 
     useEffect(() => {
         if (!manga?.id) return undefined
@@ -698,7 +740,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
         setDexReadingStatus(null)
         setChapBusy(false)
         return undefined
-    }, [manga?.id, manga?.source, source, manga?.chapters, legacyConnected, chapterLang])
+    }, [manga?.id, manga.source, source, manga.chapters, legacyConnected, chapterLang, manga])
 
     const chaptersInSeriesOrder = useMemo(() => {
         const list = chapters?.data ? [...chapters.data] : []
@@ -710,6 +752,14 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
         if (chapterOrder === 'desc') return [...chaptersInSeriesOrder].reverse()
         return chaptersInSeriesOrder
     }, [chaptersInSeriesOrder, chapterOrder])
+
+    const highlightedChapterId = useMemo(() => {
+        const fromProgress = String(currentChapterId || '').trim()
+        if (fromProgress) return fromProgress
+        const fromManga = String(manga?.lastChapterId || detail?.lastChapterId || '').trim()
+        if (fromManga) return fromManga
+        return ''
+    }, [currentChapterId, detail?.lastChapterId, manga?.lastChapterId])
 
     const chapterSeriesIndex = useCallback(
         ch => {
@@ -724,6 +774,21 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
         const dm = detail || manga
         return buildDexChapterLangSelectOptions(dm.availableTranslatedLanguages || manga.availableTranslatedLanguages)
     }, [detail, manga])
+
+    useEffect(() => {
+        if (didAutoScrollCurrentChapterRef.current) return
+        if (chapBusy || !highlightedChapterId || displayChapters.length === 0) return
+        const targetChapterExists = displayChapters.some((ch) => String(ch?.id || '') === highlightedChapterId)
+        if (!targetChapterExists) return
+        const listEl = chapterListRef.current
+        const chapterEl = currentChapterButtonRef.current
+        if (!listEl || !chapterEl) return
+        didAutoScrollCurrentChapterRef.current = true
+        requestAnimationFrame(() => {
+            const top = chapterEl.offsetTop - (listEl.clientHeight / 2) + (chapterEl.clientHeight / 2)
+            listEl.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
+        })
+    }, [chapBusy, displayChapters, highlightedChapterId])
 
     if (!manga) return null
 
@@ -1083,20 +1148,37 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                                 </div>
                             ) : (
                                 <div className="overflow-hidden rounded-xl">
-                                    <ul className="max-h-80 overflow-y-auto">
-                                        {displayChapters.map(ch => (
+                                    <ul ref={chapterListRef} className="max-h-80 overflow-y-auto">
+                                        {displayChapters.map(ch => {
+                                            const isCurrentChapter = highlightedChapterId && String(ch?.id || '') === highlightedChapterId
+                                            return (
                                             <li key={ch.id}>
                                                 <button
+                                                    ref={isCurrentChapter ? currentChapterButtonRef : null}
                                                     type="button"
                                                     onClick={() => onStartRead(mergedManga, ch)}
-                                                    className="group flex w-full items-center gap-3 px-3.5 py-2.5 text-left"
+                                                    aria-current={isCurrentChapter ? 'true' : undefined}
+                                                    className={`group flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left transition-colors ${
+                                                        isCurrentChapter
+                                                            ? 'bg-[var(--mx-color-c6ff00)]/18 ring-1 ring-[var(--mx-color-c6ff00)]/45'
+                                                            : 'hover:bg-[var(--mx-color-f5f5f7)]'
+                                                    }`}
                                                 >
-                                                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-[var(--mx-color-86868b)] transition-colors group-hover:bg-[var(--mx-color-c6ff00)]/20 group-hover:text-[var(--mx-color-1d1d1f)]">
+                                                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold transition-colors ${
+                                                        isCurrentChapter
+                                                            ? 'bg-[var(--mx-color-c6ff00)]/32 text-[var(--mx-color-1d1d1f)]'
+                                                            : 'text-[var(--mx-color-86868b)] group-hover:bg-[var(--mx-color-c6ff00)]/20 group-hover:text-[var(--mx-color-1d1d1f)]'
+                                                    }`}>
                                                         {chapterSeriesIndex(ch) || '—'}
                                                     </span>
                                                     <span className="flex-1 min-w-0">
                                                         <span className="flex items-center gap-2 min-w-0">
                                                             <span className="block text-[12px] font-medium text-[var(--mx-color-1d1d1f)] truncate">{formatChapterLabel(ch)}</span>
+                                                            {isCurrentChapter && (
+                                                                <span className="shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]/28 px-1.5 py-0.5 text-[9px] font-semibold text-[var(--mx-color-1a1628)]">
+                                                                    Current
+                                                                </span>
+                                                            )}
                                                             {src === 'legacy' && chapterLang === 'all' && ch.translatedLanguage && (
                                                                 <span className="shrink-0 text-[9px] font-semibold uppercase text-[var(--mx-color-86868b)] bg-[var(--mx-color-ebebed)] px-1.5 py-0.5 rounded">{ch.translatedLanguage}</span>
                                                             )}
@@ -1106,7 +1188,8 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                                                     <svg className="w-3.5 h-3.5 shrink-0 text-[var(--mx-color-d2d2d7)] group-hover:text-[var(--mx-color-c6ff00)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                                                 </button>
                                             </li>
-                                        ))}
+                                            )
+                                        })}
                                     </ul>
                                 </div>
                             )}
@@ -2527,6 +2610,7 @@ export default function LifeSyncManga() {
                         key={`${selectedManga.source || source}-${selectedManga.id}`}
                         manga={selectedManga}
                         source={source}
+                        isLifeSyncConnected={isLifeSyncConnected}
                         onClose={() => goToList({ replace: true })}
                         onStartRead={handleStartRead}
                         legacyConnected={Boolean(dexAuthStatus?.connected)}
