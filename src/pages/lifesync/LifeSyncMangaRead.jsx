@@ -93,10 +93,6 @@ function sanitizeProgressPayload(raw) {
         lastChapterNum: String(raw?.lastChapterNum || ''),
         lastReadPercent: normalizeReadPercent(raw?.lastReadPercent),
     }
-    const contentRating = String(raw?.contentRating || '').trim()
-    if (source === 'comix' && contentRating) {
-        payload.contentRating = contentRating
-    }
     return payload
 }
 
@@ -208,7 +204,7 @@ function mangaImageProps(url) {
     try {
         const u = new URL(src, window.location.origin)
         const host = u.hostname || ''
-        if (host.includes('comix.to') || host.includes('mangadistrict')) {
+        if (host.includes('mangadistrict') || host.includes('roliascan')) {
             return { referrerPolicy: 'no-referrer' }
         }
     } catch {
@@ -261,7 +257,7 @@ export default function LifeSyncMangaRead() {
 
     const [fallbackResume, setFallbackResume] = useState({ source: '', chapterId: '', percent: 0 })
 
-    const source = sourceHint || fallbackResume.source || 'comix'
+    const source = sourceHint || fallbackResume.source || 'mangadistrict'
 
     const browseTranslatedLang = useMemo(() => {
         const fromQuery = String(searchParams.get('lang') || '').trim().toLowerCase()
@@ -348,7 +344,8 @@ export default function LifeSyncMangaRead() {
                 ? 'mangadistrict'
                 : manga.source === 'comix'
                     ? 'comix'
-                    : 'comix'
+                : ''
+        if (!sourceName) return null
         return sanitizeProgressPayload({
             source: sourceName,
             mangaId: String(manga.id),
@@ -359,7 +356,6 @@ export default function LifeSyncMangaRead() {
             lastVolume: chapter?.volume != null && chapter.volume !== '' ? String(chapter.volume) : '',
             lastChapterNum: chapter?.chapter != null && chapter.chapter !== '' ? String(chapter.chapter) : '',
             lastReadPercent: normalizeReadPercent(row?.percent),
-            ...(sourceName === 'comix' && manga?.contentRating ? { contentRating: String(manga.contentRating) } : {}),
         })
     }, [])
 

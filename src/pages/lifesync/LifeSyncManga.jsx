@@ -48,13 +48,13 @@ const mangaFilterExpandTransition = {
 }
 
 function mangaCoverLayoutId(source, id) {
-    return `lifesync-manga-cover-${String(source || 'comix')}-${String(id)}`
+    return `lifesync-manga-cover-${String(source || 'legacy')}-${String(id)}`
 }
 
 /** Serializable list-card fields for instant detail chrome (navigate `state`). */
 function mangaDetailPreviewFromCard(manga, source) {
     if (!manga || manga.id == null) return null
-    const src = manga.source || source || 'comix'
+    const src = manga.source || source || 'legacy'
     return {
         id: String(manga.id),
         source: src,
@@ -555,7 +555,7 @@ function DexGenreFilter({
 }
 
 const MangaCard = memo(function MangaCard({ manga, onClick }) {
-    const cardSrc = manga.source || 'comix'
+    const cardSrc = manga.source || 'legacy'
     const coverDisplayUrl = resolveMangaCoverDisplayUrl(manga.coverUrl, cardSrc)
     const rating = manga.ratings?.average ?? manga.ratingAverage
     const ratingNum = rating != null ? Number(rating) : null
@@ -581,7 +581,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
                 <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
                     {manga.id != null ? (
                         <MotionDiv
-                            layoutId={mangaCoverLayoutId(manga.source || 'comix', manga.id)}
+                            layoutId={mangaCoverLayoutId(manga.source || 'legacy', manga.id)}
                             transition={lifeSyncSharedLayoutTransitionProps}
                             className="absolute inset-0"
                         >
@@ -810,7 +810,11 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
     const cleanDesc = d.description ? String(d.description).replace(/<[^>]*>/g, '') : ''
     const comixTitleUrl =
         src === 'comix' && mergedManga.id
-            ? `https://comix.to/title/${encodeURIComponent(String(mergedManga.id))}${mergedManga.slug ? `-${encodeURIComponent(String(mergedManga.slug))}` : ''}`
+            ? (mergedManga.url
+                ? String(mergedManga.url)
+                : mergedManga.slug
+                    ? `https://roliascan.com/manga/${encodeURIComponent(String(mergedManga.slug))}/`
+                    : `https://roliascan.com/browse/?title=${encodeURIComponent(String(mergedManga.title || ''))}`)
             : null
     const isDarkTheme =
         typeof document !== 'undefined' &&
@@ -1107,7 +1111,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                                             rel="noopener noreferrer"
                                             className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
                                         >
-                                            Open on Comix
+                                            Open on Roliascan
                                         </a>
                                     )}
                                 </div>
@@ -1212,7 +1216,7 @@ const COMIX_TABS = [
     { id: 'manga', label: 'Manga', type: 'manga' },
     { id: 'manhwa', label: 'Manhwa', type: 'manhwa' },
     { id: 'manhua', label: 'Manhua', type: 'manhua' },
-    { id: 'oneshot', label: 'Oneshot', type: 'other' },
+    { id: 'oneshot', label: 'Novel', type: 'other' },
 ]
 
 const COMIX_FOLDER_TABS = [
@@ -1244,12 +1248,14 @@ const COMIX_FOLDER_DEFAULT_ORDER = {
 }
 
 function defaultTabForSource(src) {
+    if (src === 'legacy') return 'popular'
     if (src === 'comix') return 'manga'
     return 'latest'
 }
 
 function normalizeTabForSource(src, rawTab) {
     const tab = String(rawTab || '').trim()
+    if (src === 'legacy') return DEX_TAB_IDS.has(tab) ? tab : defaultTabForSource(src)
     if (src === 'comix') return COMIX_TAB_IDS.has(tab) ? tab : defaultTabForSource(src)
     return tab || defaultTabForSource(src)
 }
@@ -1278,8 +1284,8 @@ export default function LifeSyncManga() {
     const route = useMemo(() => {
         const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : ''
         const parts = rel.split('/').filter(Boolean)
-        const allowedSources = new Set(['comix', 'mangadistrict'])
-        const src = allowedSources.has(parts[0]) ? parts[0] : 'comix'
+        const allowedSources = new Set(['legacy', 'mangadistrict', 'comix'])
+        const src = allowedSources.has(parts[0]) ? parts[0] : 'legacy'
 
         const tab = normalizeTabForSource(src, parts[1] || defaultTabForSource(src))
 
@@ -1310,14 +1316,14 @@ export default function LifeSyncManga() {
     /** Synced from LifeSync viewing preferences (default on when unset). */
     const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false
 
-    const [source, setSource] = useState('comix')
-    const [tab, setTab] = useState('manga')
+    const [source, setSource] = useState('legacy')
+    const [tab, setTab] = useState('popular')
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
     const [selectedManga, setSelectedManga] = useState(null)
 
     const listPath = useMemo(() => {
-        const src = route.src || 'comix'
+        const src = route.src || 'legacy'
         const t = route.tab || defaultTabForSource(src)
         const p = clampPage(route.page)
         return `${basePath}/${src}/${t}/page/${p}${location.search || ''}`
@@ -1372,8 +1378,12 @@ export default function LifeSyncManga() {
     const goToRead = useCallback(
         (mangaId, chapterId, srcOverride, options = {}) => {
             const src = srcOverride || route.src
+            const params = new URLSearchParams(location.search || '')
+            params.set('source', src)
+            params.set('lang', mangaEnglishReleasesOnly ? 'en' : dexTranslatedLang)
+            const readerSearch = params.toString() ? `?${params.toString()}` : ''
             navigate(
-                `${basePath}/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(chapterId))}${location.search || ''}`,
+                `${basePath}/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(chapterId))}${readerSearch}`,
                 {
                     state: {
                         from: `${basePath}/${src}/${route.tab}/page/${clampPage(route.page)}${location.search || ''}`,
@@ -1499,6 +1509,8 @@ export default function LifeSyncManga() {
     const [comixCommittedSearch, setComixCommittedSearch] = useState('')
     const [comixIncludeGenres, setComixIncludeGenres] = useState([])
     const [comixExcludeGenres, setComixExcludeGenres] = useState([])
+    const [comixIncludeTags, setComixIncludeTags] = useState([])
+    const [comixExcludeTags, setComixExcludeTags] = useState([])
     const [comixIncludeDemographics, setComixIncludeDemographics] = useState([])
     const [comixExcludeDemographics, setComixExcludeDemographics] = useState([])
     const [comixStatuses, setComixStatuses] = useState([])
@@ -1525,6 +1537,8 @@ export default function LifeSyncManga() {
                 mc: String(comixMinchap || ''),
                 yf: String(comixYearFrom || ''),
                 yt: String(comixYearTo || ''),
+                tg: [...comixIncludeTags].sort(),
+                te: [...comixExcludeTags].sort(),
             }),
         [
             comixArtistsInput,
@@ -1548,8 +1562,8 @@ export default function LifeSyncManga() {
     useEffect(() => {
         if (comixFilterSig === comixListSigBound) return
         setComixListSigBound(comixFilterSig)
-        if (source === 'comix' && clampPage(route.page) !== 1) {
-            navigate(`${basePath}/comix/${route.tab}/page/1${location.search || ''}`)
+        if (source === 'legacy' && clampPage(route.page) !== 1 && route.tab === 'search') {
+            navigate(`${basePath}/legacy/search/page/1${location.search || ''}`)
             return
         }
         setComixPage(1)
@@ -1732,35 +1746,42 @@ export default function LifeSyncManga() {
     }, [])
 
     useEffect(() => {
-        if (!isLifeSyncConnected) {
-            setComixStatus(null)
-            return
-        }
-        lifesyncFetch('/api/v1/manga/comix/status?view=compact')
-            .then(setComixStatus)
-            .catch(() => setComixStatus({ configured: false, online: false }))
-    }, [isLifeSyncConnected])
+        setComixStatus(null)
+        setComixTerms({})
+    }, [])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || source !== 'comix') return
+        if (!isLifeSyncConnected || lifeSyncLoading || source !== 'comix') return
         let cancelled = false
-        lifesyncFetch('/api/v1/manga/comix/terms?view=full')
-            .then((data) => {
+        ;(async () => {
+            try {
+                const [statusData, termsData] = await Promise.all([
+                    lifesyncFetch('/api/v1/manga/comix/status?view=standard'),
+                    lifesyncFetch('/api/v1/manga/comix/terms?view=full'),
+                ])
                 if (cancelled) return
-                if (data?.terms && typeof data.terms === 'object') {
-                    setComixTerms({
-                        ...data.terms,
-                        status: Array.isArray(data?.statuses) ? data.statuses : [],
-                    })
-                }
-            })
-            .catch(() => {
-                if (!cancelled) setComixTerms({})
-            })
+                setComixStatus(statusData || null)
+                const termsPayload =
+                    termsData?.terms && typeof termsData.terms === 'object'
+                        ? termsData.terms
+                        : {}
+                setComixTerms({
+                    ...termsPayload,
+                    status: Array.isArray(termsData?.statuses) ? termsData.statuses : [],
+                    years: Array.isArray(termsData?.years) ? termsData.years : [],
+                    types: Array.isArray(termsData?.types) ? termsData.types : [],
+                    sorts: Array.isArray(termsData?.sorts) ? termsData.sorts : [],
+                })
+            } catch {
+                if (cancelled) return
+                setComixStatus(null)
+                setComixTerms({})
+            }
+        })()
         return () => {
             cancelled = true
         }
-    }, [isLifeSyncConnected, source])
+    }, [isLifeSyncConnected, lifeSyncLoading, source])
 
     useEffect(() => {
         if (source !== 'legacy' || (tab !== 'following' && tab !== 'library')) return
@@ -2113,9 +2134,11 @@ export default function LifeSyncManga() {
             }
             comixIncludeGenres.forEach((row) => qs.append('genres[]', String(row)))
             comixExcludeGenres.forEach((row) => qs.append('exclude_genres[]', String(row)))
+            comixExcludeTags.forEach((row) => qs.append('exclude_genres[]', String(row)))
             comixIncludeDemographics.forEach((row) => qs.append('demographics[]', String(row)))
             comixExcludeDemographics.forEach((row) => qs.append('exclude_genders[]', String(row)))
             comixStatuses.forEach((row) => qs.append('statuses[]', String(row)))
+            comixIncludeTags.forEach((row) => qs.append('genres[]', String(row)))
             parseCommaList(comixAuthorsInput).forEach((row) => qs.append('authors[]', row))
             parseCommaList(comixArtistsInput).forEach((row) => qs.append('artists[]', row))
             if (String(comixMinchap || '').trim()) qs.set('minchap', String(comixMinchap).trim())
@@ -2125,11 +2148,24 @@ export default function LifeSyncManga() {
             try {
                 const d = await lifesyncFetch(`/api/v1/manga/comix/browser?${qs.toString()}&view=standard`)
                 if (comixFetchGenRef.current !== gen) return
-                const rows = Array.isArray(d?.data) ? d.data : []
-                const total = typeof d?.total === 'number' ? d.total : rows.length
+                const rowsRaw = Array.isArray(d?.data) ? d.data : []
+                const rows = rowsRaw
+                    .map((row) => ({
+                        ...row,
+                        id: row?.id || row?.slug || row?.hid,
+                        source: 'comix',
+                    }))
+                    .filter((row) => row?.id)
+                const pageInfo = d?.pageInfo || {}
+                const total =
+                    typeof d?.total === 'number'
+                        ? d.total
+                        : typeof pageInfo?.total === 'number'
+                            ? pageInfo.total
+                            : ((page - 1) * 24) + rows.length
                 const last = Math.max(
                     1,
-                    Number(d?.lastPage || d?.pagination?.last_page || d?.pageInfo?.totalPages || page) || 1,
+                    Number(d?.lastPage || d?.pagination?.last_page || pageInfo?.totalPages || (rows.length >= 24 ? page + 1 : page)) || 1,
                 )
                 setComixRows(rows)
                 setComixTotal(total)
@@ -2140,7 +2176,7 @@ export default function LifeSyncManga() {
                 setComixRows([])
                 setComixTotal(0)
                 setComixLastPage(1)
-                setError(e?.message || 'Failed to load Comix')
+                setError(e?.message || 'Failed to load manga')
             } finally {
                 if (comixFetchGenRef.current === gen) setComixLoading(false)
             }
@@ -2235,8 +2271,8 @@ export default function LifeSyncManga() {
                         ...prev,
                         ...data,
                         id: data.id || id,
-                        coverUrl: data.coverUrl || prev?.coverUrl,
                         source: 'comix',
+                        coverUrl: data.coverUrl || prev?.coverUrl,
                     }))
                     return
                 }
@@ -2246,7 +2282,7 @@ export default function LifeSyncManga() {
                     ...prev,
                     ...data,
                     id: data.id || id,
-                    source: 'comix',
+                    source: 'legacy',
                     coverUrl: data.coverUrl || prev?.coverUrl,
                 }))
             } catch (e) {
@@ -2386,6 +2422,34 @@ export default function LifeSyncManga() {
         setComixExcludeDemographics((prev) => prev.filter((row) => row !== token))
     }, [comixExcludeDemographics, comixIncludeDemographics, toggleComixDemographic])
 
+    const toggleComixTag = useCallback((value, mode = 'include') => {
+        const token = String(value || '').trim()
+        if (!token) return
+        if (mode === 'exclude') {
+            setComixIncludeTags((prev) => prev.filter((row) => row !== token))
+            setComixExcludeTags((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+            return
+        }
+        setComixExcludeTags((prev) => prev.filter((row) => row !== token))
+        setComixIncludeTags((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+    }, [])
+
+    const cycleComixTag = useCallback((value) => {
+        const token = String(value || '').trim()
+        if (!token) return
+        const included = comixIncludeTags.includes(token)
+        const excluded = comixExcludeTags.includes(token)
+        if (!included && !excluded) {
+            toggleComixTag(token, 'include')
+            return
+        }
+        if (included) {
+            toggleComixTag(token, 'exclude')
+            return
+        }
+        setComixExcludeTags((prev) => prev.filter((row) => row !== token))
+    }, [comixExcludeTags, comixIncludeTags, toggleComixTag])
+
     const toggleComixStatus = useCallback((value) => {
         const token = String(value || '').trim()
         if (!token) return
@@ -2498,6 +2562,8 @@ export default function LifeSyncManga() {
     const comixGenreTerms = Array.isArray(comixTerms?.genre) ? comixTerms.genre : []
     const comixDemographicTerms = Array.isArray(comixTerms?.demographic) ? comixTerms.demographic : []
     const comixStatusTerms = Array.isArray(comixTerms?.status) ? comixTerms.status : []
+    const comixYears = Array.isArray(comixTerms?.years) ? comixTerms.years : []
+    const comixFormatTerms = Array.isArray(comixTerms?.format) ? comixTerms.format : []
 
 
     const currentItems = useMemo(() => {
@@ -2508,12 +2574,12 @@ export default function LifeSyncManga() {
             if (tab === 'recent') return recent
             if (tab === 'search') return searchResults
         }
-        if (source === 'comix') {
-            return comixRows
-        }
         if (source === 'mangadistrict') {
             if (mdFilter.trim()) return mdSearchResults
             return mdLatest?.data || []
+        }
+        if (source === 'comix') {
+            return comixRows
         }
         return []
     }, [
@@ -2528,6 +2594,7 @@ export default function LifeSyncManga() {
         mdLatest,
         mdFilter,
         mdSearchResults,
+        comixRows,
     ])
 
     const mangaGridLoading = useMemo(() => {
@@ -2540,8 +2607,8 @@ export default function LifeSyncManga() {
             if (tab === 'popular' && popularLoading) return true
             if (tab === 'recent' && recentLoading) return true
         }
-        if (source === 'comix' && comixLoading) return true
         if (source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy) return true
+        if (source === 'comix' && comixLoading) return true
         return false
     }, [
         currentItems.length,
@@ -2569,8 +2636,8 @@ export default function LifeSyncManga() {
     const tabs = source === 'legacy'
         ? dexTabs
         : source === 'comix'
-            ? COMIX_TABS.map((tabRow) => ({ id: tabRow.id, label: tabRow.label }))
-            : []
+            ? COMIX_TABS.map(t => ({ id: t.id, label: t.label }))
+        : []
 
     const useMangaBrowseCardStagger =
         currentItems.length > 0 &&
@@ -3006,24 +3073,46 @@ export default function LifeSyncManga() {
                                                     className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
                                                 />
                                             </label>
-                                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                                Year from
-                                                <input
-                                                    type="number"
-                                                    value={comixYearFrom}
-                                                    onChange={(e) => setComixYearFrom(e.target.value)}
-                                                    className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
-                                                />
-                                            </label>
-                                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                                Year to
-                                                <input
-                                                    type="number"
-                                                    value={comixYearTo}
-                                                    onChange={(e) => setComixYearTo(e.target.value)}
-                                                    className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
-                                                />
-                                            </label>
+                                            {comixYears.length > 0 ? (
+                                                <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                                                    Year
+                                                    <select
+                                                        value={comixYearFrom || ''}
+                                                        onChange={(e) => {
+                                                            const v = e.target.value
+                                                            setComixYearFrom(v)
+                                                            setComixYearTo(v)
+                                                        }}
+                                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                                                    >
+                                                        <option value="">Any year</option>
+                                                        {comixYears.map((y) => (
+                                                            <option key={String(y)} value={String(y)}>{String(y)}</option>
+                                                        ))}
+                                                    </select>
+                                                </label>
+                                            ) : (
+                                                <>
+                                                    <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                                                        Year from
+                                                        <input
+                                                            type="number"
+                                                            value={comixYearFrom}
+                                                            onChange={(e) => setComixYearFrom(e.target.value)}
+                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                                                        />
+                                                    </label>
+                                                    <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                                                        Year to
+                                                        <input
+                                                            type="number"
+                                                            value={comixYearTo}
+                                                            onChange={(e) => setComixYearTo(e.target.value)}
+                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                                                        />
+                                                    </label>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
@@ -3068,6 +3157,40 @@ export default function LifeSyncManga() {
                                                         onContextMenu={(event) => {
                                                             event.preventDefault()
                                                             toggleComixGenre(key, 'exclude')
+                                                        }}
+                                                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                            included
+                                                                ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                                : excluded
+                                                                    ? 'bg-rose-100 text-rose-700 ring-1 ring-rose-200'
+                                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                        }`}
+                                                    >
+                                                        {title}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Tap cycles include → exclude → clear. Right-click toggles exclude.</p>
+                                    </div>
+
+                                    <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Tags</p>
+                                        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                                            {comixFormatTerms.slice(0, 240).map((term) => {
+                                                const key = comixTermToken(term)
+                                                const title = String(term.title || term.slug || key)
+                                                if (!key || !title) return null
+                                                const included = comixIncludeTags.includes(key)
+                                                const excluded = comixExcludeTags.includes(key)
+                                                return (
+                                                    <button
+                                                        key={`ct-${key}`}
+                                                        type="button"
+                                                        onClick={() => cycleComixTag(key)}
+                                                        onContextMenu={(event) => {
+                                                            event.preventDefault()
+                                                            toggleComixTag(key, 'exclude')
                                                         }}
                                                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                             included

@@ -26,7 +26,6 @@ const MANGA_LIBRARY_PATH = `${MANGA_BASE}/library`
 
 const SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
-    { id: 'comix', label: 'Comix' },
     { id: 'mangadistrict', label: 'Manga District' },
 ]
 const PAGE_SIZE = 25
@@ -65,7 +64,6 @@ const SORT_OPTIONS = [
 
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
-    if (source === 'comix') return 'Comix'
     return source || 'Manga'
 }
 

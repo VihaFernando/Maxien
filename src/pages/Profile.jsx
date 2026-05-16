@@ -108,7 +108,7 @@ const COMIX_TYPE_PREF_OPTIONS = [
     { id: "manga", label: "Manga" },
     { id: "manhwa", label: "Manhwa" },
     { id: "manhua", label: "Manhua" },
-    { id: "other", label: "Oneshot / Other" },
+    { id: "other", label: "Novel / Other" },
 ]
 
 const CONTROLLER_INPUT_LAYOUT = [
@@ -1354,7 +1354,7 @@ export default function Profile() {
                                                 <div className="min-w-0">
                                                     <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Comix default filters</p>
                                                     <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                                                        Account-level Comix exclusions shared across devices (Manga / Manhwa / Manhua / Oneshot tabs).
+                                                        Account-level Comix exclusions shared across devices (Manga / Manhwa / Manhua / Novel tabs).
                                                     </p>
                                                 </div>
                                                 <div className="space-y-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-soft)] p-3">

@@ -17,13 +17,13 @@ export function decodeHtmlEntities(str) {
  * @param {string|null|undefined} src
  * @returns {{ referrerPolicy?: 'no-referrer' }}
  */
-const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com', 'comix.to'])
+const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com', 'roliascan.com', 'roliascan.org'])
 
 /**
  * Manga District APIs may still return root-relative cover URLs; the detail sheet
  * loads them as `<img src>` against this app’s origin unless expanded here.
  * @param {string|null|undefined} src
- * @param {string} [source] mangadistrict | comix
+ * @param {string} [source] mangadistrict
  * @returns {string|null}
  */
 export function resolveMangaCoverDisplayUrl(src, source) {
@@ -37,7 +37,7 @@ export function resolveMangaCoverDisplayUrl(src, source) {
         key === 'mangadistrict'
             ? 'https://mangadistrict.com'
             : key === 'comix'
-                ? 'https://comix.to'
+                ? 'https://roliascan.com'
             : ''
     if (!origin) return s
     if (s.startsWith('/')) return `${origin}${s}`
