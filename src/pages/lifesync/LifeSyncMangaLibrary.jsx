@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { FaBookOpen, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { isLifeSyncHManhwaVisible, isPluginEnabled } from '../../lib/lifesyncApi'
+import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
 import { mangaImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 import { LifesyncEpisodeThumbnail, LifesyncMediaLibraryPageSkeleton } from '../../components/lifesync/EpisodeLoadingSkeletons'
@@ -652,7 +652,8 @@ export default function LifeSyncMangaLibrary() {
     const [syncBusy, setSyncBusy] = useState(false)
     const [syncError, setSyncError] = useState('')
     const [syncScope, setSyncScope] = useState('needs_sync')
-    const syncJob = null
+    const [syncJob, setSyncJob] = useState(null)
+    const syncPollRef = useRef(null)
     const [actionBusyKeys, setActionBusyKeys] = useState(() => new Set())
     const [removeBusyKey, setRemoveBusyKey] = useState('')
     const [bulkBusy, setBulkBusy] = useState(false)
@@ -754,11 +755,11 @@ export default function LifeSyncMangaLibrary() {
     const hiddenByPreferencesCount = Math.max(0, listEntries.length - visibleEntries.length)
 
     const anyRefreshing = refreshing
-    const syncRunning = false
-    const syncTotal = 0
-    const syncProcessed = 0
-    const syncPercent = 0
-    const syncItemStates = {}
+    const syncRunning = syncJob != null && (syncJob.status === 'queued' || syncJob.status === 'running')
+    const syncTotal = Number(syncJob?.total || 0)
+    const syncProcessed = Number(syncJob?.processed || 0)
+    const syncPercent = syncTotal > 0 ? Math.min(100, Math.round((syncProcessed / syncTotal) * 100)) : (syncJob?.percent ?? 0)
+    const syncItemStates = syncJob?.itemStates || {}
 
     const refreshAll = useCallback(async () => {
         await refreshList()
@@ -842,18 +843,52 @@ export default function LifeSyncMangaLibrary() {
         setDeleteConfirmation({ isOpen: false, entry: null })
     }, [deleteConfirmation.entry, onRemove])
 
+    const stopSyncPoll = useCallback(() => {
+        if (syncPollRef.current) {
+            clearInterval(syncPollRef.current)
+            syncPollRef.current = null
+        }
+    }, [])
+
+    const startSyncPoll = useCallback(() => {
+        stopSyncPoll()
+        syncPollRef.current = setInterval(async () => {
+            try {
+                const data = await lifesyncFetch('/api/v1/progress/sync', { method: 'GET' })
+                const job = data?.job || null
+                setSyncJob(job)
+                const terminal = !job || job.status === 'completed' || job.status === 'completed_with_errors' || job.status === 'failed'
+                if (terminal) {
+                    stopSyncPoll()
+                    await refreshAll()
+                }
+            } catch {
+                stopSyncPoll()
+            }
+        }, 2000)
+    }, [refreshAll, stopSyncPoll])
+
+    useEffect(() => () => stopSyncPoll(), [stopSyncPoll])
+
     const onSync = useCallback(async () => {
         if (syncBusy || syncRunning) return
         setSyncBusy(true)
         setSyncError('')
         try {
-            await refreshAll()
+            const data = await lifesyncFetch('/api/v1/progress/sync', { method: 'POST', json: { scope: syncScope } })
+            const job = data?.job || null
+            setSyncJob(job)
+            if (job && (job.status === 'queued' || job.status === 'running')) {
+                startSyncPoll()
+            } else {
+                await refreshAll()
+            }
         } catch (err) {
-            setSyncError(String(err?.message || 'Failed to refresh progress'))
+            setSyncError(String(err?.message || 'Failed to start sync'))
         } finally {
             setSyncBusy(false)
         }
-    }, [refreshAll, syncBusy, syncRunning])
+    }, [refreshAll, startSyncPoll, syncBusy, syncRunning, syncScope])
 
     const onToggleSelect = useCallback((entry) => {
         const key = entryKey(entry)
