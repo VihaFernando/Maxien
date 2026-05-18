@@ -48,13 +48,13 @@ const mangaFilterExpandTransition = {
 }
 
 function mangaCoverLayoutId(source, id) {
-    return `lifesync-manga-cover-${String(source || 'legacy')}-${String(id)}`
+    return `lifesync-manga-cover-${String(source || 'roliascan')}-${String(id)}`
 }
 
 /** Serializable list-card fields for instant detail chrome (navigate `state`). */
 function mangaDetailPreviewFromCard(manga, source) {
     if (!manga || manga.id == null) return null
-    const src = manga.source || source || 'legacy'
+    const src = manga.source || source || 'roliascan'
     return {
         id: String(manga.id),
         source: src,
@@ -96,7 +96,7 @@ const DEX_MAX_OFFSET = 9900
 const STATUS_FILTERS = ['ongoing', 'completed', 'hiatus', 'cancelled']
 const DEMOGRAPHIC_FILTERS = ['shounen', 'shoujo', 'josei', 'seinen']
 const TAG_GROUP_ORDER = ['genre', 'theme', 'format', 'content']
-/** Browse modes for Popular / Recent (maps to Legacy list `shuffle` or `orderBy`). */
+/** Browse modes for Popular / Recent (maps to Roliascan list `shuffle` or `orderBy`). */
 const BROWSE_SORT_TABS = [
     { id: 'random', label: 'Random' },
     { id: 'followedCount', label: 'Follows' },
@@ -195,7 +195,7 @@ function buildMangaDistrictListQuery(section, genreType, genreFilter, browseId) 
     return q.toString()
 }
 
-/** Legacy personal list — aligned with `client/src/pages/MangaPage.jsx` READING_STATUSES. */
+/** Roliascan personal list — aligned with `client/src/pages/MangaPage.jsx` READING_STATUSES. */
 const MANGADEX_READING_STATUSES = [
     { value: 'reading', label: 'Reading' },
     { value: 'on_hold', label: 'On Hold' },
@@ -222,7 +222,7 @@ function dexBrowseLastPage(total) {
     return Math.min(fromTotal, maxByOffset)
 }
 
-/** Legacy API `contentRating` — order preserved for stable query strings. */
+/** Roliascan API `contentRating` — order preserved for stable query strings. */
 const MD_CONTENT_RATING_ORDER = ['safe', 'suggestive', 'erotica', 'pornographic']
 
 const MD_CONTENT_RATING_OPTIONS = [
@@ -238,7 +238,7 @@ function sortDexContentRatings(ids) {
     return MD_CONTENT_RATING_ORDER.filter((id) => ids.includes(id))
 }
 
-/** Query string for server `parseLegacyListQuery` (client MangaPage.jsx parity). */
+/** Query string for server `parseRoliascanListQuery` (client MangaPage.jsx parity). */
 function buildDexListQuery(opts) {
     const {
         limit,
@@ -302,9 +302,9 @@ function DexContentRatingSection({ selectedIds, nsfwEnabled, onToggle }) {
             <div className="mb-3">
                 <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--mx-color-5b5670)]">Content rating</h3>
                 <p className="mt-1 text-[10px] leading-relaxed text-[var(--mx-color-86868b)]">
-                    Legacy catalog filter (see{' '}
+                    Roliascan catalog filter (see{' '}
                     <a
-                        href="https://api.legacy.org/docs/swagger.html"
+                        href="https://roliascan.to/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-medium text-[var(--mx-color-6d28d9)] underline decoration-[var(--mx-color-c4b5fd)] underline-offset-2 hover:text-[var(--mx-color-5b21b6)]"
@@ -555,7 +555,7 @@ function DexGenreFilter({
 }
 
 const MangaCard = memo(function MangaCard({ manga, onClick }) {
-    const cardSrc = manga.source || 'legacy'
+    const cardSrc = manga.source || 'roliascan'
     const coverDisplayUrl = resolveMangaCoverDisplayUrl(manga.coverUrl, cardSrc)
     const rating = manga.ratings?.average ?? manga.ratingAverage
     const ratingNum = rating != null ? Number(rating) : null
@@ -568,7 +568,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
             {manga.contentRating && manga.contentRating !== 'safe' && (
                 <span className="absolute right-2 top-2 z-[2] rounded-lg bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-amber-700">{manga.contentRating}</span>
             )}
-            {manga.source && manga.source !== 'comix' && (
+            {manga.source && manga.source !== 'roliascan' && (
                 <span className="pointer-events-none absolute bottom-12 left-2 z-[2] rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase text-white backdrop-blur-sm">
                     {manga.source === 'mangadistrict' ? 'District' : manga.source}
                 </span>
@@ -581,7 +581,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
                 <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
                     {manga.id != null ? (
                         <MotionDiv
-                            layoutId={mangaCoverLayoutId(manga.source || 'legacy', manga.id)}
+                            layoutId={mangaCoverLayoutId(manga.source || 'roliascan', manga.id)}
                             transition={lifeSyncSharedLayoutTransitionProps}
                             className="absolute inset-0"
                         >
@@ -654,7 +654,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
     )
 })
 
-function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, browseTranslatedLang = 'en', isLifeSyncConnected = false }) {
+function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, browseTranslatedLang = 'en', isLifeSyncConnected = false }) {
     const [detail, setDetail] = useState(null)
     const [chapters, setChapters] = useState(null)
     const [chapBusy, setChapBusy] = useState(false)
@@ -722,10 +722,10 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
         if (!manga?.id) return undefined
         const src = manga.source || source
 
-        if (src === 'mangadistrict' || src === 'comix') {
+        if (src === 'mangadistrict' || src === 'roliascan') {
             const list = Array.isArray(manga.chapters) ? manga.chapters : []
             setChapters({ data: [...list] })
-            setDetail(src === 'comix' ? { ...manga } : null)
+            setDetail(src === 'roliascan' ? { ...manga } : null)
             setDexStats(null)
             setIsDexFollowing(null)
             setDexReadingStatus(null)
@@ -740,7 +740,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
         setDexReadingStatus(null)
         setChapBusy(false)
         return undefined
-    }, [manga?.id, manga.source, source, manga.chapters, legacyConnected, chapterLang, manga])
+    }, [manga?.id, manga.source, source, manga.chapters, roliascanConnected, chapterLang, manga])
 
     const chaptersInSeriesOrder = useMemo(() => {
         const list = chapters?.data ? [...chapters.data] : []
@@ -808,13 +808,13 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
     const ratingNum = rating != null ? Number(rating) : null
     const showRating = ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0
     const cleanDesc = d.description ? String(d.description).replace(/<[^>]*>/g, '') : ''
-    const comixTitleUrl =
-        src === 'comix' && mergedManga.id
+    const roliascanTitleUrl =
+        src === 'roliascan' && mergedManga.id
             ? (mergedManga.url
                 ? String(mergedManga.url)
                 : mergedManga.slug
-                    ? `https://roliascan.com/manga/${encodeURIComponent(String(mergedManga.slug))}/`
-                    : `https://roliascan.com/browse/?title=${encodeURIComponent(String(mergedManga.title || ''))}`)
+                    ? `https://roliascan.to/manga/${encodeURIComponent(String(mergedManga.slug))}/`
+                    : `https://roliascan.to/browse/?title=${encodeURIComponent(String(mergedManga.title || ''))}`)
             : null
     const isDarkTheme =
         typeof document !== 'undefined' &&
@@ -943,7 +943,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                                     </span>
                                 )}
                             </div>
-                            {src === 'legacy' && legacyConnected && (
+                            {false && roliascanConnected && (
                                 <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
                                     <div className="flex flex-wrap gap-2 shrink-0">
                                         {isDexFollowing == null ? (
@@ -963,7 +963,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                                                 }}
                                                 className="text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-600 px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] hover:border-red-100 hover:bg-red-50 transition-colors disabled:opacity-50"
                                             >
-                                                {dexFollowBusy ? '…' : 'Unfollow on Legacy'}
+                                                {dexFollowBusy ? '…' : 'Unfollow on Roliascan'}
                                             </button>
                                         ) : (
                                             <button
@@ -980,7 +980,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                                                 }}
                                                 className="text-[11px] font-semibold text-white bg-[var(--mx-color-ff6740)] hover:bg-[var(--mx-color-e55a36)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
                                             >
-                                                {dexFollowBusy ? '…' : 'Follow on Legacy'}
+                                                {dexFollowBusy ? '…' : 'Follow on Roliascan'}
                                             </button>
                                         )}
                                     </div>
@@ -1055,7 +1055,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                             <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                                     <h3 className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)]">Chapters</h3>
-                                    {src === 'legacy' && (
+                                    {false && (
                                         <select
                                             value={chapterLang}
                                             onChange={e => setChapterLang(e.target.value)}
@@ -1094,19 +1094,19 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                                             Last → first
                                         </button>
                                     </div>
-                                    {src === 'legacy' && mergedManga.id && (
+                                    {false && mergedManga.id && (
                                         <a
-                                            href={`https://legacy.org/title/${mergedManga.id}`}
+                                            href={`https://roliascan.to/title/${mergedManga.id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
                                         >
-                                            Open on Legacy
+                                            Open on Roliascan
                                         </a>
                                     )}
-                                    {src === 'comix' && comixTitleUrl && (
+                                    {src === 'roliascan' && roliascanTitleUrl && (
                                         <a
-                                            href={comixTitleUrl}
+                                            href={roliascanTitleUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
@@ -1145,7 +1145,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                             ) : chaptersInSeriesOrder.length === 0 ? (
                                 <div className="rounded-xl bg-[var(--mx-color-f5f5f7)] px-4 py-6 text-center">
                                     <p className="text-[12px] text-[var(--mx-color-86868b)]">
-                                        {src === 'mangadistrict' || src === 'comix'
+                                        {src === 'mangadistrict' || src === 'roliascan'
                                             ? 'No chapters in listing.'
                                             : 'No chapters for this language filter.'}
                                     </p>
@@ -1183,7 +1183,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, legacyConnected, bro
                                                                     Current
                                                                 </span>
                                                             )}
-                                                            {src === 'legacy' && chapterLang === 'all' && ch.translatedLanguage && (
+                                                            {false && chapterLang === 'all' && ch.translatedLanguage && (
                                                                 <span className="shrink-0 text-[9px] font-semibold uppercase text-[var(--mx-color-86868b)] bg-[var(--mx-color-ebebed)] px-1.5 py-0.5 rounded">{ch.translatedLanguage}</span>
                                                             )}
                                                         </span>
@@ -1212,21 +1212,21 @@ const DEX_TABS = [
 ]
 const DEX_TAB_IDS = new Set(['popular', 'recent', 'library', 'following', 'search'])
 
-const COMIX_TABS = [
+const ROLIASCAN_TABS = [
     { id: 'manga', label: 'Manga', type: 'manga' },
     { id: 'manhwa', label: 'Manhwa', type: 'manhwa' },
     { id: 'manhua', label: 'Manhua', type: 'manhua' },
     { id: 'oneshot', label: 'Novel', type: 'other' },
 ]
 
-const COMIX_FOLDER_TABS = [
+const ROLIASCAN_FOLDER_TABS = [
     { id: 'hot', label: 'Hot' },
     { id: 'new', label: 'New' },
     { id: 'recent', label: 'Most Recent' },
     { id: 'popular', label: 'Popular' },
 ]
 
-const COMIX_ORDER_OPTIONS = [
+const ROLIASCAN_ORDER_OPTIONS = [
     { id: '', label: 'Folder default' },
     { id: 'chapter_updated_at', label: 'Latest update' },
     { id: 'created_at', label: 'Newly added' },
@@ -1238,9 +1238,9 @@ const COMIX_ORDER_OPTIONS = [
     { id: 'title', label: 'Title' },
 ]
 
-const COMIX_TAB_IDS = new Set(COMIX_TABS.map((tab) => tab.id))
-const COMIX_SOURCE_TYPE_BY_TAB = Object.fromEntries(COMIX_TABS.map((tab) => [tab.id, tab.type]))
-const COMIX_FOLDER_DEFAULT_ORDER = {
+const ROLIASCAN_TAB_IDS = new Set(ROLIASCAN_TABS.map((tab) => tab.id))
+const ROLIASCAN_SOURCE_TYPE_BY_TAB = Object.fromEntries(ROLIASCAN_TABS.map((tab) => [tab.id, tab.type]))
+const ROLIASCAN_FOLDER_DEFAULT_ORDER = {
     hot: { key: 'views_7d', dir: 'desc' },
     new: { key: 'created_at', dir: 'desc' },
     recent: { key: 'chapter_updated_at', dir: 'desc' },
@@ -1248,15 +1248,13 @@ const COMIX_FOLDER_DEFAULT_ORDER = {
 }
 
 function defaultTabForSource(src) {
-    if (src === 'legacy') return 'popular'
-    if (src === 'comix') return 'manga'
+    if (src === 'roliascan') return 'manga'
     return 'latest'
 }
 
 function normalizeTabForSource(src, rawTab) {
     const tab = String(rawTab || '').trim()
-    if (src === 'legacy') return DEX_TAB_IDS.has(tab) ? tab : defaultTabForSource(src)
-    if (src === 'comix') return COMIX_TAB_IDS.has(tab) ? tab : defaultTabForSource(src)
+    if (src === 'roliascan') return ROLIASCAN_TAB_IDS.has(tab) ? tab : defaultTabForSource(src)
     return tab || defaultTabForSource(src)
 }
 
@@ -1267,7 +1265,7 @@ function parseCommaList(value) {
         .filter(Boolean)
 }
 
-function comixTermToken(term) {
+function roliascanTermToken(term) {
     const byId = String(term?.id || term?.termId || '').trim()
     if (byId) return byId
     const bySlug = String(term?.slug || '').trim()
@@ -1284,8 +1282,8 @@ export default function LifeSyncManga() {
     const route = useMemo(() => {
         const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : ''
         const parts = rel.split('/').filter(Boolean)
-        const allowedSources = new Set(['legacy', 'mangadistrict', 'comix'])
-        const src = allowedSources.has(parts[0]) ? parts[0] : 'legacy'
+        const allowedSources = new Set(['mangadistrict', 'roliascan'])
+        const src = allowedSources.has(parts[0]) ? parts[0] : 'roliascan'
 
         const tab = normalizeTabForSource(src, parts[1] || defaultTabForSource(src))
 
@@ -1293,7 +1291,7 @@ export default function LifeSyncManga() {
         const pageIdx = parts.indexOf('page')
         if (pageIdx >= 0 && parts[pageIdx + 1]) page = clampPage(parts[pageIdx + 1])
 
-        // Detail route is `.../page/:n/manga/:id`. Do not treat the Comix `manga` tab as a detail marker.
+        // Detail route is `.../page/:n/manga/:id`. Do not treat the Roliascan `manga` tab as a detail marker.
         let detailMangaId = null
         if (pageIdx >= 0) {
             const detailMarkerIdx = pageIdx + 2
@@ -1301,10 +1299,10 @@ export default function LifeSyncManga() {
                 detailMangaId = parts[detailMarkerIdx + 1]
             }
         } else {
-            // Legacy fallback only when `manga` appears beyond `/:source/:tab`.
-            const legacyDetailIdx = parts.lastIndexOf('manga')
-            if (legacyDetailIdx >= 2 && parts[legacyDetailIdx + 1]) {
-                detailMangaId = parts[legacyDetailIdx + 1]
+            // Fallback only when `manga` appears beyond `/:source/:tab`.
+            const fallbackDetailIdx = parts.lastIndexOf('manga')
+            if (fallbackDetailIdx >= 2 && parts[fallbackDetailIdx + 1]) {
+                detailMangaId = parts[fallbackDetailIdx + 1]
             }
         }
         return { src, tab, page, detailMangaId }
@@ -1316,14 +1314,14 @@ export default function LifeSyncManga() {
     /** Synced from LifeSync viewing preferences (default on when unset). */
     const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false
 
-    const [source, setSource] = useState('legacy')
-    const [tab, setTab] = useState('popular')
+    const [source, setSource] = useState('roliascan')
+    const [tab, setTab] = useState('manga')
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
     const [selectedManga, setSelectedManga] = useState(null)
 
     const listPath = useMemo(() => {
-        const src = route.src || 'legacy'
+        const src = route.src || 'roliascan'
         const t = route.tab || defaultTabForSource(src)
         const p = clampPage(route.page)
         return `${basePath}/${src}/${t}/page/${p}${location.search || ''}`
@@ -1372,7 +1370,7 @@ export default function LifeSyncManga() {
         [basePath, location.search, navigate, route.page, route.src, route.tab]
     )
 
-    // Legacy state (needs to exist before `goToRead`)
+    // Roliascan state (needs to exist before `goToRead`)
     const [dexTranslatedLang, setDexTranslatedLang] = useState('en')
 
     const goToRead = useCallback(
@@ -1398,7 +1396,7 @@ export default function LifeSyncManga() {
         [basePath, dexTranslatedLang, location.search, mangaEnglishReleasesOnly, navigate, route.page, route.src, route.tab]
     )
 
-    // Legacy state
+    // Roliascan state
     const [dexAuthStatus, setDexAuthStatus] = useState(null)
     const [popular, setPopular] = useState([])
     const [recent, setRecent] = useState([])
@@ -1493,88 +1491,84 @@ export default function LifeSyncManga() {
     const [mdFilterGenre, setMdFilterGenre] = useState('')
     const [mdBrowse, setMdBrowse] = useState('latest-updates')
 
-    // Comix state
-    const [comixStatus, setComixStatus] = useState(null)
-    const [comixTerms, setComixTerms] = useState({})
-    const [comixRows, setComixRows] = useState([])
-    const [comixLoading, setComixLoading] = useState(false)
-    const [comixFiltersOpen, setComixFiltersOpen] = useState(false)
-    const [comixPage, setComixPage] = useState(1)
-    const [comixLastPage, setComixLastPage] = useState(1)
-    const [comixTotal, setComixTotal] = useState(0)
-    const [comixFolder, setComixFolder] = useState('hot')
-    const [comixOrderKey, setComixOrderKey] = useState('')
-    const [comixOrderDir, setComixOrderDir] = useState('desc')
-    const [comixSearchQ, setComixSearchQ] = useState('')
-    const [comixCommittedSearch, setComixCommittedSearch] = useState('')
-    const [comixIncludeGenres, setComixIncludeGenres] = useState([])
-    const [comixExcludeGenres, setComixExcludeGenres] = useState([])
-    const [comixIncludeTags, setComixIncludeTags] = useState([])
-    const [comixExcludeTags, setComixExcludeTags] = useState([])
-    const [comixIncludeDemographics, setComixIncludeDemographics] = useState([])
-    const [comixExcludeDemographics, setComixExcludeDemographics] = useState([])
-    const [comixStatuses, setComixStatuses] = useState([])
-    const [comixAuthorsInput, setComixAuthorsInput] = useState('')
-    const [comixArtistsInput, setComixArtistsInput] = useState('')
-    const [comixMinchap, setComixMinchap] = useState('')
-    const [comixYearFrom, setComixYearFrom] = useState('')
-    const [comixYearTo, setComixYearTo] = useState('')
+    // Roliascan state
+    const [roliascanStatus, setRoliascanStatus] = useState(null)
+    const [roliascanTerms, setRoliascanTerms] = useState({})
+    const [roliascanRows, setRoliascanRows] = useState([])
+    const [roliascanLoading, setRoliascanLoading] = useState(false)
+    const [roliascanFiltersOpen, setRoliascanFiltersOpen] = useState(false)
+    const [roliascanPage, setRoliascanPage] = useState(1)
+    const [roliascanLastPage, setRoliascanLastPage] = useState(1)
+    const [roliascanTotal, setRoliascanTotal] = useState(0)
+    const [roliascanFolder, setRoliascanFolder] = useState('hot')
+    const [roliascanOrderKey, setRoliascanOrderKey] = useState('')
+    const [roliascanOrderDir, setRoliascanOrderDir] = useState('desc')
+    const [roliascanSearchQ, setRoliascanSearchQ] = useState('')
+    const [roliascanCommittedSearch, setRoliascanCommittedSearch] = useState('')
+    const [roliascanIncludeGenres, setRoliascanIncludeGenres] = useState([])
+    const [roliascanExcludeGenres, setRoliascanExcludeGenres] = useState([])
+    const [roliascanIncludeTags, setRoliascanIncludeTags] = useState([])
+    const [roliascanExcludeTags, setRoliascanExcludeTags] = useState([])
+    const [roliascanIncludeDemographics, setRoliascanIncludeDemographics] = useState([])
+    const [roliascanExcludeDemographics, setRoliascanExcludeDemographics] = useState([])
+    const [roliascanStatuses, setRoliascanStatuses] = useState([])
+    const [roliascanAuthorsInput, setRoliascanAuthorsInput] = useState('')
+    const [roliascanArtistsInput, setRoliascanArtistsInput] = useState('')
+    const [roliascanMinchap, setRoliascanMinchap] = useState('')
+    const [roliascanYearFrom, setRoliascanYearFrom] = useState('')
+    const [roliascanYearTo, setRoliascanYearTo] = useState('')
 
-    const comixFilterSig = useMemo(
+    const roliascanFilterSig = useMemo(
         () =>
             JSON.stringify({
-                q: comixCommittedSearch.trim().toLowerCase(),
-                folder: comixFolder,
-                orderKey: comixOrderKey,
-                orderDir: comixOrderDir,
-                ig: [...comixIncludeGenres].sort(),
-                eg: [...comixExcludeGenres].sort(),
-                id: [...comixIncludeDemographics].sort(),
-                ed: [...comixExcludeDemographics].sort(),
-                st: [...comixStatuses].sort(),
-                au: parseCommaList(comixAuthorsInput.toLowerCase()).sort(),
-                ar: parseCommaList(comixArtistsInput.toLowerCase()).sort(),
-                mc: String(comixMinchap || ''),
-                yf: String(comixYearFrom || ''),
-                yt: String(comixYearTo || ''),
-                tg: [...comixIncludeTags].sort(),
-                te: [...comixExcludeTags].sort(),
+                q: roliascanCommittedSearch.trim().toLowerCase(),
+                folder: roliascanFolder,
+                orderKey: roliascanOrderKey,
+                orderDir: roliascanOrderDir,
+                ig: [...roliascanIncludeGenres].sort(),
+                eg: [...roliascanExcludeGenres].sort(),
+                id: [...roliascanIncludeDemographics].sort(),
+                ed: [...roliascanExcludeDemographics].sort(),
+                st: [...roliascanStatuses].sort(),
+                au: parseCommaList(roliascanAuthorsInput.toLowerCase()).sort(),
+                ar: parseCommaList(roliascanArtistsInput.toLowerCase()).sort(),
+                mc: String(roliascanMinchap || ''),
+                yf: String(roliascanYearFrom || ''),
+                yt: String(roliascanYearTo || ''),
+                tg: [...roliascanIncludeTags].sort(),
+                te: [...roliascanExcludeTags].sort(),
             }),
         [
-            comixArtistsInput,
-            comixAuthorsInput,
-            comixCommittedSearch,
-            comixExcludeDemographics,
-            comixExcludeGenres,
-            comixFolder,
-            comixIncludeDemographics,
-            comixIncludeGenres,
-            comixMinchap,
-            comixOrderDir,
-            comixOrderKey,
-            comixStatuses,
-            comixYearFrom,
-            comixYearTo,
+            roliascanArtistsInput,
+            roliascanAuthorsInput,
+            roliascanCommittedSearch,
+            roliascanExcludeDemographics,
+            roliascanExcludeGenres,
+            roliascanFolder,
+            roliascanIncludeDemographics,
+            roliascanIncludeGenres,
+            roliascanMinchap,
+            roliascanOrderDir,
+            roliascanOrderKey,
+            roliascanStatuses,
+            roliascanYearFrom,
+            roliascanYearTo,
         ],
     )
-    const [comixListSigBound, setComixListSigBound] = useState(comixFilterSig)
+    const [roliascanListSigBound, setRoliascanListSigBound] = useState(roliascanFilterSig)
 
     useEffect(() => {
-        if (comixFilterSig === comixListSigBound) return
-        setComixListSigBound(comixFilterSig)
-        if (source === 'legacy' && clampPage(route.page) !== 1 && route.tab === 'search') {
-            navigate(`${basePath}/legacy/search/page/1${location.search || ''}`)
-            return
-        }
-        setComixPage(1)
-    }, [basePath, comixFilterSig, comixListSigBound, location.search, navigate, route.page, route.tab, source])
+        if (roliascanFilterSig === roliascanListSigBound) return
+        setRoliascanListSigBound(roliascanFilterSig)
+        setRoliascanPage(1)
+    }, [basePath, roliascanFilterSig, roliascanListSigBound, location.search, navigate, route.page, route.tab, source])
 
     /** Invalidates in-flight Manga District list fetches when filters/order/page change or source leaves. */
     const mdLatestFetchGenRef = useRef(0)
     /** Invalidates debounced Manga District search when query or source changes. */
     const mdSearchFetchGenRef = useRef(0)
-    /** Invalidates in-flight Comix browser fetches when source/filter/page changes. */
-    const comixFetchGenRef = useRef(0)
+    /** Invalidates in-flight Roliascan browser fetches when source/filter/page changes. */
+    const roliascanFetchGenRef = useRef(0)
     /** Invalidates in-flight manga detail enrichment when route/source changes or another open supersedes. */
     const mangaDetailEnrichGenRef = useRef(0)
 
@@ -1583,20 +1577,20 @@ export default function LifeSyncManga() {
             mdLatestFetchGenRef.current += 1
             mdSearchFetchGenRef.current += 1
         }
-        if (source !== 'comix') {
-            comixFetchGenRef.current += 1
+        if (source !== 'roliascan') {
+            roliascanFetchGenRef.current += 1
         }
     }, [source])
 
     useEffect(() => {
         if (location.pathname === basePath || location.pathname === `${basePath}/`) {
-            navigate(`${basePath}/comix/manga/page/1${location.search || ''}`, { replace: true })
+            navigate(`${basePath}/roliascan/manga/page/1${location.search || ''}`, { replace: true })
             return
         }
         const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : ''
         const first = rel.split('/').filter(Boolean)[0]
         if (first === 'mangahere') {
-            navigate(`${basePath}/comix/manga/page/1${location.search || ''}`, { replace: true })
+            navigate(`${basePath}/roliascan/manga/page/1${location.search || ''}`, { replace: true })
         }
     }, [basePath, location.pathname, location.search, navigate])
 
@@ -1627,13 +1621,13 @@ export default function LifeSyncManga() {
         const nextTab = normalizeTabForSource(route.src, route.tab)
         if (tab !== nextTab) setTab(nextTab)
 
-        if (route.src === 'legacy' && nextTab === 'popular' && dexPopularPage !== route.page) setDexPopularPage(route.page)
-        if (route.src === 'legacy' && nextTab === 'recent' && dexRecentPage !== route.page) setDexRecentPage(route.page)
-        if (route.src === 'legacy' && nextTab === 'search' && dexSearchPage !== route.page) setDexSearchPage(route.page)
+        if (false && nextTab === 'popular' && dexPopularPage !== route.page) setDexPopularPage(route.page)
+        if (false && nextTab === 'recent' && dexRecentPage !== route.page) setDexRecentPage(route.page)
+        if (false && nextTab === 'search' && dexSearchPage !== route.page) setDexSearchPage(route.page)
         if (route.src === 'mangadistrict' && mdPage !== route.page) setMdPage(route.page)
-        if (route.src === 'comix' && comixPage !== route.page) setComixPage(route.page)
+        if (route.src === 'roliascan' && roliascanPage !== route.page) setRoliascanPage(route.page)
     }, [
-        comixPage,
+        roliascanPage,
         dexPopularPage,
         dexRecentPage,
         dexSearchPage,
@@ -1651,7 +1645,7 @@ export default function LifeSyncManga() {
     }, [source, mdBrowse])
 
     useEffect(() => {
-        if (route.src !== 'legacy' || route.tab !== 'search') return
+        if (true || route.tab !== 'search') return
         const q = new URLSearchParams(location.search || '').get('q') || ''
         const next = q.trim()
         if (next && next !== committedSearchQuery) {
@@ -1703,8 +1697,8 @@ export default function LifeSyncManga() {
                 })
                 return
             }
-            if (entry.source === 'comix') {
-                const data = await lifesyncFetch(`/api/v1/manga/comix/info/${encodeURIComponent(entry.mangaId)}?view=full`)
+            if (entry.source === 'roliascan') {
+                const data = await lifesyncFetch(`/api/v1/manga/roliascan/info/${encodeURIComponent(entry.mangaId)}?view=full`)
                 const list = [...(data.chapters || [])]
                 list.sort(compareChapters)
                 let ch = list.find(c => String(c?.id) === preferredChapterId)
@@ -1717,8 +1711,8 @@ export default function LifeSyncManga() {
                     return
                 }
                 setSelectedManga(null)
-                setSource('comix')
-                goToRead(entry.mangaId, ch.id, 'comix', {
+                setSource('roliascan')
+                goToRead(entry.mangaId, ch.id, 'roliascan', {
                     resumeChapterId: String(ch.id),
                     resumePercent: preferredResumePercent,
                 })
@@ -1746,26 +1740,26 @@ export default function LifeSyncManga() {
     }, [])
 
     useEffect(() => {
-        setComixStatus(null)
-        setComixTerms({})
+        setRoliascanStatus(null)
+        setRoliascanTerms({})
     }, [])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || lifeSyncLoading || source !== 'comix') return
+        if (!isLifeSyncConnected || lifeSyncLoading || source !== 'roliascan') return
         let cancelled = false
         ;(async () => {
             try {
                 const [statusData, termsData] = await Promise.all([
-                    lifesyncFetch('/api/v1/manga/comix/status?view=standard'),
-                    lifesyncFetch('/api/v1/manga/comix/terms?view=full'),
+                    lifesyncFetch('/api/v1/manga/roliascan/status?view=standard'),
+                    lifesyncFetch('/api/v1/manga/roliascan/terms?view=full'),
                 ])
                 if (cancelled) return
-                setComixStatus(statusData || null)
+                setRoliascanStatus(statusData || null)
                 const termsPayload =
                     termsData?.terms && typeof termsData.terms === 'object'
                         ? termsData.terms
                         : {}
-                setComixTerms({
+                setRoliascanTerms({
                     ...termsPayload,
                     status: Array.isArray(termsData?.statuses) ? termsData.statuses : [],
                     years: Array.isArray(termsData?.years) ? termsData.years : [],
@@ -1774,8 +1768,8 @@ export default function LifeSyncManga() {
                 })
             } catch {
                 if (cancelled) return
-                setComixStatus(null)
-                setComixTerms({})
+                setRoliascanStatus(null)
+                setRoliascanTerms({})
             }
         })()
         return () => {
@@ -1784,7 +1778,7 @@ export default function LifeSyncManga() {
     }, [isLifeSyncConnected, lifeSyncLoading, source])
 
     useEffect(() => {
-        if (source !== 'legacy' || (tab !== 'following' && tab !== 'library')) return
+        if (true || (tab !== 'following' && tab !== 'library')) return
         if (dexAuthStatus && !dexAuthStatus.connected) setTab('popular')
     }, [source, tab, dexAuthStatus])
 
@@ -1793,7 +1787,7 @@ export default function LifeSyncManga() {
         if (lifeSyncLoading || !isLifeSyncConnected) return
         if (hManhwaEnabled) return
         if (route.src !== 'mangadistrict') return
-        navigate(`${basePath}/comix/manga/page/1${location.search || ''}`, { replace: true })
+        navigate(`${basePath}/roliascan/manga/page/1${location.search || ''}`, { replace: true })
     }, [
         basePath,
         hManhwaEnabled,
@@ -1821,7 +1815,7 @@ export default function LifeSyncManga() {
     const browseShuffle = dexBrowseSort === 'random'
     const browseOrderBy = browseShuffle ? '' : dexBrowseSort
 
-    // Legacy loaders (`shuffle=1` for random browse; otherwise stable order + pagination)
+    // Roliascan loaders (`shuffle=1` for random browse; otherwise stable order + pagination)
     const loadPopular = useCallback(async () => {
         setPopularLoading(true)
         try {
@@ -1845,7 +1839,7 @@ export default function LifeSyncManga() {
                 orderDir: 'desc',
                 shuffle: browseShuffle,
             })
-            const d = await lifesyncFetch(`/api/v1/manga/popular?${q}&view=standard`)
+            const d = await lifesyncFetch(`/api/v1/manga/roliascan/browser?${q}&view=standard`)
             setPopular(d?.data || [])
             setPopularTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
         } catch { /* ignore */ }
@@ -1893,7 +1887,7 @@ export default function LifeSyncManga() {
                 orderDir: 'desc',
                 shuffle: browseShuffle,
             })
-            const d = await lifesyncFetch(`/api/v1/manga/recent?${q}&view=standard`)
+            const d = await lifesyncFetch(`/api/v1/manga/roliascan/browser?${q}&view=standard`)
             setRecent(d?.data || [])
             setRecentTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
         } catch { /* ignore */ }
@@ -1952,12 +1946,12 @@ export default function LifeSyncManga() {
     }, [])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || source !== 'legacy' || tab === 'library') return
+        if (!isLifeSyncConnected || true || tab === 'library') return
         void loadPopular()
     }, [isLifeSyncConnected, source, tab, loadPopular])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || source !== 'legacy' || tab === 'library') return
+        if (!isLifeSyncConnected || true || tab === 'library') return
         void loadRecent()
     }, [isLifeSyncConnected, source, tab, loadRecent])
 
@@ -1966,7 +1960,7 @@ export default function LifeSyncManga() {
     }, [isLifeSyncConnected])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || source !== 'legacy' || tab !== 'search' || !committedSearchQuery.trim()) return
+        if (!isLifeSyncConnected || true || tab !== 'search' || !committedSearchQuery.trim()) return
         let cancelled = false
         ;(async () => {
             setSearching(true)
@@ -1991,7 +1985,7 @@ export default function LifeSyncManga() {
                     orderDir: dexSearchOrderDir,
                 })
                 q.set('q', committedSearchQuery.trim())
-                const d = await lifesyncFetch(`/api/v1/manga/search?${q}&view=standard`)
+                const d = await lifesyncFetch(`/api/v1/manga/roliascan/browser?${q}&view=standard`)
                 if (!cancelled) {
                     setSearchResults(d?.data || [])
                     setSearchTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
@@ -2029,13 +2023,13 @@ export default function LifeSyncManga() {
     ])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || source !== 'legacy' || tab !== 'following') return
+        if (!isLifeSyncConnected || true || tab !== 'following') return
         if (!dexAuthStatus?.connected) return
         void loadFollows(0)
     }, [isLifeSyncConnected, source, tab, dexAuthStatus?.connected, loadFollows])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || source !== 'legacy' || tab !== 'library') return
+        if (!isLifeSyncConnected || true || tab !== 'library') return
         if (!dexAuthStatus?.connected) return
         setDexLibraryList([])
         void loadDexLibrary(libraryListStatus)
@@ -2112,48 +2106,48 @@ export default function LifeSyncManga() {
     }, [isLifeSyncConnected, hManhwaEnabled, lifeSyncLoading, source, mdFilter])
 
     useEffect(() => {
-        if (!isLifeSyncConnected || lifeSyncLoading || source !== 'comix') return
-        const tabType = COMIX_SOURCE_TYPE_BY_TAB[route.tab] || 'manga'
-        const gen = ++comixFetchGenRef.current
-        const page = clampPage(comixPage)
-        setComixLoading(true)
+        if (!isLifeSyncConnected || lifeSyncLoading || source !== 'roliascan') return
+        const tabType = ROLIASCAN_SOURCE_TYPE_BY_TAB[route.tab] || 'manga'
+        const gen = ++roliascanFetchGenRef.current
+        const page = clampPage(roliascanPage)
+        setRoliascanLoading(true)
         setError('')
         ;(async () => {
             const qs = new URLSearchParams()
             qs.set('page', String(page))
             qs.set('limit', '24')
-            qs.set('folder', comixFolder)
+            qs.set('folder', roliascanFolder)
             qs.append('types[]', tabType)
-            const keyword = comixCommittedSearch.trim()
+            const keyword = roliascanCommittedSearch.trim()
             if (keyword) qs.set('keyword', keyword)
-            const folderDefaultOrder = COMIX_FOLDER_DEFAULT_ORDER[comixFolder] || COMIX_FOLDER_DEFAULT_ORDER.hot
-            const orderKey = comixOrderKey || folderDefaultOrder.key
-            const orderDir = comixOrderKey ? (comixOrderDir === 'asc' ? 'asc' : 'desc') : folderDefaultOrder.dir
+            const folderDefaultOrder = ROLIASCAN_FOLDER_DEFAULT_ORDER[roliascanFolder] || ROLIASCAN_FOLDER_DEFAULT_ORDER.hot
+            const orderKey = roliascanOrderKey || folderDefaultOrder.key
+            const orderDir = roliascanOrderKey ? (roliascanOrderDir === 'asc' ? 'asc' : 'desc') : folderDefaultOrder.dir
             if (orderKey) {
                 qs.set(`order[${orderKey}]`, orderDir)
             }
-            comixIncludeGenres.forEach((row) => qs.append('genres[]', String(row)))
-            comixExcludeGenres.forEach((row) => qs.append('exclude_genres[]', String(row)))
-            comixExcludeTags.forEach((row) => qs.append('exclude_genres[]', String(row)))
-            comixIncludeDemographics.forEach((row) => qs.append('demographics[]', String(row)))
-            comixExcludeDemographics.forEach((row) => qs.append('exclude_genders[]', String(row)))
-            comixStatuses.forEach((row) => qs.append('statuses[]', String(row)))
-            comixIncludeTags.forEach((row) => qs.append('genres[]', String(row)))
-            parseCommaList(comixAuthorsInput).forEach((row) => qs.append('authors[]', row))
-            parseCommaList(comixArtistsInput).forEach((row) => qs.append('artists[]', row))
-            if (String(comixMinchap || '').trim()) qs.set('minchap', String(comixMinchap).trim())
-            if (String(comixYearFrom || '').trim()) qs.set('year_from', String(comixYearFrom).trim())
-            if (String(comixYearTo || '').trim()) qs.set('year_to', String(comixYearTo).trim())
+            roliascanIncludeGenres.forEach((row) => qs.append('genres[]', String(row)))
+            roliascanExcludeGenres.forEach((row) => qs.append('exclude_genres[]', String(row)))
+            roliascanExcludeTags.forEach((row) => qs.append('exclude_genres[]', String(row)))
+            roliascanIncludeDemographics.forEach((row) => qs.append('demographics[]', String(row)))
+            roliascanExcludeDemographics.forEach((row) => qs.append('exclude_genders[]', String(row)))
+            roliascanStatuses.forEach((row) => qs.append('statuses[]', String(row)))
+            roliascanIncludeTags.forEach((row) => qs.append('genres[]', String(row)))
+            parseCommaList(roliascanAuthorsInput).forEach((row) => qs.append('authors[]', row))
+            parseCommaList(roliascanArtistsInput).forEach((row) => qs.append('artists[]', row))
+            if (String(roliascanMinchap || '').trim()) qs.set('minchap', String(roliascanMinchap).trim())
+            if (String(roliascanYearFrom || '').trim()) qs.set('year_from', String(roliascanYearFrom).trim())
+            if (String(roliascanYearTo || '').trim()) qs.set('year_to', String(roliascanYearTo).trim())
 
             try {
-                const d = await lifesyncFetch(`/api/v1/manga/comix/browser?${qs.toString()}&view=standard`)
-                if (comixFetchGenRef.current !== gen) return
+                const d = await lifesyncFetch(`/api/v1/manga/roliascan/browser?${qs.toString()}&view=standard`)
+                if (roliascanFetchGenRef.current !== gen) return
                 const rowsRaw = Array.isArray(d?.data) ? d.data : []
                 const rows = rowsRaw
                     .map((row) => ({
                         ...row,
                         id: row?.id || row?.slug || row?.hid,
-                        source: 'comix',
+                        source: 'roliascan',
                     }))
                     .filter((row) => row?.id)
                 const pageInfo = d?.pageInfo || {}
@@ -2167,36 +2161,36 @@ export default function LifeSyncManga() {
                     1,
                     Number(d?.lastPage || d?.pagination?.last_page || pageInfo?.totalPages || (rows.length >= 24 ? page + 1 : page)) || 1,
                 )
-                setComixRows(rows)
-                setComixTotal(total)
-                setComixLastPage(last)
-                setComixPage(page)
+                setRoliascanRows(rows)
+                setRoliascanTotal(total)
+                setRoliascanLastPage(last)
+                setRoliascanPage(page)
             } catch (e) {
-                if (comixFetchGenRef.current !== gen) return
-                setComixRows([])
-                setComixTotal(0)
-                setComixLastPage(1)
+                if (roliascanFetchGenRef.current !== gen) return
+                setRoliascanRows([])
+                setRoliascanTotal(0)
+                setRoliascanLastPage(1)
                 setError(e?.message || 'Failed to load manga')
             } finally {
-                if (comixFetchGenRef.current === gen) setComixLoading(false)
+                if (roliascanFetchGenRef.current === gen) setRoliascanLoading(false)
             }
         })()
     }, [
-        comixArtistsInput,
-        comixAuthorsInput,
-        comixCommittedSearch,
-        comixExcludeDemographics,
-        comixExcludeGenres,
-        comixFolder,
-        comixIncludeDemographics,
-        comixIncludeGenres,
-        comixMinchap,
-        comixOrderDir,
-        comixOrderKey,
-        comixPage,
-        comixStatuses,
-        comixYearFrom,
-        comixYearTo,
+        roliascanArtistsInput,
+        roliascanAuthorsInput,
+        roliascanCommittedSearch,
+        roliascanExcludeDemographics,
+        roliascanExcludeGenres,
+        roliascanFolder,
+        roliascanIncludeDemographics,
+        roliascanIncludeGenres,
+        roliascanMinchap,
+        roliascanOrderDir,
+        roliascanOrderKey,
+        roliascanPage,
+        roliascanStatuses,
+        roliascanYearFrom,
+        roliascanYearTo,
         isLifeSyncConnected,
         lifeSyncLoading,
         route.tab,
@@ -2214,25 +2208,25 @@ export default function LifeSyncManga() {
         navigate(`${basePath}/${route.src}/search/page/1?${qs.toString()}`)
     }
 
-    function handleComixSearch(e) {
+    function handleRoliascanSearch(e) {
         e.preventDefault()
-        const keyword = comixSearchQ.trim()
+        const keyword = roliascanSearchQ.trim()
         if (keyword) {
-            setComixIncludeGenres([])
-            setComixExcludeGenres([])
-            setComixIncludeDemographics([])
-            setComixExcludeDemographics([])
-            setComixStatuses([])
-            setComixAuthorsInput('')
-            setComixArtistsInput('')
-            setComixMinchap('')
-            setComixYearFrom('')
-            setComixYearTo('')
+            setRoliascanIncludeGenres([])
+            setRoliascanExcludeGenres([])
+            setRoliascanIncludeDemographics([])
+            setRoliascanExcludeDemographics([])
+            setRoliascanStatuses([])
+            setRoliascanAuthorsInput('')
+            setRoliascanArtistsInput('')
+            setRoliascanMinchap('')
+            setRoliascanYearFrom('')
+            setRoliascanYearTo('')
         }
-        setComixCommittedSearch(keyword)
-        setComixPage(1)
-        if (route.src !== 'comix') return
-        navigate(`${basePath}/comix/${route.tab || 'manga'}/page/1${location.search || ''}`)
+        setRoliascanCommittedSearch(keyword)
+        setRoliascanPage(1)
+        if (route.src !== 'roliascan') return
+        navigate(`${basePath}/roliascan/${route.tab || 'manga'}/page/1${location.search || ''}`)
     }
 
     const openMangaFromCard = useCallback(
@@ -2264,25 +2258,25 @@ export default function LifeSyncManga() {
                     }))
                     return
                 }
-                if (src === 'comix') {
-                    const data = await lifesyncFetch(`/api/v1/manga/comix/info/${encodeURIComponent(id)}?view=full`)
+                if (src === 'roliascan') {
+                    const data = await lifesyncFetch(`/api/v1/manga/roliascan/info/${encodeURIComponent(id)}?view=full`)
                     if (mangaDetailEnrichGenRef.current !== gen) return
                     setSelectedManga(prev => ({
                         ...prev,
                         ...data,
                         id: data.id || id,
-                        source: 'comix',
+                        source: 'roliascan',
                         coverUrl: data.coverUrl || prev?.coverUrl,
                     }))
                     return
                 }
-                const data = await lifesyncFetch(`/api/v1/manga/details/${id}?view=full`)
+                const data = await lifesyncFetch(`/api/v1/manga/roliascan/info/${encodeURIComponent(id)}?view=full`)
                 if (mangaDetailEnrichGenRef.current !== gen) return
                 setSelectedManga(prev => ({
                     ...prev,
                     ...data,
                     id: data.id || id,
-                    source: 'legacy',
+                    source: 'roliascan',
                     coverUrl: data.coverUrl || prev?.coverUrl,
                 }))
             } catch (e) {
@@ -2366,94 +2360,94 @@ export default function LifeSyncManga() {
         setOriginalLangFilter(prev => (prev.includes(code) ? prev.filter(x => x !== code) : [...prev, code]))
     }, [])
 
-    const toggleComixGenre = useCallback((value, mode = 'include') => {
+    const toggleRoliascanGenre = useCallback((value, mode = 'include') => {
         const token = String(value || '').trim()
         if (!token) return
         if (mode === 'exclude') {
-            setComixIncludeGenres((prev) => prev.filter((row) => row !== token))
-            setComixExcludeGenres((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+            setRoliascanIncludeGenres((prev) => prev.filter((row) => row !== token))
+            setRoliascanExcludeGenres((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
             return
         }
-        setComixExcludeGenres((prev) => prev.filter((row) => row !== token))
-        setComixIncludeGenres((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+        setRoliascanExcludeGenres((prev) => prev.filter((row) => row !== token))
+        setRoliascanIncludeGenres((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
     }, [])
 
-    const toggleComixDemographic = useCallback((value, mode = 'include') => {
+    const toggleRoliascanDemographic = useCallback((value, mode = 'include') => {
         const token = String(value || '').trim()
         if (!token) return
         if (mode === 'exclude') {
-            setComixIncludeDemographics((prev) => prev.filter((row) => row !== token))
-            setComixExcludeDemographics((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+            setRoliascanIncludeDemographics((prev) => prev.filter((row) => row !== token))
+            setRoliascanExcludeDemographics((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
             return
         }
-        setComixExcludeDemographics((prev) => prev.filter((row) => row !== token))
-        setComixIncludeDemographics((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+        setRoliascanExcludeDemographics((prev) => prev.filter((row) => row !== token))
+        setRoliascanIncludeDemographics((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
     }, [])
 
-    const cycleComixGenre = useCallback((value) => {
+    const cycleRoliascanGenre = useCallback((value) => {
         const token = String(value || '').trim()
         if (!token) return
-        const included = comixIncludeGenres.includes(token)
-        const excluded = comixExcludeGenres.includes(token)
+        const included = roliascanIncludeGenres.includes(token)
+        const excluded = roliascanExcludeGenres.includes(token)
         if (!included && !excluded) {
-            toggleComixGenre(token, 'include')
+            toggleRoliascanGenre(token, 'include')
             return
         }
         if (included) {
-            toggleComixGenre(token, 'exclude')
+            toggleRoliascanGenre(token, 'exclude')
             return
         }
-        setComixExcludeGenres((prev) => prev.filter((row) => row !== token))
-    }, [comixExcludeGenres, comixIncludeGenres, toggleComixGenre])
+        setRoliascanExcludeGenres((prev) => prev.filter((row) => row !== token))
+    }, [roliascanExcludeGenres, roliascanIncludeGenres, toggleRoliascanGenre])
 
-    const cycleComixDemographic = useCallback((value) => {
+    const cycleRoliascanDemographic = useCallback((value) => {
         const token = String(value || '').trim()
         if (!token) return
-        const included = comixIncludeDemographics.includes(token)
-        const excluded = comixExcludeDemographics.includes(token)
+        const included = roliascanIncludeDemographics.includes(token)
+        const excluded = roliascanExcludeDemographics.includes(token)
         if (!included && !excluded) {
-            toggleComixDemographic(token, 'include')
+            toggleRoliascanDemographic(token, 'include')
             return
         }
         if (included) {
-            toggleComixDemographic(token, 'exclude')
+            toggleRoliascanDemographic(token, 'exclude')
             return
         }
-        setComixExcludeDemographics((prev) => prev.filter((row) => row !== token))
-    }, [comixExcludeDemographics, comixIncludeDemographics, toggleComixDemographic])
+        setRoliascanExcludeDemographics((prev) => prev.filter((row) => row !== token))
+    }, [roliascanExcludeDemographics, roliascanIncludeDemographics, toggleRoliascanDemographic])
 
-    const toggleComixTag = useCallback((value, mode = 'include') => {
+    const toggleRoliascanTag = useCallback((value, mode = 'include') => {
         const token = String(value || '').trim()
         if (!token) return
         if (mode === 'exclude') {
-            setComixIncludeTags((prev) => prev.filter((row) => row !== token))
-            setComixExcludeTags((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+            setRoliascanIncludeTags((prev) => prev.filter((row) => row !== token))
+            setRoliascanExcludeTags((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
             return
         }
-        setComixExcludeTags((prev) => prev.filter((row) => row !== token))
-        setComixIncludeTags((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+        setRoliascanExcludeTags((prev) => prev.filter((row) => row !== token))
+        setRoliascanIncludeTags((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
     }, [])
 
-    const cycleComixTag = useCallback((value) => {
+    const cycleRoliascanTag = useCallback((value) => {
         const token = String(value || '').trim()
         if (!token) return
-        const included = comixIncludeTags.includes(token)
-        const excluded = comixExcludeTags.includes(token)
+        const included = roliascanIncludeTags.includes(token)
+        const excluded = roliascanExcludeTags.includes(token)
         if (!included && !excluded) {
-            toggleComixTag(token, 'include')
+            toggleRoliascanTag(token, 'include')
             return
         }
         if (included) {
-            toggleComixTag(token, 'exclude')
+            toggleRoliascanTag(token, 'exclude')
             return
         }
-        setComixExcludeTags((prev) => prev.filter((row) => row !== token))
-    }, [comixExcludeTags, comixIncludeTags, toggleComixTag])
+        setRoliascanExcludeTags((prev) => prev.filter((row) => row !== token))
+    }, [roliascanExcludeTags, roliascanIncludeTags, toggleRoliascanTag])
 
-    const toggleComixStatus = useCallback((value) => {
+    const toggleRoliascanStatus = useCallback((value) => {
         const token = String(value || '').trim()
         if (!token) return
-        setComixStatuses((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
+        setRoliascanStatuses((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
     }, [])
 
     const toggleDexContentRating = useCallback(id => {
@@ -2485,22 +2479,22 @@ export default function LifeSyncManga() {
         setDexTagsPanelOpen(false)
     }, [])
 
-    const resetComixFilters = useCallback(() => {
-        setComixIncludeGenres([])
-        setComixExcludeGenres([])
-        setComixIncludeDemographics([])
-        setComixExcludeDemographics([])
-        setComixStatuses([])
-        setComixAuthorsInput('')
-        setComixArtistsInput('')
-        setComixMinchap('')
-        setComixYearFrom('')
-        setComixYearTo('')
-        setComixOrderKey('')
-        setComixOrderDir('desc')
-        setComixFolder('hot')
-        setComixCommittedSearch('')
-        setComixSearchQ('')
+    const resetRoliascanFilters = useCallback(() => {
+        setRoliascanIncludeGenres([])
+        setRoliascanExcludeGenres([])
+        setRoliascanIncludeDemographics([])
+        setRoliascanExcludeDemographics([])
+        setRoliascanStatuses([])
+        setRoliascanAuthorsInput('')
+        setRoliascanArtistsInput('')
+        setRoliascanMinchap('')
+        setRoliascanYearFrom('')
+        setRoliascanYearTo('')
+        setRoliascanOrderKey('')
+        setRoliascanOrderDir('desc')
+        setRoliascanFolder('hot')
+        setRoliascanCommittedSearch('')
+        setRoliascanSearchQ('')
     }, [])
 
     const dexFilterBarCount = useMemo(() => {
@@ -2526,48 +2520,48 @@ export default function LifeSyncManga() {
             dexContentRatings,
     ])
 
-    const comixFilterBarCount = useMemo(() => {
+    const roliascanFilterBarCount = useMemo(() => {
         let n =
-            comixIncludeGenres.length +
-            comixExcludeGenres.length +
-            comixIncludeDemographics.length +
-            comixExcludeDemographics.length +
-            comixStatuses.length
-        if (parseCommaList(comixAuthorsInput).length > 0) n += 1
-        if (parseCommaList(comixArtistsInput).length > 0) n += 1
-        if (String(comixMinchap || '').trim()) n += 1
-        if (String(comixYearFrom || '').trim()) n += 1
-        if (String(comixYearTo || '').trim()) n += 1
-        if (comixOrderKey || comixOrderDir !== 'desc') n += 1
-        if (comixFolder !== 'hot') n += 1
-        if (comixCommittedSearch.trim()) n += 1
+            roliascanIncludeGenres.length +
+            roliascanExcludeGenres.length +
+            roliascanIncludeDemographics.length +
+            roliascanExcludeDemographics.length +
+            roliascanStatuses.length
+        if (parseCommaList(roliascanAuthorsInput).length > 0) n += 1
+        if (parseCommaList(roliascanArtistsInput).length > 0) n += 1
+        if (String(roliascanMinchap || '').trim()) n += 1
+        if (String(roliascanYearFrom || '').trim()) n += 1
+        if (String(roliascanYearTo || '').trim()) n += 1
+        if (roliascanOrderKey || roliascanOrderDir !== 'desc') n += 1
+        if (roliascanFolder !== 'hot') n += 1
+        if (roliascanCommittedSearch.trim()) n += 1
         return n
     }, [
-        comixArtistsInput,
-        comixAuthorsInput,
-        comixCommittedSearch,
-        comixExcludeDemographics,
-        comixExcludeGenres,
-        comixFolder,
-        comixIncludeDemographics,
-        comixIncludeGenres,
-        comixMinchap,
-        comixOrderDir,
-        comixOrderKey,
-        comixStatuses,
-        comixYearFrom,
-        comixYearTo,
+        roliascanArtistsInput,
+        roliascanAuthorsInput,
+        roliascanCommittedSearch,
+        roliascanExcludeDemographics,
+        roliascanExcludeGenres,
+        roliascanFolder,
+        roliascanIncludeDemographics,
+        roliascanIncludeGenres,
+        roliascanMinchap,
+        roliascanOrderDir,
+        roliascanOrderKey,
+        roliascanStatuses,
+        roliascanYearFrom,
+        roliascanYearTo,
     ])
 
-    const comixGenreTerms = Array.isArray(comixTerms?.genre) ? comixTerms.genre : []
-    const comixDemographicTerms = Array.isArray(comixTerms?.demographic) ? comixTerms.demographic : []
-    const comixStatusTerms = Array.isArray(comixTerms?.status) ? comixTerms.status : []
-    const comixYears = Array.isArray(comixTerms?.years) ? comixTerms.years : []
-    const comixFormatTerms = Array.isArray(comixTerms?.format) ? comixTerms.format : []
+    const roliascanGenreTerms = Array.isArray(roliascanTerms?.genre) ? roliascanTerms.genre : []
+    const roliascanDemographicTerms = Array.isArray(roliascanTerms?.demographic) ? roliascanTerms.demographic : []
+    const roliascanStatusTerms = Array.isArray(roliascanTerms?.status) ? roliascanTerms.status : []
+    const roliascanYears = Array.isArray(roliascanTerms?.years) ? roliascanTerms.years : []
+    const roliascanFormatTerms = Array.isArray(roliascanTerms?.format) ? roliascanTerms.format : []
 
 
     const currentItems = useMemo(() => {
-        if (source === 'legacy') {
+        if (false) {
             if (tab === 'following') return dexFollows
             if (tab === 'library') return dexLibraryList
             if (tab === 'popular') return popular
@@ -2578,8 +2572,8 @@ export default function LifeSyncManga() {
             if (mdFilter.trim()) return mdSearchResults
             return mdLatest?.data || []
         }
-        if (source === 'comix') {
-            return comixRows
+        if (source === 'roliascan') {
+            return roliascanRows
         }
         return []
     }, [
@@ -2590,17 +2584,17 @@ export default function LifeSyncManga() {
         searchResults,
         dexFollows,
         dexLibraryList,
-        comixRows,
+        roliascanRows,
         mdLatest,
         mdFilter,
         mdSearchResults,
-        comixRows,
+        roliascanRows,
     ])
 
     const mangaGridLoading = useMemo(() => {
         if (currentItems.length > 0) return false
         if (busy) return true
-        if (source === 'legacy') {
+        if (false) {
             if (tab === 'following' && dexFollowsBusy) return true
             if (tab === 'library' && dexLibraryBusy) return true
             if (tab === 'search' && committedSearchQuery.trim() && searching) return true
@@ -2608,7 +2602,7 @@ export default function LifeSyncManga() {
             if (tab === 'recent' && recentLoading) return true
         }
         if (source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy) return true
-        if (source === 'comix' && comixLoading) return true
+        if (source === 'roliascan' && roliascanLoading) return true
         return false
     }, [
         currentItems.length,
@@ -2621,7 +2615,7 @@ export default function LifeSyncManga() {
         searching,
         popularLoading,
         recentLoading,
-        comixLoading,
+        roliascanLoading,
         mdFilter,
         mdSearchBusy,
     ])
@@ -2633,10 +2627,10 @@ export default function LifeSyncManga() {
         return t
     }, [dexAuthStatus?.connected, committedSearchQuery])
 
-    const tabs = source === 'legacy'
+    const tabs = false
         ? dexTabs
-        : source === 'comix'
-            ? COMIX_TABS.map(t => ({ id: t.id, label: t.label }))
+        : source === 'roliascan'
+            ? ROLIASCAN_TABS.map(t => ({ id: t.id, label: t.label }))
         : []
 
     const useMangaBrowseCardStagger =
@@ -2680,7 +2674,7 @@ export default function LifeSyncManga() {
                         isLifeSyncConnected={isLifeSyncConnected}
                         onClose={() => goToList({ replace: true })}
                         onStartRead={handleStartRead}
-                        legacyConnected={Boolean(dexAuthStatus?.connected)}
+                        roliascanConnected={Boolean(dexAuthStatus?.connected)}
                         browseTranslatedLang={mangaEnglishReleasesOnly ? 'en' : dexTranslatedLang}
                     />
                 ) : null}
@@ -2709,14 +2703,14 @@ export default function LifeSyncManga() {
             {error && <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{error}</div>}
 
             {/* Search & filters toolbar (shared layout across sources) */}
-            {source === 'legacy' && (
+            {false && (
                 <div className="min-w-0 w-full max-w-full space-y-3">
                     <form onSubmit={handleDexSearch} className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row">
                         <input
                             type="search"
                             value={searchQ}
                             onChange={e => setSearchQ(e.target.value)}
-                            placeholder="Search Legacy..."
+                            placeholder="Search Roliascan..."
                             className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
                         />
                         <button
@@ -2806,7 +2800,7 @@ export default function LifeSyncManga() {
                                 <div className="min-w-0 max-w-full border-t border-[var(--mx-color-f0f0f0)] pt-4">
                                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                                         <div>
-                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Legacy filters</p>
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Roliascan filters</p>
                                             <p className="text-[12px] text-[var(--mx-color-5b5670)]">Tune discovery without leaving the page.</p>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -2978,40 +2972,40 @@ export default function LifeSyncManga() {
                     </AnimatePresence>
                     {dexAuthStatus && !dexAuthStatus.oauthConfigured && (
                         <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-                            Signing in with Legacy isn’t set up for this site yet. You can still browse and search public catalogs.
+                            Signing in with Roliascan isn’t set up for this site yet. You can still browse and search public catalogs.
                         </p>
                     )}
                 </div>
             )}
 
-            {source === 'comix' && (
+            {source === 'roliascan' && (
                 <div className="min-w-0 w-full max-w-full space-y-3">
-                    <form onSubmit={handleComixSearch} className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row">
+                    <form onSubmit={handleRoliascanSearch} className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row">
                         <input
                             type="search"
-                            value={comixSearchQ}
-                            onChange={(e) => setComixSearchQ(e.target.value)}
-                            placeholder="Search Comix..."
+                            value={roliascanSearchQ}
+                            onChange={(e) => setRoliascanSearchQ(e.target.value)}
+                            placeholder="Search Roliascan..."
                             className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
                         />
                         <button
                             type="button"
-                            onClick={() => setComixFiltersOpen((v) => !v)}
-                            aria-expanded={comixFiltersOpen}
+                            onClick={() => setRoliascanFiltersOpen((v) => !v)}
+                            aria-expanded={roliascanFiltersOpen}
                             className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
                         >
                             Filters
-                            {comixFilterBarCount > 0 && (
-                                <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">{comixFilterBarCount}</span>
+                            {roliascanFilterBarCount > 0 && (
+                                <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">{roliascanFilterBarCount}</span>
                             )}
-                            <svg className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${comixFiltersOpen ? '-rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                            <svg className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${roliascanFiltersOpen ? '-rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                             </svg>
                         </button>
-                        {comixFilterBarCount > 0 && (
+                        {roliascanFilterBarCount > 0 && (
                             <button
                                 type="button"
-                                onClick={resetComixFilters}
+                                onClick={resetRoliascanFilters}
                                 className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
                             >
                                 Reset
@@ -3026,9 +3020,9 @@ export default function LifeSyncManga() {
                     </form>
 
                     <AnimatePresence initial={false}>
-                        {comixFiltersOpen && (
+                        {roliascanFiltersOpen && (
                             <MotionDiv
-                                key="comix-toolbar-filters"
+                                key="roliascan-toolbar-filters"
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: 'auto', opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
@@ -3042,11 +3036,11 @@ export default function LifeSyncManga() {
                                             <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
                                                 Order
                                                 <select
-                                                    value={comixOrderKey}
-                                                    onChange={(e) => setComixOrderKey(e.target.value)}
+                                                    value={roliascanOrderKey}
+                                                    onChange={(e) => setRoliascanOrderKey(e.target.value)}
                                                     className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
                                                 >
-                                                    {COMIX_ORDER_OPTIONS.map((option) => (
+                                                    {ROLIASCAN_ORDER_OPTIONS.map((option) => (
                                                         <option key={option.id} value={option.id}>{option.label}</option>
                                                     ))}
                                                 </select>
@@ -3054,8 +3048,8 @@ export default function LifeSyncManga() {
                                             <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
                                                 Direction
                                                 <select
-                                                    value={comixOrderDir}
-                                                    onChange={(e) => setComixOrderDir(e.target.value)}
+                                                    value={roliascanOrderDir}
+                                                    onChange={(e) => setRoliascanOrderDir(e.target.value)}
                                                     className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
                                                 >
                                                     <option value="desc">Descending</option>
@@ -3068,25 +3062,25 @@ export default function LifeSyncManga() {
                                                 Min chapter
                                                 <input
                                                     type="number"
-                                                    value={comixMinchap}
-                                                    onChange={(e) => setComixMinchap(e.target.value)}
+                                                    value={roliascanMinchap}
+                                                    onChange={(e) => setRoliascanMinchap(e.target.value)}
                                                     className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
                                                 />
                                             </label>
-                                            {comixYears.length > 0 ? (
+                                            {roliascanYears.length > 0 ? (
                                                 <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
                                                     Year
                                                     <select
-                                                        value={comixYearFrom || ''}
+                                                        value={roliascanYearFrom || ''}
                                                         onChange={(e) => {
                                                             const v = e.target.value
-                                                            setComixYearFrom(v)
-                                                            setComixYearTo(v)
+                                                            setRoliascanYearFrom(v)
+                                                            setRoliascanYearTo(v)
                                                         }}
                                                         className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
                                                     >
                                                         <option value="">Any year</option>
-                                                        {comixYears.map((y) => (
+                                                        {roliascanYears.map((y) => (
                                                             <option key={String(y)} value={String(y)}>{String(y)}</option>
                                                         ))}
                                                     </select>
@@ -3097,8 +3091,8 @@ export default function LifeSyncManga() {
                                                         Year from
                                                         <input
                                                             type="number"
-                                                            value={comixYearFrom}
-                                                            onChange={(e) => setComixYearFrom(e.target.value)}
+                                                            value={roliascanYearFrom}
+                                                            onChange={(e) => setRoliascanYearFrom(e.target.value)}
                                                             className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
                                                         />
                                                     </label>
@@ -3106,8 +3100,8 @@ export default function LifeSyncManga() {
                                                         Year to
                                                         <input
                                                             type="number"
-                                                            value={comixYearTo}
-                                                            onChange={(e) => setComixYearTo(e.target.value)}
+                                                            value={roliascanYearTo}
+                                                            onChange={(e) => setRoliascanYearTo(e.target.value)}
                                                             className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
                                                         />
                                                     </label>
@@ -3122,8 +3116,8 @@ export default function LifeSyncManga() {
                                             Authors (comma separated)
                                             <input
                                                 type="text"
-                                                value={comixAuthorsInput}
-                                                onChange={(e) => setComixAuthorsInput(e.target.value)}
+                                                value={roliascanAuthorsInput}
+                                                onChange={(e) => setRoliascanAuthorsInput(e.target.value)}
                                                 placeholder="eiichiro oda, ..."
                                                 className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
                                             />
@@ -3132,8 +3126,8 @@ export default function LifeSyncManga() {
                                             Artists (comma separated)
                                             <input
                                                 type="text"
-                                                value={comixArtistsInput}
-                                                onChange={(e) => setComixArtistsInput(e.target.value)}
+                                                value={roliascanArtistsInput}
+                                                onChange={(e) => setRoliascanArtistsInput(e.target.value)}
                                                 placeholder="artist slug, ..."
                                                 className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
                                             />
@@ -3143,20 +3137,20 @@ export default function LifeSyncManga() {
                                     <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
                                         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Genres</p>
                                         <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                                            {comixGenreTerms.slice(0, 240).map((term) => {
-                                                const key = comixTermToken(term)
+                                            {roliascanGenreTerms.slice(0, 240).map((term) => {
+                                                const key = roliascanTermToken(term)
                                                 const title = String(term.title || term.slug || key)
                                                 if (!key || !title) return null
-                                                const included = comixIncludeGenres.includes(key)
-                                                const excluded = comixExcludeGenres.includes(key)
+                                                const included = roliascanIncludeGenres.includes(key)
+                                                const excluded = roliascanExcludeGenres.includes(key)
                                                 return (
                                                     <button
                                                         key={`cg-${key}`}
                                                         type="button"
-                                                        onClick={() => cycleComixGenre(key)}
+                                                        onClick={() => cycleRoliascanGenre(key)}
                                                         onContextMenu={(event) => {
                                                             event.preventDefault()
-                                                            toggleComixGenre(key, 'exclude')
+                                                            toggleRoliascanGenre(key, 'exclude')
                                                         }}
                                                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                             included
@@ -3177,20 +3171,20 @@ export default function LifeSyncManga() {
                                     <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
                                         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Tags</p>
                                         <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                                            {comixFormatTerms.slice(0, 240).map((term) => {
-                                                const key = comixTermToken(term)
+                                            {roliascanFormatTerms.slice(0, 240).map((term) => {
+                                                const key = roliascanTermToken(term)
                                                 const title = String(term.title || term.slug || key)
                                                 if (!key || !title) return null
-                                                const included = comixIncludeTags.includes(key)
-                                                const excluded = comixExcludeTags.includes(key)
+                                                const included = roliascanIncludeTags.includes(key)
+                                                const excluded = roliascanExcludeTags.includes(key)
                                                 return (
                                                     <button
                                                         key={`ct-${key}`}
                                                         type="button"
-                                                        onClick={() => cycleComixTag(key)}
+                                                        onClick={() => cycleRoliascanTag(key)}
                                                         onContextMenu={(event) => {
                                                             event.preventDefault()
-                                                            toggleComixTag(key, 'exclude')
+                                                            toggleRoliascanTag(key, 'exclude')
                                                         }}
                                                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                             included
@@ -3211,20 +3205,20 @@ export default function LifeSyncManga() {
                                     <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
                                         <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Demographics & Status</p>
                                         <div className="flex flex-wrap gap-1">
-                                            {comixDemographicTerms.slice(0, 120).map((term) => {
-                                                const key = comixTermToken(term)
+                                            {roliascanDemographicTerms.slice(0, 120).map((term) => {
+                                                const key = roliascanTermToken(term)
                                                 const title = String(term.title || term.slug || key)
                                                 if (!key || !title) return null
-                                                const included = comixIncludeDemographics.includes(key)
-                                                const excluded = comixExcludeDemographics.includes(key)
+                                                const included = roliascanIncludeDemographics.includes(key)
+                                                const excluded = roliascanExcludeDemographics.includes(key)
                                                 return (
                                                     <button
                                                         key={`cd-${key}`}
                                                         type="button"
-                                                        onClick={() => cycleComixDemographic(key)}
+                                                        onClick={() => cycleRoliascanDemographic(key)}
                                                         onContextMenu={(event) => {
                                                             event.preventDefault()
-                                                            toggleComixDemographic(key, 'exclude')
+                                                            toggleRoliascanDemographic(key, 'exclude')
                                                         }}
                                                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                             included
@@ -3241,7 +3235,7 @@ export default function LifeSyncManga() {
                                         </div>
                                         <p className="text-[11px] text-[var(--mx-color-86868b)]">Tap cycles include → exclude → clear. Right-click toggles exclude.</p>
                                         <div className="flex flex-wrap gap-1">
-                                            {comixStatusTerms.map((status) => {
+                                            {roliascanStatusTerms.map((status) => {
                                                 const key = String(status.id || status.slug || status.title || '').trim()
                                                 const title = String(status.title || status.slug || key)
                                                 if (!key || !title) return null
@@ -3249,9 +3243,9 @@ export default function LifeSyncManga() {
                                                     <button
                                                         key={`cs-${key}`}
                                                         type="button"
-                                                        onClick={() => toggleComixStatus(key)}
+                                                        onClick={() => toggleRoliascanStatus(key)}
                                                         className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                            comixStatuses.includes(key)
+                                                            roliascanStatuses.includes(key)
                                                                 ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
                                                                 : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
                                                         }`}
@@ -3421,10 +3415,10 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {/* Content tabs (Legacy + Comix type tabs) */}
+            {/* Content tabs (Roliascan + Roliascan type tabs) */}
             {tabs.length > 0 && (
                 <LifeSyncSectionNav
-                    ariaLabel={source === 'comix' ? 'Comix type tabs' : 'Legacy lists'}
+                    ariaLabel={source === 'roliascan' ? 'Roliascan type tabs' : 'Roliascan lists'}
                     layoutId="lifesync-manga-dex-tab"
                     items={tabs.map(t => ({ id: t.id, label: t.label }))}
                     activeId={tab}
@@ -3432,29 +3426,29 @@ export default function LifeSyncManga() {
                 />
             )}
 
-            {source === 'comix' && (
+            {source === 'roliascan' && (
                 <div className="space-y-1.5">
                     <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">Browse order</p>
                     <LifeSyncSectionNav
                         size="dense"
-                        ariaLabel="Comix browse order"
-                        layoutId="lifesync-manga-comix-folder"
-                        items={COMIX_FOLDER_TABS.map((row) => ({ id: row.id, label: row.label }))}
-                        activeId={comixFolder}
+                        ariaLabel="Roliascan browse order"
+                        layoutId="lifesync-manga-roliascan-folder"
+                        items={ROLIASCAN_FOLDER_TABS.map((row) => ({ id: row.id, label: row.label }))}
+                        activeId={roliascanFolder}
                         onSelect={(id) => {
-                            setComixFolder(id)
-                            setComixOrderKey('')
-                            setComixOrderDir('desc')
-                            setComixPage(1)
-                            if (route.src === 'comix') {
-                                navigate(`${basePath}/comix/${route.tab || 'manga'}/page/1${location.search || ''}`)
+                            setRoliascanFolder(id)
+                            setRoliascanOrderKey('')
+                            setRoliascanOrderDir('desc')
+                            setRoliascanPage(1)
+                            if (route.src === 'roliascan') {
+                                navigate(`${basePath}/roliascan/${route.tab || 'manga'}/page/1${location.search || ''}`)
                             }
                         }}
                     />
                 </div>
             )}
 
-            {source === 'legacy' && tab === 'library' && (
+            {false && tab === 'library' && (
                 <div className="space-y-1.5">
                     <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">Library</p>
                     <LifeSyncSectionNav
@@ -3467,13 +3461,13 @@ export default function LifeSyncManga() {
                     />
                     {!dexAuthStatus?.connected && (
                         <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                            Link Legacy under Profile → Integrations to see titles from your Legacy reading lists.
+                            Link Roliascan under Profile → Integrations to see titles from your Roliascan reading lists.
                         </p>
                     )}
                 </div>
             )}
 
-            {source === 'legacy' && (tab === 'popular' || tab === 'recent') && (
+            {false && (tab === 'popular' || tab === 'recent') && (
                 <div className="space-y-1.5">
                     <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">Browse</p>
                     <LifeSyncSectionNav
@@ -3490,7 +3484,7 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {source === 'legacy' && tab === 'search' && committedSearchQuery.trim() && (
+            {false && tab === 'search' && committedSearchQuery.trim() && (
                 <div className="flex flex-wrap items-end gap-3">
                     <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[160px]">
                         Search sort
@@ -3529,25 +3523,25 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {source === 'comix' && (
+            {source === 'roliascan' && (
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                        Page {comixPage} of {comixLastPage}
-                        {comixTotal > 0 && <span className="ml-1">({comixTotal.toLocaleString()} titles)</span>}
+                        Page {roliascanPage} of {roliascanLastPage}
+                        {roliascanTotal > 0 && <span className="ml-1">({roliascanTotal.toLocaleString()} titles)</span>}
                     </p>
                     <div className="flex gap-2">
                         <button
                             type="button"
-                            disabled={comixLoading || comixPage <= 1}
-                            onClick={() => goToPage(comixPage - 1)}
+                            disabled={roliascanLoading || roliascanPage <= 1}
+                            onClick={() => goToPage(roliascanPage - 1)}
                             className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
                         >
                             Previous
                         </button>
                         <button
                             type="button"
-                            disabled={comixLoading || comixPage >= comixLastPage}
-                            onClick={() => goToPage(comixPage + 1)}
+                            disabled={roliascanLoading || roliascanPage >= roliascanLastPage}
+                            onClick={() => goToPage(roliascanPage + 1)}
                             className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
                         >
                             Next
@@ -3556,7 +3550,7 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {source === 'legacy' && tab === 'popular' && dexBrowseSort !== 'random' && (
+            {false && tab === 'popular' && dexBrowseSort !== 'random' && (
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-[11px] text-[var(--mx-color-86868b)]">
                         Page {dexPopularPage} of {dexPopularLast}
@@ -3602,11 +3596,11 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {source === 'legacy' && tab === 'popular' && dexBrowseSort === 'random' && popularTotal > 0 && (
+            {false && tab === 'popular' && dexBrowseSort === 'random' && popularTotal > 0 && (
                 <p className="text-[11px] text-[var(--mx-color-86868b)]">{popularTotal.toLocaleString()} titles match your filters (showing {DEX_PAGE_SIZE} at random).</p>
             )}
 
-            {source === 'legacy' && tab === 'recent' && dexBrowseSort !== 'random' && (
+            {false && tab === 'recent' && dexBrowseSort !== 'random' && (
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-[11px] text-[var(--mx-color-86868b)]">
                         Page {dexRecentPage} of {dexRecentLast}
@@ -3652,11 +3646,11 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
-            {source === 'legacy' && tab === 'recent' && dexBrowseSort === 'random' && recentTotal > 0 && (
+            {false && tab === 'recent' && dexBrowseSort === 'random' && recentTotal > 0 && (
                 <p className="text-[11px] text-[var(--mx-color-86868b)]">{recentTotal.toLocaleString()} titles match your filters (showing {DEX_PAGE_SIZE} at random).</p>
             )}
 
-            {source === 'legacy' && tab === 'search' && committedSearchQuery.trim() && (
+            {false && tab === 'search' && committedSearchQuery.trim() && (
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                     <p className="text-[11px] text-[var(--mx-color-86868b)]">
                         Page {dexSearchPage} of {dexSearchLast}
@@ -3705,7 +3699,7 @@ export default function LifeSyncManga() {
             {/* Content grid — only this block animates on source/tab change */}
             <AnimatePresence mode="wait">
                 <MotionDiv
-                    key={source === 'legacy' ? `${source}-${tab}` : source}
+                    key={false ? `${source}-${tab}` : source}
                     className="min-w-0 max-w-full space-y-4"
                     initial="initial"
                     animate="animate"
@@ -3748,33 +3742,33 @@ export default function LifeSyncManga() {
                     </MotionDiv>
                 )
             ) : !busy &&
-              !(source === 'legacy' && tab === 'following' && dexFollowsBusy) &&
-              !(source === 'legacy' && tab === 'library' && dexLibraryBusy) ? (
+              !(false && tab === 'following' && dexFollowsBusy) &&
+              !(false && tab === 'library' && dexLibraryBusy) ? (
                 <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm px-6 py-10 text-center">
                     <p className="text-[13px] text-[var(--mx-color-86868b)]">
                         {source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy ? 'Searching...'
                             : source === 'mangadistrict' && mdFilter.trim() && !mdSearchBusy && mdSearchResults.length === 0
                               ? 'No titles matched your search.'
-                            : source === 'comix' && comixCommittedSearch.trim()
-                                ? 'No Comix titles matched your search.'
-                                : source === 'comix'
-                                    ? 'No Comix titles matched this tab and filter set.'
-                            : source === 'legacy' && tab === 'search' && committedSearchQuery.trim() && searching ? 'Searching…'
-                            : source === 'legacy' && tab === 'search' && committedSearchQuery.trim() && !searching ? 'No titles matched your search.'
-                            : source === 'legacy' && tab === 'library' && dexAuthStatus?.connected
-                              ? 'Nothing in this list on Legacy yet. Set a status from a title detail panel or read a chapter to sync.'
-                              : source === 'legacy' && tab === 'library'
-                                ? 'Link Legacy under Profile → Integrations to browse your Legacy reading lists.'
-                                : source === 'legacy' && tab === 'following' && dexAuthStatus?.connected
-                              ? 'No titles in your Legacy follows, or they are past the first page. Use Refresh or follow series from a detail panel.'
-                              : source === 'legacy' && tab === 'following'
-                                ? 'Link Legacy under Profile → Integrations to see titles you follow on Legacy.'
+                            : source === 'roliascan' && roliascanCommittedSearch.trim()
+                                ? 'No Roliascan titles matched your search.'
+                                : source === 'roliascan'
+                                    ? 'No Roliascan titles matched this tab and filter set.'
+                            : false && tab === 'search' && committedSearchQuery.trim() && searching ? 'Searching…'
+                            : false && tab === 'search' && committedSearchQuery.trim() && !searching ? 'No titles matched your search.'
+                            : false && tab === 'library' && dexAuthStatus?.connected
+                              ? 'Nothing in this list on Roliascan yet. Set a status from a title detail panel or read a chapter to sync.'
+                              : false && tab === 'library'
+                                ? 'Link Roliascan under Profile → Integrations to browse your Roliascan reading lists.'
+                                : false && tab === 'following' && dexAuthStatus?.connected
+                              ? 'No titles in your Roliascan follows, or they are past the first page. Use Refresh or follow series from a detail panel.'
+                              : false && tab === 'following'
+                                ? 'Link Roliascan under Profile → Integrations to see titles you follow on Roliascan.'
                                 : 'No manga to display.'}
                     </p>
                 </div>
             ) : null}
 
-            {source === 'legacy' && tab === 'following' && dexFollows.length > 0 && dexFollows.length < dexFollowsTotal && (
+            {false && tab === 'following' && dexFollows.length > 0 && dexFollows.length < dexFollowsTotal && (
                 <div className="flex justify-center pt-2">
                     <button
                         type="button"

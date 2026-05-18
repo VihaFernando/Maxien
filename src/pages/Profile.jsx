@@ -104,7 +104,7 @@ const ANIME_BG_MODE_DESCRIPTIONS = {
     custom_video: "MP4/WEBM or YouTube link",
 }
 
-const COMIX_TYPE_PREF_OPTIONS = [
+const ROLIASCAN_TYPE_PREF_OPTIONS = [
     { id: "manga", label: "Manga" },
     { id: "manhwa", label: "Manhwa" },
     { id: "manhua", label: "Manhua" },
@@ -278,10 +278,10 @@ export default function Profile() {
     const [animeCustomVideoUrlInput, setAnimeCustomVideoUrlInput] = useState("")
     const [gamesYoutubePreviewResolution, setGamesYoutubePreviewResolution] = useState(null)
     const [animeYoutubePreviewResolution, setAnimeYoutubePreviewResolution] = useState(null)
-    const [comixExcludeTypesInput, setComixExcludeTypesInput] = useState([])
-    const [comixExcludeGendersInput, setComixExcludeGendersInput] = useState("")
-    const [comixExcludeGenresInput, setComixExcludeGenresInput] = useState("")
-    const [comixColoredGenresInput, setComixColoredGenresInput] = useState("")
+    const [roliascanExcludeTypesInput, setRoliascanExcludeTypesInput] = useState([])
+    const [roliascanExcludeGendersInput, setRoliascanExcludeGendersInput] = useState("")
+    const [roliascanExcludeGenresInput, setRoliascanExcludeGenresInput] = useState("")
+    const [roliascanColoredGenresInput, setRoliascanColoredGenresInput] = useState("")
 
     const [fullName, setFullName] = useState("")
     const [username, setUsername] = useState("")
@@ -334,18 +334,18 @@ export default function Profile() {
     }, [])
 
     useEffect(() => {
-        const pref = lifeSyncUser?.preferences?.comixFilterPrefs
+        const pref = lifeSyncUser?.preferences?.roliascanFilterPrefs
         const excludeTypes = Array.isArray(pref?.excludeTypes)
             ? pref.excludeTypes
                 .map((row) => String(row || "").trim().toLowerCase())
                 .filter(Boolean)
             : []
-        setComixExcludeTypesInput(excludeTypes)
-        setComixExcludeGendersInput(Array.isArray(pref?.excludeGenders) ? pref.excludeGenders.join(", ") : "")
-        setComixExcludeGenresInput(Array.isArray(pref?.excludeGenres) ? pref.excludeGenres.join(", ") : "")
-        setComixColoredGenresInput(formatColoredGenresInput(pref?.coloredGenres))
+        setRoliascanExcludeTypesInput(excludeTypes)
+        setRoliascanExcludeGendersInput(Array.isArray(pref?.excludeGenders) ? pref.excludeGenders.join(", ") : "")
+        setRoliascanExcludeGenresInput(Array.isArray(pref?.excludeGenres) ? pref.excludeGenres.join(", ") : "")
+        setRoliascanColoredGenresInput(formatColoredGenresInput(pref?.coloredGenres))
     }, [
-        lifeSyncUser?.preferences?.comixFilterPrefs,
+        lifeSyncUser?.preferences?.roliascanFilterPrefs,
     ])
 
     useEffect(() => {
@@ -725,25 +725,25 @@ export default function Profile() {
         await updateLifeSyncBackgroundPreferences({ [key]: cleaned })
     }
 
-    const toggleComixExcludeType = (typeId) => {
+    const toggleRoliascanExcludeType = (typeId) => {
         const token = String(typeId || "").trim().toLowerCase()
         if (!token) return
-        setComixExcludeTypesInput((prev) =>
+        setRoliascanExcludeTypesInput((prev) =>
             prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token],
         )
     }
 
-    const saveComixFilterPrefs = async () => {
+    const saveRoliascanFilterPrefs = async () => {
         if (!lifeSyncUser) return
-        const orderedTypes = COMIX_TYPE_PREF_OPTIONS
+        const orderedTypes = ROLIASCAN_TYPE_PREF_OPTIONS
             .map((row) => row.id)
-            .filter((id) => comixExcludeTypesInput.includes(id))
+            .filter((id) => roliascanExcludeTypesInput.includes(id))
         const payload = {
-            comixFilterPrefs: {
+            roliascanFilterPrefs: {
                 excludeTypes: orderedTypes,
-                excludeGenders: parseCommaOrLineList(comixExcludeGendersInput, { maxItems: 40, maxLen: 40 }),
-                excludeGenres: parseCommaOrLineList(comixExcludeGenresInput, { maxItems: 500, maxLen: 50 }),
-                coloredGenres: parseColoredGenresInput(comixColoredGenresInput),
+                excludeGenders: parseCommaOrLineList(roliascanExcludeGendersInput, { maxItems: 40, maxLen: 40 }),
+                excludeGenres: parseCommaOrLineList(roliascanExcludeGenresInput, { maxItems: 500, maxLen: 50 }),
+                coloredGenres: parseColoredGenresInput(roliascanColoredGenresInput),
             },
         }
         setPrefsBusy(true)
@@ -751,7 +751,7 @@ export default function Profile() {
         try {
             await lifeSyncUpdatePreferences(payload)
         } catch (e) {
-            setError(e?.message || "Could not save Comix defaults")
+            setError(e?.message || "Could not save Roliascan defaults")
         } finally {
             setPrefsBusy(false)
         }
@@ -1352,23 +1352,23 @@ export default function Profile() {
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3">
                                                 <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Comix default filters</p>
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Roliascan default filters</p>
                                                     <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                                                        Account-level Comix exclusions shared across devices (Manga / Manhwa / Manhua / Novel tabs).
+                                                        Account-level Roliascan exclusions shared across devices (Manga / Manhwa / Manhua / Novel tabs).
                                                     </p>
                                                 </div>
                                                 <div className="space-y-3 rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface-soft)] p-3">
                                                     <div className="space-y-1">
                                                         <p className="text-[11px] font-semibold text-[var(--color-text-primary)]">Exclude types</p>
                                                         <div className="flex flex-wrap gap-1.5">
-                                                            {COMIX_TYPE_PREF_OPTIONS.map((row) => {
-                                                                const active = comixExcludeTypesInput.includes(row.id)
+                                                            {ROLIASCAN_TYPE_PREF_OPTIONS.map((row) => {
+                                                                const active = roliascanExcludeTypesInput.includes(row.id)
                                                                 return (
                                                                     <button
                                                                         key={row.id}
                                                                         type="button"
                                                                         disabled={prefsBusy || !lifeSyncUser}
-                                                                        onClick={() => toggleComixExcludeType(row.id)}
+                                                                        onClick={() => toggleRoliascanExcludeType(row.id)}
                                                                         className={`rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors ${
                                                                             active
                                                                                 ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--color-text-primary)] ring-1 ring-[var(--mx-color-c6ff00)]/45"
@@ -1386,8 +1386,8 @@ export default function Profile() {
                                                             <span className="text-[11px] font-semibold text-[var(--color-text-primary)]">Exclude demographics</span>
                                                             <input
                                                                 type="text"
-                                                                value={comixExcludeGendersInput}
-                                                                onChange={(e) => setComixExcludeGendersInput(e.target.value)}
+                                                                value={roliascanExcludeGendersInput}
+                                                                onChange={(e) => setRoliascanExcludeGendersInput(e.target.value)}
                                                                 placeholder="shounen, seinen"
                                                                 disabled={prefsBusy || !lifeSyncUser}
                                                                 className="h-10 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
@@ -1397,8 +1397,8 @@ export default function Profile() {
                                                             <span className="text-[11px] font-semibold text-[var(--color-text-primary)]">Exclude genres</span>
                                                             <input
                                                                 type="text"
-                                                                value={comixExcludeGenresInput}
-                                                                onChange={(e) => setComixExcludeGenresInput(e.target.value)}
+                                                                value={roliascanExcludeGenresInput}
+                                                                onChange={(e) => setRoliascanExcludeGenresInput(e.target.value)}
                                                                 placeholder="adult, ecchi, mature"
                                                                 disabled={prefsBusy || !lifeSyncUser}
                                                                 className="h-10 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 text-[12px] text-[var(--color-text-primary)] outline-none focus:border-[var(--mx-color-0071e3)]/60 disabled:opacity-50"
@@ -1408,8 +1408,8 @@ export default function Profile() {
                                                     <label className="flex min-w-0 flex-col gap-1">
                                                         <span className="text-[11px] font-semibold text-[var(--color-text-primary)]">Colored genres map</span>
                                                         <textarea
-                                                            value={comixColoredGenresInput}
-                                                            onChange={(e) => setComixColoredGenresInput(e.target.value)}
+                                                            value={roliascanColoredGenresInput}
+                                                            onChange={(e) => setRoliascanColoredGenresInput(e.target.value)}
                                                             placeholder={"genre-slug:color-name\nromance:pink"}
                                                             rows={3}
                                                             disabled={prefsBusy || !lifeSyncUser}
@@ -1420,19 +1420,19 @@ export default function Profile() {
                                                         <button
                                                             type="button"
                                                             disabled={prefsBusy || !lifeSyncUser}
-                                                            onClick={() => void saveComixFilterPrefs()}
+                                                            onClick={() => void saveRoliascanFilterPrefs()}
                                                             className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-primary)] hover:bg-[var(--color-surface-muted)] disabled:opacity-50"
                                                         >
-                                                            Save Comix defaults
+                                                            Save Roliascan defaults
                                                         </button>
                                                         <button
                                                             type="button"
                                                             disabled={prefsBusy || !lifeSyncUser}
                                                             onClick={() => {
-                                                                setComixExcludeTypesInput([])
-                                                                setComixExcludeGendersInput("")
-                                                                setComixExcludeGenresInput("")
-                                                                setComixColoredGenresInput("")
+                                                                setRoliascanExcludeTypesInput([])
+                                                                setRoliascanExcludeGendersInput("")
+                                                                setRoliascanExcludeGenresInput("")
+                                                                setRoliascanColoredGenresInput("")
                                                             }}
                                                             className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-surface)] disabled:opacity-50"
                                                         >

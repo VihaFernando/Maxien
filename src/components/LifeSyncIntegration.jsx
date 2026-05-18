@@ -65,8 +65,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
 
     const integrations = lifeSyncUser?.integrations || {}
     const steamLinked = Boolean(integrations.steam || integrations.steamId)
-    const malLinked = Boolean(integrations.mal || integrations.malUsername)
-    const animeScheduleLinked = Boolean(integrations.animeschedule || integrations.animescheduleUsername)
 
     useEffect(() => {
         try {
@@ -293,69 +291,6 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                                         {steamBusy ? 'Saving…' : 'Save Steam ID'}
                                     </button>
                                 </form>
-                            )}
-                        </div>
-                    </li>
-
-                    {/* MyAnimeList */}
-                    <li className="px-5 sm:px-6 py-4 ">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[var(--mx-color-2e51a2)] flex items-center justify-center flex-shrink-0">
-                                    <span className="text-white text-[11px] font-black leading-none">MAL</span>
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">MyAnimeList</p>
-                                    {malLinked ? (
-                                        <p className="text-[11px] text-emerald-600 font-medium">
-                                            Connected{integrations.malUsername ? ` as ${integrations.malUsername}` : ''}
-                                        </p>
-                                    ) : (
-                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Link to sync your anime/manga lists</p>
-                                    )}
-                                </div>
-                            </div>
-                            {malLinked ? (
-                                <button type="button" onClick={() => unlinkProvider('MAL', '/api/v1/anime/link')} disabled={unlinkBusy === 'MAL'} className="w-fit shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 transition-colors disabled:opacity-50 sm:ml-auto">
-                                    {unlinkBusy === 'MAL' ? 'Unlinking…' : 'Disconnect'}
-                                </button>
-                            ) : (
-                                <a href={lifesyncOAuthStartUrl('mal') || '#'} className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[var(--mx-color-2e51a2)] hover:bg-[var(--mx-color-24408a)] px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('mal') ? 'opacity-50 pointer-events-none' : ''}`}>
-                                    Connect MAL
-                                </a>
-                            )}
-                        </div>
-                    </li>
-
-                    {/* AnimeSchedule */}
-                    <li className="px-5 sm:px-6 py-4">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-[var(--mx-color-151418)] flex items-center justify-center flex-shrink-0">
-                                    <span className="text-white text-[9px] font-black leading-none">ASN</span>
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">AnimeSchedule</p>
-                                    {animeScheduleLinked ? (
-                                        <p className="text-[11px] text-emerald-600 font-medium">
-                                            Connected{integrations.animescheduleUsername ? ` as ${integrations.animescheduleUsername}` : ''}
-                                        </p>
-                                    ) : (
-                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Optional: link to access your AnimeSchedule lists</p>
-                                    )}
-                                </div>
-                            </div>
-                            {animeScheduleLinked ? (
-                                <span className="w-fit shrink-0 text-[11px] font-semibold text-[var(--mx-color-86868b)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] sm:ml-auto">
-                                    Connected
-                                </span>
-                            ) : (
-                                <a
-                                    href={lifesyncOAuthStartUrl('animeschedule') || '#'}
-                                    className={`w-fit shrink-0 text-[11px] font-semibold text-white bg-[var(--mx-color-151418)] hover:bg-black px-3.5 py-1.5 rounded-lg transition-colors sm:ml-auto ${!lifesyncOAuthStartUrl('animeschedule') ? 'opacity-50 pointer-events-none' : ''}`}
-                                >
-                                    Connect AnimeSchedule
-                                </a>
                             )}
                         </div>
                     </li>

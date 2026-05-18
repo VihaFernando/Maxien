@@ -163,14 +163,16 @@ const POOL = {
         'https://cdn.myanimelist.net/images/anime/1223/96541.jpg'
     ],
     manga: [
-        'https://static.comix.to/c9c8/i/b/b6/68e121be6ed89@280.jpg',
-        'https://static.comix.to/7e11/i/a/2c/68de7df78456e@280.jpg',
-        'https://static.comix.to/42c2/i/a/59/68de7a7941f40@280.jpg',
-        'https://static.comix.to/c32a/i/d/dc/68e0957e2f38a@280.jpg',
-        'https://static.comix.to/b6d4/i/4/df/68de759b28ee4@280.jpg',
-        'https://static.comix.to/9a48/i/d/45/68de753270514@280.jpg',
-        'https://static.comix.to/6941/i/0/c5/68de6bed96e7b@280.jpg',
-        'https://static.comix.to/52fd/i/7/bc/68de7ab171b14@280.jpg'
+        'https://roliascan.com/content/media/manga-10996-cover-1775133523.png',
+        'https://roliascan.com/content/media/manga-10492-cover-1775133327.jpg',
+        'https://roliascan.com/content/media/manga-10482-cover-1775133325.webp',
+        'https://roliascan.com/content/media/manga-10458-cover-1775133318.webp',
+        'https://roliascan.com/content/media/manga-10664-cover-1775133397.webp',
+        'https://roliascan.com/content/media/manga-1469-cover-1775048210.webp',
+        'https://roliascan.com/content/media/manga-11300-cover-1775134486.jpg',
+        'https://roliascan.com/content/media/manga-80194-cover-1775555921.png',
+        'https://roliascan.com/content/media/manga-10558-cover-1775133344.png',
+        'https://roliascan.com/content/media/manga-146584-cover-1777856073.jpg',
     ],
     hentai: [
         'https://watchhentai.net/uploads/2022/11/boy-meets-harem-the-animation/poster.jpg',
@@ -830,7 +832,7 @@ async function fetchCalendarMonthCached(year, month1) {
 }
 
 const ANIME_HUB_PATHS = {
-    seasonal: '/dashboard/lifesync/anime/anime/seasonal/page/1',
+    seasonal: '/dashboard/lifesync/anime/anime/home/page/1',
     calendar: '/dashboard/lifesync/anime/anime/calendar',
     mangaHome: '/dashboard/lifesync/anime/manga',
     hManhwaHome: '/dashboard/lifesync/anime/manga/mangadistrict/latest/page/1',
@@ -850,7 +852,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             cols: 3,
             rows: 3,
             title: 'Anime',
-            subtitle: 'MAL seasonal lineups, rankings, search, and your list.',
+            subtitle: 'Browse featured titles, ongoing series, and search anime.',
             gradient: 'bg-gradient-to-t from-[var(--mx-color-e0f2fe)] via-[var(--color-surface)]/70 to-transparent',
             hero: true,
         })
@@ -863,7 +865,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             cols: 2,
             rows: 2,
             title: 'Manga',
-            subtitle: 'Comix and Manga District browse, chapters, and reader.',
+            subtitle: 'Roliascan and Manga District browse, chapters, and reader.',
             gradient: 'bg-gradient-to-t from-[var(--mx-color-fff8eb)] via-[var(--color-surface)]/65 to-transparent',
             hero: !animePluginOn && tiles.length === 0,
         })
@@ -924,7 +926,7 @@ function AnimeHubExploreSection({ tiles }) {
                         Explore
                     </h2>
                     <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-slate-600 sm:text-[13px]">
-                        <span className="lg:hidden">Jump into seasonal anime, manga, H manhwa, or 18+ from the cards below.</span>
+                        <span className="lg:hidden">Jump into anime, manga, H manhwa, or 18+ from the cards below.</span>
                         <span className="hidden lg:inline">Primary lane on the left, with adaptive destination cards on the right for faster routing.</span>
                     </p>
                 </div>
@@ -1112,7 +1114,7 @@ function AnimeHubBroadcastWeekSection({
                                 <ul className="space-y-2">
                                     {selectedItems.slice(0, 6).map((it, i) => (
                                         <li
-                                            key={`${selectedKey}-${it?.malId}-${it?.episodeNumber}-${i}`}
+                                            key={`${selectedKey}-${it?.animeId}-${it?.episodeNumber}-${i}`}
                                             className={`
                                                 flex items-center gap-3 rounded-xl border px-3 py-2
                                                 ${it?.isPinned ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-f7fee7)]/70' : 'border-slate-200/80 bg-slate-50/80'}
@@ -1225,7 +1227,7 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                     <ul className="space-y-2">
                         {show.map((it, i) => (
                             <li
-                                key={`${key}-${it?.malId}-${it?.episodeNumber}-${i}`}
+                                key={`${key}-${it?.animeId}-${it?.episodeNumber}-${i}`}
                                 className={`
                                     flex items-center gap-2 rounded-xl border px-2 py-2
                                     ${it?.isPinned ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-f7fee7)]/80' : 'border-slate-200/80 bg-slate-50/80'}

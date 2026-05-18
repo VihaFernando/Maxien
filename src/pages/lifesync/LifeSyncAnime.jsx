@@ -9,13 +9,14 @@ import { LifeSyncSectionNav } from "../../components/lifesync/LifeSyncSectionNav
 import { useLifeSync } from "../../context/LifeSyncContext";
 import {
   getAnimeStreamAudio,
+  getAnimeLibraryLayout,
   getLifesyncApiBase,
   lifesyncFetch,
-  lifesyncOAuthStartUrl,
+  lifesyncPatchPreferences,
 } from "../../lib/lifesyncApi";
 import {
-  fetchStreamInfoByMalWithCache,
-  writeLifesyncStreamCatalogByMal,
+  fetchStreamInfoBySlugWithCache,
+  writeLifesyncStreamCatalogBySlug,
 } from "../../lib/lifesyncStreamCatalogCache";
 import { animePosterLayoutId } from "../../lib/lifesyncAnimeSharedLayout";
 import { stashAnimeWatchHandoff } from "../../lib/lifesyncWatchHandoff";
@@ -43,16 +44,14 @@ import {
   MotionDiv,
 } from "../../lib/lifesyncMotion";
 
-/** Minimal MAL node fields for instant detail hero (navigate `state`, no extra fetch). */
 function animeDetailPreviewFromNode(node) {
-  if (!node || node.id == null) return null;
+  if (!node || !node.slug) return null;
   return {
-    id: String(node.id),
+    id: String(node.slug),
     title: node.title,
-    main_picture: node.main_picture,
-    mean: node.mean,
-    num_episodes: node.num_episodes,
-    media_type: node.media_type,
+    poster: node.poster || node.image,
+    num_episodes: node.num_episodes ?? node.numEpisodes,
+    type: node.type || node.media_type,
   };
 }
 
@@ -61,269 +60,449 @@ function clampPage(n) {
   return Number.isFinite(v) && v > 0 ? v : 1;
 }
 
-/** MAL API v2 GET /anime/ranking — `ranking_type` values. */
-/** MAL API seasonal calendar (month 0–11 → season). */
-function currentMalSeason(d = new Date()) {
-  const y = d.getFullYear();
-  const m = d.getMonth();
-  if (m <= 2) return { year: y, season: "winter" };
-  if (m <= 5) return { year: y, season: "spring" };
-  if (m <= 8) return { year: y, season: "summer" };
-  return { year: y, season: "fall" };
-}
-
-const MAL_SEASON_OPTIONS = [
-  { id: "winter", label: "Winter" },
-  { id: "spring", label: "Spring" },
-  { id: "summer", label: "Summer" },
-  { id: "fall", label: "Fall" },
-];
-
-const MAL_RANKING_OPTIONS = [
-  { id: "all", label: "Top series" },
-  { id: "airing", label: "Airing" },
-  { id: "upcoming", label: "Upcoming" },
-  { id: "tv", label: "TV" },
-  { id: "movie", label: "Movies" },
-  { id: "ova", label: "OVA" },
-  { id: "special", label: "Specials" },
-  { id: "bypopularity", label: "Popular" },
-  { id: "favorite", label: "Favorited" },
-];
-
 function isIOSDevice() {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent || "";
-  const iOS = /iPad|iPhone|iPod/.test(ua);
-  const iPadOS =
-    navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-  return iOS || iPadOS;
+  return /iPad|iPhone|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 }
 
+const BROWSE_TYPE_OPTIONS = [
+  { id: "", label: "All" }, { id: "1", label: "TV" }, { id: "2", label: "Movie" },
+  { id: "3", label: "OVA" }, { id: "4", label: "ONA" }, { id: "5", label: "Special" }, { id: "6", label: "Music" },
+];
+const BROWSE_STATUS_OPTIONS = [
+  { id: "", label: "Any" }, { id: "Ongoing", label: "Ongoing" },
+  { id: "Completed", label: "Completed" }, { id: "info", label: "Upcoming" },
+];
+const BROWSE_LANGUAGE_OPTIONS = [
+  { id: "", label: "All" }, { id: "sub", label: "Sub" }, { id: "dub", label: "Dub" },
+];
+const BROWSE_SORT_OPTIONS = [
+  { id: "", label: "Latest" }, { id: "recently_added", label: "Newly Added" },
+  { id: "release_date", label: "Release Date" }, { id: "title_az", label: "A–Z" },
+];
+const BROWSE_GENRE_OPTIONS = [
+  "action", "adventure", "comedy", "drama", "ecchi", "fantasy", "horror",
+  "isekai", "magic", "mecha", "military", "mystery", "psychological",
+  "romance", "sci-fi", "slice-of-life", "sports", "supernatural", "thriller",
+];
+
+// ── Icons ──────────────────────────────────────────────────────────────────────
+const IconGrid = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" />
+    <rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" />
+  </svg>
+);
+const IconList = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5h12M9 12h12M9 19h12M4 5h.01M4 12h.01M4 19h.01" />
+  </svg>
+);
+const IconPlay = () => (
+  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+const IconSearch = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+    <circle cx="11" cy="11" r="7" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35" />
+  </svg>
+);
+const IconChevronLeft = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+  </svg>
+);
+const IconChevronRight = () => (
+  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+// ── Poster card (grid) ─────────────────────────────────────────────────────────
 const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
   const anime = node || {};
-  const pic = anime.main_picture?.large || anime.main_picture?.medium;
+  const slug = anime.slug || anime.id;
+  const pic = anime.poster || anime.image || anime.main_picture?.large || anime.main_picture?.medium;
   return (
-    <button
-      type="button"
-      onClick={() => anime.id != null && onSelect?.(anime)}
-      className="group w-full text-left"
-    >
-      <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden hover:shadow-md transition-all">
-        <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
-          {anime.id != null ? (
+    <button type="button" onClick={() => slug && onSelect?.(anime)} className="group w-full text-left">
+      <div className="relative overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5">
+        <div className="relative aspect-2/3 w-full overflow-hidden bg-(--color-surface-muted)">
+          {slug ? (
             <MotionDiv
-              layoutId={animePosterLayoutId(anime.id)}
+              layoutId={animePosterLayoutId(slug)}
               transition={lifeSyncSharedLayoutTransitionProps}
-              className="absolute inset-0 bg-[var(--mx-color-f5f5f7)]"
+              className="absolute inset-0 overflow-hidden bg-(--color-surface-muted)"
             >
               {pic ? (
-                <img
-                  src={pic}
-                  alt=""
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                  loading="lazy"
-                />
+                <img src={pic} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
-                  <svg
-                    className="w-10 h-10"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75M3.375 19.5h17.25m0 0a1.125 1.125 0 001.125-1.125m0 0V5.625"
-                    />
+                <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75" />
                   </svg>
                 </div>
               )}
             </MotionDiv>
           ) : pic ? (
-            <img
-              src={pic}
-              alt=""
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-              loading="lazy"
-            />
+            <img src={pic} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
-              <svg
-                className="w-10 h-10"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75M3.375 19.5h17.25m0 0a1.125 1.125 0 001.125-1.125m0 0V5.625"
-                />
+            <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75" />
               </svg>
             </div>
           )}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
           {ranking != null && (
-            <span className="absolute left-2 top-2 bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg">
+            <span className="absolute left-2 top-2 bg-primary text-(--color-ink-strong) text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums">
               #{ranking}
             </span>
           )}
-          {anime.mean != null && (
-            <span className="absolute right-2 top-2 bg-[var(--color-surface)]/90 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg flex items-center gap-0.5">
-              <svg
-                className="w-3 h-3 text-amber-500 fill-amber-500"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-              {anime.mean}
-            </span>
-          )}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
-            <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-2.5">
+            <p className="text-[12px] font-bold text-white line-clamp-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
               {anime.title}
             </p>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {anime.media_type && (
-                <span className="rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] font-medium uppercase text-white backdrop-blur-sm">
-                  {anime.media_type}
-                </span>
-              )}
-              {anime.num_episodes != null && (
-                <span className="rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
-                  {anime.num_episodes} ep
-                </span>
-              )}
+            {(anime.type || anime.media_type) && (
+              <span className="mt-1 inline-block rounded bg-white/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white/90 backdrop-blur-sm">
+                {anime.type || anime.media_type}
+              </span>
+            )}
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/90 text-(--color-ink-strong) shadow-lg backdrop-blur-sm">
+              <IconPlay />
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-center gap-1.5 border-t border-[var(--mx-color-f0f0f0)] bg-[var(--mx-color-fafafa)] py-2.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">
-          <svg
-            className="h-3.5 w-3.5 text-[var(--mx-color-86868b)]"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            strokeWidth="2"
-            aria-hidden
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z"
-            />
-          </svg>
-          View details
-        </div>
       </div>
     </button>
   );
 });
 
-const MyListCard = memo(function MyListCard({ node, listStatus, onSelect }) {
+// ── Row card (list view) ───────────────────────────────────────────────────────
+const AnimeRow = memo(function AnimeRow({ node, ranking, onSelect, isLast }) {
   const anime = node || {};
-  const pic = anime.main_picture?.large || anime.main_picture?.medium;
-  const st = listStatus || {};
-  const statusColors = {
-    watching: "bg-emerald-50 text-emerald-700 border-emerald-100",
-    completed: "bg-blue-50 text-blue-700 border-blue-100",
-    on_hold: "bg-amber-50 text-amber-700 border-amber-100",
-    dropped: "bg-red-50 text-red-700 border-red-100",
-    plan_to_watch: "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)]",
-  };
-  const badge =
-    statusColors[st.status] || "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)]";
-
+  const slug = anime.slug || anime.id;
+  const pic = anime.poster || anime.image || anime.main_picture?.large;
   return (
     <button
       type="button"
-      onClick={() => anime.id != null && onSelect?.(anime)}
-      className="group w-full text-left"
+      onClick={() => slug && onSelect?.(anime)}
+      className={`group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-(--color-surface-muted) ${!isLast ? "border-b border-(--color-border-soft)" : ""}`}
     >
-      <div className="bg-[var(--color-surface)] rounded-[16px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-3 flex gap-3 hover:shadow-md transition-all">
-        <div className="h-24 w-16 shrink-0 overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)]">
-          {anime.id != null ? (
-            <MotionDiv
-              layoutId={animePosterLayoutId(anime.id)}
-              transition={lifeSyncSharedLayoutTransitionProps}
-              className="h-full w-full"
-            >
-              {pic ? (
-                <img
-                  src={pic}
-                  alt=""
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-              ) : null}
-            </MotionDiv>
-          ) : pic ? (
-            <img
-              src={pic}
-              alt=""
-              className="h-full w-full object-cover"
-              loading="lazy"
-            />
-          ) : null}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] line-clamp-2">
-            {anime.title}
-          </p>
-          <span
-            className={`inline-flex mt-1.5 text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${badge}`}
-          >
-            {(st.status || "").replace(/_/g, " ")}
-          </span>
-          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[var(--mx-color-86868b)]">
-            {st.score > 0 && (
-              <span className="flex items-center gap-0.5">
-                <svg
-                  className="w-3 h-3 text-amber-500 fill-amber-500"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-                {st.score}/10
-              </span>
-            )}
-            {st.num_episodes_watched != null && (
-              <span>{st.num_episodes_watched} ep watched</span>
-            )}
+      {ranking != null && (
+        <span className="w-5 shrink-0 text-center text-[11px] font-black tabular-nums text-primary">{ranking}</span>
+      )}
+      <div className="relative h-[54px] w-[38px] shrink-0 overflow-hidden rounded-lg bg-(--color-surface-muted)">
+        {pic ? (
+          <img src={pic} alt="" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.05]" loading="lazy" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125V5.625" />
+            </svg>
           </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-1 text-[13px] font-semibold text-(--color-text-primary)">{anime.title}</p>
+        <div className="mt-0.5 flex items-center gap-1.5">
+          {(anime.type || anime.media_type) && (
+            <span className="rounded bg-(--color-surface-muted) px-1.5 py-0.5 text-[9px] font-semibold uppercase text-(--color-text-secondary)">{anime.type || anime.media_type}</span>
+          )}
+          {anime.status && (
+            <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${anime.status === "Ongoing" ? "bg-green-500/10 text-green-600 dark:text-green-400" : "bg-(--color-surface-muted) text-(--color-text-secondary)"}`}>{anime.status}</span>
+          )}
         </div>
       </div>
+      <svg className="h-3.5 w-3.5 shrink-0 text-(--color-text-secondary) opacity-0 transition-opacity group-hover:opacity-100" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z" />
+      </svg>
     </button>
   );
 });
 
-function normalizeStreamEpisodesForPlayer(list, episodeThumbnails = {}) {
-  const thumbs =
-    episodeThumbnails && typeof episodeThumbnails === "object"
-      ? episodeThumbnails
-      : {};
+// ── Hero banner (home featured) ────────────────────────────────────────────────
+function HeroBanner({ items, onSelect }) {
+  const [idx, setIdx] = useState(0);
+  const timerRef = useRef(null);
+  const active = items?.[idx] || items?.[0];
+  const pic = active?.poster || active?.image || active?.main_picture?.large;
+
+  const startTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => setIdx((i) => (i + 1) % Math.max(1, items.length)), 6000);
+  }, [items?.length]);
+
+  useEffect(() => {
+    if (!items?.length) return;
+    startTimer();
+    return () => clearInterval(timerRef.current);
+  }, [startTimer, items?.length]);
+
+  const go = (n) => {
+    setIdx((i) => (i + n + items.length) % items.length);
+    startTimer();
+  };
+
+  if (!items?.length) return null;
+
+  // Build tag chips from metadata
+  const heroBadges = (node) => {
+    const chips = [];
+    const t = node?.type || node?.media_type;
+    if (t) chips.push({ label: t, cls: "bg-white/15 text-white" });
+    if (node?.status) chips.push({ label: node.status, cls: "bg-white/15 text-white" });
+    if (node?.release) chips.push({ label: node.release, cls: "bg-white/15 text-white" });
+    if (node?.hasSub) chips.push({ label: "SUB", cls: "bg-white/15 text-white" });
+    if (node?.hasDub) chips.push({ label: "DUB", cls: "bg-white/15 text-white" });
+    return chips;
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-(--color-surface-muted)" style={{ minHeight: 320, aspectRatio: "21/9" }}>
+      {/* Background images */}
+      <AnimatePresence mode="sync" initial={false}>
+        <MotionDiv
+          key={idx}
+          className="absolute inset-0 overflow-hidden"
+          initial={{ opacity: 0, scale: 1.04 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
+          {pic && <img src={pic} alt="" className="h-full w-full object-cover object-top" />}
+          <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-black/10" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
+        </MotionDiv>
+      </AnimatePresence>
+
+      {/* Content overlay */}
+      <div className="relative flex h-full flex-col justify-end p-5 sm:p-8 sm:pb-10">
+        <AnimatePresence mode="wait" initial={false}>
+          <MotionDiv
+            key={`hero-text-${idx}`}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.38 }}
+            className="max-w-lg"
+          >
+            {/* Featured badge */}
+            <span className="mb-2 inline-block rounded-full border border-primary/60 bg-primary/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-primary backdrop-blur-sm">
+              Featured
+            </span>
+
+            {/* Title */}
+            <h2 className="line-clamp-2 text-[22px] font-black leading-tight text-white drop-shadow sm:text-[30px]">
+              {active?.title}
+            </h2>
+
+            {/* Tag chips */}
+            {heroBadges(active).length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {heroBadges(active).map((chip, i) => (
+                  <span key={i} className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm ${chip.cls}`}>
+                    {chip.label}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Synopsis */}
+            {active?.synopsis && (
+              <p className="mt-2.5 line-clamp-2 text-[12px] leading-relaxed text-white/75 sm:line-clamp-3">
+                {active.synopsis}
+              </p>
+            )}
+
+            {/* Meta row: genres, studio, episodes, quality */}
+            <div className="mt-2.5 space-y-1">
+              {active?.genres?.length > 0 && (
+                <p className="text-[11px] text-white/70">
+                  <span className="font-semibold text-primary">Genres:</span>{" "}
+                  {active.genres.slice(0, 5).join(", ")}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+                {active?.studio && (
+                  <p className="text-[11px] text-white/70">
+                    <span className="font-semibold text-primary">Studio:</span> {active.studio}
+                  </p>
+                )}
+                {(active?.episodeCount || active?.num_episodes) && (
+                  <p className="text-[11px] text-white/70">
+                    <span className="font-semibold text-primary">Episodes:</span>{" "}
+                    {active.episodeCount || active.num_episodes}
+                  </p>
+                )}
+                {active?.quality && (
+                  <p className="text-[11px] text-white/70">
+                    <span className="font-semibold text-primary">Quality:</span> {active.quality}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Action buttons */}
+            <div className="mt-4 flex flex-wrap gap-2.5">
+              <button
+                type="button"
+                onClick={() => onSelect?.(active)}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-bold text-(--color-ink-strong) shadow-lg transition-all hover:brightness-105 active:scale-[0.97]"
+              >
+                <IconPlay />
+                Watch Now
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelect?.(active)}
+                className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 py-2.5 text-[13px] font-bold text-white backdrop-blur-sm transition-all hover:bg-white/20 active:scale-[0.97]"
+              >
+                View Details
+              </button>
+            </div>
+          </MotionDiv>
+        </AnimatePresence>
+
+        {/* Slide dots */}
+        <div className="absolute bottom-4 right-5 flex gap-1.5">
+          {items.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => { setIdx(i); startTimer(); }}
+              className={`h-2 rounded-full transition-all ${i === idx ? "w-6 bg-primary" : "w-2 bg-white/30 hover:bg-white/50"}`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Horizontal scroll rail ─────────────────────────────────────────────────────
+function HorizRail({ title, items, onSelect, onSeeAll }) {
+  const ref = useRef(null);
+  const scroll = (dir) => {
+    if (!ref.current) return;
+    ref.current.scrollBy({ left: dir * 220, behavior: "smooth" });
+  };
+  if (!items?.length) return null;
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-[11px] font-black uppercase tracking-widest text-(--color-text-secondary)">{title}</p>
+        <div className="flex items-center gap-1.5">
+          <button type="button" onClick={() => scroll(-1)} className="flex h-6 w-6 items-center justify-center rounded-full border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
+            <IconChevronLeft />
+          </button>
+          <button type="button" onClick={() => scroll(1)} className="flex h-6 w-6 items-center justify-center rounded-full border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
+            <IconChevronRight />
+          </button>
+          {onSeeAll && (
+            <button type="button" onClick={onSeeAll} className="ml-1 text-[11px] font-semibold text-primary hover:underline">
+              See all
+            </button>
+          )}
+        </div>
+      </div>
+      <div
+        ref={ref}
+        className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar overscroll-x-contain snap-x snap-mandatory"
+      >
+        {items.map((node, i) => (
+          <div key={node.slug || node.id || i} className="w-[130px] shrink-0 snap-start sm:w-[150px]">
+            <AnimeCard node={node} onSelect={onSelect} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Trending strip (ranked horizontal) ────────────────────────────────────────
+function TrendingStrip({ items, onSelect }) {
+  if (!items?.length) return null;
+  return (
+    <div>
+      <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-(--color-text-secondary)">Trending</p>
+      <div className="flex gap-2.5 overflow-x-auto pb-2 hide-scrollbar overscroll-x-contain snap-x snap-mandatory">
+        {items.slice(0, 10).map((node, i) => {
+          const pic = node?.poster || node?.image;
+          return (
+            <button
+              key={node.slug || i}
+              type="button"
+              onClick={() => onSelect?.(node)}
+              className="group relative shrink-0 snap-start overflow-hidden rounded-2xl bg-(--color-surface-muted) transition-all hover:scale-[1.02] hover:shadow-lg"
+              style={{ width: 100, aspectRatio: "2/3" }}
+            >
+              {pic && <img src={pic} alt="" className="h-full w-full object-cover" loading="lazy" />}
+              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/10 to-transparent" />
+              <span className="absolute left-2 top-2 text-[22px] font-black leading-none text-white/20 tabular-nums select-none">{i + 1}</span>
+              <div className="absolute inset-x-0 bottom-0 p-2">
+                <p className="line-clamp-2 text-[10px] font-bold leading-tight text-white drop-shadow">{node.title}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Skeleton ───────────────────────────────────────────────────────────────────
+function SkeletonHero() {
+  return <div className="w-full animate-pulse rounded-3xl bg-(--color-surface-muted)" style={{ aspectRatio: "21/9" }} />;
+}
+function SkeletonRail({ count = 6 }) {
+  return (
+    <div className="flex gap-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="w-[130px] shrink-0 animate-pulse overflow-hidden rounded-2xl bg-(--color-surface-muted) aspect-2/3" />
+      ))}
+    </div>
+  );
+}
+function SkeletonGrid({ count = 12 }) {
+  return (
+    <div className="grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="animate-pulse overflow-hidden rounded-2xl bg-(--color-surface-muted) aspect-2/3" />
+      ))}
+    </div>
+  );
+}
+function SkeletonList({ count = 8 }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className={`flex items-center gap-3 px-4 py-3 animate-pulse ${i < count - 1 ? "border-b border-(--color-border-soft)" : ""}`}>
+          <div className="h-[54px] w-[38px] shrink-0 rounded-lg bg-(--color-surface-muted)" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-2/3 rounded bg-(--color-surface-muted)" />
+            <div className="h-2 w-1/3 rounded bg-(--color-surface-muted)" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Episode stream section (inside detail panel) ───────────────────────────────
+function normalizeStreamEpisodesForPlayer(list) {
   return (list || [])
     .map((ep, i) => {
       const episodeId = ep.episodeId || ep.id;
       if (!episodeId) return null;
       const num = ep.number ?? ep.episode;
-      const tn = num != null ? thumbs[String(num)] : null;
-      const thumbUrl =
-        (typeof ep.thumbnailUrl === "string" && ep.thumbnailUrl.trim()) ||
-        (typeof tn === "string" && tn.trim()) ||
-        undefined;
+      const thumbUrl = typeof ep.thumbnailUrl === "string" && ep.thumbnailUrl.trim() ? ep.thumbnailUrl : undefined;
       return {
         episodeId: String(episodeId),
-        title:
-          ep.title || (num != null ? `Episode ${num}` : `Episode ${i + 1}`),
+        title: ep.title || (num != null ? `Episode ${num}` : `Episode ${i + 1}`),
         number: num,
         hasDub: ep.hasDub,
         hasSub: ep.hasSub,
@@ -333,18 +512,9 @@ function normalizeStreamEpisodesForPlayer(list, episodeThumbnails = {}) {
     .filter(Boolean);
 }
 
-/** Parent key includes `animeStreamAudio` so sub/dub changes remount this block (no sync reset setState in the effect). */
-function DetailWatchSection({
-  animeId,
-  malTitle,
-  pic,
-  malDetail,
-  animeStreamAudio,
-  onPlayStream,
-}) {
+function DetailWatchSection({ animeId, animeTitle, pic, animeStreamAudio, onPlayStream }) {
   const [streamData, setStreamData] = useState(null);
   const [streamBusy, setStreamBusy] = useState(true);
-  const [thumbMap, setThumbMap] = useState({});
   const [resumeLastEp, setResumeLastEp] = useState(null);
 
   useEffect(() => {
@@ -353,94 +523,42 @@ function DetailWatchSection({
     let cancelled = false;
     const isAbort = (err) => err?.name === "AbortError";
 
-    const audio = animeStreamAudio === "dub" ? "dub" : "sub";
-
     lifesyncFetch(
-      `/api/v1/anime/stream/info/by-mal/${encodeURIComponent(animeId)}?view=full${malTitle ? `&title=${encodeURIComponent(String(malTitle))}` : ''}`,
+      `/api/v1/anime/stream/info/by-slug/${encodeURIComponent(animeId)}?view=full${animeTitle ? `&title=${encodeURIComponent(String(animeTitle))}` : ""}`,
       { signal },
     )
-      .then((res) => {
-        if (!cancelled) setStreamData(res?.data ?? null);
-      })
-      .catch((err) => {
-        if (isAbort(err) || cancelled) return;
-        setStreamData(null);
-      })
-      .finally(() => {
-        if (!cancelled) setStreamBusy(false);
-      });
+      .then((res) => { if (!cancelled) setStreamData(res?.data ?? null); })
+      .catch((err) => { if (isAbort(err) || cancelled) return; setStreamData(null); })
+      .finally(() => { if (!cancelled) setStreamBusy(false); });
 
-    lifesyncFetch(
-      `/api/v1/anime/mal-episode-thumbnails/${encodeURIComponent(animeId)}?audio=${audio}&view=compact`,
-      { signal },
-    )
-      .then((res) => {
-        if (
-          cancelled ||
-          !res?.thumbnails ||
-          typeof res.thumbnails !== "object"
-        )
-          return;
-        setThumbMap(res.thumbnails);
-      })
-      .catch((err) => {
-        if (isAbort(err) || cancelled) return;
-        setThumbMap({});
-      });
+    lifesyncFetch(`/api/v1/anime/watch-progress/${encodeURIComponent(animeId)}`, { signal })
+      .then((p) => { if (cancelled) return; setResumeLastEp(p?.lastEpisodeNumber != null ? p.lastEpisodeNumber : null); })
+      .catch((err) => { if (isAbort(err) || cancelled) return; setResumeLastEp(null); });
 
-    lifesyncFetch(`/api/v1/anime/watch-progress/${encodeURIComponent(animeId)}`, {
-      signal,
-    })
-      .then((p) => {
-        if (cancelled) return;
-        setResumeLastEp(
-          p?.lastEpisodeNumber != null ? p.lastEpisodeNumber : null,
-        );
-      })
-      .catch((err) => {
-        if (isAbort(err) || cancelled) return;
-        setResumeLastEp(null);
-      });
-
-    return () => {
-      cancelled = true;
-      ac.abort();
-    };
-  }, [animeId, animeStreamAudio, malTitle]);
+    return () => { cancelled = true; ac.abort(); };
+  }, [animeId, animeTitle]);
 
   const catalogWarmTimerRef = useRef(null);
   const warmStreamCatalog = useCallback(() => {
-    if (!animeId) return;
-    if (catalogWarmTimerRef.current != null) return;
+    if (!animeId || catalogWarmTimerRef.current != null) return;
     catalogWarmTimerRef.current = window.setTimeout(() => {
       catalogWarmTimerRef.current = null;
-      void fetchStreamInfoByMalWithCache(animeId, lifesyncFetch)
-        .then((body) => {
-          if (body?.data != null) writeLifesyncStreamCatalogByMal(animeId, body);
-        })
-        .catch(() => {});
+      void fetchStreamInfoBySlugWithCache(animeId, lifesyncFetch).catch(() => {});
     }, 200);
   }, [animeId]);
 
-  useEffect(
-    () => () => {
-      if (catalogWarmTimerRef.current != null) {
-        window.clearTimeout(catalogWarmTimerRef.current);
-        catalogWarmTimerRef.current = null;
-      }
-    },
-    [],
-  );
+  useEffect(() => () => {
+    if (catalogWarmTimerRef.current != null) {
+      window.clearTimeout(catalogWarmTimerRef.current);
+      catalogWarmTimerRef.current = null;
+    }
+  }, []);
 
-  const streamEps = useMemo(
-    () => normalizeStreamEpisodesForPlayer(streamData?.episodes, thumbMap),
-    [streamData, thumbMap],
-  );
+  const streamEps = useMemo(() => normalizeStreamEpisodesForPlayer(streamData?.episodes), [streamData]);
 
   const dubAvailabilityLabel = useMemo(() => {
     if (!streamEps.length) return "Dub: —";
-    let hasSignal = false;
-    let anyDub = false;
+    let hasSignal = false, anyDub = false;
     for (const ep of streamEps) {
       if (typeof ep?.hasDub !== "boolean") continue;
       hasSignal = true;
@@ -450,245 +568,89 @@ function DetailWatchSection({
     return anyDub ? "Dub: Available" : "Dub: Not available";
   }, [streamEps]);
 
-  const resumeIndex =
-    resumeLastEp != null
-      ? streamEps.findIndex((e) => e.number === resumeLastEp)
-      : -1;
+  const resumeIndex = resumeLastEp != null ? streamEps.findIndex((e) => e.number === resumeLastEp) : -1;
 
-  const openSeries = useCallback(
-    (ep, i) => {
-      onPlayStream?.(
-        {
-          seriesKey: `mal:${animeId}`,
-          malId: animeId,
-          title: malTitle,
-          poster: pic || "",
-          episodes: streamEps,
-          malDetail: malDetail || null,
-        },
-        ep,
-        i,
-      );
-    },
-    [animeId, malDetail, malTitle, onPlayStream, pic, streamEps],
-  );
+  const openSeries = useCallback((ep, i) => {
+    onPlayStream?.({ seriesKey: `anineko:${animeId}`, animeId, title: animeTitle, poster: pic || "", episodes: streamEps }, ep, i);
+  }, [animeId, animeTitle, onPlayStream, pic, streamEps]);
 
-  const useStaggeredEpisodeCells =
-    streamEps.length > 0 &&
-    streamEps.length <= lifeSyncEpisodeGridStaggerMaxItems;
-
-  const episodeGridClass =
-    "grid grid-cols-2 gap-2 sm:grid-cols-3";
-  const isDarkTheme =
-    typeof document !== "undefined" &&
-    document.documentElement?.dataset?.maxienTheme === "dark";
+  const isDarkTheme = typeof document !== "undefined" && document.documentElement?.dataset?.maxienTheme === "dark";
 
   return (
-    <div className=" pt-4 space-y-3">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)]">
-          Watch
-        </p>
-        <span className="inline-flex items-center rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-5b5670)]">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Episodes</p>
+        <span className="inline-flex items-center rounded-full border border-(--color-border-soft) bg-(--color-surface) px-2 py-0.5 text-[10px] font-semibold text-(--color-text-secondary)">
           {dubAvailabilityLabel}
         </span>
       </div>
       <AnimatePresence mode="sync" initial={false}>
         {streamBusy ? (
-          <MotionDiv
-            key="watch-ep-skeleton"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={lifeSyncEpisodeBlockPresenceTransition}
-          >
+          <MotionDiv key="watch-ep-skeleton" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={lifeSyncEpisodeBlockPresenceTransition}>
             <DetailWatchGridSkeleton count={6} dark={isDarkTheme} />
           </MotionDiv>
         ) : (
-          <MotionDiv
-            key={`watch-ep-loaded-${animeId}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 6 }}
-            transition={lifeSyncEpisodeBlockPresenceTransition}
-            className="space-y-3"
-          >
-            {streamData?.matchedStreamTitle &&
-              streamData.matchedStreamTitle !== malTitle && (
-                <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                  Mirror match:{" "}
-                  <span className="font-medium text-[var(--mx-color-1d1d1f)]">
-                    {streamData.matchedStreamTitle}
-                  </span>
-                </p>
-              )}
-            {streamEps.length > 0 &&
-              resumeIndex >= 0 &&
-              streamEps[resumeIndex] && (
-                <MotionDiv
-                  variants={lifeSyncStaggerEpisodeGridItem}
-                  initial="hidden"
-                  animate="show"
+          <MotionDiv key={`watch-ep-loaded-${animeId}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 6 }} transition={lifeSyncEpisodeBlockPresenceTransition} className="space-y-2">
+            {streamData?.matchedStreamTitle && streamData.matchedStreamTitle !== animeTitle && (
+              <p className="text-[11px] text-(--color-text-secondary)">
+                Matched: <span className="font-medium text-(--color-text-primary)">{streamData.matchedStreamTitle}</span>
+              </p>
+            )}
+            {streamEps.length > 0 && resumeIndex >= 0 && streamEps[resumeIndex] && (
+              <MotionDiv variants={lifeSyncStaggerEpisodeGridItem} initial="hidden" animate="show">
+                <button
+                  type="button"
+                  onMouseEnter={warmStreamCatalog}
+                  onFocus={warmStreamCatalog}
+                  onClick={() => openSeries(streamEps[resumeIndex], resumeIndex)}
+                  className="w-full rounded-[14px] border border-primary/30 bg-primary/10 px-4 py-3 text-left shadow-sm transition hover:border-primary/50 hover:bg-primary/15"
                 >
-                  <button
-                    type="button"
-                    onMouseEnter={warmStreamCatalog}
-                    onFocus={warmStreamCatalog}
-                    onClick={() =>
-                      openSeries(streamEps[resumeIndex], resumeIndex)
-                    }
-                    className="w-full rounded-[14px] border border-[var(--mx-color-c6ff00)]/30 bg-[var(--mx-color-c6ff00)]/10 px-4 py-3 text-left shadow-sm transition hover:border-[var(--mx-color-c6ff00)]/50 hover:bg-[var(--mx-color-c6ff00)]/14"
-                  >
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-c6ff00)]">
-                      Continue
-                    </p>
-                    <p className="mt-1 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">
-                      Resume episode {resumeLastEp}
-                      {streamEps[resumeIndex]?.title
-                        ? ` · ${streamEps[resumeIndex].title}`
-                        : ""}
-                    </p>
-                  </button>
-                </MotionDiv>
-              )}
-            {streamEps.length > 0 ? (
-              useStaggeredEpisodeCells ? (
-                <MotionDiv
-                  variants={lifeSyncStaggerEpisodeGrid}
-                  initial="hidden"
-                  animate="show"
-                  className={episodeGridClass}
-                >
-                  {streamEps.map((ep, i) => (
-                    <MotionDiv
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Continue</p>
+                  <p className="mt-1 text-[13px] font-semibold text-(--color-text-primary)">
+                    Resume Ep {resumeLastEp}{streamEps[resumeIndex]?.title ? ` · ${streamEps[resumeIndex].title}` : ""}
+                  </p>
+                </button>
+              </MotionDiv>
+            )}
+            {streamEps.length > 0 && (
+              <div className="flex flex-col gap-1">
+                {streamEps.map((ep, i) => {
+                  const isResume = i === resumeIndex && resumeIndex >= 0;
+                  return (
+                    <button
                       key={ep.episodeId}
-                      variants={lifeSyncStaggerEpisodeGridItem}
+                      type="button"
+                      onMouseEnter={warmStreamCatalog}
+                      onFocus={warmStreamCatalog}
+                      onClick={() => openSeries(ep, i)}
+                      className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
+                        isResume
+                          ? "bg-primary/8 border border-primary/25 hover:bg-primary/12"
+                          : "border border-transparent hover:bg-(--color-surface-muted) hover:border-(--color-border-soft)"
+                      }`}
                     >
-                      <button
-                        type="button"
-                        onMouseEnter={warmStreamCatalog}
-                        onFocus={warmStreamCatalog}
-                        onClick={() => openSeries(ep, i)}
-                        className="group h-full w-full overflow-hidden rounded-[14px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--mx-color-fafafa)] text-left shadow-sm transition-all hover:border-[var(--mx-color-c6ff00)]/40 hover:shadow-md"
-                      >
-                        <div className="relative aspect-video w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
-                          {ep.thumbnailUrl || pic ? (
-                            <img
-                              src={ep.thumbnailUrl || pic}
-                              alt=""
-                              className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-[1.03]"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
-                              <svg
-                                className="h-8 w-8"
-                                fill="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </div>
-                          )}
-                          {ep.number != null && (
-                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[var(--mx-color-1d1d1f)]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
-                              E{ep.number}
-                            </span>
-                          )}
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] shadow-lg">
-                              <svg
-                                className="ml-0.5 h-4 w-4 text-[var(--mx-color-1d1d1f)]"
-                                fill="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-                        <div className="px-2 py-2">
-                          <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-[var(--mx-color-1d1d1f)]">
-                            {ep.title}
-                          </p>
-                        </div>
-                      </button>
-                    </MotionDiv>
-                  ))}
-                </MotionDiv>
-              ) : (
-                <MotionDiv
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={lifeSyncPageTransition}
-                  className={episodeGridClass}
-                >
-                  {streamEps.map((ep, i) => (
-                    <div key={ep.episodeId}>
-                      <button
-                        type="button"
-                        onMouseEnter={warmStreamCatalog}
-                        onFocus={warmStreamCatalog}
-                        onClick={() => openSeries(ep, i)}
-                        className="group h-full w-full overflow-hidden rounded-[14px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--mx-color-fafafa)] text-left shadow-sm transition-all hover:border-[var(--mx-color-c6ff00)]/40 hover:shadow-md"
-                      >
-                        <div className="relative aspect-video w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
-                          {ep.thumbnailUrl || pic ? (
-                            <img
-                              src={ep.thumbnailUrl || pic}
-                              alt=""
-                              className="h-full w-full object-cover opacity-90 transition-transform duration-300 group-hover:scale-[1.03]"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
-                              <svg
-                                className="h-8 w-8"
-                                fill="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </div>
-                          )}
-                          {ep.number != null && (
-                            <span className="absolute left-1.5 top-1.5 rounded-md bg-[var(--mx-color-1d1d1f)]/85 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white">
-                              E{ep.number}
-                            </span>
-                          )}
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/25 opacity-0 transition-opacity group-hover:opacity-100">
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] shadow-lg">
-                              <svg
-                                className="ml-0.5 h-4 w-4 text-[var(--mx-color-1d1d1f)]"
-                                fill="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
-                            </span>
-                          </div>
-                        </div>
-                        <div className="px-2 py-2">
-                          <p className="line-clamp-2 text-[10px] font-semibold leading-snug text-[var(--mx-color-1d1d1f)]">
-                            {ep.title}
-                          </p>
-                        </div>
-                      </button>
-                    </div>
-                  ))}
-                </MotionDiv>
-              )
-            ) : null}
-            {streamData && streamEps.length === 0 ? (
-              <p className="text-[12px] text-[var(--mx-color-86868b)]">
-                No playable episodes were found for this mirror.
-              </p>
-            ) : null}
-            {streamData === null ? (
-              <p className="text-[12px] text-[var(--mx-color-86868b)]">
-                We couldn’t find this title on the selected mirror. Try a different mirror.
-              </p>
-            ) : null}
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-(--color-surface-muted) text-[11px] font-bold tabular-nums text-(--color-text-secondary) group-hover:bg-primary group-hover:text-(--color-ink-strong) transition-colors">
+                        {ep.number}
+                      </span>
+                      <span className="min-w-0 flex-1 text-[12.5px] font-medium text-(--color-text-primary) line-clamp-1">
+                        {ep.title || `Episode ${ep.number}`}
+                      </span>
+                      {(ep.hasSub || ep.hasDub) && (
+                        <span className="flex shrink-0 gap-1">
+                          {ep.hasSub && <span className="rounded bg-(--color-surface-muted) px-1 py-0.5 text-[9px] font-bold text-(--color-text-secondary)">SUB</span>}
+                          {ep.hasDub && <span className="rounded bg-(--color-surface-muted) px-1 py-0.5 text-[9px] font-bold text-(--color-text-secondary)">DUB</span>}
+                        </span>
+                      )}
+                      <svg className="h-3.5 w-3.5 shrink-0 text-(--color-text-secondary) opacity-0 group-hover:opacity-100 transition-opacity" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {streamData && streamEps.length === 0 && <p className="text-[12px] text-(--color-text-secondary)">No playable episodes found for this title.</p>}
+            {streamData === null && <p className="text-[12px] text-(--color-text-secondary)">Couldn't find this title on the streaming provider.</p>}
           </MotionDiv>
         )}
       </AnimatePresence>
@@ -696,7 +658,7 @@ function DetailWatchSection({
   );
 }
 
-/** Parent uses `key={detailId}` so each open starts with `busy === true` and `data === null` without effect setState. */
+// ── Detail panel ───────────────────────────────────────────────────────────────
 function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview }) {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(true);
@@ -707,84 +669,51 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
   useEffect(() => {
     const ac = new AbortController();
     let cancelled = false;
-    lifesyncFetch(`/api/v1/anime/details/${animeId}?view=full`, { signal: ac.signal })
-      .then((next) => {
-        if (!cancelled) setData(next);
-      })
+    lifesyncFetch(`/api/v1/anime/stream/info/by-slug/${encodeURIComponent(animeId)}?view=full`, { signal: ac.signal })
+      .then((res) => { if (!cancelled) setData(res?.data ?? res ?? null); })
       .catch((err) => {
         if (err?.name === "AbortError") return;
-        if (!cancelled) setData(null);
-        if (!cancelled) {
-          setDetailError(
-            err?.message ||
-              "We couldn’t load this title right now. Check your connection and try again.",
-          );
-        }
+        if (!cancelled) { setData(null); setDetailError(err?.message || "We couldn't load this title right now."); }
       })
-      .finally(() => {
-        if (!cancelled) setBusy(false);
-      });
-    return () => {
-      cancelled = true;
-      ac.abort();
-    };
+      .finally(() => { if (!cancelled) setBusy(false); });
+    return () => { cancelled = true; ac.abort(); };
   }, [animeId, reloadTick]);
 
   const triggerReload = useCallback(() => {
-    // Avoid synchronous setState inside the effect body (React can warn about cascading renders).
-    // This runs on user action, and `key={detailId}` remount already resets initial state on open.
-    setBusy(true);
-    setDetailError("");
-    setData(null);
-    setReloadTick((n) => n + 1);
+    setBusy(true); setDetailError(""); setData(null); setReloadTick((n) => n + 1);
   }, []);
 
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose?.();
-    };
+    const onKey = (e) => { if (e.key === "Escape") onClose?.(); };
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
+    return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
   }, [onClose]);
 
-  const pic = data?.main_picture?.large || data?.main_picture?.medium;
-  const previewPic =
-    preview?.main_picture?.large || preview?.main_picture?.medium;
+  const pic = data?.poster || data?.image || data?.main_picture?.large || data?.main_picture?.medium;
+  const previewPic = preview?.poster || preview?.main_picture?.large;
   const heroPic = pic || previewPic;
   const description = data?.synopsis ? String(data.synopsis).trim() : "";
   const genres = Array.isArray(data?.genres) ? data.genres : [];
-  const showPreviewMeta = busy && preview && !data;
-  const malUrl = animeId ? `https://myanimelist.net/anime/${encodeURIComponent(String(animeId))}` : null;
-  const isDarkTheme =
-    typeof document !== "undefined" &&
-    document.documentElement?.dataset?.maxienTheme === "dark";
+  const related = Array.isArray(data?.related) ? data.related : [];
+  const isDarkTheme = typeof document !== "undefined" && document.documentElement?.dataset?.maxienTheme === "dark";
 
   const node = (
     <MotionDiv
-      className="fixed inset-0 z-[9998] flex h-dvh max-h-dvh w-full max-w-[100vw] min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-9998 flex h-dvh max-h-dvh w-full max-w-screen min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
       onClick={onClose}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={lifeSyncDetailOverlayFadeTransition}
     >
       <MotionDiv
         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={lifeSyncDetailBackdropFadeTransition}
       />
-
       <MotionDiv
-        layout="size"
-        layoutRoot
-        className="lifesync-anime-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-[var(--color-surface)] shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+        layout="size" layoutRoot
+        className="lifesync-anime-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-(--color-surface) shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         initial={lifeSyncDetailSheetEnterInitial}
         animate={lifeSyncDetailSheetEnterAnimate}
@@ -793,295 +722,207 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
       >
         {/* Hero */}
         <div className="relative shrink-0">
-          {heroPic ? (
+          {heroPic && (
             <>
               <div className="absolute inset-0 overflow-hidden">
-                <img
-                  src={heroPic}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
+                <img src={heroPic} alt="" className="h-full w-full object-cover" />
               </div>
               <div className="absolute inset-0 lifesync-detail-hero-fade" />
             </>
-          ) : (
-            <div className="absolute inset-0 lifesync-detail-hero-fallback" />
           )}
-
+          {!heroPic && <div className="absolute inset-0 lifesync-detail-hero-fallback" />}
           <button
-            type="button"
-            onClick={onClose}
-            className="absolute z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white/90 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white"
-            style={{
-              top: "0.75rem",
-              right: "0.75rem",
-            }}
-            aria-label="Close"
+            type="button" onClick={onClose}
+            className="absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white/90 backdrop-blur-sm transition-all hover:bg-black/60"
           >
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth="2"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
-
-          <div className="relative flex flex-col items-center gap-4 px-4 pb-4 pt-5 text-center sm:flex-row sm:items-end sm:gap-5 sm:px-6 sm:pt-5 sm:text-left">
+          <div className="relative flex flex-row items-end gap-4 px-5 pb-5 pt-5 sm:gap-5 sm:px-6">
             <MotionDiv
               layoutId={animePosterLayoutId(animeId)}
               transition={lifeSyncSharedLayoutTransitionProps}
-              className="w-24 shrink-0 overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)] shadow-lg ring-1 ring-black/10 sm:w-36"
+              className="w-[88px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted) shadow-xl ring-1 ring-black/15 sm:w-[120px]"
               style={{ aspectRatio: "2/3" }}
             >
               {heroPic ? (
-                <img
-                  src={heroPic}
-                  alt=""
-                  className="h-full w-full object-cover"
-                />
+                <img src={heroPic} alt="" className="h-full w-full object-cover" />
               ) : busy ? (
-                <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center gap-1.5">
-                  <span
-                    className="lifesync-dot-bounce h-2 w-2 rounded-full bg-[var(--mx-color-c6ff00)]"
-                    aria-hidden
-                  />
-                  <span
-                    className="lifesync-dot-bounce lifesync-dot-bounce-delay-1 h-2 w-2 rounded-full bg-[var(--mx-color-c6ff00)]"
-                    aria-hidden
-                  />
-                  <span
-                    className="lifesync-dot-bounce lifesync-dot-bounce-delay-2 h-2 w-2 rounded-full bg-[var(--mx-color-c6ff00)]"
-                    aria-hidden
-                  />
+                <div className="flex h-full min-h-28 w-full items-center justify-center gap-1">
+                  <span className="lifesync-dot-bounce h-1.5 w-1.5 rounded-full bg-primary" />
+                  <span className="lifesync-dot-bounce lifesync-dot-bounce-delay-1 h-1.5 w-1.5 rounded-full bg-primary" />
+                  <span className="lifesync-dot-bounce lifesync-dot-bounce-delay-2 h-1.5 w-1.5 rounded-full bg-primary" />
                 </div>
               ) : (
-                <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center">
-                  <svg
-                    className="h-10 w-10 text-[var(--mx-color-86868b)]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75"
-                    />
+                <div className="flex h-full min-h-28 w-full items-center justify-center text-(--color-text-secondary)">
+                  <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25M3.375 19.5a1.125 1.125 0 01-1.125-1.125V5.625" />
                   </svg>
                 </div>
               )}
             </MotionDiv>
-
-            <div className="flex w-full min-w-0 flex-1 flex-col justify-end pb-1">
-              <h2 className="wrap-anywhere line-clamp-4 text-[17px] font-bold leading-tight text-[var(--mx-color-1d1d1f)] sm:line-clamp-3 sm:text-[22px]">
-                {busy && !preview?.title ? (
-                  <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[var(--mx-color-ebebed)]" />
-                ) : data?.title ? (
-                  data.title
-                ) : preview?.title ? (
-                  preview.title
-                ) : !busy ? (
-                "Couldn\u2019t load details"
-                ) : (
-                  <span className="inline-block h-6 w-[min(100%,12rem)] animate-pulse rounded-lg bg-[var(--mx-color-ebebed)]" />
-                )}
+            <div className="min-w-0 flex-1 pb-1">
+              <h2 className="wrap-anywhere line-clamp-3 text-[17px] font-bold leading-tight text-white drop-shadow sm:text-[20px]">
+                {data?.title || preview?.title || (busy ? "" : "Couldn't load details")}
+                {busy && !preview?.title && <span className="inline-block h-5 w-48 animate-pulse rounded-md bg-white/20" />}
               </h2>
-
-              {showPreviewMeta ? (
-                <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                  {preview.mean != null && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mx-color-c6ff00)]/20 px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-1d1d1f)]">
-                      <svg
-                        className="h-3 w-3 text-amber-500 fill-amber-500"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                      {preview.mean}
-                    </span>
-                  )}
-                  {preview.num_episodes != null && (
-                    <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium text-[var(--mx-color-86868b)]">
-                      {preview.num_episodes} ep
-                    </span>
-                  )}
-                  {preview.media_type && (
-                    <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium uppercase text-[var(--mx-color-86868b)]">
-                      {preview.media_type}
-                    </span>
-                  )}
-                </div>
-              ) : null}
-
-              {!busy && data ? (
-                <>
-                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                    {data.mean != null && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--mx-color-c6ff00)]/20 px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-1d1d1f)]">
-                        <svg
-                          className="h-3 w-3 text-amber-500 fill-amber-500"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        {data.mean}
-                      </span>
-                    )}
-                    {data.status && (
-                      <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--mx-color-86868b)]">
-                        {String(data.status).replace(/_/g, " ")}
-                      </span>
-                    )}
-                    {data.num_episodes != null && (
-                      <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium text-[var(--mx-color-86868b)]">
-                        {data.num_episodes} ep
-                      </span>
-                    )}
-                    {data.media_type && (
-                      <span className="rounded-full bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 text-[10px] font-medium uppercase text-[var(--mx-color-86868b)]">
-                        {data.media_type}
-                      </span>
-                    )}
-                  </div>
-
-                  {genres.length > 0 && (
-                    <div className="mt-2.5 flex flex-wrap justify-center gap-1 sm:justify-start">
-                      {genres.map((g) => (
-                        <span
-                          key={g.id || g.name}
-                          className="rounded-full bg-[var(--mx-color-c6ff00)]/10 px-2 py-0.5 text-[10px] font-medium text-[var(--mx-color-1d1d1f)]"
-                        >
-                          {g.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : null}
+              {data?.altTitle && data.altTitle !== data.title && (
+                <p className="mt-0.5 line-clamp-1 text-[11px] text-white/65">{data.altTitle}</p>
+              )}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {(data?.type || preview?.type) && (
+                  <span className="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-white/90 backdrop-blur-sm">{data?.type || preview?.type}</span>
+                )}
+                {data?.status && (
+                  <span className="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-sm">{data.status}</span>
+                )}
+                {data?.release && (
+                  <span className="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-sm">{data.release}</span>
+                )}
+                {data?.quality && (
+                  <span className="rounded-md bg-primary/80 px-2 py-0.5 text-[10px] font-bold text-(--color-ink-strong) backdrop-blur-sm">{data.quality}</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
         {/* Body */}
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {data && !busy ? (
-            <MotionDiv
-              key={String(animeId)}
-              className="min-h-0"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={lifeSyncDetailAnimeContentRevealTransition}
-            >
-              {(description || data.my_list_status) && (
-                <div className="border-b border-[var(--mx-color-f0f0f0)] px-5 py-3 sm:px-6">
-                  {description && (
-                    <>
-                      <p
-                        className={`text-[12px] leading-relaxed text-[var(--mx-color-424245)] ${descExpanded ? "" : "line-clamp-3"}`}
-                      >
-                        {description}
-                      </p>
-                      {description.length > 200 && (
-                        <button
-                          type="button"
-                          onClick={() => setDescExpanded((v) => !v)}
-                          className="mt-1 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] hover:underline"
-                        >
-                          {descExpanded ? "Show less" : "Show more"}
-                        </button>
-                      )}
-                    </>
-                  )}
-
-                  {data.my_list_status && (
-                    <div className={`${description ? "mt-3" : ""} rounded-2xl bg-[var(--mx-color-f5f5f7)] p-4`}>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)]">
-                        Your List Status
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
-                        <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-0.5 font-semibold capitalize text-[var(--mx-color-1d1d1f)]">
-                          {(data.my_list_status.status || "").replace(/_/g, " ")}
-                        </span>
-                        {data.my_list_status.score > 0 && (
-                          <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-0.5 font-semibold text-[var(--mx-color-1d1d1f)]">
-                            Score: {data.my_list_status.score}/10
-                          </span>
-                        )}
-                        {data.my_list_status.num_episodes_watched != null && (
-                          <span className="rounded-full border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-2.5 py-0.5 font-medium text-[var(--mx-color-86868b)]">
-                            {data.my_list_status.num_episodes_watched} ep watched
-                          </span>
-                        )}
-                      </div>
-                    </div>
+          {busy && !data ? (
+            <div className="px-5 py-5 sm:px-6">
+              <LifesyncTextLinesSkeleton lines={3} dark={isDarkTheme} />
+              <div className="mt-5"><DetailWatchGridSkeleton count={6} dark={isDarkTheme} /></div>
+            </div>
+          ) : !busy && !data ? (
+            <div className="px-5 py-8 sm:px-6">
+              <div className="rounded-2xl bg-(--color-surface-muted) px-4 py-5 text-center">
+                <p className="text-[13px] font-semibold text-(--color-text-primary)">Couldn't load this title</p>
+                <p className="mt-1 text-[12px] text-(--color-text-secondary)">{detailError || "Try again in a moment."}</p>
+                <button type="button" onClick={triggerReload} className="mt-4 rounded-xl bg-primary px-4 py-2 text-[12px] font-bold text-(--color-ink-strong)">
+                  Try again
+                </button>
+              </div>
+            </div>
+          ) : data ? (
+            <MotionDiv key={String(animeId)} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncDetailAnimeContentRevealTransition}>
+              {description && (
+                <div className="border-b border-(--color-border-soft) px-5 py-4 sm:px-6">
+                  <p className={`text-[12.5px] leading-relaxed text-(--color-text-secondary) ${descExpanded ? "" : "line-clamp-3"}`}>{description}</p>
+                  {description.length > 200 && (
+                    <button type="button" onClick={() => setDescExpanded((v) => !v)} className="mt-1.5 text-[11px] font-semibold text-(--color-text-secondary) hover:text-(--color-text-primary)">
+                      {descExpanded ? "Show less" : "Show more"}
+                    </button>
                   )}
                 </div>
               )}
-
+              <div className="border-b border-(--color-border-soft) px-5 py-4 sm:px-6">
+                <p className="mb-3 text-[9.5px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Anime Info</p>
+                <div className="flex flex-col gap-2">
+                  {data.japanese && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Japanese</span>
+                      <span className="text-[11px] font-medium text-(--color-text-primary) wrap-break-word min-w-0">{data.japanese}</span>
+                    </div>
+                  )}
+                  {Array.isArray(data.synonyms) && data.synonyms.length > 0 && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Synonyms</span>
+                      <span className="text-[11px] text-(--color-text-secondary) wrap-break-word min-w-0">{data.synonyms.join(", ")}</span>
+                    </div>
+                  )}
+                  {data.type && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Type</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.type}</span>
+                    </div>
+                  )}
+                  {data.status && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Status</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.status}</span>
+                    </div>
+                  )}
+                  {data.release && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Release</span>
+                      <span className="text-[11px] font-medium text-(--color-text-primary)">{data.release}</span>
+                    </div>
+                  )}
+                  {data.duration && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Duration</span>
+                      <span className="text-[11px] font-medium text-(--color-text-primary)">{data.duration}</span>
+                    </div>
+                  )}
+                  {data.quality && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Quality</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.quality}</span>
+                    </div>
+                  )}
+                  {(data.subCount != null || data.dubCount != null) && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Episodes</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary)">
+                        {[data.subCount != null && `SUB ${data.subCount}`, data.dubCount != null && `DUB ${data.dubCount}`].filter(Boolean).join(" · ")}
+                      </span>
+                    </div>
+                  )}
+                  {data.studios && data.studios !== "?" && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Studios</span>
+                      <span className="text-[11px] font-medium text-(--color-text-primary)">{data.studios}</span>
+                    </div>
+                  )}
+                </div>
+                {genres.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {genres.map((g, i) => (
+                      <span key={g?.name || g || i} className="rounded-full border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-0.5 text-[10.5px] font-medium text-(--color-text-secondary)">
+                        {g?.name || g}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="px-5 py-4 sm:px-6">
                 <DetailWatchSection
                   key={`${animeId}-${animeStreamAudio}`}
                   animeId={animeId}
-                  malTitle={data.title}
+                  animeTitle={data.title || data.name || ""}
                   pic={pic}
-                  malDetail={data}
                   animeStreamAudio={animeStreamAudio}
                   onPlayStream={onPlayStream}
                 />
               </div>
+              {related.length > 0 && (
+                <div className="border-t border-(--color-border-soft) px-5 pb-6 pt-4 sm:px-6">
+                  <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Related</p>
+                  <div className="flex flex-col gap-1.5">
+                    {related.slice(0, 8).map((r, i) => (
+                      <div key={r.slug || r.title || i} className="flex items-center gap-3 rounded-xl bg-(--color-surface-muted) border border-(--color-border-soft) px-3 py-2.5">
+                        {r.poster && <img src={r.poster} alt="" className="h-10 w-7 shrink-0 rounded-md object-cover" loading="lazy" />}
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-1 text-[12px] font-semibold text-(--color-text-primary)">{r.title}</p>
+                          {r.relation && <p className="text-[10px] capitalize text-(--color-text-secondary)">{r.relation}</p>}
+                        </div>
+                        {r.slug && (
+                          <button
+                            type="button"
+                            onClick={() => onPlayStream?.({ animeId: r.slug, title: r.title, episodes: [] }, { episodeId: null }, 0)}
+                            className="shrink-0 rounded-lg bg-(--color-surface-muted) px-2.5 py-1.5 text-[10px] font-semibold text-(--color-text-primary) transition hover:bg-(--color-border-soft)"
+                          >
+                            View
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </MotionDiv>
-          ) : !busy && !data ? (
-            <div className="px-5 py-8 sm:px-6">
-              <div className="lifesync-detail-status-card rounded-2xl  bg-[var(--mx-color-fafafa)] px-4 py-5 text-center">
-                <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">
-                  Couldn’t load this title
-                </p>
-                <p className="mt-1 text-[12px] text-[var(--mx-color-86868b)]">
-                  {detailError || "Try again in a moment, or open it on MyAnimeList."}
-                </p>
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={triggerReload}
-                    className="min-h-[40px] rounded-xl bg-[var(--mx-color-c6ff00)] px-4 text-[12px] font-bold text-[var(--mx-color-1a1628)] shadow-sm"
-                  >
-                    Try again
-                  </button>
-                  {malUrl ? (
-                    <a
-                      href={malUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="min-h-[40px] rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-4 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition hover:bg-[var(--mx-color-fafafa)]"
-                    >
-                      Open on MAL
-                    </a>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          ) : busy ? (
-            <div className="px-5 py-6 sm:px-6">
-              <div className="lifesync-detail-status-card rounded-2xl bg-[var(--color-surface)] px-4 py-5">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)]">
-                  Loading details
-                </p>
-                <div className="mt-3">
-                  <LifesyncTextLinesSkeleton lines={3} dark={isDarkTheme} />
-                </div>
-                <div className="mt-4">
-                  <DetailWatchGridSkeleton count={6} dark={isDarkTheme} />
-                </div>
-              </div>
-            </div>
           ) : null}
         </div>
       </MotionDiv>
@@ -1091,64 +932,49 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
   return createPortal(node, document.body);
 }
 
+// ── Main page ──────────────────────────────────────────────────────────────────
 export default function LifeSyncAnime() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isLifeSyncConnected, lifeSyncUser, refreshLifeSyncMe } = useLifeSync();
-  /** Server applies MAL `nsfw` from this preference; listed in deps so lists refetch after toggling in Settings. */
-  const nsfwContentEnabled = Boolean(
-    lifeSyncUser?.preferences?.nsfwContentEnabled,
-  );
+  const nsfwContentEnabled = Boolean(lifeSyncUser?.preferences?.nsfwContentEnabled);
 
   const basePath = "/dashboard/lifesync/anime/anime";
   const route = useMemo(() => {
-    const rel = location.pathname.startsWith(basePath)
-      ? location.pathname.slice(basePath.length)
-      : "";
+    const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : "";
     const parts = rel.split("/").filter(Boolean);
-
-    const tabId = parts[0] || "seasonal";
-    const allowedTabs = new Set(["seasonal", "ranking", "mylist", "search"]);
-    const tab = allowedTabs.has(tabId) ? tabId : "seasonal";
-
+    const tabId = parts[0] || "home";
+    const allowedTabs = new Set(["home", "ongoing", "latest", "browse", "search"]);
+    const tab = allowedTabs.has(tabId) ? tabId : "home";
     let page = 1;
     const pageIdx = parts.indexOf("page");
     if (pageIdx >= 0 && parts[pageIdx + 1]) page = clampPage(parts[pageIdx + 1]);
-
     const detailIdx = parts.indexOf("detail");
     const detailAnimeId = detailIdx >= 0 ? parts[detailIdx + 1] || null : null;
-
     const watchIdx = parts.indexOf("watch");
     const watchAnimeId = watchIdx >= 0 ? parts[watchIdx + 1] || null : null;
-    const watchEpisodeIndexRaw =
-      watchIdx >= 0 ? parts[watchIdx + 2] || null : null;
-    const watchEpisodeIndex =
-      watchEpisodeIndexRaw != null ? clampPage(watchEpisodeIndexRaw) - 1 : null;
-
-    return {
-      tab,
-      page,
-      detailAnimeId,
-      watchAnimeId,
-      watchEpisodeIndex,
-      parts,
-    };
+    const watchEpisodeIndexRaw = watchIdx >= 0 ? parts[watchIdx + 2] || null : null;
+    const watchEpisodeIndex = watchEpisodeIndexRaw != null ? clampPage(watchEpisodeIndexRaw) - 1 : null;
+    return { tab, page, detailAnimeId, watchAnimeId, watchEpisodeIndex, parts };
   }, [location.pathname]);
-  const [tab, setTab] = useState("seasonal");
-  const [seasonalYear, setSeasonalYear] = useState(
-    () => currentMalSeason().year,
-  );
-  const [seasonalSeason, setSeasonalSeason] = useState(
-    () => currentMalSeason().season,
-  );
-  const [seasonal, setSeasonal] = useState([]);
-  const [seasonalPage, setSeasonalPage] = useState(1);
-  const [seasonalHasNext, setSeasonalHasNext] = useState(false);
-  const [rankingType, setRankingType] = useState("all");
-  const [ranking, setRanking] = useState([]);
-  const [rankingPage, setRankingPage] = useState(1);
-  const [rankingHasNext, setRankingHasNext] = useState(false);
-  const [myList, setMyList] = useState([]);
+
+  const [tab, setTab] = useState("home");
+  const [homeData, setHomeData] = useState(null);
+  const [homeBusy, setHomeBusy] = useState(false);
+  const [ongoingItems, setOngoingItems] = useState([]);
+  const [ongoingPage, setOngoingPage] = useState(1);
+  const [ongoingHasNext, setOngoingHasNext] = useState(false);
+  const [latestItems, setLatestItems] = useState([]);
+  const [latestPage, setLatestPage] = useState(1);
+  const [latestHasNext, setLatestHasNext] = useState(false);
+  const [browseItems, setBrowseItems] = useState([]);
+  const [browsePage, setBrowsePage] = useState(1);
+  const [browseHasNext, setBrowseHasNext] = useState(false);
+  const [browseType, setBrowseType] = useState("");
+  const [browseStatus, setBrowseStatus] = useState("");
+  const [browseLanguage, setBrowseLanguage] = useState("");
+  const [browseSort, setBrowseSort] = useState("");
+  const [browseGenres, setBrowseGenres] = useState([]);
   const [searchQ, setSearchQ] = useState("");
   const [searchCommittedQ, setSearchCommittedQ] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -1156,120 +982,64 @@ export default function LifeSyncAnime() {
   const [searchHasNext, setSearchHasNext] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState("");
-  const [oauthMsg, setOauthMsg] = useState("");
-  const oauthMsgTimerRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [detailId, setDetailId] = useState(null);
 
-  const streamAudioType = getAnimeStreamAudio(lifeSyncUser?.preferences);
-  const malLinked = Boolean(
-    lifeSyncUser?.integrations?.mal || lifeSyncUser?.integrations?.malUsername,
-  );
+  // Layout — seeded from server pref, persisted on toggle
+  const [layout, setLayoutState] = useState(() => getAnimeLibraryLayout(null));
+  const layoutSaveTimer = useRef(null);
 
-  const scheduleClearOauthMsg = useCallback((ms) => {
-    if (oauthMsgTimerRef.current != null) {
-      window.clearTimeout(oauthMsgTimerRef.current);
-      oauthMsgTimerRef.current = null;
-    }
-    oauthMsgTimerRef.current = window.setTimeout(() => {
-      oauthMsgTimerRef.current = null;
-      setOauthMsg("");
-    }, ms);
+  useEffect(() => {
+    setLayoutState(getAnimeLibraryLayout(lifeSyncUser?.preferences));
+  }, [lifeSyncUser?.preferences?.animeLibraryLayout]);
+
+  const setLayout = useCallback((next) => {
+    setLayoutState(next);
+    if (layoutSaveTimer.current) clearTimeout(layoutSaveTimer.current);
+    layoutSaveTimer.current = setTimeout(() => {
+      lifesyncPatchPreferences({ animeLibraryLayout: next }).catch(() => {});
+    }, 600);
   }, []);
 
-  useEffect(
-    () => () => {
-      if (oauthMsgTimerRef.current != null) {
-        window.clearTimeout(oauthMsgTimerRef.current);
-        oauthMsgTimerRef.current = null;
-      }
-    },
-    [],
-  );
+  useEffect(() => () => { if (layoutSaveTimer.current) clearTimeout(layoutSaveTimer.current); }, []);
 
+  const streamAudioType = getAnimeStreamAudio(lifeSyncUser?.preferences);
   const listFetchMountedRef = useRef(true);
   useEffect(() => {
     listFetchMountedRef.current = true;
-    return () => {
-      listFetchMountedRef.current = false;
-    };
+    return () => { listFetchMountedRef.current = false; };
   }, []);
 
-  const listPath = useMemo(() => {
-    const t = route.tab === "mylist" && !malLinked ? "seasonal" : route.tab;
-    const p = route.page;
-    return `${basePath}/${t}/page/${p}${location.search || ""}`;
-  }, [basePath, location.search, malLinked, route.page, route.tab]);
-
-  const goToList = useCallback(
-    (opts = {}) => {
-      navigate(listPath, {
-        replace: Boolean(opts.replace),
-        state: null,
-      });
-    },
-    [navigate, listPath],
+  const listPath = useMemo(
+    () => `${basePath}/${route.tab}/page/${route.page}${location.search || ""}`,
+    [basePath, location.search, route.page, route.tab],
   );
 
-  const goToTab = useCallback(
-    (t) => {
-      const nextTab = t === "mylist" && !malLinked ? "seasonal" : t;
-      navigate(`${basePath}/${nextTab}/page/1${location.search || ""}`);
-    },
-    [basePath, location.search, malLinked, navigate],
-  );
+  const goToList = useCallback((opts = {}) => navigate(listPath, { replace: Boolean(opts.replace), state: null }), [navigate, listPath]);
+  const goToTab = useCallback((t) => navigate(`${basePath}/${t}/page/1${location.search || ""}`), [basePath, location.search, navigate]);
+  const goToPage = useCallback((p) => navigate(`${basePath}/${route.tab}/page/${clampPage(p)}${location.search || ""}`), [basePath, location.search, navigate, route.tab]);
 
-  const goToPage = useCallback(
-    (p) => {
-      navigate(
-        `${basePath}/${route.tab}/page/${clampPage(p)}${location.search || ""}`,
-      );
-    },
-    [basePath, location.search, navigate, route.tab],
-  );
-
-  const goToDetail = useCallback(
-    (animeOrId) => {
-      const id =
-        animeOrId && typeof animeOrId === "object"
-          ? animeOrId.id
-          : animeOrId;
-      if (id == null) return;
-      const preview = animeDetailPreviewFromNode(
-        animeOrId && typeof animeOrId === "object" ? animeOrId : null,
-      );
-      navigate(
-        `${listPath.replace(location.search || "", "")}/detail/${encodeURIComponent(String(id))}${location.search || ""}`,
-        preview ? { state: { animeDetailPreview: preview } } : {},
-      );
-    },
-    [navigate, listPath, location.search],
-  );
+  const goToDetail = useCallback((animeOrId) => {
+    const id = animeOrId && typeof animeOrId === "object" ? (animeOrId.slug || animeOrId.id) : animeOrId;
+    if (!id) return;
+    const preview = animeDetailPreviewFromNode(animeOrId && typeof animeOrId === "object" ? animeOrId : null);
+    navigate(
+      `${listPath.replace(location.search || "", "")}/detail/${encodeURIComponent(String(id))}${location.search || ""}`,
+      preview ? { state: { animeDetailPreview: preview } } : {},
+    );
+  }, [navigate, listPath, location.search]);
 
   useEffect(() => {
-    const desiredTab = route.tab === "mylist" && !malLinked ? "seasonal" : route.tab;
-    if (tab !== desiredTab) setTab(desiredTab);
-    // Keep per-tab pagination aligned with URL.
-    if (desiredTab === "seasonal" && seasonalPage !== route.page) setSeasonalPage(route.page);
-    if (desiredTab === "ranking" && rankingPage !== route.page) setRankingPage(route.page);
-    if (desiredTab === "search" && searchPage !== route.page) setSearchPage(route.page);
-    // mylist has no pagination currently.
-  }, [
-    malLinked,
-    rankingPage,
-    route.page,
-    route.tab,
-    searchPage,
-    seasonalPage,
-    tab,
-  ]);
+    if (tab !== route.tab) setTab(route.tab);
+    if (route.tab === "ongoing" && ongoingPage !== route.page) setOngoingPage(route.page);
+    if (route.tab === "latest" && latestPage !== route.page) setLatestPage(route.page);
+    if (route.tab === "browse" && browsePage !== route.page) setBrowsePage(route.page);
+    if (route.tab === "search" && searchPage !== route.page) setSearchPage(route.page);
+  }, [route.page, route.tab, ongoingPage, latestPage, browsePage, searchPage, tab]);
 
   useEffect(() => {
-    // Canonicalize base route to include tab + page.
     if (location.pathname === basePath || location.pathname === `${basePath}/`) {
-      navigate(`${basePath}/seasonal/page/1${location.search || ""}`, {
-        replace: true,
-      });
+      navigate(`${basePath}/home/page/1${location.search || ""}`, { replace: true });
     }
   }, [basePath, location.pathname, location.search, navigate]);
 
@@ -1277,19 +1047,12 @@ export default function LifeSyncAnime() {
     if (route.tab !== "search") return;
     const q = new URLSearchParams(location.search || "").get("q") || "";
     const next = q.trim();
-    if (next && next !== searchCommittedQ) {
-      setSearchCommittedQ(next);
-      setSearchQ(next);
-    }
+    if (next && next !== searchCommittedQ) { setSearchCommittedQ(next); setSearchQ(next); }
   }, [location.search, route.tab, searchCommittedQ]);
 
   useEffect(() => {
-    // Route-controlled detail overlay.
-    if (route.detailAnimeId) {
-      if (detailId !== route.detailAnimeId) setDetailId(route.detailAnimeId);
-    } else if (detailId) {
-      setDetailId(null);
-    }
+    if (route.detailAnimeId) { if (detailId !== route.detailAnimeId) setDetailId(route.detailAnimeId); }
+    else if (detailId) setDetailId(null);
   }, [detailId, route.detailAnimeId]);
 
   const detailPreview = useMemo(() => {
@@ -1299,324 +1062,132 @@ export default function LifeSyncAnime() {
     return raw;
   }, [location.state?.animeDetailPreview, route.detailAnimeId]);
 
-  const resolveAnimeStream = useCallback(
-    async (ep, audioOverride, seriesMalId, mirrorId) => {
-      const episodeId = ep?.episodeId;
-      const base = {
-        title: ep?.title || "Episode",
-        embedUrl: "",
-        watchUrl: "",
-        videoUrl: null,
-        iframeUrl: null,
-        textTracks: [],
-        mirrors: [],
-        selectedMirrorId: null,
-        selectedMirrorLabel: null,
-        resolving: false,
-      };
-      if (!episodeId) return base;
-      try {
-        const audio =
-          audioOverride === "dub" || audioOverride === "sub"
-            ? audioOverride
-            : streamAudioType === "dub"
-              ? "dub"
-              : "sub";
-        const type = audio === "dub" ? "dub" : "sub";
-        const malQ =
-          seriesMalId != null &&
-          String(seriesMalId).trim() !== "" &&
-          /^\d+$/.test(String(seriesMalId).trim())
-            ? `&malId=${encodeURIComponent(String(seriesMalId).trim())}`
-            : "";
-        const mirrorQ =
-          mirrorId != null && String(mirrorId).trim() !== ""
-            ? `&server=${encodeURIComponent(String(mirrorId).trim())}`
-            : "";
-        const pack = await lifesyncFetch(
-          `/api/v1/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${malQ}${mirrorQ}&view=full`,
-        );
-        const apiBase = getLifesyncApiBase();
-        const iframeFromPack =
-          typeof pack.iframeUrl === "string" &&
-          /^https?:\/\//i.test(pack.iframeUrl)
-            ? pack.iframeUrl
-            : null;
-        if (iframeFromPack) {
-          return {
-            ...base,
-            title: ep.title || base.title,
-            iframeUrl: iframeFromPack,
-            textTracks: [],
-            mirrors: pack?.streamMeta?.mirrors || [],
-            selectedMirrorId: pack?.streamMeta?.selectedMirrorId ?? null,
-            selectedMirrorLabel: pack?.streamMeta?.selectedMirrorLabel ?? null,
-            provider: pack?.streamMeta?.provider ?? null,
-          };
-        }
-        const sources = Array.isArray(pack.sources) ? pack.sources : [];
-        const preferIframe = isIOSDevice();
-        const iframeSrc = sources.find(
-          (s) =>
-            s &&
-            String(s.kind || "").toLowerCase() === "iframe" &&
-            s.url,
-        );
-        if (iframeSrc?.url) {
-          const u = String(iframeSrc.url).startsWith("http")
-            ? iframeSrc.url
-            : `${apiBase}${iframeSrc.url}`;
-          return {
-            ...base,
-            title: ep.title || base.title,
-            iframeUrl: u,
-            textTracks: [],
-            mirrors: pack?.streamMeta?.mirrors || [],
-            selectedMirrorId: pack?.streamMeta?.selectedMirrorId ?? null,
-            selectedMirrorLabel: pack?.streamMeta?.selectedMirrorLabel ?? null,
-            provider: pack?.streamMeta?.provider ?? null,
-          };
-        }
-        const first = preferIframe
-          ? sources.find((s) => s.kind === "iframe") ||
-            sources.find((s) => s.kind === "hls") ||
-            sources.find((s) => s.kind === "mp4") ||
-            sources[0]
-          : sources.find((s) => s.kind === "hls") ||
-            sources.find((s) => s.kind === "mp4") ||
-            sources[0];
-        if (!first?.url) return base;
-        const url = String(first.url).startsWith("http")
-          ? first.url
-          : `${apiBase}${first.url}`;
-        const rawSubs = Array.isArray(pack.subtitles) ? pack.subtitles : [];
-        const textTracks = rawSubs.map((s, i) => ({
-          src: String(s.url || "").startsWith("http")
-            ? s.url
-            : `${apiBase}${s.url}`,
-          label: s.label || `Subtitles ${i + 1}`,
-          srclang: s.lang || "und",
-          default: i === 0,
-        }));
-        return {
-          ...base,
-          title: ep.title || base.title,
-          videoUrl: url,
-          textTracks,
-          mirrors: pack?.streamMeta?.mirrors || [],
-          selectedMirrorId: pack?.streamMeta?.selectedMirrorId ?? null,
-          selectedMirrorLabel: pack?.streamMeta?.selectedMirrorLabel ?? null,
-          provider: pack?.streamMeta?.provider ?? null,
-        };
-      } catch {
-        return { ...base, title: ep.title || base.title };
+  const resolveAnimeStream = useCallback(async (ep, audioOverride, animeId, mirrorId) => {
+    const episodeId = ep?.episodeId;
+    const base = { title: ep?.title || "Episode", embedUrl: "", watchUrl: "", videoUrl: null, iframeUrl: null, textTracks: [], mirrors: [], selectedMirrorId: null, selectedMirrorLabel: null, resolving: false };
+    if (!episodeId) return base;
+    try {
+      const audio = audioOverride === "dub" || audioOverride === "sub" ? audioOverride : streamAudioType === "dub" ? "dub" : "sub";
+      const type = audio === "dub" ? "dub" : "sub";
+      const mirrorQ = mirrorId != null && String(mirrorId).trim() ? `&server=${encodeURIComponent(String(mirrorId).trim())}` : "";
+      const pack = await lifesyncFetch(`/api/v1/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${mirrorQ}&view=full`);
+      const apiBase = getLifesyncApiBase();
+      const iframeFromPack = typeof pack.iframeUrl === "string" && /^https?:\/\//i.test(pack.iframeUrl) ? pack.iframeUrl : null;
+      if (iframeFromPack) return { ...base, title: ep.title || base.title, iframeUrl: iframeFromPack, textTracks: [], mirrors: pack?.streamMeta?.mirrors || [], selectedMirrorId: pack?.streamMeta?.selectedMirrorId ?? null, selectedMirrorLabel: pack?.streamMeta?.selectedMirrorLabel ?? null, provider: pack?.streamMeta?.provider ?? null };
+      const sources = Array.isArray(pack.sources) ? pack.sources : [];
+      const preferIframe = isIOSDevice();
+      const iframeSrc = sources.find((s) => s && String(s.kind || "").toLowerCase() === "iframe" && s.url);
+      if (iframeSrc?.url) {
+        const u = String(iframeSrc.url).startsWith("http") ? iframeSrc.url : `${apiBase}${iframeSrc.url}`;
+        return { ...base, title: ep.title || base.title, iframeUrl: u, textTracks: [], mirrors: pack?.streamMeta?.mirrors || [], selectedMirrorId: pack?.streamMeta?.selectedMirrorId ?? null, selectedMirrorLabel: pack?.streamMeta?.selectedMirrorLabel ?? null, provider: pack?.streamMeta?.provider ?? null };
       }
-    },
-    [streamAudioType],
-  );
+      const first = preferIframe
+        ? sources.find((s) => s.kind === "iframe") || sources.find((s) => s.kind === "hls") || sources.find((s) => s.kind === "mp4") || sources[0]
+        : sources.find((s) => s.kind === "hls") || sources.find((s) => s.kind === "mp4") || sources[0];
+      if (!first?.url) return base;
+      const url = String(first.url).startsWith("http") ? first.url : `${apiBase}${first.url}`;
+      const rawSubs = Array.isArray(pack.subtitles) ? pack.subtitles : [];
+      const textTracks = rawSubs.map((s, i) => ({ src: String(s.url || "").startsWith("http") ? s.url : `${apiBase}${s.url}`, label: s.label || `Subtitles ${i + 1}`, srclang: s.lang || "und", default: i === 0 }));
+      return { ...base, title: ep.title || base.title, videoUrl: url, textTracks, mirrors: pack?.streamMeta?.mirrors || [], selectedMirrorId: pack?.streamMeta?.selectedMirrorId ?? null, selectedMirrorLabel: pack?.streamMeta?.selectedMirrorLabel ?? null, provider: pack?.streamMeta?.provider ?? null };
+    } catch { return { ...base, title: ep.title || base.title }; }
+  }, [streamAudioType]);
 
-  const playEpisode = useCallback(
-    async (series, ep, epIndex) => {
-      if (!series?.malId || !ep?.episodeId) return;
-      const resolved = await resolveAnimeStream(
-        ep,
-        undefined,
-        series.malId,
-        null,
-      );
-      if (!listFetchMountedRef.current) return;
-      const handoffId = stashAnimeWatchHandoff({
-        malId: String(series.malId),
-        episodeIndex: epIndex,
-        anime: series.malDetail || null,
-        episodes: Array.isArray(series.episodes) ? series.episodes : [],
-        stream: { ...resolved, resolving: false },
-      });
-      void fetchStreamInfoByMalWithCache(String(series.malId), lifesyncFetch, undefined, {
-        title: String(series?.title || ''),
-      })
-        .then((body) => {
-          if (body?.data != null)
-            writeLifesyncStreamCatalogByMal(series.malId, body);
-        })
-        .catch(() => {});
-      const ep1 = clampPage(epIndex + 1);
-      const fromPath = `${listPath.replace(location.search || "", "")}${location.search || ""}`;
-      const target = `/dashboard/lifesync/anime/anime/watch/${encodeURIComponent(String(series.malId))}/${ep1}`;
-      const nextState = { from: fromPath, handoffId, title: String(series?.title || '') };
-      const go = () => navigate(target, { state: nextState });
-      if (typeof document !== "undefined" && document.startViewTransition) {
-        document.startViewTransition(() => {
-          go();
-        });
-      } else {
-        go();
-      }
-    },
-    [listPath, location.search, navigate, resolveAnimeStream],
-  );
+  const playEpisode = useCallback(async (series, ep, epIndex) => {
+    if (!series?.animeId || !ep?.episodeId) return;
+    const resolved = await resolveAnimeStream(ep, undefined, series.animeId, null);
+    if (!listFetchMountedRef.current) return;
+    const handoffId = stashAnimeWatchHandoff({ animeId: String(series.animeId), episodeIndex: epIndex, anime: series.animeDetail || null, episodes: Array.isArray(series.episodes) ? series.episodes : [], stream: { ...resolved, resolving: false } });
+    void fetchStreamInfoBySlugWithCache(String(series.animeId), lifesyncFetch, undefined, { title: String(series?.title || "") })
+      .then((body) => { if (body?.data != null) writeLifesyncStreamCatalogBySlug(series.animeId, body); })
+      .catch(() => {});
+    const ep1 = clampPage(epIndex + 1);
+    const fromPath = `${listPath.replace(location.search || "", "")}${location.search || ""}`;
+    const target = `/dashboard/lifesync/anime/anime/watch/${encodeURIComponent(String(series.animeId))}/${ep1}`;
+    const nextState = { from: fromPath, handoffId, title: String(series?.title || "") };
+    const go = () => navigate(target, { state: nextState });
+    if (typeof document !== "undefined" && document.startViewTransition) {
+      document.startViewTransition(() => { go(); });
+    } else { go(); }
+  }, [listPath, location.search, navigate, resolveAnimeStream]);
 
-  /** Legacy list URLs `…/seasonal/page/1/watch/:malId/:ep` → dedicated watch route. */
   useEffect(() => {
-    const malId = route.watchAnimeId;
-    if (!malId) return;
-    const rel = location.pathname.startsWith(basePath)
-      ? location.pathname.slice(basePath.length)
-      : "";
+    const animeId = route.watchAnimeId;
+    if (!animeId) return;
+    const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : "";
     const parts = rel.split("/").filter(Boolean);
     const watchIdx = parts.indexOf("watch");
     if (watchIdx < 0) return;
     const withoutWatch = parts.slice(0, watchIdx);
     const fromPath = `${basePath}/${withoutWatch.join("/")}${location.search || ""}`;
-    const ep1 =
-      route.watchEpisodeIndex != null && route.watchEpisodeIndex >= 0
-        ? clampPage(route.watchEpisodeIndex + 1)
-        : 1;
-    navigate(
-      `/dashboard/lifesync/anime/anime/watch/${encodeURIComponent(malId)}/${ep1}`,
-      { replace: true, state: { from: fromPath } },
-    );
-  }, [
-    basePath,
-    location.pathname,
-    location.search,
-    navigate,
-    route.watchAnimeId,
-    route.watchEpisodeIndex,
-  ]);
-
-  const seasonalYearOptions = useMemo(() => {
-    const end = new Date().getFullYear() + 1;
-    const out = [];
-    for (let y = end; y >= 1995; y -= 1) out.push(y);
-    return out;
-  }, []);
+    const ep1 = route.watchEpisodeIndex != null && route.watchEpisodeIndex >= 0 ? clampPage(route.watchEpisodeIndex + 1) : 1;
+    navigate(`/dashboard/lifesync/anime/anime/watch/${encodeURIComponent(animeId)}/${ep1}`, { replace: true, state: { from: fromPath } });
+  }, [basePath, location.pathname, location.search, navigate, route.watchAnimeId, route.watchEpisodeIndex]);
 
   const PAGE_SIZE = 24;
 
-  const loadSeasonal = useCallback(async () => {
+  const loadHome = useCallback(async () => {
+    if (!listFetchMountedRef.current) return;
+    setHomeBusy(true);
     try {
-      const offset = (Math.max(1, seasonalPage) - 1) * PAGE_SIZE;
-      const data = await lifesyncFetch(
-        `/api/v1/anime/seasonal?year=${seasonalYear}&season=${encodeURIComponent(seasonalSeason)}&limit=${PAGE_SIZE}&offset=${offset}&fields=mean,media_type,num_episodes&view=compact`,
-      );
+      const data = await lifesyncFetch("/api/v1/anime/home");
       if (!listFetchMountedRef.current) return;
-      setSeasonal(data?.data || []);
-      setSeasonalHasNext(Boolean(data?.paging?.next));
-    } catch {
-      /* ignore */
-    }
-  }, [seasonalYear, seasonalSeason, seasonalPage, nsfwContentEnabled]);
+      setHomeData(data || null);
+    } catch { if (listFetchMountedRef.current) setHomeData(null); }
+    finally { if (listFetchMountedRef.current) setHomeBusy(false); }
+  }, []);
 
-  const loadRanking = useCallback(async () => {
+  const loadOngoing = useCallback(async () => {
     try {
-      const offset = (Math.max(1, rankingPage) - 1) * PAGE_SIZE;
-      const data = await lifesyncFetch(
-        `/api/v1/anime/ranking?ranking_type=${encodeURIComponent(rankingType)}&limit=${PAGE_SIZE}&offset=${offset}&view=compact`,
-      );
+      const data = await lifesyncFetch(`/api/v1/anime/ongoing?limit=${PAGE_SIZE}&page=${Math.max(1, ongoingPage)}`);
       if (!listFetchMountedRef.current) return;
-      setRanking(data?.data || []);
-      setRankingHasNext(Boolean(data?.paging?.next));
-    } catch {
-      /* ignore */
-    }
-  }, [rankingType, rankingPage, nsfwContentEnabled]);
+      setOngoingItems(data?.data || []); setOngoingHasNext(Boolean(data?.paging?.next));
+    } catch { /* ignore */ }
+  }, [ongoingPage, nsfwContentEnabled]);
 
-  const loadMyList = useCallback(async () => {
+  const loadLatest = useCallback(async () => {
     try {
-      const data = await lifesyncFetch("/api/v1/anime/mylist?limit=50&view=standard");
+      const data = await lifesyncFetch(`/api/v1/anime/latest?limit=${PAGE_SIZE}&page=${Math.max(1, latestPage)}`);
       if (!listFetchMountedRef.current) return;
-      setMyList(data?.data || []);
-    } catch {
-      /* ignore */
-    }
-  }, [nsfwContentEnabled]);
+      setLatestItems(data?.data || []); setLatestHasNext(Boolean(data?.paging?.next));
+    } catch { /* ignore */ }
+  }, [latestPage, nsfwContentEnabled]);
+
+  const loadBrowse = useCallback(async () => {
+    try {
+      const qs = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(Math.max(1, browsePage)) });
+      if (browseType) qs.set("type", browseType);
+      if (browseStatus) qs.set("status", browseStatus);
+      if (browseLanguage) qs.set("language", browseLanguage);
+      if (browseSort) qs.set("sort", browseSort);
+      if (browseGenres.length > 0) qs.set("genre", browseGenres.join(","));
+      const data = await lifesyncFetch(`/api/v1/anime/browse?${qs}`);
+      if (!listFetchMountedRef.current) return;
+      setBrowseItems(data?.data || []); setBrowseHasNext(Boolean(data?.paging?.next));
+    } catch { /* ignore */ }
+  }, [browsePage, browseType, browseStatus, browseLanguage, browseSort, browseGenres, nsfwContentEnabled]);
 
   const load = useCallback(async () => {
-    if (listFetchMountedRef.current) {
-      setBusy(true);
-      setError("");
-    }
-    try {
-      await Promise.all([
-        loadSeasonal(),
-        loadRanking(),
-        malLinked ? loadMyList() : Promise.resolve(),
-      ]);
-    } catch (e) {
-      if (listFetchMountedRef.current) {
-        setError(e.message || "Failed to load anime data");
-      }
-    } finally {
-      if (listFetchMountedRef.current) {
-        setBusy(false);
-      }
-    }
-  }, [loadSeasonal, loadRanking, loadMyList, malLinked]);
+    if (listFetchMountedRef.current) { setBusy(true); setError(""); }
+    try { await Promise.all([loadHome(), loadOngoing(), loadLatest()]); }
+    catch (e) { if (listFetchMountedRef.current) setError(e.message || "Failed to load anime data"); }
+    finally { if (listFetchMountedRef.current) setBusy(false); }
+  }, [loadHome, loadOngoing, loadLatest]);
 
-  useEffect(() => {
-    if (isLifeSyncConnected) load();
-  }, [isLifeSyncConnected, load]);
-
-  useEffect(() => {
-    if (!isLifeSyncConnected || tab !== "ranking") return;
-    void loadRanking();
-  }, [isLifeSyncConnected, tab, loadRanking]);
-
-  useEffect(() => {
-    if (!isLifeSyncConnected || tab !== "seasonal") return;
-    void loadSeasonal();
-  }, [isLifeSyncConnected, tab, loadSeasonal]);
-
-  useEffect(() => {
-    setSeasonalPage(1);
-  }, [seasonalYear, seasonalSeason]);
-
-  useEffect(() => {
-    setRankingPage(1);
-  }, [rankingType]);
-
-  useEffect(() => {
-    let cancelled = false;
-    try {
-      const raw = sessionStorage.getItem("maxien_lifesync_oauth");
-      if (raw) {
-        sessionStorage.removeItem("maxien_lifesync_oauth");
-        const { type, text, provider } = JSON.parse(raw);
-        if (provider?.startsWith("mal")) {
-          setOauthMsg(text);
-          if (type === "error") setError(text);
-          refreshLifeSyncMe()
-            .then(() => {
-              if (!cancelled) void load();
-            })
-            .catch(() => {});
-          scheduleClearOauthMsg(8000);
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshLifeSyncMe, load, scheduleClearOauthMsg]);
-
+  useEffect(() => { if (isLifeSyncConnected) load(); }, [isLifeSyncConnected, load]);
+  useEffect(() => { if (!isLifeSyncConnected || tab !== "ongoing") return; void loadOngoing(); }, [isLifeSyncConnected, tab, loadOngoing]);
+  useEffect(() => { if (!isLifeSyncConnected || tab !== "latest") return; void loadLatest(); }, [isLifeSyncConnected, tab, loadLatest]);
+  useEffect(() => { if (!isLifeSyncConnected || tab !== "browse") return; void loadBrowse(); }, [isLifeSyncConnected, tab, loadBrowse]);
+  useEffect(() => { setOngoingPage(1); }, []);
+  useEffect(() => { setLatestPage(1); }, []);
+  useEffect(() => { setBrowsePage(1); }, [browseType, browseStatus, browseLanguage, browseSort, browseGenres]);
   useEffect(() => {
     let cancelled = false;
     const onVisible = () => {
       if (document.visibilityState !== "visible" || !isLifeSyncConnected) return;
-      refreshLifeSyncMe()
-        .then(() => {
-          if (!cancelled) void load();
-        })
-        .catch(() => {});
+      refreshLifeSyncMe().then(() => { if (!cancelled) void load(); }).catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      cancelled = true;
-      document.removeEventListener("visibilitychange", onVisible);
-    };
+    return () => { cancelled = true; document.removeEventListener("visibilitychange", onVisible); };
   }, [isLifeSyncConnected, refreshLifeSyncMe, load]);
 
   async function handleSearch(e) {
@@ -1625,16 +1196,12 @@ export default function LifeSyncAnime() {
     setSearching(true);
     try {
       const q = searchQ.trim();
-      setSearchCommittedQ(q);
-      setSearchPage(1);
+      setSearchCommittedQ(q); setSearchPage(1);
       const qs = new URLSearchParams(location.search || "");
       qs.set("q", q);
       navigate(`${basePath}/search/page/1?${qs.toString()}`);
-    } catch (e) {
-      setError(e.message || "Search failed");
-    } finally {
-      setSearching(false);
-    }
+    } catch (e) { setError(e.message || "Search failed"); }
+    finally { setSearching(false); }
   }
 
   useEffect(() => {
@@ -1642,43 +1209,22 @@ export default function LifeSyncAnime() {
     const offset = (Math.max(1, searchPage) - 1) * PAGE_SIZE;
     let cancelled = false;
     setSearching(true);
-    lifesyncFetch(
-      `/api/v1/anime/search?q=${encodeURIComponent(searchCommittedQ.trim())}&limit=${PAGE_SIZE}&offset=${offset}&view=compact`,
-    )
-      .then((data) => {
-        if (cancelled) return;
-        setSearchResults(data?.data || []);
-        setSearchHasNext(Boolean(data?.paging?.next));
-      })
+    lifesyncFetch(`/api/v1/anime/search?q=${encodeURIComponent(searchCommittedQ.trim())}&limit=${PAGE_SIZE}&offset=${offset}`)
+      .then((data) => { if (cancelled) return; setSearchResults(data?.data || []); setSearchHasNext(Boolean(data?.paging?.next)); })
       .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setSearching(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .finally(() => { if (!cancelled) setSearching(false); });
+    return () => { cancelled = true; };
   }, [isLifeSyncConnected, tab, searchCommittedQ, searchPage]);
 
   if (!isLifeSyncConnected) {
     return (
       <div className="mx-auto max-w-4xl">
-        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">
-          Anime
-        </h1>
-        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-          Track what you watch, browse seasonal charts, and open episodes—connect LifeSync to get started.
-        </p>
-        <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
-          <p className="mb-2 text-[15px] font-bold text-[var(--mx-color-1a1628)]">
-            LifeSync Not Connected
-          </p>
-          <p className="mb-4 text-[13px] text-[var(--mx-color-5b5670)]">
-            Connect LifeSync in your profile to access anime tracking.
-          </p>
-          <Link
-            to="/dashboard/profile?tab=integrations"
-            className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
-          >
+        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-(--color-text-primary)">Anime</h1>
+        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-(--color-text-secondary)">Browse featured anime, ongoing series, and latest updates—connect LifeSync to get started.</p>
+        <div className="rounded-[22px] border border-(--color-border-strong) bg-(--color-surface) px-8 py-16 text-center shadow-sm">
+          <p className="mb-2 text-[15px] font-bold text-(--color-text-primary)">LifeSync Not Connected</p>
+          <p className="mb-4 text-[13px] text-(--color-text-secondary)">Connect LifeSync in your profile to access anime tracking.</p>
+          <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-95">
             Go to Integrations
           </Link>
         </div>
@@ -1687,62 +1233,38 @@ export default function LifeSyncAnime() {
   }
 
   const tabs = [
-    { id: "seasonal", label: "Seasonal" },
-    { id: "ranking", label: "Top Ranked" },
-    ...(malLinked ? [{ id: "mylist", label: "My List" }] : []),
-    ...(searchResults.length > 0
-      ? [{ id: "search", label: "Search Results" }]
-      : []),
+    { id: "home", label: "Home" },
+    { id: "ongoing", label: "Ongoing" },
+    { id: "latest", label: "Latest" },
+    { id: "browse", label: "Browse" },
+    ...(searchResults.length > 0 ? [{ id: "search", label: "Search Results" }] : []),
   ];
 
-  const currentItems =
-    tab === "seasonal"
-      ? seasonal
-      : tab === "ranking"
-        ? ranking
-        : tab === "mylist"
-          ? myList
-          : searchResults;
+  const paginatedItems =
+    tab === "ongoing" ? ongoingItems
+    : tab === "latest" ? latestItems
+    : tab === "browse" ? browseItems
+    : tab === "search" ? searchResults
+    : [];
 
   const pager = (() => {
-    if (tab === "seasonal") {
-      return {
-        page: seasonalPage,
-        onPage: setSeasonalPage,
-        canPrev: seasonalPage > 1,
-        canNext: seasonalHasNext,
-      };
-    }
-    if (tab === "ranking") {
-      return {
-        page: rankingPage,
-        onPage: setRankingPage,
-        canPrev: rankingPage > 1,
-        canNext: rankingHasNext,
-      };
-    }
-    if (tab === "search") {
-      return {
-        page: searchPage,
-        onPage: setSearchPage,
-        canPrev: searchPage > 1,
-        canNext: searchHasNext,
-      };
-    }
+    if (tab === "ongoing") return { page: ongoingPage, onPage: setOngoingPage, canPrev: ongoingPage > 1, canNext: ongoingHasNext };
+    if (tab === "latest") return { page: latestPage, onPage: setLatestPage, canPrev: latestPage > 1, canNext: latestHasNext };
+    if (tab === "browse") return { page: browsePage, onPage: setBrowsePage, canPrev: browsePage > 1, canNext: browseHasNext };
+    if (tab === "search") return { page: searchPage, onPage: setSearchPage, canPrev: searchPage > 1, canNext: searchHasNext };
     return null;
   })();
 
   return (
     <MotionDiv
-      className="space-y-6 sm:space-y-8"
+      className="space-y-5 sm:space-y-7"
       style={{ transformOrigin: "50% 0%" }}
-      initial="initial"
-      animate="animate"
+      initial="initial" animate="animate"
       variants={lifeSyncDollyPageVariants}
       transition={lifeSyncDollyPageTransition}
     >
       <AnimatePresence mode="sync">
-        {detailId ? (
+        {detailId && (
           <DetailPanel
             key={detailId}
             animeId={detailId}
@@ -1751,280 +1273,325 @@ export default function LifeSyncAnime() {
             onClose={() => goToList({ replace: true })}
             onPlayStream={playEpisode}
           />
-        ) : null}
+        )}
       </AnimatePresence>
 
       <MotionDiv
         className="flex flex-col gap-5 sm:gap-6"
         style={{ pointerEvents: detailId ? "none" : undefined }}
         variants={lifeSyncStaggerContainer}
-        initial="hidden"
-        animate="show"
+        initial="hidden" animate="show"
       >
-      <MotionDiv className="flex items-start justify-between gap-3 sm:gap-4" variants={lifeSyncStaggerItem}>
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">
-            LifeSync / Anime
-          </p>
-          <h1 className="text-[24px] sm:text-[28px] font-bold text-[var(--mx-color-1a1628)] tracking-tight">
-            Anime
-          </h1>
-          <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-            Track seasonal lineups and rankings, open any title for details, and continue watching on the dedicated watch page.
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col sm:flex-row sm:items-center gap-2 sm:pt-0.5">
-          {!malLinked && lifesyncOAuthStartUrl("mal") && (
-            <a
-              href={lifesyncOAuthStartUrl("mal")}
-              className="whitespace-nowrap text-center text-[12px] font-semibold bg-[var(--mx-color-2e51a2)] text-white px-4 py-2 rounded-xl hover:bg-[var(--mx-color-24408a)] transition-colors"
-            >
-              Link MAL
-            </a>
-          )}
-          {malLinked && (
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await lifesyncFetch("/api/v1/anime/link", { method: "DELETE" });
-                  await refreshLifeSyncMe();
-                  setOauthMsg("MyAnimeList disconnected.");
-                  scheduleClearOauthMsg(5000);
-                } catch (e) {
-                  setError(e.message || "Failed to disconnect MAL");
-                }
-              }}
-              className="whitespace-nowrap text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 px-3 py-2 sm:py-1.5 rounded-lg hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 transition-colors"
-            >
-              Disconnect MAL
-            </button>
-          )}
-        </div>
-      </MotionDiv>
-
-      {oauthMsg && !error && (
-        <div className="bg-green-50 text-green-700 text-[12px] font-medium px-4 py-3 rounded-xl border border-green-100">
-          {oauthMsg}
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">
-          {error}
-        </div>
-      )}
-
-      <MotionDiv
-        variants={lifeSyncStaggerItem}
-      >
-      <form
-        onSubmit={handleSearch}
-        className="flex flex-col gap-2 items-stretch sm:flex-row sm:flex-wrap"
-      >
-        <input
-          type="search"
-          value={searchQ}
-          onChange={(e) => setSearchQ(e.target.value)}
-          placeholder="Search anime..."
-          className="min-w-[min(100%,12rem)] flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-4 py-2.5 text-[13px] text-[var(--mx-color-1d1d1f)] transition-all focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={searching}
-          className="w-full shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50 sm:w-auto"
-        >
-          {searching ? "Searching..." : "Search"}
-        </button>
-      </form>
-      </MotionDiv>
-
-      <MotionDiv variants={lifeSyncStaggerItem}>
-      <LifeSyncSectionNav
-        ariaLabel="Anime lists"
-        layoutId="lifesync-anime-main-tab"
-        items={tabs.map((t) => ({ id: t.id, label: t.label }))}
-        activeId={tab}
-        onSelect={(id) => goToTab(id)}
-      />
-      </MotionDiv>
-
-      {tab === "seasonal" && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-wrap -mt-2">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor="seasonal-year"
-              className="text-[11px] font-semibold text-[var(--mx-color-86868b)] whitespace-nowrap"
-            >
-              Year
-            </label>
-            <select
-              id="seasonal-year"
-              value={seasonalYear}
-              onChange={(e) => setSeasonalYear(Number(e.target.value))}
-              className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] rounded-lg px-2.5 py-1.5 min-w-[5.5rem] focus:outline-none focus:border-[var(--mx-color-c6ff00)]/60"
-            >
-              {seasonalYearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => {
-                const cur = currentMalSeason();
-                setSeasonalYear(cur.year);
-                setSeasonalSeason(cur.season);
-              }}
-              className="text-[11px] font-semibold text-[var(--mx-color-2e51a2)] hover:underline px-1"
-            >
-              This season
-            </button>
+        {/* Header */}
+        <MotionDiv variants={lifeSyncStaggerItem} className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold text-(--color-text-secondary) uppercase tracking-widest">LifeSync / Anime</p>
+            <h1 className="text-[24px] sm:text-[28px] font-black text-(--color-text-primary) tracking-tight leading-none mt-0.5">Anime</h1>
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
-            {MAL_SEASON_OPTIONS.map((opt) => (
+          {/* Layout toggle — only shown outside home tab */}
+          {tab !== "home" && (
+            <div className="flex items-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) p-0.5">
               <button
-                key={opt.id}
                 type="button"
-                onClick={() => setSeasonalSeason(opt.id)}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all ${
-                  seasonalSeason === opt.id
-                    ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
-                    : "bg-[var(--color-surface)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)] hover:text-[var(--mx-color-1d1d1f)] hover:border-[var(--mx-color-d2d2d7)]"
-                }`}
+                onClick={() => setLayout("grid")}
+                title="Grid view"
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${layout === "grid" ? "bg-primary text-(--color-ink-strong) shadow-sm" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
               >
-                {opt.label}
+                <IconGrid />
               </button>
-            ))}
-          </div>
-        </div>
-      )}
+              <button
+                type="button"
+                onClick={() => setLayout("list")}
+                title="List view"
+                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${layout === "list" ? "bg-primary text-(--color-ink-strong) shadow-sm" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+              >
+                <IconList />
+              </button>
+            </div>
+          )}
+        </MotionDiv>
 
-      {tab === "ranking" && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mt-2 hide-scrollbar overscroll-x-contain">
-          {MAL_RANKING_OPTIONS.map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setRankingType(opt.id)}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${
-                rankingType === opt.id
-                  ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
-                  : "bg-[var(--color-surface)] text-[var(--mx-color-86868b)] border-[var(--mx-color-e5e5ea)] hover:text-[var(--mx-color-1d1d1f)] hover:border-[var(--mx-color-d2d2d7)]"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
+        {error && (
+          <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{error}</div>
+        )}
 
-      {/* List + pager only — tab filters above stay put */}
-      <MotionDiv variants={lifeSyncStaggerItem}>
-        <AnimatePresence mode="wait">
-          <MotionDiv
-            key={tab}
-            className="space-y-4"
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            variants={lifeSyncSectionPresenceVariants}
-            transition={lifeSyncSectionPresenceTransition}
-          >
-      {tab === "mylist" && currentItems.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {currentItems.map((item) => (
-            <MyListCard
-              key={item.node?.id}
-              node={item.node}
-              listStatus={item.list_status}
-              onSelect={goToDetail}
-            />
-          ))}
-        </div>
-      ) : currentItems.length > 0 ? (
-        <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {currentItems.map((item, i) => (
-            <AnimeCard
-              key={item.node?.id || i}
-              node={item.node}
-              ranking={tab === "ranking" ? item.ranking?.rank : undefined}
-              onSelect={goToDetail}
-            />
-          ))}
-        </div>
-      ) : (
-        !busy && (
-          <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm px-6 py-10 text-center">
-            <p className="text-[13px] text-[var(--mx-color-86868b)]">
-              {tab === "mylist"
-                ? "Your anime list is empty. Link MAL to sync your list."
-                : "No anime to display."}
-            </p>
-          </div>
-        )
-      )}
-
-      {pager && currentItems.length > 0 && (
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <p className="text-[11px] text-[var(--mx-color-86868b)]">Page {pager.page}</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              disabled={!pager.canPrev}
-              onClick={() => goToPage(pager.page - 1)}
-              className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-            >
-              Previous
-            </button>
-            <div className="flex items-center gap-1.5">
-              {(() => {
-                const cur = pager.page;
-                const pages = [];
-                const start = Math.max(1, cur - 2);
-                const end = cur + 2;
-                if (start > 1) pages.push(1, "…");
-                for (let p = start; p <= end; p += 1) pages.push(p);
-                if (pager.canNext) pages.push("…");
-                return pages.map((p, idx) =>
-                  typeof p === "number" ? (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => goToPage(p)}
-                      className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
-                        p === cur
-                          ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
-                          : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]"
-                      }`}
-                      aria-current={p === cur ? "page" : undefined}
-                    >
-                      {p}
-                    </button>
-                  ) : (
-                    <span key={`dots-${idx}`} className="px-1 text-[11px] text-[var(--mx-color-86868b)]">
-                      …
-                    </span>
-                  ),
-                );
-              })()}
+        {/* Search */}
+        <MotionDiv variants={lifeSyncStaggerItem}>
+          <form onSubmit={handleSearch} className="flex flex-col gap-2 items-stretch sm:flex-row sm:flex-wrap">
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)">
+                <IconSearch />
+              </span>
+              <input
+                type="search"
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                placeholder="Search anime..."
+                className="w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) pl-9 pr-4 py-2.5 text-[13px] text-(--color-text-primary) transition-all focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none focus:ring-2 focus:ring-primary/15"
+              />
             </div>
             <button
-              type="button"
-              disabled={!pager.canNext}
-              onClick={() => goToPage(pager.page + 1)}
-              className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+              type="submit"
+              disabled={searching}
+              className="w-full shrink-0 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-bold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-105 disabled:opacity-50 sm:w-auto"
             >
-              Next
+              {searching ? "Searching…" : "Search"}
             </button>
-          </div>
-        </div>
-      )}
-          </MotionDiv>
-        </AnimatePresence>
-      </MotionDiv>
+          </form>
+        </MotionDiv>
 
+        {/* Tabs */}
+        <MotionDiv variants={lifeSyncStaggerItem}>
+          <LifeSyncSectionNav
+            ariaLabel="Anime lists"
+            layoutId="lifesync-anime-main-tab"
+            items={tabs.map((t) => ({ id: t.id, label: t.label }))}
+            activeId={tab}
+            onSelect={(id) => goToTab(id)}
+          />
+        </MotionDiv>
+
+        {/* Browse filters */}
+        {tab === "browse" && (
+          <div className="flex flex-col gap-2.5 -mt-2">
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
+              {BROWSE_TYPE_OPTIONS.map((opt) => (
+                <button key={opt.id} type="button" onClick={() => setBrowseType(opt.id)}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${browseType === opt.id ? "bg-(--color-text-primary) text-(--color-surface) border-(--color-text-primary)" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary) hover:border-(--color-border-strong)"}`}>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
+                {BROWSE_STATUS_OPTIONS.map((opt) => (
+                  <button key={opt.id} type="button" onClick={() => setBrowseStatus(opt.id)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${browseStatus === opt.id ? "bg-primary text-(--color-ink-strong) border-primary" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary)"}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
+                {BROWSE_LANGUAGE_OPTIONS.map((opt) => (
+                  <button key={opt.id} type="button" onClick={() => setBrowseLanguage(opt.id)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${browseLanguage === opt.id ? "bg-(--color-text-primary) text-(--color-surface) border-(--color-text-primary)" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary)"}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
+                {BROWSE_SORT_OPTIONS.map((opt) => (
+                  <button key={opt.id} type="button" onClick={() => setBrowseSort(opt.id)}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${browseSort === opt.id ? "bg-(--color-text-secondary) text-(--color-surface) border-(--color-text-secondary)" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary)"}`}>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
+              {BROWSE_GENRE_OPTIONS.map((g) => {
+                const active = browseGenres.includes(g);
+                return (
+                  <button key={g} type="button" onClick={() => setBrowseGenres((prev) => active ? prev.filter((x) => x !== g) : [...prev, g])}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap capitalize transition-all border ${active ? "bg-primary text-(--color-ink-strong) border-primary" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary)"}`}>
+                    {g.replace(/-/g, " ")}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Tab content */}
+        <MotionDiv variants={lifeSyncStaggerItem}>
+          <AnimatePresence mode="wait">
+            <MotionDiv
+              key={tab}
+              className="space-y-6"
+              initial="initial" animate="animate" exit="exit"
+              variants={lifeSyncSectionPresenceVariants}
+              transition={lifeSyncSectionPresenceTransition}
+            >
+              {/* ── HOME TAB ────────────────────────────────────────── */}
+              {tab === "home" && (
+                <div className="space-y-8">
+                  {homeBusy && !homeData ? (
+                    <div className="space-y-8">
+                      <SkeletonHero />
+                      <SkeletonRail count={6} />
+                      <SkeletonRail count={6} />
+                    </div>
+                  ) : (
+                    <>
+                      {/* Hero — first 5 featured items */}
+                      {homeData?.featured?.length > 0 && (
+                        <HeroBanner items={homeData.featured.slice(0, 5)} onSelect={goToDetail} />
+                      )}
+
+                      {/* Trending strip */}
+                      {homeData?.trending?.length > 0 && (
+                        <TrendingStrip items={homeData.trending} onSelect={goToDetail} />
+                      )}
+
+                      {/* Schedule promo banner */}
+                      <Link
+                        to="/dashboard/lifesync/anime/anime/schedule"
+                        className="group flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-5 py-4 transition-all hover:border-primary/40 hover:bg-primary/5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                              <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-bold text-(--color-text-primary)">Weekly Schedule</p>
+                            <p className="text-[11px] text-(--color-text-secondary)">See what's airing each day this week</p>
+                          </div>
+                        </div>
+                        <svg className="h-4 w-4 shrink-0 text-(--color-text-secondary) transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+
+                      {/* Featured rail (remaining) */}
+                      {homeData?.featured?.length > 5 && (
+                        <HorizRail title="Featured" items={homeData.featured.slice(5)} onSelect={goToDetail} />
+                      )}
+
+                      {/* Latest updates rail */}
+                      {homeData?.latestUpdates?.length > 0 && (
+                        <HorizRail
+                          title="Latest Updates"
+                          items={homeData.latestUpdates.slice(0, 12)}
+                          onSelect={goToDetail}
+                          onSeeAll={() => goToTab("latest")}
+                        />
+                      )}
+
+                      {/* Ongoing rail */}
+                      {homeData?.ongoing?.length > 0 && (
+                        <HorizRail
+                          title="Ongoing"
+                          items={homeData.ongoing.slice(0, 12)}
+                          onSelect={goToDetail}
+                          onSeeAll={() => goToTab("ongoing")}
+                        />
+                      )}
+
+                      {!homeBusy && !homeData && (
+                        <div className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-10 text-center">
+                          <p className="text-[13px] text-(--color-text-secondary)">Couldn't load home page data.</p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ── PAGINATED TABS ──────────────────────────────────── */}
+              {tab !== "home" && (
+                <>
+                  {busy && paginatedItems.length === 0 ? (
+                    layout === "grid" ? <SkeletonGrid count={12} /> : <SkeletonList count={8} />
+                  ) : paginatedItems.length > 0 ? (
+                    <AnimatePresence mode="wait" initial={false}>
+                      {layout === "grid" ? (
+                        <MotionDiv
+                          key="grid"
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                          className="grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                        >
+                          {paginatedItems.map((item, i) => (
+                            <AnimeCard
+                              key={item.node?.slug || item.node?.id || i}
+                              node={item.node}
+                              ranking={tab === "browse" ? item.ranking?.rank : undefined}
+                              onSelect={goToDetail}
+                            />
+                          ))}
+                        </MotionDiv>
+                      ) : (
+                        <MotionDiv
+                          key="list"
+                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                          transition={{ duration: 0.18 }}
+                          className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)"
+                        >
+                          {paginatedItems.map((item, i) => (
+                            <AnimeRow
+                              key={item.node?.slug || item.node?.id || i}
+                              node={item.node}
+                              ranking={tab === "browse" ? item.ranking?.rank : undefined}
+                              onSelect={goToDetail}
+                              isLast={i === paginatedItems.length - 1}
+                            />
+                          ))}
+                        </MotionDiv>
+                      )}
+                    </AnimatePresence>
+                  ) : (
+                    !busy && (
+                      <div className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-10 text-center">
+                        <p className="text-[13px] text-(--color-text-secondary)">No anime to display.</p>
+                      </div>
+                    )
+                  )}
+
+                  {/* Pagination */}
+                  {pager && paginatedItems.length > 0 && (
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <p className="text-[11px] text-(--color-text-secondary)">Page {pager.page}</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!pager.canPrev}
+                          onClick={() => goToPage(pager.page - 1)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
+                        >
+                          <IconChevronLeft />
+                        </button>
+                        <div className="flex items-center gap-1">
+                          {(() => {
+                            const cur = pager.page;
+                            const pages = [];
+                            const start = Math.max(1, cur - 2);
+                            const end = cur + 2;
+                            if (start > 1) pages.push(1, "…");
+                            for (let p = start; p <= end; p += 1) pages.push(p);
+                            if (pager.canNext) pages.push("…");
+                            return pages.map((p, idx) =>
+                              typeof p === "number" ? (
+                                <button
+                                  key={p} type="button" onClick={() => goToPage(p)}
+                                  className={`min-w-8 px-2 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${p === cur ? "bg-primary text-(--color-ink-strong) border-primary" : "bg-(--color-surface) text-(--color-text-primary) border-(--color-border-soft) hover:bg-(--color-surface-muted)"}`}
+                                  aria-current={p === cur ? "page" : undefined}
+                                >
+                                  {p}
+                                </button>
+                              ) : (
+                                <span key={`dots-${idx}`} className="px-1 text-[11px] text-(--color-text-secondary)">…</span>
+                              ),
+                            );
+                          })()}
+                        </div>
+                        <button
+                          type="button"
+                          disabled={!pager.canNext}
+                          onClick={() => goToPage(pager.page + 1)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
+                        >
+                          <IconChevronRight />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </MotionDiv>
+          </AnimatePresence>
+        </MotionDiv>
       </MotionDiv>
     </MotionDiv>
   );

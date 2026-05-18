@@ -1,247 +1,417 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { FaPlay, FaStar, FaTimes, FaChevronLeft } from 'react-icons/fa'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
 import {
     LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT,
     useAnimeWatchHistory,
 } from '../../hooks/useAnimeWatchHistory'
-import { LifesyncEpisodeThumbnail, LifesyncMediaLibraryPageSkeleton } from '../../components/lifesync/EpisodeLoadingSkeletons'
-import { SeriesCompleteBadge } from '../../components/lifesync/LifeSyncShelfDecor'
+import { LifesyncEpisodeThumbnail } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import {
     MotionDiv,
     lifeSyncEaseOut,
     lifeSyncPageTransition,
-    lifeSyncStaggerContainerDense,
-    lifeSyncStaggerItemFade,
 } from '../../lib/lifesyncMotion'
-
-const MotionLi = motion.li
 
 const ANIME_BASE = '/dashboard/lifesync/anime/anime'
 const ANIME_HISTORY_PATH = `${ANIME_BASE}/history`
-const SPOTLIGHT_ROTATE_MS = 8000
 
-function formatUpdatedAt(iso) {
-    if (!iso) return '—'
-    try {
-        return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-    } catch {
-        return '—'
-    }
-}
-
-function formatDateLabel(iso) {
-    if (!iso) return '—'
-    try {
-        return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
-    } catch {
-        return '—'
-    }
+function cleanAnimeTitle(raw) {
+    if (!raw) return ''
+    return String(raw)
+        .replace(/\s*[-–—]\s*AniNeko\s*$/i, '')
+        .replace(/\s+Anime\s+Info\s*$/i, '')
+        .trim()
 }
 
 function relativeTouch(iso) {
     if (!iso) return ''
     try {
         const d = new Date(iso)
-        const now = Date.now()
-        const diff = now - d.getTime()
+        const diff = Date.now() - d.getTime()
         const days = Math.floor(diff / 864e5)
         if (days <= 0) return 'Today'
         if (days === 1) return 'Yesterday'
         if (days < 7) return `${days}d ago`
         if (days < 30) return `${Math.floor(days / 7)}w ago`
         return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    } catch {
-        return ''
-    }
+    } catch { return '' }
 }
 
-function entryKey(e) {
-    return String(e?.malId ?? '')
-}
-
+function entryKey(e) { return String(e?.animeId ?? '') }
 function lastEpNum(entry) {
     const n = Math.floor(Number(entry?.lastEpisodeNumber) || 1)
     return Number.isFinite(n) && n > 0 ? n : 1
 }
-
 function totalEpNum(entry) {
     const n = Math.floor(Number(entry?.numEpisodes))
     return Number.isFinite(n) && n > 0 ? n : null
 }
-
 function isSeriesComplete(entry) {
     const total = totalEpNum(entry)
     if (total == null) return false
     return lastEpNum(entry) >= total
 }
-
 function resumeWatchTarget(entry) {
     const ep = lastEpNum(entry)
     return {
-        to: `${ANIME_BASE}/watch/${encodeURIComponent(String(entry.malId))}/${ep}`,
+        to: `${ANIME_BASE}/watch/${encodeURIComponent(String(entry.animeId))}/${ep}`,
         state: { from: ANIME_HISTORY_PATH },
     }
 }
-
 function progressFraction(entry) {
     const total = totalEpNum(entry)
     if (total == null) return null
     return Math.min(1, lastEpNum(entry) / total)
 }
 
-const spotlightSlide = {
-    initial: { opacity: 0, x: 28 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -28 },
-}
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const IconPlay = ({ className = 'h-4 w-4' }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+)
+const IconX = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+)
+const IconSearch = ({ className = 'h-4 w-4' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" d="M21 21l-4.35-4.35" />
+    </svg>
+)
+const IconBack = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+)
+const IconCheck = ({ className = 'h-3 w-3' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+)
+const IconGrid = ({ className = 'h-4 w-4' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+)
+const IconList = ({ className = 'h-4 w-4' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+    </svg>
+)
 
-const spotlightTransition = {
-    type: 'tween',
-    duration: 0.38,
-    ease: lifeSyncEaseOut,
-}
-
-/** Corner ribbon for titles that still have episodes to watch (not a pill). */
-function ContinueWatchingRibbon({ size = 'card' }) {
-    const wide = size === 'spotlight'
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function SkeletonRow() {
     return (
-        <div
-            className={`pointer-events-none absolute right-0 top-0 z-20 overflow-hidden ${wide ? 'h-24 w-24' : 'h-[4.25rem] w-[4.25rem]'}`}
-            aria-hidden
-        >
-            <motion.div
-                className={`absolute rotate-45 bg-gradient-to-b from-[var(--mx-color-eeff77)] via-[var(--mx-color-c6ff00)] to-[var(--mx-color-b4e830)] text-center font-black uppercase tracking-[0.22em] text-slate-900 shadow-[0_3px_14px_rgba(0,0,0,0.18)] ${wide ? 'right-[-38%] top-[18%] w-[130%] py-2 text-[8px] sm:text-[9px]' : 'right-[-42%] top-[16%] w-[140%] py-1.5 text-[7px] sm:text-[8px]'}`}
-                animate={{ filter: ['brightness(1)', 'brightness(1.09)', 'brightness(1)'] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-            >
-                {wide ? 'CONTINUE' : 'GO'}
-            </motion.div>
+        <div className="flex items-center gap-4 px-4 py-3 animate-pulse">
+            <div className="h-[54px] w-[38px] shrink-0 rounded-lg bg-(--color-surface-muted)" />
+            <div className="flex-1 space-y-2">
+                <div className="h-3 w-2/3 rounded bg-(--color-surface-muted)" />
+                <div className="h-2 w-1/3 rounded bg-(--color-surface-muted)" />
+            </div>
+            <div className="h-8 w-8 shrink-0 rounded-xl bg-(--color-surface-muted)" />
+        </div>
+    )
+}
+function SkeletonCard() {
+    return (
+        <div className="animate-pulse overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+            <div className="aspect-2/3 w-full bg-(--color-surface-muted)" />
+            <div className="p-2.5 space-y-1.5">
+                <div className="h-3 w-3/4 rounded bg-(--color-surface-muted)" />
+                <div className="h-2 w-1/2 rounded bg-(--color-surface-muted)" />
+                <div className="h-1.5 w-full rounded-full bg-(--color-surface-muted)" />
+            </div>
         </div>
     )
 }
 
-function AnimeDetailModal({ entry, onClose, onContinue, onRemove, removeBusy }) {
+// ─── Detail drawer ────────────────────────────────────────────────────────────
+function DetailDrawer({ entry, onClose, onContinue, onRemove, removeBusy }) {
     if (!entry) return null
     const frac = progressFraction(entry)
     const total = totalEpNum(entry)
     const current = lastEpNum(entry)
     const complete = isSeriesComplete(entry)
-    const progressPct = frac != null ? Math.round(frac * 100) : null
+    const title = cleanAnimeTitle(entry.title)
+    const pct = frac != null ? Math.round(frac * 100) : null
+
+    useEffect(() => {
+        const fn = (e) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', fn)
+        return () => window.removeEventListener('keydown', fn)
+    }, [onClose])
+
     return (
         <MotionDiv
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
         >
             <MotionDiv
-                className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-[var(--color-surface)] shadow-2xl"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 18 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-                onClick={(event) => event.stopPropagation()}
+                className="relative w-full max-w-sm overflow-hidden rounded-t-3xl sm:rounded-3xl bg-(--color-surface) shadow-2xl"
+                initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+                onClick={(e) => e.stopPropagation()}
             >
-                <div className="relative aspect-[3/1] overflow-hidden bg-slate-100">
-                    {entry.imageUrl ? (
-                        <LifesyncEpisodeThumbnail
-                            src={entry.imageUrl}
-                            className="absolute inset-0 h-full w-full"
-                            imgClassName="h-full w-full object-cover"
-                            imgProps={{ referrerPolicy: 'no-referrer' }}
-                        />
-                    ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/20" />
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white hover:bg-black/65"
-                        aria-label="Close"
-                    >
-                        <FaTimes className="h-4 w-4" />
-                    </button>
-                    <div className="absolute bottom-3 left-3 right-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/85">Anime</p>
-                        <h2 className="mt-1 line-clamp-2 text-[18px] font-bold leading-tight text-white">
-                            {entry.title || 'Untitled'}
-                        </h2>
-                    </div>
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                    <div className="h-1 w-10 rounded-full bg-(--color-border-soft)" />
                 </div>
-                <div className="space-y-3 p-4">
-                    <div className="grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-3">
-                        <div className="rounded-lg bg-slate-50 p-2">
-                            <p className="text-slate-500">Last watched</p>
-                            <p className="mt-0.5 font-semibold text-slate-900">Episode {current}</p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50 p-2">
-                            <p className="text-slate-500">Series length</p>
-                            <p className="mt-0.5 font-semibold text-slate-900">
-                                {total != null ? `${total} episode${total === 1 ? '' : 's'}` : 'Unknown'}
-                            </p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50 p-2">
-                            <p className="text-slate-500">Last updated</p>
-                            <p className="mt-0.5 font-semibold text-slate-900">{formatDateLabel(entry.updatedAt)}</p>
-                        </div>
+                <div className="flex gap-4 px-5 pt-4 pb-3">
+                    <div className="relative h-[88px] w-[60px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted)">
+                        {entry.imageUrl && (
+                            <LifesyncEpisodeThumbnail
+                                src={entry.imageUrl}
+                                className="absolute inset-0 h-full w-full"
+                                imgClassName="h-full w-full object-cover"
+                                imgProps={{ referrerPolicy: 'no-referrer' }}
+                            />
+                        )}
+                        {complete && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                                <IconCheck className="h-5 w-5 text-primary" />
+                            </div>
+                        )}
                     </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                        <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700">
-                            <span>Current: EP {current}</span>
-                            <span>{total != null ? `Total: ${total}` : 'Total unknown'}</span>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-primary">
+                            {complete ? 'Finished' : 'Watching'}
+                        </p>
+                        <h2 className="mt-0.5 line-clamp-3 text-[15px] font-bold leading-snug text-(--color-text-primary)">
+                            {title || 'Untitled'}
+                        </h2>
+                        <p className="mt-1 text-[11px] text-(--color-text-secondary)">{relativeTouch(entry.updatedAt)}</p>
+                    </div>
+                    <button
+                        type="button" onClick={onClose}
+                        className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-(--color-surface-muted) text-(--color-text-secondary) hover:text-(--color-text-primary) transition"
+                    >
+                        <IconX className="h-3 w-3" />
+                    </button>
+                </div>
+                <div className="px-5 pb-4">
+                    <div className="rounded-2xl bg-(--color-surface-muted) p-3.5 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-semibold text-(--color-text-secondary)">Episode progress</span>
+                            <span className="text-[11px] font-bold text-(--color-text-primary)">
+                                {current}{total != null ? ` / ${total}` : ''}{pct != null ? ` · ${pct}%` : ''}
+                            </span>
                         </div>
-                        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
                             <div
-                                className="h-full rounded-full"
-                                style={{
-                                    width: `${progressPct != null ? progressPct : 0}%`,
-                                    backgroundColor: 'var(--mx-color-c6ff00)',
-                                }}
+                                className="h-full rounded-full bg-primary transition-all"
+                                style={{ width: `${frac != null ? Math.round(frac * 100) : 30}%` }}
                             />
                         </div>
-                        <p className="mt-1 text-[10px] font-semibold text-slate-600">
-                            {progressPct != null ? `${progressPct}% complete` : 'Progress unavailable'}
-                            {complete ? ' · Completed' : ''}
-                        </p>
                     </div>
-                    <div className="rounded-lg border border-slate-200 bg-[var(--color-surface)] p-2.5 text-[11px] text-slate-600">
-                        MAL ID: <span className="font-semibold text-slate-900">{entry.malId}</span>
-                        {entry.updatedAt ? (
-                            <span className="ml-2 text-slate-500">({relativeTouch(entry.updatedAt) || 'recent'})</span>
-                        ) : null}
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => onContinue(entry)}
-                            className="inline-flex min-h-[42px] flex-1 items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-4 text-[13px] font-bold text-slate-900 hover:brightness-95"
-                        >
-                            Resume
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => void onRemove(entry)}
-                            disabled={removeBusy}
-                            className="inline-flex min-h-[42px] flex-1 items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 text-[13px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
-                        >
-                            {removeBusy ? 'Removing…' : 'Remove'}
-                        </button>
-                    </div>
+                </div>
+                <div className="flex gap-2.5 px-5 pb-6">
+                    <button
+                        type="button" onClick={() => onContinue(entry)}
+                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95 active:scale-[0.98]"
+                    >
+                        <IconPlay className="h-4 w-4" /> Resume Ep {current}
+                    </button>
+                    <button
+                        type="button" onClick={() => void onRemove(entry)} disabled={removeBusy}
+                        className="min-h-12 rounded-2xl border border-(--color-border-soft) px-4 text-[13px] font-semibold text-(--color-text-secondary) transition hover:border-red-300 hover:text-red-500 disabled:opacity-40 active:scale-[0.98]"
+                    >
+                        {removeBusy ? '…' : 'Remove'}
+                    </button>
                 </div>
             </MotionDiv>
         </MotionDiv>
     )
 }
 
+// ─── List row ─────────────────────────────────────────────────────────────────
+function FeedRow({ entry, onOpenDetail, onRemove, removeBusyKey, isLast }) {
+    const { to, state } = resumeWatchTarget(entry)
+    const frac = progressFraction(entry)
+    const total = totalEpNum(entry)
+    const current = lastEpNum(entry)
+    const complete = isSeriesComplete(entry)
+    const rel = relativeTouch(entry.updatedAt)
+    const title = cleanAnimeTitle(entry.title)
+    const busy = removeBusyKey === entryKey(entry)
+
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -16 }}
+            transition={{ type: 'tween', duration: 0.2, ease: lifeSyncEaseOut }}
+            className={`group relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-(--color-surface-muted) ${!isLast ? 'border-b border-(--color-border-soft)' : ''}`}
+        >
+            <button
+                type="button" onClick={() => onOpenDetail(entry)}
+                className="relative h-[54px] w-[38px] shrink-0 overflow-hidden rounded-lg bg-(--color-surface-muted) shadow-sm transition group-hover:shadow-md"
+                aria-label={`Details for ${title || 'anime'}`}
+            >
+                {entry.imageUrl ? (
+                    <LifesyncEpisodeThumbnail
+                        src={entry.imageUrl}
+                        className="absolute inset-0 h-full w-full"
+                        imgClassName="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                        imgProps={{ referrerPolicy: 'no-referrer' }}
+                    />
+                ) : (
+                    <div className="flex h-full items-center justify-center text-(--color-border-strong)">
+                        <IconPlay className="h-4 w-4" />
+                    </div>
+                )}
+                {complete && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <IconCheck className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                )}
+                {frac != null && !complete && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-black/30">
+                        <div className="h-full bg-primary" style={{ width: `${Math.round(frac * 100)}%` }} />
+                    </div>
+                )}
+            </button>
+
+            <button type="button" onClick={() => onOpenDetail(entry)} className="min-w-0 flex-1 text-left">
+                <p className="truncate text-[13px] font-semibold leading-snug text-(--color-text-primary)">{title || 'Untitled'}</p>
+                <div className="mt-0.5 flex items-center gap-2">
+                    <span className={`inline-flex h-[18px] items-center rounded-md px-1.5 text-[9px] font-bold uppercase tracking-wide ${
+                        complete ? 'bg-primary/15 text-primary' : 'bg-(--color-surface-soft) text-(--color-text-secondary) border border-(--color-border-soft)'
+                    }`}>
+                        {complete ? 'Done' : `Ep ${current}${total != null ? ` / ${total}` : ''}`}
+                    </span>
+                    {rel && <span className="text-[10px] text-(--color-text-secondary)">{rel}</span>}
+                </div>
+                {frac != null && (
+                    <div className="mt-1.5 h-[3px] w-full overflow-hidden rounded-full bg-(--color-border-soft)">
+                        <div
+                            className={`h-full rounded-full transition-all ${complete ? 'bg-primary/50' : 'bg-primary'}`}
+                            style={{ width: `${Math.round(frac * 100)}%` }}
+                        />
+                    </div>
+                )}
+            </button>
+
+            <div className="flex shrink-0 items-center gap-1.5 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                <button
+                    type="button" onClick={() => void onRemove(entry)} disabled={busy}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-red-50 hover:text-red-500 disabled:opacity-30 dark:hover:bg-red-900/20"
+                    aria-label="Remove"
+                >
+                    {busy ? <span className="text-[11px]">…</span> : <IconX className="h-3.5 w-3.5" />}
+                </button>
+                <Link
+                    to={to} state={state}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95"
+                    aria-label={`Play episode ${current}`}
+                >
+                    <IconPlay className="ml-px h-3.5 w-3.5" />
+                </Link>
+            </div>
+        </motion.div>
+    )
+}
+
+// ─── Grid card ────────────────────────────────────────────────────────────────
+function GridCard({ entry, onOpenDetail, onRemove, removeBusyKey }) {
+    const { to, state } = resumeWatchTarget(entry)
+    const frac = progressFraction(entry)
+    const total = totalEpNum(entry)
+    const current = lastEpNum(entry)
+    const complete = isSeriesComplete(entry)
+    const rel = relativeTouch(entry.updatedAt)
+    const title = cleanAnimeTitle(entry.title)
+    const busy = removeBusyKey === entryKey(entry)
+
+    return (
+        <motion.div
+            layout
+            initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }}
+            transition={{ type: 'tween', duration: 0.2, ease: lifeSyncEaseOut }}
+            className="group relative flex flex-col overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm transition-shadow hover:shadow-md"
+        >
+            {/* Poster */}
+            <button
+                type="button" onClick={() => onOpenDetail(entry)}
+                className="relative block w-full aspect-2/3 overflow-hidden bg-(--color-surface-muted)"
+                aria-label={`Details for ${title || 'anime'}`}
+            >
+                {entry.imageUrl ? (
+                    <LifesyncEpisodeThumbnail
+                        src={entry.imageUrl}
+                        className="absolute inset-0 h-full w-full"
+                        imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]"
+                        imgProps={{ referrerPolicy: 'no-referrer' }}
+                    />
+                ) : (
+                    <div className="flex h-full items-center justify-center text-(--color-border-strong)">
+                        <IconPlay className="h-8 w-8" />
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-linear-to-t from-black/75 via-black/10 to-transparent" />
+
+                {/* EP badge */}
+                <span className="absolute left-2 top-2 z-10 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm">
+                    EP {current}
+                </span>
+                {rel && (
+                    <span className="absolute right-2 top-2 z-10 rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] font-medium text-white/80 backdrop-blur-sm">
+                        {rel}
+                    </span>
+                )}
+                {complete && (
+                    <span className="absolute left-2 bottom-10 z-10 flex items-center gap-1 rounded-md bg-primary/90 px-1.5 py-0.5 text-[9px] font-bold text-black">
+                        <IconCheck className="h-2.5 w-2.5" /> Done
+                    </span>
+                )}
+                {frac != null && (
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/20">
+                        <div className={`h-full ${complete ? 'bg-primary/60' : 'bg-primary'}`} style={{ width: `${Math.round(frac * 100)}%` }} />
+                    </div>
+                )}
+                <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                    <h3 className="line-clamp-2 text-[12px] font-bold leading-snug text-white drop-shadow">
+                        {title || 'Untitled'}
+                    </h3>
+                </div>
+
+                {/* Remove on hover */}
+                <button
+                    type="button" onClick={(e) => { e.stopPropagation(); void onRemove(entry) }} disabled={busy}
+                    className="absolute right-2 bottom-2 z-10 flex h-6 w-6 items-center justify-center rounded-lg bg-black/50 text-white/70 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 hover:bg-red-600/80 hover:text-white disabled:opacity-30"
+                    aria-label="Remove"
+                >
+                    {busy ? <span className="text-[9px]">…</span> : <IconX className="h-3 w-3" />}
+                </button>
+            </button>
+
+            {/* Footer */}
+            <div className="flex items-center gap-1.5 px-2.5 py-2 border-t border-(--color-border-soft)">
+                <div className="min-w-0 flex-1">
+                    <p className="text-[10px] text-(--color-text-secondary) tabular-nums">
+                        {complete ? 'Finished' : `Ep ${current}${total != null ? ` / ${total}` : ''}`}
+                    </p>
+                </div>
+                <Link
+                    to={to} state={state}
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95"
+                    aria-label={`Play episode ${current}`}
+                >
+                    <IconPlay className="ml-px h-3 w-3" />
+                </Link>
+            </div>
+        </motion.div>
+    )
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function LifeSyncAnimeHistory() {
     const navigate = useNavigate()
     const { isLifeSyncConnected, lifeSyncUser } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
     const animePluginOn = isPluginEnabled(prefs, 'pluginAnimeEnabled')
+    const searchRef = useRef(null)
 
     const { entries, loading, refresh } = useAnimeWatchHistory({
         enabled: isLifeSyncConnected && animePluginOn,
@@ -252,149 +422,69 @@ export default function LifeSyncAnimeHistory() {
     const [filter, setFilter] = useState('all')
     const [sortBy, setSortBy] = useState('recent')
     const [query, setQuery] = useState('')
-    const [spotlightIndex, setSpotlightIndex] = useState(0)
     const [detailEntry, setDetailEntry] = useState(null)
+    const [layout, setLayout] = useState('list') // 'list' | 'grid'
 
     useEffect(() => {
-        if (!isLifeSyncConnected) {
-            navigate('/dashboard/profile?tab=integrations', { replace: true })
-        }
+        if (!isLifeSyncConnected) navigate('/dashboard/profile?tab=integrations', { replace: true })
     }, [isLifeSyncConnected, navigate])
 
-    const onRemove = useCallback(
-        async (entry) => {
-            const key = entryKey(entry)
-            if (!key || removeBusyKey) return false
-            setRemoveBusyKey(key)
-            try {
-                await lifesyncFetch(`/api/v1/anime/watch-progress/${encodeURIComponent(key)}`, {
-                    method: 'DELETE',
-                })
-                window.dispatchEvent(new CustomEvent(LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT))
-                await refresh()
-                return true
-            } catch {
-                return false
-            } finally {
-                setRemoveBusyKey('')
-            }
-        },
-        [refresh, removeBusyKey],
-    )
+    const onRemove = useCallback(async (entry) => {
+        const key = entryKey(entry)
+        if (!key || removeBusyKey) return false
+        setRemoveBusyKey(key)
+        try {
+            await lifesyncFetch(`/api/v1/anime/watch-progress/${encodeURIComponent(key)}`, { method: 'DELETE' })
+            window.dispatchEvent(new CustomEvent(LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT))
+            await refresh()
+            return true
+        } catch { return false }
+        finally { setRemoveBusyKey('') }
+    }, [refresh, removeBusyKey])
 
-    const onOpenDetail = useCallback((entry) => {
-        setDetailEntry(entry || null)
-    }, [])
-
-    const onCloseDetail = useCallback(() => {
-        setDetailEntry(null)
-    }, [])
-
+    const onOpenDetail = useCallback((entry) => setDetailEntry(entry || null), [])
+    const onCloseDetail = useCallback(() => setDetailEntry(null), [])
     const onContinueFromDetail = useCallback((entry) => {
         const { to, state } = resumeWatchTarget(entry)
         setDetailEntry(null)
         navigate(to, { state: state || undefined })
     }, [navigate])
-
     const onRemoveFromDetail = useCallback(async (entry) => {
         const removed = await onRemove(entry)
         if (removed) setDetailEntry(null)
     }, [onRemove])
 
     const stats = useMemo(() => {
-        const complete = entries.filter((e) => isSeriesComplete(e)).length
-        const inProgress = entries.length - complete
-        return { total: entries.length, complete, inProgress }
+        const complete = entries.filter(isSeriesComplete).length
+        return { total: entries.length, complete, inProgress: entries.length - complete }
     }, [entries])
 
     const filteredSorted = useMemo(() => {
         let list = [...entries]
         const q = query.trim().toLowerCase()
-        if (q) {
-            list = list.filter((e) => String(e.title || '').toLowerCase().includes(q))
-        }
-        if (filter === 'progress') {
-            list = list.filter((e) => !isSeriesComplete(e))
-        }
-        if (filter === 'complete') {
-            list = list.filter((e) => isSeriesComplete(e))
-        }
-        if (sortBy === 'recent') {
-            list.sort((a, b) => {
-                const ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
-                const tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
-                return tb - ta
-            })
-        } else {
-            list.sort((a, b) =>
-                String(a.title || '').localeCompare(String(b.title || ''), undefined, { sensitivity: 'base' }),
-            )
-        }
+        if (q) list = list.filter((e) => cleanAnimeTitle(e.title).toLowerCase().includes(q))
+        if (filter === 'watching') list = list.filter((e) => !isSeriesComplete(e))
+        if (filter === 'done') list = list.filter(isSeriesComplete)
+        list.sort(sortBy === 'recent'
+            ? (a, b) => (b.updatedAt ? new Date(b.updatedAt).getTime() : 0) - (a.updatedAt ? new Date(a.updatedAt).getTime() : 0)
+            : (a, b) => cleanAnimeTitle(a.title).localeCompare(cleanAnimeTitle(b.title), undefined, { sensitivity: 'base' })
+        )
         return list
     }, [entries, filter, sortBy, query])
-
-    const spotlightCandidates = useMemo(() => {
-        const open = entries.filter((e) => !isSeriesComplete(e))
-        return [...open].sort((a, b) => {
-            const ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0
-            const tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0
-            return tb - ta
-        })
-    }, [entries])
-
-    const candidatesSig = useMemo(() => spotlightCandidates.map(entryKey).join('|'), [spotlightCandidates])
-
-    useEffect(() => {
-        setSpotlightIndex(0)
-    }, [candidatesSig])
-
-    useEffect(() => {
-        setSpotlightIndex((i) => {
-            if (!spotlightCandidates.length) return 0
-            return Math.min(i, spotlightCandidates.length - 1)
-        })
-    }, [spotlightCandidates.length])
-
-    useEffect(() => {
-        if (spotlightCandidates.length <= 1) return undefined
-        const id = window.setInterval(() => {
-            setSpotlightIndex((i) => (i + 1) % spotlightCandidates.length)
-        }, SPOTLIGHT_ROTATE_MS)
-        return () => window.clearInterval(id)
-    }, [spotlightCandidates.length, candidatesSig])
-
-    const spotlight = spotlightCandidates[spotlightIndex] ?? null
-
-    const showSpotlight =
-        Boolean(spotlight) &&
-        spotlightCandidates.length > 0 &&
-        entries.length > 1 &&
-        filter === 'all' &&
-        !query.trim()
 
     if (!isLifeSyncConnected) return null
 
     if (!animePluginOn) {
         return (
             <MotionDiv
-                className="relative overflow-hidden rounded-3xl border border-amber-200/80 bg-gradient-to-br from-amber-50/90 via-[var(--color-surface)] to-lime-50/40 px-6 py-14 text-center shadow-lg sm:px-10"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={lifeSyncPageTransition}
+                className="rounded-3xl border border-dashed border-(--color-border-soft) bg-(--color-surface) px-6 py-14 text-center"
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncPageTransition}
             >
-                <div
-                    className="pointer-events-none absolute -left-20 top-0 h-56 w-56 rounded-full bg-amber-300/25 blur-3xl"
-                    aria-hidden
-                />
-                <FaPlay className="mx-auto h-10 w-10 text-lime-600" aria-hidden />
-                <p className="mt-4 text-[17px] font-bold text-slate-900">Anime streaming is off</p>
-                <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-slate-600">
+                <p className="text-[17px] font-bold text-(--color-text-primary)">Anime streaming is off</p>
+                <p className="mx-auto mt-2 max-w-md text-[14px] text-(--color-text-secondary)">
                     Turn on the anime plugin in LifeSync preferences to track watch history here.
                 </p>
-                <Link
-                    to="/dashboard/profile?tab=preferences"
-                    className="mt-8 inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-slate-900 px-6 py-3 text-[14px] font-semibold text-white shadow-lg transition hover:bg-slate-800"
-                >
+                <Link to="/dashboard/profile?tab=preferences" className="mt-8 inline-flex min-h-12 items-center justify-center rounded-2xl bg-(--color-text-primary) px-6 text-[14px] font-semibold text-(--color-surface) transition hover:opacity-90">
                     Open preferences
                 </Link>
             </MotionDiv>
@@ -402,537 +492,162 @@ export default function LifeSyncAnimeHistory() {
     }
 
     return (
-        <MotionDiv
-            className="relative min-w-0 lifesync-anime-history"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={lifeSyncPageTransition}
-        >
-            <div
-                className="lifesync-history-glow-a pointer-events-none absolute -left-32 top-0 h-[28rem] w-[28rem] rounded-full bg-gradient-to-br from-amber-200/35 via-lime-100/20 to-transparent blur-3xl"
-                aria-hidden
-            />
-            <div
-                className="lifesync-history-glow-b pointer-events-none absolute -right-24 bottom-0 h-72 w-72 rounded-full bg-gradient-to-tl from-lime-200/20 via-amber-100/20 to-transparent blur-3xl"
-                aria-hidden
-            />
+        <MotionDiv className="min-w-0 space-y-4" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncPageTransition}>
 
-            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8">
-                <aside className="lg:w-[min(100%,280px)] lg:shrink-0">
-                    <div className="lifesync-history-sidebar sticky top-2 space-y-4 rounded-3xl border border-slate-200/80 bg-[var(--color-surface)]/80 p-5 shadow-[0_8px_30px_-12px_rgba(21, 20, 24,0.12)] backdrop-blur-md ring-1 ring-[var(--color-border-strong)]/60">
-                        <div className="flex items-start gap-3">
-                            <Link
-                                to="/dashboard/lifesync/anime"
-                                className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 transition hover:bg-[var(--color-surface)] hover:shadow-sm"
-                                aria-label="Back to hub"
-                            >
-                                <FaChevronLeft className="h-4 w-4" aria-hidden />
-                            </Link>
-                            <div className="min-w-0">
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-800/90">
-                                    Queue
-                                </p>
-                                <h1 className="mt-0.5 text-[20px] font-black leading-tight tracking-tight text-slate-900">
-                                    Watch history
-                                </h1>
-                            </div>
-                        </div>
-
-                        <p className="text-[12px] leading-relaxed text-slate-600">
-                            Every title you open in the player keeps its last episode here. Remove entries you
-                            no longer want suggested.
-                        </p>
-
-                        <div className="grid grid-cols-3 gap-2">
-                            <div className="lifesync-history-stat-card lifesync-history-stat-neutral rounded-2xl bg-gradient-to-br from-slate-50 to-[var(--color-surface)] px-2 py-3 text-center ring-1 ring-slate-100">
-                                <p className="text-[20px] font-black tabular-nums text-slate-900">
-                                    {loading ? '…' : stats.total}
-                                </p>
-                                <p className="text-[9px] font-bold uppercase tracking-wide text-slate-500">Saved</p>
-                            </div>
-                            <div className="lifesync-history-stat-card lifesync-history-stat-active rounded-2xl bg-gradient-to-br from-lime-50 to-[var(--mx-color-ecfccb)] px-2 py-3 text-center ring-1 ring-lime-200/60">
-                                <p className="text-[20px] font-black tabular-nums text-slate-900">
-                                    {loading ? '…' : stats.inProgress}
-                                </p>
-                                <p className="text-[9px] font-bold uppercase tracking-wide text-lime-900/70">Active</p>
-                            </div>
-                            <div className="lifesync-history-stat-card lifesync-history-stat-done rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50/80 px-2 py-3 text-center ring-1 ring-emerald-200/50">
-                                <p className="text-[20px] font-black tabular-nums text-slate-900">
-                                    {loading ? '…' : stats.complete}
-                                </p>
-                                <p className="text-[9px] font-bold uppercase tracking-wide text-emerald-900/70">Done</p>
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <button
-                                type="button"
-                                onClick={() => void refresh()}
-                                disabled={loading}
-                                className="min-h-[42px] rounded-2xl border border-slate-200 bg-[var(--color-surface)] px-4 py-2.5 text-[12px] font-semibold text-slate-800 transition hover:bg-slate-50 disabled:opacity-50"
-                            >
-                                {loading ? 'Refreshing…' : 'Reload list'}
-                            </button>
-                            <Link
-                                to={`${ANIME_BASE}/seasonal/page/1`}
-                                className="flex min-h-[42px] items-center justify-center rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-2.5 text-center text-[12px] font-semibold text-amber-950 transition hover:bg-amber-100"
-                            >
-                                Discover seasonal anime
-                            </Link>
-                        </div>
-
-                        <div className="border-t border-slate-100 pt-4">
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Filter</p>
-                            <div className="mt-2 flex flex-wrap gap-1.5">
-                                {[
-                                    { id: 'all', label: 'All' },
-                                    { id: 'progress', label: 'In progress' },
-                                    { id: 'complete', label: 'Finished' },
-                                ].map((f) => (
-                                    <button
-                                        key={f.id}
-                                        type="button"
-                                        onClick={() => setFilter(f.id)}
-                                        className={`rounded-full px-3 py-1.5 text-[11px] font-semibold transition ${
-                                            filter === f.id
-                                                ? 'bg-slate-900 text-white shadow-sm'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                                        }`}
-                                    >
-                                        {f.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Sort</p>
-                            <div className="mt-2 flex rounded-xl border border-slate-200 bg-slate-50/80 p-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setSortBy('recent')}
-                                    className={`flex-1 rounded-lg py-2 text-[11px] font-semibold transition ${
-                                        sortBy === 'recent'
-                                            ? 'bg-[var(--color-surface)] text-slate-900 shadow-sm'
-                                            : 'text-slate-500 hover:text-slate-800'
-                                    }`}
-                                >
-                                    Recent
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setSortBy('title')}
-                                    className={`flex-1 rounded-lg py-2 text-[11px] font-semibold transition ${
-                                        sortBy === 'title'
-                                            ? 'bg-[var(--color-surface)] text-slate-900 shadow-sm'
-                                            : 'text-slate-500 hover:text-slate-800'
-                                    }`}
-                                >
-                                    A–Z
-                                </button>
-                            </div>
-                        </div>
-
-                        <label className="block">
-                            <span className="sr-only">Search titles</span>
-                            <input
-                                type="search"
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
-                                placeholder="Search your queue…"
-                                className="w-full rounded-xl border border-slate-200 bg-[var(--color-surface)] px-3 py-2.5 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-[var(--mx-color-c6ff00)]/70 focus:outline-none focus:ring-2 focus:ring-amber-200/80"
-                            />
-                        </label>
-                    </div>
-                </aside>
-
-                <div className="min-w-0 flex-1 space-y-5">
-                    {loading && entries.length === 0 ? (
-                        <div className="rounded-3xl border border-slate-100 bg-[var(--color-surface)]/60 p-6">
-                            <LifesyncMediaLibraryPageSkeleton gridCount={8} showSpotlight />
-                        </div>
-                    ) : entries.length === 0 ? (
-                        <MotionDiv
-                            className="relative overflow-hidden rounded-3xl border border-dashed border-amber-200/70 bg-gradient-to-br from-[var(--color-surface)] via-amber-50/40 to-lime-50/25 px-6 py-16 text-center"
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={lifeSyncPageTransition}
-                        >
-                            <FaStar className="mx-auto h-10 w-10 text-amber-400" aria-hidden />
-                            <p className="mt-4 text-[17px] font-bold text-slate-900">No watch history yet</p>
-                            <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-slate-600">
-                                Start an episode from seasonal or search — we save your place automatically.
-                            </p>
-                            <Link
-                                to={`${ANIME_BASE}/seasonal/page/1`}
-                                className="mt-8 inline-flex min-h-[48px] items-center justify-center rounded-2xl bg-slate-900 px-6 py-3 text-[14px] font-semibold text-white shadow-lg transition hover:bg-slate-800"
-                            >
-                                Browse seasonal
-                            </Link>
-                        </MotionDiv>
-                    ) : (
-                        <>
-                            {showSpotlight && spotlight ? (
-                                <div className="space-y-3">
-                                    <AnimatePresence mode="wait" initial={false}>
-                                        <AnimeSpotlightCard
-                                            key={entryKey(spotlight)}
-                                            entry={spotlight}
-                                            onRemove={onRemove}
-                                            removeBusyKey={removeBusyKey}
-                                            onOpenDetail={onOpenDetail}
-                                            slideVariants={spotlightSlide}
-                                            transition={spotlightTransition}
-                                        />
-                                    </AnimatePresence>
-                                    {spotlightCandidates.length > 1 ? (
-                                        <div
-                                            className="flex justify-center gap-1.5"
-                                            role="tablist"
-                                            aria-label="Rotating picks"
-                                        >
-                                            {spotlightCandidates.map((c, i) => (
-                                                <button
-                                                    key={entryKey(c)}
-                                                    type="button"
-                                                    role="tab"
-                                                    aria-selected={i === spotlightIndex}
-                                                    onClick={() => setSpotlightIndex(i)}
-                                                    className={`h-2 rounded-full transition-all duration-300 ${
-                                                        i === spotlightIndex
-                                                            ? 'w-6 bg-amber-600 ring-2 ring-amber-200'
-                                                            : 'w-2 bg-amber-200/80 hover:bg-amber-300'
-                                                    }`}
-                                                />
-                                            ))}
-                                        </div>
-                                    ) : null}
-                                </div>
-                            ) : null}
-
-                            {filteredSorted.length === 0 ? (
-                                <MotionDiv
-                                    className="rounded-3xl border border-slate-200 bg-[var(--color-surface)]/90 px-6 py-12 text-center"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={lifeSyncPageTransition}
-                                >
-                                    <p className="text-[15px] font-semibold text-slate-800">No matches</p>
-                                    <p className="mt-2 text-[13px] text-slate-500">
-                                        Try another filter or clear search.
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setFilter('all')
-                                            setQuery('')
-                                        }}
-                                        className="mt-4 text-[13px] font-semibold text-amber-800 hover:underline"
-                                    >
-                                        Reset filters
-                                    </button>
-                                </MotionDiv>
-                            ) : (
-                                <MotionDiv
-                                    className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4"
-                                    variants={lifeSyncStaggerContainerDense}
-                                    initial="hidden"
-                                    animate="show"
-                                >
-                                    {filteredSorted.map((entry) => {
-                                        const isSpotlightSlot =
-                                            showSpotlight &&
-                                            spotlight &&
-                                            entryKey(entry) === entryKey(spotlight)
-                                        if (isSpotlightSlot) return null
-                                        return (
-                                            <AnimeHistoryCard
-                                                key={entryKey(entry)}
-                                                entry={entry}
-                                                onRemove={onRemove}
-                                                removeBusyKey={removeBusyKey}
-                                                onOpenDetail={onOpenDetail}
-                                            />
-                                        )
-                                    })}
-                                </MotionDiv>
-                            )}
-                        </>
-                    )}
-                </div>
-            </div>
-            <AnimatePresence>
-                {detailEntry ? (
-                    <AnimeDetailModal
-                        entry={detailEntry}
-                        onClose={onCloseDetail}
-                        onContinue={onContinueFromDetail}
-                        onRemove={onRemoveFromDetail}
-                        removeBusy={removeBusyKey === entryKey(detailEntry)}
-                    />
-                ) : null}
-            </AnimatePresence>
-        </MotionDiv>
-    )
-}
-
-function AnimeSpotlightCard({ entry, onRemove, removeBusyKey, onOpenDetail, slideVariants, transition }) {
-    const { to, state } = resumeWatchTarget(entry)
-    const busyRemove = removeBusyKey === entryKey(entry)
-    const rel = relativeTouch(entry.updatedAt)
-    const complete = isSeriesComplete(entry)
-    const frac = progressFraction(entry)
-    const total = totalEpNum(entry)
-
-    return (
-        <MotionDiv
-            layout
-            className="lifesync-history-spotlight relative overflow-visible rounded-3xl border border-amber-200/90 bg-[var(--color-surface)] shadow-[0_12px_40px_-14px_rgba(180,140,60,0.18)] ring-1 ring-amber-100/60"
-            variants={slideVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={transition}
-        >
-            <div
-                className="pointer-events-none absolute -right-6 -top-10 h-40 w-40 rounded-full bg-[var(--mx-color-c6ff00)]/15 blur-3xl"
-                aria-hidden
-            />
-            <div
-                className="pointer-events-none absolute -left-4 bottom-0 h-32 w-32 rounded-full bg-amber-200/25 blur-2xl"
-                aria-hidden
-            />
-
-            <div className="relative flex flex-col gap-4 border-l-[6px] border-l-amber-500 pl-4 pr-4 pb-5 pt-4 sm:flex-row sm:items-stretch sm:gap-6 sm:pl-5 sm:pr-6 sm:pb-8 sm:pt-5">
-                <div className="flex shrink-0 items-start gap-3 sm:flex-col sm:items-center">
-                    <span
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 text-amber-900 shadow-sm ring-1 ring-amber-200/80"
-                        aria-hidden
-                    >
-                        <FaPlay className="h-5 w-5" />
-                    </span>
-                    <div className="min-w-0 pt-0.5 sm:hidden">
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-800/90">
-                            Resume here
-                        </p>
-                    </div>
-                </div>
-
-                <div className="relative mx-auto shrink-0 sm:mx-0">
-                    <button
-                        type="button"
-                        onClick={() => onOpenDetail(entry)}
-                        aria-label={`Open details for ${entry.title || 'anime'}`}
-                        className="relative mx-auto block h-[196px] w-[128px] overflow-hidden rounded-2xl bg-slate-100 shadow-md ring-2 ring-amber-200/70 sm:h-[218px] sm:w-[146px]"
-                    >
-                        {entry.imageUrl ? (
-                            <motion.div
-                                className="absolute inset-0 h-full w-full"
-                                initial={{ scale: 1.06 }}
-                                animate={{ scale: 1 }}
-                                transition={{ duration: 0.55, ease: lifeSyncEaseOut }}
-                            >
-                                <LifesyncEpisodeThumbnail
-                                    src={entry.imageUrl}
-                                    className="absolute inset-0 h-full w-full"
-                                    imgClassName="h-full w-full object-cover"
-                                    imgProps={{ referrerPolicy: 'no-referrer' }}
-                                />
-                            </motion.div>
-                        ) : null}
-                        {!complete ? <ContinueWatchingRibbon size="spotlight" /> : null}
-                        {frac != null ? (
-                            <div
-                                className="absolute bottom-0 left-0 right-0 h-1.5 bg-black/25"
-                                aria-hidden
-                            >
-                                <div
-                                    className="h-full bg-gradient-to-r from-[var(--mx-color-c6ff00)] to-amber-400"
-                                    style={{ width: `${Math.round(frac * 100)}%` }}
-                                />
-                            </div>
-                        ) : null}
-                    </button>
-                    {complete ? <SeriesCompleteBadge /> : null}
-                </div>
-
-                <div className="flex min-w-0 flex-1 flex-col justify-center">
-                    <p className="hidden text-[10px] font-black uppercase tracking-[0.2em] text-amber-800/90 sm:block">
-                        Resume here
-                    </p>
-                    <h2 className="mt-0 line-clamp-2 text-[19px] font-black leading-tight tracking-tight text-slate-900 sm:mt-1 sm:text-[22px]">
-                        <button
-                            type="button"
-                            onClick={() => onOpenDetail(entry)}
-                            className="text-left transition hover:text-amber-900"
-                        >
-                            {entry.title || 'Untitled'}
-                        </button>
-                    </h2>
-                    <p className="mt-1 text-[12px] font-medium text-slate-500">
-                        MAL #{entry.malId}
-                        {rel ? ` · ${rel}` : ''}
-                    </p>
-                    <div className="relative mt-3 pl-4">
-                        <div className="absolute bottom-1.5 left-[7px] top-1.5 w-px bg-gradient-to-b from-amber-400/90 via-slate-200 to-slate-200" />
-                        <div className="space-y-3">
-                            <div className="relative">
-                                <span
-                                    className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--color-border-strong)] bg-amber-500 shadow-sm ring-1 ring-amber-300/60"
-                                    aria-hidden
-                                />
-                                <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
-                                    Last watched
-                                </p>
-                                <p className="text-[13px] font-bold text-slate-900">Episode {lastEpNum(entry)}</p>
-                            </div>
-                            <div className="relative">
-                                <span
-                                    className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--color-border-strong)] bg-slate-400 shadow-sm ring-1 ring-slate-300/50"
-                                    aria-hidden
-                                />
-                                <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
-                                    Series length
-                                </p>
-                                <p className="text-[13px] font-semibold text-slate-800">
-                                    {total != null ? `${total} episode${total === 1 ? '' : 's'}` : 'Unknown'}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="mt-4 flex flex-wrap items-center gap-2">
-                        <Link
-                            to={to}
-                            state={state}
-                            className="inline-flex min-h-[44px] flex-1 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-bold text-slate-900 shadow-sm ring-1 ring-slate-900/10 transition hover:brightness-95 sm:flex-none"
-                        >
-                            Resume episode
-                        </Link>
-                        <button
-                            type="button"
-                            onClick={() => onOpenDetail(entry)}
-                            className="min-h-[44px] rounded-2xl border border-slate-200 bg-[var(--color-surface)] px-4 py-2 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50"
-                        >
-                            Details
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => void onRemove(entry)}
-                            disabled={busyRemove}
-                            className="min-h-[44px] rounded-2xl border border-slate-200 bg-[var(--color-surface)] px-4 py-2 text-[12px] font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                        >
-                            {busyRemove ? '…' : 'Remove'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </MotionDiv>
-    )
-}
-
-function AnimeHistoryCard({ entry, onRemove, removeBusyKey, onOpenDetail }) {
-    const { to, state } = resumeWatchTarget(entry)
-    const busyRemove = removeBusyKey === entryKey(entry)
-    const complete = isSeriesComplete(entry)
-    const frac = progressFraction(entry)
-    const total = totalEpNum(entry)
-
-    return (
-        <MotionLi
-            variants={lifeSyncStaggerItemFade}
-            className="lifesync-history-card group relative flex min-w-0 flex-col overflow-visible rounded-3xl border border-slate-200/90 bg-[var(--color-surface)] shadow-[0_4px_24px_-8px_rgba(21, 20, 24,0.15)]"
-            whileHover={{ y: -4, transition: { type: 'tween', duration: 0.2, ease: lifeSyncEaseOut } }}
-        >
-            <div className="relative w-full">
-                <div className="relative aspect-[2/3] w-full overflow-hidden rounded-t-3xl bg-gradient-to-br from-slate-100 to-slate-50">
-                    <button
-                        type="button"
-                        onClick={() => onOpenDetail(entry)}
-                        aria-label={`Open details for ${entry.title || 'anime'}`}
-                        className="absolute inset-0 block"
-                    >
-                        {entry.imageUrl ? (
-                            <LifesyncEpisodeThumbnail
-                                src={entry.imageUrl}
-                                className="absolute inset-0 h-full w-full"
-                                imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-[1.06]"
-                                imgProps={{ referrerPolicy: 'no-referrer' }}
-                            />
-                        ) : (
-                            <div className="flex h-full items-center justify-center text-slate-300">
-                                <FaPlay className="h-14 w-14" aria-hidden />
-                            </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent opacity-95" />
-                        {frac != null ? (
-                            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30" aria-hidden>
-                                <div
-                                    className="h-full bg-gradient-to-r from-[var(--mx-color-c6ff00)] to-amber-400"
-                                    style={{ width: `${Math.round(frac * 100)}%` }}
-                                />
-                            </div>
-                        ) : null}
-                    </button>
-                    {!complete ? <ContinueWatchingRibbon size="card" /> : null}
-                    <button
-                        type="button"
-                        onClick={() => void onRemove(entry)}
-                        disabled={busyRemove}
-                        className="absolute right-2.5 top-2.5 z-30 rounded-full bg-[var(--color-surface)]/95 p-2 text-[11px] font-bold text-slate-500 opacity-0 shadow-md ring-1 ring-slate-200/80 transition group-hover:opacity-100 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                        aria-label="Remove from history"
-                    >
-                        {busyRemove ? '…' : '✕'}
-                    </button>
-                    <span className="absolute left-2 top-2 z-10 max-w-[calc(100%-1rem)] truncate rounded-md bg-[var(--color-surface)]/90 px-1.5 py-0.5 font-mono text-[8px] font-bold tabular-nums uppercase tracking-wide text-slate-900 ring-1 ring-slate-200/80">
-                        EP {lastEpNum(entry)}
-                    </span>
-                    <div className={`absolute left-0 right-0 p-3 ${complete ? 'bottom-5' : 'bottom-0'}`}>
-                        <button
-                            type="button"
-                            onClick={() => onOpenDetail(entry)}
-                            className="block text-left"
-                            aria-label={`Open details for ${entry.title || 'anime'}`}
-                        >
-                            <h3 className="line-clamp-2 text-[13px] font-bold leading-snug text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)] sm:text-[14px]">
-                                {entry.title || 'Untitled'}
-                            </h3>
-                        </button>
-                    </div>
-                </div>
-                {complete ? <SeriesCompleteBadge /> : null}
-            </div>
-
-            <div
-                className={`lifesync-history-card-body relative flex flex-1 flex-col gap-1 border-t border-slate-100/90 bg-[linear-gradient(180deg,var(--mx-color-fafaf9)_0%,var(--mx-color-ffffff)_100%)] px-3 pb-3 pt-3 sm:gap-1.5 sm:px-4 sm:pb-4 sm:pt-4 ${complete ? 'pt-5 sm:pt-6' : ''}`}
-            >
-                <div className="relative pl-4">
-                    <div className="absolute bottom-2 left-[7px] top-2 w-px bg-gradient-to-b from-amber-400/80 via-slate-200 to-slate-200" />
-                    <div className="space-y-3.5">
-                        <div className="relative">
-                            <span
-                                className="absolute -left-[13px] top-1 h-2.5 w-2.5 rounded-full border-2 border-[var(--color-border-strong)] bg-amber-500 shadow-sm ring-1 ring-amber-300/60"
-                                aria-hidden
-                            />
-                            <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400">
-                                Last watched
-                            </p>
-                            <p className="text-[11px] font-bold leading-snug text-slate-900">
-                                Episode {lastEpNum(entry)}
-                                {total != null ? ` / ${total}` : ''}
-                            </p>
-                            <p className="text-[9px] text-slate-400">{formatUpdatedAt(entry.updatedAt)}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <Link
-                    to={to}
-                    state={state}
-                    className="mt-auto flex min-h-[40px] w-full items-center justify-center rounded-2xl bg-slate-900 py-2.5 text-[11px] font-bold text-white transition hover:bg-slate-800 sm:min-h-[42px] sm:text-[12px]"
-                >
-                    Open player
+            {/* ── Header ── */}
+            <div className="flex items-center gap-3">
+                <Link to="/dashboard/lifesync/anime" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-primary) transition hover:bg-(--color-surface-muted)" aria-label="Back">
+                    <IconBack />
+                </Link>
+                <h1 className="min-w-0 flex-1 text-[20px] font-black leading-none text-(--color-text-primary)">Watch History</h1>
+                <Link to={`${ANIME_BASE}/home/page/1`} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
+                    Browse
                 </Link>
             </div>
-        </MotionLi>
+
+            {/* ── Stats ── */}
+            <div className="grid grid-cols-3 gap-2">
+                {[
+                    { label: 'Total', value: stats.total },
+                    { label: 'Watching', value: stats.inProgress, accent: true },
+                    { label: 'Finished', value: stats.complete },
+                ].map((s) => (
+                    <div key={s.label} className={`rounded-2xl px-3 py-3 text-center ${s.accent ? 'bg-primary/10 ring-1 ring-primary/20' : 'bg-(--color-surface) border border-(--color-border-soft)'}`}>
+                        <p className={`text-[22px] font-black tabular-nums leading-none ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{loading ? '—' : s.value}</p>
+                        <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary)">{s.label}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* ── Controls ── */}
+            <div className="flex flex-wrap gap-2">
+                {/* Search */}
+                <div className="relative min-w-0 flex-1 basis-48">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)">
+                        <IconSearch className="h-3.5 w-3.5" />
+                    </span>
+                    <input
+                        ref={searchRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search titles…"
+                        className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 transition"
+                    />
+                </div>
+
+                {/* Filter */}
+                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                    {[{ id: 'all', label: 'All' }, { id: 'watching', label: 'Watching' }, { id: 'done', label: 'Done' }].map((f) => (
+                        <button key={f.id} type="button" onClick={() => setFilter(f.id)}
+                            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition ${filter === f.id ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
+                            {f.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Sort */}
+                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                    {[{ id: 'recent', label: 'Recent' }, { id: 'title', label: 'A–Z' }].map((s) => (
+                        <button key={s.id} type="button" onClick={() => setSortBy(s.id)}
+                            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition ${sortBy === s.id ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
+                            {s.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Layout toggle */}
+                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                    <button type="button" onClick={() => setLayout('list')}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        aria-label="List view">
+                        <IconList className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => setLayout('grid')}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        aria-label="Grid view">
+                        <IconGrid className="h-3.5 w-3.5" />
+                    </button>
+                </div>
+
+                {/* Reload */}
+                <button type="button" onClick={() => void refresh()} disabled={loading}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
+                    aria-label="Reload">
+                    <svg className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                </button>
+            </div>
+
+            {/* ── Content ── */}
+            {loading && entries.length === 0 ? (
+                layout === 'list' ? (
+                    <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className={i < 5 ? 'border-b border-(--color-border-soft)' : ''}><SkeletonRow /></div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                        {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+                    </div>
+                )
+            ) : entries.length === 0 ? (
+                <MotionDiv className="rounded-2xl border border-dashed border-(--color-border-soft) bg-(--color-surface) px-6 py-16 text-center" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={lifeSyncPageTransition}>
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--color-surface-muted)">
+                        <IconPlay className="h-5 w-5 text-(--color-text-secondary)" />
+                    </div>
+                    <p className="text-[16px] font-bold text-(--color-text-primary)">Nothing here yet</p>
+                    <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-(--color-text-secondary)">Start watching an episode — your progress saves automatically.</p>
+                    <Link to={`${ANIME_BASE}/home/page/1`} className="mt-6 inline-flex min-h-[42px] items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
+                        <IconPlay className="h-3.5 w-3.5" /> Browse anime
+                    </Link>
+                </MotionDiv>
+            ) : filteredSorted.length === 0 ? (
+                <MotionDiv className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-12 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={lifeSyncPageTransition}>
+                    <p className="text-[14px] font-semibold text-(--color-text-primary)">No matches</p>
+                    <p className="mt-1 text-[12px] text-(--color-text-secondary)">Try adjusting your filters or search.</p>
+                    <button type="button" onClick={() => { setFilter('all'); setQuery('') }} className="mt-3 text-[12px] font-semibold text-primary hover:underline">Reset</button>
+                </MotionDiv>
+            ) : layout === 'list' ? (
+                <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+                    <AnimatePresence initial={false}>
+                        {filteredSorted.map((entry, idx) => (
+                            <FeedRow key={entryKey(entry)} entry={entry} onOpenDetail={onOpenDetail} onRemove={onRemove} removeBusyKey={removeBusyKey} isLast={idx === filteredSorted.length - 1} />
+                        ))}
+                    </AnimatePresence>
+                    <div className="flex items-center justify-between border-t border-(--color-border-soft) px-4 py-2.5">
+                        <p className="text-[10px] text-(--color-text-secondary)">
+                            {filteredSorted.length} {filteredSorted.length === 1 ? 'title' : 'titles'}{filteredSorted.length !== entries.length ? ` of ${entries.length}` : ''}
+                        </p>
+                        {(query || filter !== 'all') && (
+                            <button type="button" onClick={() => { setFilter('all'); setQuery('') }} className="text-[10px] font-semibold text-(--color-text-secondary) hover:text-(--color-text-primary) transition">Clear filters</button>
+                        )}
+                    </div>
+                </div>
+            ) : (
+                <div>
+                    <AnimatePresence initial={false}>
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                            {filteredSorted.map((entry) => (
+                                <GridCard key={entryKey(entry)} entry={entry} onOpenDetail={onOpenDetail} onRemove={onRemove} removeBusyKey={removeBusyKey} />
+                            ))}
+                        </div>
+                    </AnimatePresence>
+                    <div className="mt-3 flex items-center justify-between px-1">
+                        <p className="text-[10px] text-(--color-text-secondary)">
+                            {filteredSorted.length} {filteredSorted.length === 1 ? 'title' : 'titles'}{filteredSorted.length !== entries.length ? ` of ${entries.length}` : ''}
+                        </p>
+                        {(query || filter !== 'all') && (
+                            <button type="button" onClick={() => { setFilter('all'); setQuery('') }} className="text-[10px] font-semibold text-(--color-text-secondary) hover:text-(--color-text-primary) transition">Clear filters</button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            <AnimatePresence>
+                {detailEntry && (
+                    <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} onRemove={onRemoveFromDetail} removeBusy={removeBusyKey === entryKey(detailEntry)} />
+                )}
+            </AnimatePresence>
+        </MotionDiv>
     )
 }

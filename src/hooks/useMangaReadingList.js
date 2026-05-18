@@ -8,7 +8,7 @@ const EMPTY_SUMMARY = {
     caughtUp: 0,
     seriesEnded: 0,
     pinned: 0,
-    sources: { mangadistrict: 0, hentaifox: 0 },
+    sources: { mangadistrict: 0, roliascan: 0 },
     statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
 }
 
@@ -49,7 +49,7 @@ function summarizeEntries(entries) {
         caughtUp: 0,
         seriesEnded: 0,
         pinned: 0,
-        sources: { mangadistrict: 0, hentaifox: 0 },
+        sources: { mangadistrict: 0, roliascan: 0 },
         statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
     }
     for (const entry of entries) {

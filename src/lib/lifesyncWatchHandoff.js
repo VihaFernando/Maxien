@@ -3,7 +3,7 @@
  * Survives React Strict Mode remounts (peek does not delete); entries expire by TTL.
  */
 
-const PREFIX = 'maxien_lifesync_watch_handoff:v1:'
+const PREFIX = 'maxien_lifesync_watch_handoff:v2:'
 const TTL_MS = 1000 * 60 * 5
 
 function key(id) {
@@ -12,12 +12,11 @@ function key(id) {
 
 /**
  * @param {{
- *   malId: string,
+ *   animeId: string,
  *   episodeIndex: number,
  *   anime: unknown,
  *   episodes: unknown[],
  *   stream: unknown,
- *   streamCatalogMirror?: string,
  * }} payload
  * @returns {string} handoff id for `navigate(..., { state: { handoffId } })`
  */
@@ -29,12 +28,11 @@ export function stashAnimeWatchHandoff(payload) {
       key(id),
       JSON.stringify({
         savedAt: Date.now(),
-        malId: String(payload.malId ?? '').trim(),
+        animeId: String(payload.animeId ?? '').trim(),
         episodeIndex: Number(payload.episodeIndex) || 0,
         anime: payload.anime ?? null,
         episodes: Array.isArray(payload.episodes) ? payload.episodes : [],
         stream: payload.stream ?? null,
-        streamCatalogMirror: payload.streamCatalogMirror ?? '',
       }),
     )
   } catch {
@@ -45,7 +43,7 @@ export function stashAnimeWatchHandoff(payload) {
 
 /**
  * @param {string} id
- * @returns {{ malId: string, episodeIndex: number, anime: unknown, episodes: unknown[], stream: unknown, streamCatalogMirror?: string } | null}
+ * @returns {{ animeId: string, episodeIndex: number, anime: unknown, episodes: unknown[], stream: unknown } | null}
  */
 export function peekAnimeWatchHandoff(id) {
   if (!id || typeof sessionStorage === 'undefined') return null
@@ -60,40 +58,26 @@ export function peekAnimeWatchHandoff(id) {
     const row = JSON.parse(raw)
     const savedAt = Number(row?.savedAt)
     if (!Number.isFinite(savedAt) || Date.now() - savedAt > TTL_MS) {
-      try {
-        sessionStorage.removeItem(key(id))
-      } catch {
-        /* ignore */
-      }
+      try { sessionStorage.removeItem(key(id)) } catch { /* ignore */ }
       return null
     }
-    const malId = String(row?.malId ?? '').trim()
-    if (!malId) return null
+    const animeId = String(row?.animeId ?? '').trim()
+    if (!animeId) return null
     return {
-      malId,
+      animeId,
       episodeIndex: Number(row?.episodeIndex) || 0,
       anime: row?.anime ?? null,
       episodes: Array.isArray(row?.episodes) ? row.episodes : [],
       stream: row?.stream ?? null,
-      streamCatalogMirror:
-        typeof row?.streamCatalogMirror === 'string' ? row.streamCatalogMirror : '',
     }
   } catch {
-    try {
-      sessionStorage.removeItem(key(id))
-    } catch {
-      /* ignore */
-    }
+    try { sessionStorage.removeItem(key(id)) } catch { /* ignore */ }
     return null
   }
 }
 
-/** Optional: remove after successful longer session (e.g. user left watch page). */
+/** @param {string} id */
 export function clearAnimeWatchHandoff(id) {
   if (!id || typeof sessionStorage === 'undefined') return
-  try {
-    sessionStorage.removeItem(key(id))
-  } catch {
-    /* ignore */
-  }
+  try { sessionStorage.removeItem(key(id)) } catch { /* ignore */ }
 }

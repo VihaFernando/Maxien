@@ -149,7 +149,7 @@ export function MangaReadingShelf({
                                 <div className="flex max-w-full min-w-0 gap-3 overflow-x-auto overflow-y-hidden px-4 sm:px-5 pb-0.5 hide-scrollbar overscroll-x-contain snap-x snap-mandatory scroll-pl-4 scroll-pr-4 sm:scroll-pl-5 sm:scroll-pr-5">
                                     {suggestions.slice(0, 10).map((m) => (
                                         <button
-                                            key={`${m.source || 'legacy'}-${m.id}`}
+                                            key={`${m.source || 'roliascan'}-${m.id}`}
                                             type="button"
                                             onClick={() => onPickSuggestion?.(m)}
                                             className="group w-[92px] shrink-0 snap-start text-left"

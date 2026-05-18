@@ -277,6 +277,16 @@ export function getAnimeStreamAudio(prefs) {
     return prefs?.animeStreamAudio === 'dub' ? 'dub' : 'sub'
 }
 
+/** @param {Record<string, unknown>|null|undefined} prefs */
+export function getAnimeLibraryLayout(prefs) {
+    return prefs?.animeLibraryLayout === 'list' ? 'list' : 'grid'
+}
+
+/** @param {Record<string, unknown>|null|undefined} prefs */
+export function getMangaLibraryLayout(prefs) {
+    return prefs?.mangaLibraryLayout === 'list' ? 'list' : 'grid'
+}
+
 /** API default: missing preference = enabled */
 export function isPluginEnabled(prefs, key) {
     if (!prefs || prefs[key] === undefined) return true

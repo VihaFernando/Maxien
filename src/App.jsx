@@ -35,6 +35,7 @@ const LifeSyncWishlist = lazy(() => import('./pages/lifesync/LifeSyncWishlist'))
 const LifeSyncXbox = lazy(() => import('./pages/lifesync/LifeSyncXbox'))
 const LifeSyncAnime = lazy(() => import('./pages/lifesync/LifeSyncAnime'))
 const LifeSyncAnimeCalendar = lazy(() => import('./pages/lifesync/LifeSyncAnimeCalendar'))
+const LifeSyncAnimeSchedule = lazy(() => import('./pages/lifesync/LifeSyncAnimeSchedule'))
 const LifeSyncManga = lazy(() => import('./pages/lifesync/LifeSyncManga'))
 const LifeSyncHentai = lazy(() => import('./pages/lifesync/LifeSyncHentai'))
 const LifeSyncAnimeMediaLayout = lazy(() => import('./pages/lifesync/LifeSyncAnimeMediaLayout'))
@@ -91,11 +92,12 @@ function App() {
                     <Route path="lifesync/games/xbox/*" element={<LifeSyncXbox />} />
                     <Route path="lifesync/anime" element={<LifeSyncAnimeMediaLayout />}>
                       <Route index element={<LifeSyncAnimeHub />} />
-                      <Route path="anime/watch/:malId/:ep" element={<LifeSyncAnimeWatch />} />
+                      <Route path="anime/watch/:animeId/:ep" element={<LifeSyncAnimeWatch />} />
                       <Route path="manga/read/:mangaId/:chapterId" element={<LifeSyncMangaRead />} />
                       <Route path="manga/library" element={<LifeSyncMangaLibrary />} />
                       <Route path="anime/history" element={<LifeSyncAnimeHistory />} />
                       <Route path="anime/calendar" element={<LifeSyncAnimeCalendar />} />
+                      <Route path="anime/schedule" element={<LifeSyncAnimeSchedule />} />
                       <Route path="anime/*" element={<LifeSyncAnime />} />
                       <Route path="manga/*" element={<LifeSyncManga />} />
                       <Route path="hentai/*" element={<LifeSyncHentai />} />

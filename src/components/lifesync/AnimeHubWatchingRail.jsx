@@ -7,9 +7,9 @@ const focusRing =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white'
 
 /** Dedicated watch route (`LifeSyncAnimeWatch`); matches `goToWatch` in `LifeSyncAnime.jsx`. */
-function watchPath(malId, episode) {
+function watchPath(animeId, episode) {
     const ep = Math.max(1, Math.floor(Number(episode) || 1))
-    return `${ANIME_HUB_PATH}/watch/${encodeURIComponent(String(malId))}/${ep}`
+    return `${ANIME_HUB_PATH}/watch/${encodeURIComponent(String(animeId))}/${ep}`
 }
 
 /** Hub rail — anime watch resume strip. */
@@ -48,8 +48,8 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
                 ) : (
                     entries.slice(0, 12).map((entry) => (
                         <Link
-                            key={entry.malId}
-                            to={watchPath(entry.malId, entry.lastEpisodeNumber)}
+                            key={entry.animeId}
+                            to={watchPath(entry.animeId, entry.lastEpisodeNumber)}
                             state={{ from: ANIME_HUB_PATH, fromResumeDeck: true }}
                             className={`group w-[112px] shrink-0 snap-start sm:w-[118px] ${focusRing} rounded-2xl outline-none`}
                         >

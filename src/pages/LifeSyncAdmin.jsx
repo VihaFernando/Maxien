@@ -16,19 +16,15 @@ const VALID_TAB_IDS = new Set(ADMIN_TABS.map((t) => t.id))
 
 const CAPABILITY_LABELS = {
     steamWebApi: 'Steam Web API',
-    malOAuth: 'MAL OAuth',
     googleOAuth: 'Google OAuth',
-    animeScheduleAppToken: 'AnimeSchedule app token',
-    animeScheduleOAuth: 'AnimeSchedule OAuth',
     supabasePasswordless: 'Supabase passwordless',
     openXbl: 'OpenXBL',
     gameSearch: 'GameSearch',
     gameRantNews: 'GameRant news',
     cheapShark: 'CheapShark',
     watchHentai: 'WatchHentai',
-    anitakuFallback: 'Anitaku fallback',
+    aninekoFallback: 'Anineko fallback',
     mangaDistrict: 'Manga District',
-    hentaiFox: 'HentaiFox NSFW',
 }
 
 const HEALTH_CHECK_LABELS = {
@@ -40,8 +36,7 @@ const HEALTH_CHECK_LABELS = {
     openXblConfigured: 'OpenXBL configured',
     gameSearchEnabled: 'GameSearch enabled',
     mangaDistrictEnabled: 'Manga District enabled',
-    hentaiFoxEnabled: 'HentaiFox enabled',
-    anitakuFallbackEnabled: 'Anitaku fallback enabled',
+    aninekoFallbackEnabled: 'Anineko fallback enabled',
 }
 
 const V1_ADMIN_MODE = false
@@ -175,14 +170,12 @@ export default function LifeSyncAdmin() {
     const [v1Health, setV1Health] = useState(null)
     const [v1HealthError, setV1HealthError] = useState('')
 
-    const [malCheckId, setMalCheckId] = useState('')
-    const [malCheckBusy, setMalCheckBusy] = useState(false)
-    const [malCheckResult, setMalCheckResult] = useState(null)
-    const [malMapId, setMalMapId] = useState('')
-    const [malMapSlug, setMalMapSlug] = useState('')
-    const [malMapSearchTitle, setMalMapSearchTitle] = useState('')
-    const [malMapBusy, setMalMapBusy] = useState(false)
-    const [malMapResult, setMalMapResult] = useState(null)
+    const [slugCheckId, setSlugCheckId] = useState('')
+    const [slugCheckBusy, setSlugCheckBusy] = useState(false)
+    const [slugCheckResult, setSlugCheckResult] = useState(null)
+    const [hydrateSlug, setHydrateSlug] = useState('')
+    const [hydrateBusy, setHydrateBusy] = useState(false)
+    const [hydrateResult, setHydrateResult] = useState(null)
 
 
     const hasToken = Boolean(getLifesyncToken())
@@ -412,61 +405,45 @@ export default function LifeSyncAdmin() {
     }
 
 
-    const runMalCheck = async () => {
-        const id = malCheckId.trim()
-        if (!id) {
-            setMalCheckResult({ error: 'Enter a MAL anime id.' })
+    const runSlugCheck = async () => {
+        const slug = slugCheckId.trim().replace(/^\/+|\/+$/g, '')
+        if (!slug) {
+            setSlugCheckResult({ error: 'Enter an Anineko anime slug.' })
             return
         }
-        if (!/^\d+$/.test(id)) {
-            setMalCheckResult({ error: 'MAL id must be numeric.' })
-            return
-        }
-        setMalCheckBusy(true)
-        setMalCheckResult(null)
+        setSlugCheckBusy(true)
+        setSlugCheckResult(null)
         try {
-            const data = await lifesyncFetch(`/api/v1/admin/mal/check?malId=${encodeURIComponent(id)}`, {
+            const data = await lifesyncFetch(`/api/v1/admin/anime-db/check?slug=${encodeURIComponent(slug)}`, {
                 method: 'GET',
             })
-            setMalCheckResult(data)
+            setSlugCheckResult(data)
         } catch (e) {
-            setMalCheckResult({ error: e?.message || 'MAL check failed.' })
+            setSlugCheckResult({ error: e?.message || 'Slug check failed.' })
         } finally {
-            setMalCheckBusy(false)
+            setSlugCheckBusy(false)
         }
     }
 
-    const runMalMap = async () => {
-        const id = malMapId.trim()
-        if (!id) {
-            setMalMapResult({ error: 'Enter a MAL anime id.' })
+    const runHydrate = async () => {
+        const slug = hydrateSlug.trim().replace(/^\/+|\/+$/g, '')
+        if (!slug) {
+            setHydrateResult({ error: 'Enter an Anineko anime slug.' })
             return
         }
-        if (!/^\d+$/.test(id)) {
-            setMalMapResult({ error: 'MAL id must be numeric.' })
-            return
-        }
-        const title = malMapSearchTitle.trim()
-        const slug = malMapSlug.trim().replace(/^\/+|\/+$/g, '')
-        setMalMapBusy(true)
-        setMalMapResult(null)
+        setHydrateBusy(true)
+        setHydrateResult(null)
         try {
-            const data = await lifesyncFetch('/api/v1/admin/anime-db/map-mal-to-anitaku', {
+            const data = await lifesyncFetch('/api/v1/admin/anime-db/hydrate', {
                 method: 'POST',
-                json: {
-                    malId: id,
-                    ...(title ? { searchTitle: title } : {}),
-                    ...(!title && slug ? { anitakuSlug: slug } : {}),
-                },
+                json: { aninekoSlug: slug },
             })
-            setMalMapResult(data)
-            setMalCheckId(id)
-            setMalCheckResult(null)
+            setHydrateResult(data)
             refreshAnimeDb().catch(() => {})
         } catch (e) {
-            setMalMapResult({ error: e?.message || 'MAL to Anitaku mapping failed.' })
+            setHydrateResult({ error: e?.message || 'Hydrate failed.' })
         } finally {
-            setMalMapBusy(false)
+            setHydrateBusy(false)
         }
     }
 
@@ -737,9 +714,7 @@ export default function LifeSyncAdmin() {
                             <MetricCard label="Wishlist Xbox" value={m?.wishlistXboxCount} />
                             <MetricCard label="Password logins" value={m?.usersWithLocalPassword} />
                             <MetricCard label="Steam linked" value={m?.usersSteamLinked} />
-                            <MetricCard label="MAL linked" value={m?.usersMalLinked} />
                             <MetricCard label="Google linked" value={m?.usersGoogleLinked} />
-                            <MetricCard label="AnimeSchedule" value={m?.usersAnimeScheduleLinked} />
                             <MetricCard label="Tips opt-in" value={m?.engagementOptInUsers} />
                             <MetricCard label="NSFW pref on" value={m?.usersNsfwEnabled} />
                             <MetricCard label="H manhwa plugin" value={m?.usersHManhwaPluginEnabled} />
@@ -848,7 +823,7 @@ export default function LifeSyncAdmin() {
                     <Panel>
                         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                             <SectionIntro title="Anime DB snapshot">
-                                Cache coverage for AnimeData (stream pointers + MAL detail).
+                                Cache coverage for AnimeData (stream pointers + Anineko catalog).
                             </SectionIntro>
                             <button
                                 type="button"
@@ -876,13 +851,13 @@ export default function LifeSyncAdmin() {
                                 }
                             />
                             <MetricCard label="With streams" value={animeDb?.totals?.withStreams} />
-                            <MetricCard label="With MAL detail" value={animeDb?.totals?.withMalDetail} />
+                            <MetricCard label="With catalog" value={animeDb?.totals?.withStreams} />
                         </div>
                         <div className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
                             <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Newest</p>
                                 <p className="mt-1 font-mono text-apple-text">
-                                    {animeDb?.newest?.malId ? `MAL ${animeDb.newest.malId}` : '—'}
+                                    {animeDb?.newest?.aninekoSlug || '—'}
                                 </p>
                                 <p className="mt-1 text-apple-subtext">{animeDb?.newest?.title || '—'}</p>
                                 <p className="mt-1 font-mono text-[11px] text-apple-subtext">
@@ -892,7 +867,7 @@ export default function LifeSyncAdmin() {
                             <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Oldest</p>
                                 <p className="mt-1 font-mono text-apple-text">
-                                    {animeDb?.oldest?.malId ? `MAL ${animeDb.oldest.malId}` : '—'}
+                                    {animeDb?.oldest?.aninekoSlug || '—'}
                                 </p>
                                 <p className="mt-1 text-apple-subtext">{animeDb?.oldest?.title || '—'}</p>
                                 <p className="mt-1 font-mono text-[11px] text-apple-subtext">
@@ -903,168 +878,71 @@ export default function LifeSyncAdmin() {
                     </Panel>
 
                     <Panel>
-                        <SectionIntro title="MAL id check">
-                            Validate a MAL anime id against the cache and the MAL API.
+                        <SectionIntro title="Anime slug check">
+                            Validate an Anineko slug against the local cache.
                         </SectionIntro>
                         <div className="flex flex-col gap-2 sm:flex-row">
                             <input
                                 autoComplete="off"
-                                placeholder="MAL anime id"
-                                value={malCheckId}
-                                onChange={(e) => setMalCheckId(e.target.value.trim())}
+                                placeholder="Anineko slug (e.g. one-piece)"
+                                value={slugCheckId}
+                                onChange={(e) => setSlugCheckId(e.target.value.trim())}
                                 className="min-w-0 flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
                             />
                             <button
                                 type="button"
-                                disabled={malCheckBusy}
-                                onClick={runMalCheck}
+                                disabled={slugCheckBusy}
+                                onClick={runSlugCheck}
                                 className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-4 py-2.5 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
                             >
-                                {malCheckBusy ? 'Checking…' : 'Check'}
+                                {slugCheckBusy ? 'Checking…' : 'Check'}
                             </button>
                         </div>
-                        {malCheckResult?.error ? (
-                            <p className="mt-2 text-[12px] text-amber-800">{malCheckResult.error}</p>
+                        {slugCheckResult?.error ? (
+                            <p className="mt-2 text-[12px] text-amber-800">{slugCheckResult.error}</p>
                         ) : null}
-                        {malCheckResult && !malCheckResult.error ? (
-                            <div className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
-                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Cache</p>
-                                    <p className="mt-1 text-apple-text">
-                                        {malCheckResult.db?.found ? 'Found' : 'Not found'}
-                                    </p>
-                                    <p className="mt-1 font-mono text-[11px] text-apple-subtext">
-                                        {malCheckResult.db?.malId ? `MAL ${malCheckResult.db.malId}` : '—'}
-                                    </p>
-                                    <p className="mt-1 text-apple-subtext">{malCheckResult.db?.title || '—'}</p>
-                                    <p className="mt-1 text-apple-subtext">
-                                        Streams: {malCheckResult.db?.hasStreams ? 'yes' : 'no'}
-                                    </p>
-                                    <p className="mt-1 text-apple-subtext">
-                                        MAL detail: {malCheckResult.db?.malDetailCached ? 'yes' : 'no'}
-                                    </p>
-                                </div>
-                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">MAL</p>
-                                    {malCheckResult.mal?.ok ? (
-                                        <>
-                                            <p className="mt-1 text-apple-text">OK</p>
-                                            <p className="mt-1 font-mono text-[11px] text-apple-subtext">
-                                                {malCheckResult.mal?.id ? `MAL ${malCheckResult.mal.id}` : '—'}
-                                            </p>
-                                            <p className="mt-1 text-apple-subtext">{malCheckResult.mal?.title || '—'}</p>
-                                            <p className="mt-1 text-apple-subtext">
-                                                Status: {malCheckResult.mal?.status || '—'}
-                                            </p>
-                                            <p className="mt-1 text-apple-subtext">
-                                                Episodes: {malCheckResult.mal?.numEpisodes ?? '—'}
-                                            </p>
-                                        </>
-                                    ) : (
-                                        <p className="mt-1 text-amber-800">
-                                            {malCheckResult.mal?.error || 'MAL lookup failed.'}
-                                        </p>
-                                    )}
-                                </div>
+                        {slugCheckResult && !slugCheckResult.error ? (
+                            <div className="mt-4 rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3 text-[12px]">
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Cache</p>
+                                <p className="mt-1 text-apple-text">{slugCheckResult.db?.found ? 'Found' : 'Not found'}</p>
+                                <p className="mt-1 font-mono text-[11px] text-apple-subtext">{slugCheckResult.db?.aninekoSlug || '—'}</p>
+                                <p className="mt-1 text-apple-subtext">{slugCheckResult.db?.title || '—'}</p>
+                                <p className="mt-1 text-apple-subtext">Streams: {slugCheckResult.db?.hasStreams ? 'yes' : 'no'}</p>
+                                <p className="mt-1 text-apple-subtext">Episodes: {slugCheckResult.db?.epCount ?? '—'}</p>
                             </div>
                         ) : null}
                     </Panel>
 
                     <Panel>
-                        <SectionIntro title="MAL → Anitaku map">
-                            Map by MAL id using either an Anitaku slug or search text, then persist the mapping.
+                        <SectionIntro title="Hydrate Anineko slug">
+                            Fetch and persist catalog data for an Anineko slug into the database.
                         </SectionIntro>
-                        <div className="grid gap-2 sm:grid-cols-[minmax(120px,180px)_minmax(0,1fr)_minmax(0,1fr)_auto]">
+                        <div className="flex flex-col gap-2 sm:flex-row">
                             <input
                                 autoComplete="off"
-                                placeholder="MAL anime id"
-                                value={malMapId}
-                                onChange={(e) => setMalMapId(e.target.value.trim())}
-                                className="min-w-0 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
-                            />
-                            <input
-                                autoComplete="off"
-                                placeholder="Optional Anitaku slug (category slug)"
-                                value={malMapSlug}
-                                onChange={(e) => setMalMapSlug(e.target.value.trim())}
-                                className="min-w-0 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
-                            />
-                            <input
-                                autoComplete="off"
-                                placeholder="Optional search title override"
-                                value={malMapSearchTitle}
-                                onChange={(e) => {
-                                    const next = e.target.value
-                                    setMalMapSearchTitle(next)
-                                    if (next.trim()) setMalMapSlug('')
-                                }}
-                                className="min-w-0 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[12px] text-apple-text"
+                                placeholder="Anineko slug (e.g. one-piece)"
+                                value={hydrateSlug}
+                                onChange={(e) => setHydrateSlug(e.target.value.trim())}
+                                className="min-w-0 flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 font-mono text-[12px] text-apple-text"
                             />
                             <button
                                 type="button"
-                                disabled={malMapBusy}
-                                onClick={runMalMap}
+                                disabled={hydrateBusy}
+                                onClick={runHydrate}
                                 className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-4 py-2.5 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
                             >
-                                {malMapBusy ? 'Mapping…' : 'Map & save'}
+                                {hydrateBusy ? 'Hydrating…' : 'Hydrate'}
                             </button>
                         </div>
-                        <p className="mt-2 text-[11px] text-apple-subtext">
-                            Enter slug or search text. If you type search text, slug is reset automatically.
-                        </p>
-                        {malMapResult?.error ? (
-                            <p className="mt-2 text-[12px] text-amber-800">{malMapResult.error}</p>
+                        {hydrateResult?.error ? (
+                            <p className="mt-2 text-[12px] text-amber-800">{hydrateResult.error}</p>
                         ) : null}
-                        {malMapResult && !malMapResult.error ? (
-                            <div className="mt-4 grid gap-3 text-[12px] sm:grid-cols-2">
-                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Mapped</p>
-                                    <p className="mt-1 text-apple-text">{malMapResult.mapped?.title || '—'}</p>
-                                    <p className="mt-1 font-mono text-[11px] text-apple-subtext">
-                                        {malMapResult.mapped?.anitakuSlug
-                                            ? `anitaku:${malMapResult.mapped.anitakuSlug}`
-                                            : '—'}
-                                    </p>
-                                    <p className="mt-1 text-apple-subtext">
-                                        Episodes: {malMapResult.mapped?.episodeCount ?? '—'}
-                                    </p>
-                                    <p className="mt-1 text-apple-subtext">
-                                        Search match: {malMapResult.mapped?.matchedStreamTitle || '—'}
-                                    </p>
-                                    <p className="mt-1 text-apple-subtext">
-                                        Mode: {malMapResult.mappingMode || 'search'}
-                                    </p>
-                                    <p className="mt-1 text-apple-subtext">
-                                        MAL lookup: {malMapResult.mal?.ok ? 'ok' : (malMapResult.mal?.error || 'failed')}
-                                    </p>
-                                </div>
-                                <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
-                                    <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Saved row</p>
-                                    <p className="mt-1 text-apple-text">
-                                        {malMapResult.db?.found ? 'Found' : 'Not found'}
-                                    </p>
-                                    <p className="mt-1 font-mono text-[11px] text-apple-subtext">
-                                        {malMapResult.db?.malId ? `MAL ${malMapResult.db.malId}` : '—'}
-                                    </p>
-                                    <p className="mt-1 text-apple-subtext">{malMapResult.db?.title || '—'}</p>
-                                    <p className="mt-1 text-apple-subtext">
-                                        Slug: {malMapResult.db?.anitakuSlug || '—'}
-                                    </p>
-                                    <p className="mt-1 text-apple-subtext">
-                                        DB episodes: {malMapResult.db?.epCount ?? '—'}
-                                    </p>
-                                    {malMapResult.db?.mirrorEpisodeCount != null ? (
-                                        <p className="mt-1 text-apple-subtext">
-                                            Mirror episodes: {malMapResult.db.mirrorEpisodeCount}
-                                        </p>
-                                    ) : null}
-                                </div>
+                        {hydrateResult && !hydrateResult.error ? (
+                            <div className="mt-4 rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3 text-[12px]">
+                                <p className="mt-1 text-apple-text">{hydrateResult.ok ? 'Hydrated successfully' : 'No data returned'}</p>
+                                <p className="mt-1 text-apple-subtext">{hydrateResult.title || '—'}</p>
+                                <p className="mt-1 text-apple-subtext">Episodes: {hydrateResult.episodeCount ?? '—'}</p>
                             </div>
-                        ) : null}
-                        {Array.isArray(malMapResult?.titlesTried) && malMapResult.titlesTried.length ? (
-                            <p className="mt-2 text-[11px] text-apple-subtext">
-                                Titles used: {malMapResult.titlesTried.slice(0, 5).join(' · ')}
-                            </p>
                         ) : null}
                     </Panel>
 
@@ -1206,7 +1084,7 @@ export default function LifeSyncAdmin() {
                         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
                             <SectionIntro title="Latest anime watch updates">
                                 Per-user streaming progress rows, newest <code className="font-mono text-[11px]">updatedAt</code>{' '}
-                                first (MAL id + episode).
+                                first (anime id + episode).
                             </SectionIntro>
                             <button
                                 type="button"
@@ -1223,7 +1101,7 @@ export default function LifeSyncAdmin() {
                                     <tr>
                                         <th className="px-3 py-2">When</th>
                                         <th className="px-3 py-2">User id</th>
-                                        <th className="px-3 py-2">MAL</th>
+                                        <th className="px-3 py-2">Anime</th>
                                         <th className="px-3 py-2">Episode</th>
                                         <th className="px-3 py-2">Actions</th>
                                     </tr>
@@ -1243,14 +1121,14 @@ export default function LifeSyncAdmin() {
                                         </tr>
                                     ) : (
                                         animeRows.map((row, i) => (
-                                            <tr key={`${row.userId}-${row.malId}-${i}`} className="hover:bg-apple-bg/60">
+                                            <tr key={`${row.userId}-${row.animeId}-${i}`} className="hover:bg-apple-bg/60">
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px] text-apple-subtext">
                                                     {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
                                                 </td>
                                                 <td className="max-w-40 truncate px-3 py-2 font-mono text-[11px] text-apple-subtext">
                                                     {row.userId || '—'}
                                                 </td>
-                                                <td className="px-3 py-2 font-mono text-[11px]">{row.malId || '—'}</td>
+                                                <td className="px-3 py-2 font-mono text-[11px]">{row.animeId || '—'}</td>
                                                 <td className="px-3 py-2 tabular-nums">{row.lastEpisodeNumber ?? '—'}</td>
                                                 <td className="px-2 py-2">
                                                     <button
@@ -1278,7 +1156,7 @@ export default function LifeSyncAdmin() {
                                 </div>
                             ) : (
                                 animeRows.map((row, i) => (
-                                    <article key={`${row.userId}-${row.malId}-${i}`} className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-[var(--color-surface)] p-3">
+                                    <article key={`${row.userId}-${row.animeId}-${i}`} className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-[var(--color-surface)] p-3">
                                         <p className="font-mono text-[11px] text-apple-subtext">
                                             {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
                                         </p>
@@ -1288,8 +1166,8 @@ export default function LifeSyncAdmin() {
                                                 <p className="truncate font-mono text-apple-text">{row.userId || '—'}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[10px] uppercase tracking-wide text-apple-subtext">MAL</p>
-                                                <p className="font-mono text-apple-text">{row.malId || '—'}</p>
+                                                <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Anime</p>
+                                                <p className="font-mono text-apple-text">{row.animeId || '—'}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Episode</p>
@@ -1548,10 +1426,8 @@ export default function LifeSyncAdmin() {
                                         onChange={(e) => setUnlinkIntegration(e.target.value)}
                                         className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[12px] text-apple-text"
                                     >
-                                        <option value="mal">MAL</option>
                                         <option value="steam">Steam</option>
                                         <option value="google">Google</option>
-                                        <option value="animeschedule">AnimeSchedule</option>
                                         <option value="all">All integrations</option>
                                     </select>
                                     <button
@@ -1606,9 +1482,7 @@ export default function LifeSyncAdmin() {
                                                 <td className="px-3 py-2">
                                                     <div className="flex flex-wrap gap-1">
                                                         <LinkPill label="St" active={row.links?.steam} />
-                                                        <LinkPill label="MAL" active={row.links?.mal} />
                                                         <LinkPill label="G" active={row.links?.google} />
-                                                        <LinkPill label="AS" active={row.links?.animeSchedule} />
                                                     </div>
                                                 </td>
                                                 <td className="px-2 py-2">
@@ -1651,9 +1525,7 @@ export default function LifeSyncAdmin() {
                                         </div>
                                         <div className="mt-2 flex flex-wrap gap-1">
                                             <LinkPill label="St" active={row.links?.steam} />
-                                            <LinkPill label="MAL" active={row.links?.mal} />
                                             <LinkPill label="G" active={row.links?.google} />
-                                            <LinkPill label="AS" active={row.links?.animeSchedule} />
                                         </div>
                                         <button
                                             type="button"
@@ -1706,9 +1578,7 @@ function UserSummaryCard({ user }) {
                 <dt className="text-apple-subtext">Integrations</dt>
                 <dd className="mt-1 flex flex-wrap gap-1">
                     <LinkPill label="Steam" active={user.links?.steam} />
-                    <LinkPill label="MAL" active={user.links?.mal} />
                     <LinkPill label="Google" active={user.links?.google} />
-                    <LinkPill label="AnimeSchedule" active={user.links?.animeSchedule} />
                 </dd>
             </div>
         </dl>

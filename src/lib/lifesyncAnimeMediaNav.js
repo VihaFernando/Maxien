@@ -8,6 +8,7 @@ export function animeMediaSidebarItems(prefs) {
     const hManhwaVisible = isLifeSyncHManhwaVisible(prefs)
     if (isPluginEnabled(prefs, 'pluginAnimeEnabled')) {
         items.push({ id: 'anime', to: '/dashboard/lifesync/anime/anime', label: 'Anime' })
+        items.push({ id: 'schedule', to: '/dashboard/lifesync/anime/anime/schedule', label: 'Schedule' })
         items.push({ id: 'calendar', to: '/dashboard/lifesync/anime/anime/calendar', label: 'Calendar' })
     }
     if (isPluginEnabled(prefs, 'pluginMangaEnabled')) {

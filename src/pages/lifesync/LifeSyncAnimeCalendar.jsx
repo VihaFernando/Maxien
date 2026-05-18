@@ -86,8 +86,8 @@ function normalizeRoute(route) {
 }
 
 function pinKeyFromItem(item) {
-  const mid = String(item?.malId ?? "").trim();
-  if (/^\d+$/.test(mid)) return `mal:${mid}`;
+  const animeId = String(item?.animeId ?? "").trim();
+  if (animeId) return `anineko:${animeId}`;
   const r = normalizeRoute(item?.route);
   if (r) return `route:${r}`;
   return "";
@@ -101,11 +101,6 @@ function addDays(date, deltaDays) {
 
 function safeString(x) {
   return typeof x === "string" ? x : x == null ? "" : String(x);
-}
-
-function normalizeMalId(x) {
-  const s = safeString(x).trim();
-  return /^\d+$/.test(s) ? s : "";
 }
 
 function formatClock(ms, tz) {
@@ -253,13 +248,13 @@ export default function LifeSyncAnimeCalendar() {
       const nextPins = (() => {
         const rest = (Array.isArray(prevPins) ? prevPins : []).filter((p) => String(p?.key) !== key);
         const item = typeof itemOrKey === "object" && itemOrKey ? itemOrKey : null;
-        const malId = item?.malId != null ? String(item.malId) : null;
+        const animeId = item?.animeId != null ? String(item.animeId) : null;
         const route = item?.route != null ? String(item.route) : null;
         const title = typeof item?.title === "string" ? item.title : "";
         const imageUrl = typeof item?.imageUrl === "string" ? item.imageUrl : "";
         rest.push({
           key,
-          ...(malId && /^\d+$/.test(String(malId).trim()) ? { malId: String(malId).trim() } : {}),
+          ...(animeId ? { animeId } : {}),
           ...(route && normalizeRoute(route) ? { route: normalizeRoute(route) } : {}),
           ...(title ? { title } : {}),
           ...(imageUrl ? { imageUrl } : {}),
@@ -288,7 +283,7 @@ export default function LifeSyncAnimeCalendar() {
             key,
             ...(typeof itemOrKey === "object" && itemOrKey
               ? {
-                  malId: itemOrKey?.malId ?? null,
+                  animeId: itemOrKey?.animeId ?? null,
                   route: itemOrKey?.route ?? null,
                   title: itemOrKey?.title ?? "",
                   imageUrl: itemOrKey?.imageUrl ?? "",
@@ -330,20 +325,10 @@ export default function LifeSyncAnimeCalendar() {
       writeMonthCache(monthKeyRef.current, { days: nextDays, pins: nextPins });
 
       try {
-        // Prefer key delete (route pins supported). Fallback to legacy MAL delete for older servers.
         await lifesyncFetch(`/api/v1/anime/calendar/pins/key/${encodeURIComponent(key)}`, {
           method: "DELETE",
         });
       } catch (e) {
-        // Legacy fallback: mal:<id>
-        if (/^mal:\d+$/.test(key)) {
-          try {
-            const mid = key.slice(4);
-            await lifesyncFetch(`/api/v1/anime/calendar/pins/${encodeURIComponent(mid)}`, { method: "DELETE" });
-          } catch {
-            // fall through to revert
-          }
-        }
         setPins(prevPins);
         setDays(prevDays);
         writeMonthCache(monthKeyRef.current, { days: prevDays, pins: prevPins });
@@ -438,7 +423,7 @@ export default function LifeSyncAnimeCalendar() {
           <div className="mt-1.5 hidden sm:block space-y-1 overflow-hidden">
             {list.slice(0, 2).map((it, idx) => (
               <div
-                key={`${it.malId}-${it.episodeNumber}-${idx}`}
+                key={`${it.animeId || it.title}-${it.episodeNumber}-${idx}`}
                 className={`w-full truncate rounded-md px-2 py-1 text-[10px] font-medium ${
                   it?.isPinned
                     ? "bg-[var(--mx-color-c6ff00)]/15 text-[var(--mx-color-1d1d1f)]"
@@ -458,7 +443,7 @@ export default function LifeSyncAnimeCalendar() {
           <div className="mt-2 flex flex-wrap gap-1 sm:hidden">
             {list.slice(0, 4).map((it, idx) => (
               <span
-                key={`${it.malId}-${it.episodeNumber}-${idx}`}
+                key={`${it.animeId || it.title}-${it.episodeNumber}-${idx}`}
                 className={`h-1.5 w-1.5 rounded-full ${
                   it?.isPinned ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-86868b)]"
                 }`}
@@ -514,7 +499,7 @@ export default function LifeSyncAnimeCalendar() {
     const [query, setQuery] = useState("");
     const [activeKey, setActiveKey] = useState("");
 
-    const malAbortRef = useRef(null);
+    const searchAbortRef = useRef(null);
 
     const title = selectedDate.toLocaleDateString("en-US", {
       weekday: "long",
@@ -539,7 +524,7 @@ export default function LifeSyncAnimeCalendar() {
           _isPinned: isPinned,
           _priority: priority,
           _airedAtMs: Number.isFinite(airedAtMs) ? airedAtMs : 0,
-          _rowKey: `${key || "row"}:${String(it?.malId || "")}:${String(it?.route || "")}:${String(it?.episodeNumber || "")}:${idx}`,
+          _rowKey: `${key || "row"}:${String(it?.animeId || "")}:${String(it?.route || "")}:${String(it?.episodeNumber || "")}:${idx}`,
         };
       });
     })();
@@ -606,65 +591,61 @@ export default function LifeSyncAnimeCalendar() {
       return filteredItems.find((x) => x._rowKey === activeKey) || null;
     }, [activeKey, filteredItems]);
 
-    const openMalDetails = async (it) => {
+    const openAnimeDetails = async (it) => {
       if (!it) return;
       const titleForSearch = safeString(it?.title).trim();
-      const directMalId = normalizeMalId(it?.malId);
+      const directSlug = safeString(it?.animeId).trim();
 
-      // Cancel any in-flight lookups.
-      if (malAbortRef.current) malAbortRef.current.abort();
-      const ac = new AbortController();
-      malAbortRef.current = ac;
-
-      try {
-        let malId = directMalId;
-        if (!malId) {
-          if (!titleForSearch) {
-            navigate(`/dashboard/lifesync/anime/anime/search/page/1?q=`);
-            setShowDayOverlay(false);
-            return;
-          }
-          const res = await lifesyncFetch(
-            `/api/v1/anime/search?q=${encodeURIComponent(titleForSearch)}&limit=5&offset=0&view=compact`,
-            { signal: ac.signal },
-          );
-          const rows = Array.isArray(res?.data) ? res.data : [];
-          const top = rows[0]?.node || rows[0] || null;
-          const candidateId = normalizeMalId(top?.id);
-          if (!candidateId) {
-            navigate(
-              `/dashboard/lifesync/anime/anime/search/page/1?q=${encodeURIComponent(
-                titleForSearch,
-              )}`,
-            );
-            setShowDayOverlay(false);
-            return;
-          }
-          malId = candidateId;
-        }
-
-        // Route-controlled detail overlay on the main Anime page.
-        // That page fetches MAL details + Anitaku episodes internally.
+      if (directSlug) {
         const preview = {
-          id: String(malId),
-          title: titleForSearch || safeString(it?.title).trim() || `MAL #${malId}`,
-          main_picture: it?.imageUrl
-            ? { large: String(it.imageUrl), medium: String(it.imageUrl) }
-            : undefined,
+          id: directSlug,
+          title: titleForSearch || directSlug,
+          poster: it?.imageUrl ? String(it.imageUrl) : undefined,
         };
         navigate(
-          `/dashboard/lifesync/anime/anime/seasonal/page/1/detail/${encodeURIComponent(
-            String(malId),
-          )}`,
+          `/dashboard/lifesync/anime/anime/home/page/1/detail/${encodeURIComponent(directSlug)}`,
+          { state: { animeDetailPreview: preview } },
+        );
+        setShowDayOverlay(false);
+        return;
+      }
+
+      if (!titleForSearch) {
+        navigate(`/dashboard/lifesync/anime/anime/search/page/1?q=`);
+        setShowDayOverlay(false);
+        return;
+      }
+
+      if (searchAbortRef.current) searchAbortRef.current.abort();
+      const ac = new AbortController();
+      searchAbortRef.current = ac;
+
+      try {
+        const res = await lifesyncFetch(
+          `/api/v1/anime/search?q=${encodeURIComponent(titleForSearch)}&limit=5&offset=0`,
+          { signal: ac.signal },
+        );
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        const top = rows[0]?.node || rows[0] || null;
+        const candidateSlug = safeString(top?.slug || top?.id).trim();
+        if (!candidateSlug) {
+          navigate(`/dashboard/lifesync/anime/anime/search/page/1?q=${encodeURIComponent(titleForSearch)}`);
+          setShowDayOverlay(false);
+          return;
+        }
+        const preview = {
+          id: candidateSlug,
+          title: titleForSearch || candidateSlug,
+          poster: it?.imageUrl ? String(it.imageUrl) : undefined,
+        };
+        navigate(
+          `/dashboard/lifesync/anime/anime/home/page/1/detail/${encodeURIComponent(candidateSlug)}`,
           { state: { animeDetailPreview: preview } },
         );
         setShowDayOverlay(false);
       } catch (e) {
         if (e?.name === "AbortError") return;
-        const q = titleForSearch || "";
-        navigate(
-          `/dashboard/lifesync/anime/anime/search/page/1?q=${encodeURIComponent(q)}`,
-        );
+        navigate(`/dashboard/lifesync/anime/anime/search/page/1?q=${encodeURIComponent(titleForSearch)}`);
         setShowDayOverlay(false);
       }
     };
@@ -1037,7 +1018,7 @@ export default function LifeSyncAnimeCalendar() {
 
                       <button
                         type="button"
-                        onClick={() => openMalDetails(activeItem)}
+                        onClick={() => openAnimeDetails(activeItem)}
                         className="inline-flex min-h-[42px] items-center justify-center rounded-xl bg-[var(--mx-color-2e51a2)] px-3 text-[12px] font-bold text-white transition hover:brightness-95"
                       >
                         Open anime details
@@ -1091,7 +1072,7 @@ export default function LifeSyncAnimeCalendar() {
           Anime Calendar
         </h2>
         <p className="text-[var(--mx-color-86868b)] text-sm sm:text-[17px] font-medium">
-          Episode dates powered by AnimeSchedule.net (cached server-side). Pin shows to prioritize them.
+          Weekly schedule powered by Anineko. Pin shows to prioritize them in your calendar.
         </p>
       </header>
 

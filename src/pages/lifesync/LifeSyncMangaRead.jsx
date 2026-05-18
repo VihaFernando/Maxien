@@ -12,7 +12,7 @@ import { readProgressQueueSync, writeProgressQueueSync } from '../../features/ma
 const MANGA_PROGRESS_LOCAL_SAVE_MS = 8000
 const MANGA_PROGRESS_REMOTE_FLUSH_DEBOUNCE_MS = 6000
 const MANGA_PROGRESS_FLUSH_BATCH = 16
-const MANGA_PROGRESS_SOURCES = new Set(['mangadistrict', 'comix', 'hentaifox'])
+const MANGA_PROGRESS_SOURCES = new Set(['mangadistrict', 'roliascan'])
 const MANGA_READER_INITIAL_PAGE_BURST = 4
 const MANGA_ZOOM_TRANSITION_MS = 180
 const MANGA_ZOOM_STEP = 10
@@ -70,7 +70,7 @@ function clampZoomPct(value, { fullscreen = false } = {}) {
 function normalizeMangaSource(value) {
     const source = String(value || '').trim().toLowerCase()
     if (source === 'mangadistrict') return 'mangadistrict'
-    if (source === 'comix') return 'comix'
+    if (source === 'roliascan') return 'roliascan'
     return ''
 }
 
@@ -342,8 +342,8 @@ export default function LifeSyncMangaRead() {
         const sourceName =
             manga.source === 'mangadistrict'
                 ? 'mangadistrict'
-                : manga.source === 'comix'
-                    ? 'comix'
+                : manga.source === 'roliascan'
+                    ? 'roliascan'
                 : ''
         if (!sourceName) return null
         return sanitizeProgressPayload({
@@ -455,14 +455,14 @@ export default function LifeSyncMangaRead() {
                         setSortedChapters(list)
                         setChapter(ch)
                     }
-                } else if (source === 'comix') {
-                    const data = await lifesyncFetch(`/api/v1/manga/comix/info/${encodeURIComponent(mangaId)}?view=full`)
+                } else if (source === 'roliascan') {
+                    const data = await lifesyncFetch(`/api/v1/manga/roliascan/info/${encodeURIComponent(mangaId)}?view=full`)
                     const list = [...(data?.chapters || [])]
                     list.sort(compareChapters)
                     const ch = list.find(c => String(c?.id) === chapterId) || pickLatestChapter(list)
                     if (!ch) throw new Error('No chapters available.')
                     if (!cancelled) {
-                        setManga({ ...data, source: 'comix' })
+                        setManga({ ...data, source: 'roliascan' })
                         setSortedChapters(list)
                         setChapter(ch)
                     }
@@ -544,8 +544,8 @@ export default function LifeSyncMangaRead() {
             const path =
                 manga.source === 'mangadistrict'
                         ? `/api/v1/manga/mangadistrict/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
-                        : manga.source === 'comix'
-                            ? `/api/v1/manga/comix/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
+                        : manga.source === 'roliascan'
+                            ? `/api/v1/manga/roliascan/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
                         : `/api/v1/manga/pages/${chapter.id}`
             try {
                 const data = await lifesyncFetch(`${path}${path.includes('?') ? '&' : '?'}view=full`)

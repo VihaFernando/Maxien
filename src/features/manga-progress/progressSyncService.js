@@ -46,8 +46,7 @@ function normalizePercent(value) {
 function normalizeSource(value) {
     const source = String(value || '').trim().toLowerCase()
     if (source === 'mangadistrict') return 'mangadistrict'
-    if (source === 'comix') return 'comix'
-    if (source === 'hentaifox') return 'hentaifox'
+    if (source === 'roliascan') return 'roliascan'
     return ''
 }
 

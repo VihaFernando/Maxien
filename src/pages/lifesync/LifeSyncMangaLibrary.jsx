@@ -1,39 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { FaBookOpen, FaExclamationTriangle, FaFilter, FaSyncAlt, FaTimes, FaTrashAlt } from 'react-icons/fa'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
 import { mangaImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
-import { LifesyncEpisodeThumbnail, LifesyncMediaLibraryPageSkeleton } from '../../components/lifesync/EpisodeLoadingSkeletons'
-import { SeriesCompleteBadge } from '../../components/lifesync/LifeSyncShelfDecor'
+import { LifesyncEpisodeThumbnail } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import {
     MotionDiv,
     lifeSyncEaseOut,
     lifeSyncPageTransition,
-    lifeSyncStaggerContainer,
-    lifeSyncStaggerContainerDense,
-    lifeSyncStaggerItem,
-    lifeSyncStaggerItemFade,
 } from '../../lib/lifesyncMotion'
-
-const MotionLi = motion.li
-const MotionUl = motion.ul
 
 const MANGA_BASE = '/dashboard/lifesync/anime/manga'
 const MANGA_LIBRARY_PATH = `${MANGA_BASE}/library`
+const PAGE_SIZE = 25
 
 const SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
+    { id: 'roliascan', label: 'Roliascan' },
     { id: 'mangadistrict', label: 'Manga District' },
 ]
-const PAGE_SIZE = 25
-const SYNC_SCOPE_OPTIONS = [
-    { id: 'needs_sync', label: 'Needs sync only' },
-    { id: 'all', label: 'All titles' },
-]
-
 const STATUS_OPTIONS = [
     { id: 'all', label: 'Any status' },
     { id: 'reading', label: 'Reading' },
@@ -43,590 +30,432 @@ const STATUS_OPTIONS = [
     { id: 'dropped', label: 'Dropped' },
     { id: 're_reading', label: 'Re-reading' },
 ]
-
 const UPDATE_STATE_OPTIONS = [
-    { id: 'all', label: 'Any update state' },
+    { id: 'all', label: 'Any update' },
     { id: 'new', label: 'New chapters' },
     { id: 'needs_sync', label: 'Needs sync' },
     { id: 'caught_up', label: 'Caught up' },
     { id: 'series_ended', label: 'Series ended' },
-    { id: 'up_to_date', label: 'Up to date' },
 ]
-
 const SORT_OPTIONS = [
     { id: 'updatedAt', label: 'Last updated' },
     { id: 'lastOpenedAt', label: 'Last opened' },
-    { id: 'title', label: 'Title' },
-    { id: 'source', label: 'Source' },
-    { id: 'lastReadPercent', label: 'Read progress' },
-    { id: 'lastChapterLabel', label: 'Last chapter label' },
+    { id: 'title', label: 'Title A–Z' },
+    { id: 'lastReadPercent', label: 'Progress' },
+    { id: 'lastChapterLabel', label: 'Chapter' },
+]
+const SYNC_SCOPE_OPTIONS = [
+    { id: 'needs_sync', label: 'Needs sync' },
+    { id: 'all', label: 'All titles' },
 ]
 
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const IconBook = ({ className = 'h-4 w-4' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+)
+const IconX = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+)
+const IconSearch = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" d="M21 21l-4.35-4.35" />
+    </svg>
+)
+const IconSync = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+)
+const IconGrid = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+)
+const IconList = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+    </svg>
+)
+const IconCheck = ({ className = 'h-3 w-3' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="3">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+)
+const IconChevronLeft = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+)
+const IconChevronRight = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+)
+const IconAlert = ({ className = 'h-4 w-4' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+    </svg>
+)
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
+    if (source === 'roliascan') return 'Roliascan'
     return source || 'Manga'
 }
-
-function entryKey(entry) {
-    return `${entry?.source || ''}:${entry?.mangaId || ''}`
-}
-
-function formatUpdatedAt(iso) {
-    if (!iso) return '—'
-    try {
-        return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
-    } catch {
-        return '—'
-    }
-}
-
+function entryKey(entry) { return `${entry?.source || ''}:${entry?.mangaId || ''}` }
 function relativeTouch(iso) {
     if (!iso) return ''
     try {
-        const date = new Date(iso)
-        const now = Date.now()
-        const diff = now - date.getTime()
-        const days = Math.floor(diff / 86400000)
+        const d = new Date(iso)
+        const diff = Date.now() - d.getTime()
+        const days = Math.floor(diff / 864e5)
         if (days <= 0) return 'Today'
         if (days === 1) return 'Yesterday'
         if (days < 7) return `${days}d ago`
         if (days < 30) return `${Math.floor(days / 7)}w ago`
-        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-    } catch {
-        return ''
-    }
+        return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    } catch { return '' }
 }
-
 function formatDateLabel(iso) {
     if (!iso) return '—'
-    try {
-        return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' })
-    } catch {
-        return '—'
-    }
+    try { return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) } catch { return '—' }
 }
-
-function parseIsoTime(value) {
-    const t = Date.parse(String(value || ''))
-    return Number.isFinite(t) ? t : 0
-}
-
-function latestChapterReleaseAt(entry) {
-    const candidates = [
-        entry?.remoteLatestChapterReleaseAt,
-        entry?.remoteLatestChapterReadableAt,
-        entry?.remoteLatestChapterPublishAt,
-    ]
-    let bestIso = ''
-    let bestTime = 0
-    for (const iso of candidates) {
-        const t = parseIsoTime(iso)
-        if (!t) continue
-        if (t >= bestTime) {
-            bestTime = t
-            bestIso = String(iso)
-        }
-    }
-    return bestIso
-}
-
-function collectEntryTags(entry, limit = 8) {
-    const raw = Array.isArray(entry?.tags) ? entry.tags : []
-    const seen = new Set()
-    const out = []
-    for (const row of raw) {
-        const text = String(row || '').trim()
-        if (!text || seen.has(text)) continue
-        seen.add(text)
-        out.push(text)
-        if (out.length >= limit) break
-    }
-    return out
-}
-
-function isFinishedManga(entry) {
-    return entry?.seriesEnded === true
-}
-
-function resolveResumeChapter(entry) {
-    const lastChapterId = String(entry?.lastChapterId || '').trim()
-    const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
-    const chapterId = lastChapterId || latestChapterId
-    return {
-        chapterId,
-        resumeChapterId: chapterId,
-        resumePercent: Number(entry?.lastReadPercent || 0),
-    }
-}
-
-function resumeTarget(entry, browseTranslatedLang) {
-    const { chapterId, resumeChapterId, resumePercent } = resolveResumeChapter(entry)
-    if (entry?.mangaId != null && entry?.source && chapterId) {
-        const readerQuery = new URLSearchParams({
-            source: String(entry.source),
-            lang: browseTranslatedLang === 'all' ? 'all' : 'en',
-        }).toString()
-        return {
-            to: `${MANGA_BASE}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(chapterId)}?${readerQuery}`,
-            state: {
-                from: MANGA_LIBRARY_PATH,
-                source: entry.source,
-                browseTranslatedLang,
-                resumeChapterId,
-                resumePercent,
-            },
-        }
-    }
-    return {
-        to: `${MANGA_BASE}`,
-        state: { resumeEntry: entry },
-    }
-}
-
-function DetailModal({ entry, onClose, onContinue }) {
-    if (!entry) return null
-    const tags = collectEntryTags(entry, 18)
-    const latestReleaseDate = latestChapterReleaseAt(entry)
-    const chapterProgress = chapterProgressSnapshot(entry)
-    const heroImageUrl = entry.backgroundImageUrl || entry.coverUrl || ''
-    return (
-        <MotionDiv
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-        >
-            <MotionDiv
-                className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-[var(--color-surface)] shadow-2xl"
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 18 }}
-                transition={{ type: 'spring', stiffness: 260, damping: 28 }}
-                onClick={(event) => event.stopPropagation()}
-            >
-                <div className="relative aspect-[3/1] overflow-hidden bg-slate-100">
-                    {heroImageUrl ? (
-                        <LifesyncEpisodeThumbnail
-                            src={heroImageUrl}
-                            className="absolute inset-0 h-full w-full"
-                            imgClassName="h-full w-full object-cover"
-                            imgProps={mangaImageProps(heroImageUrl)}
-                        />
-                    ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/35 to-black/20" />
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="absolute right-3 top-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white hover:bg-black/65"
-                        aria-label="Close"
-                    >
-                        <FaTimes className="h-4 w-4" />
-                    </button>
-                    <div className="absolute bottom-3 left-3 right-3">
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-white/85">{sourceLabel(entry.source)}</p>
-                        <h2 className="mt-1 line-clamp-2 text-[18px] font-bold leading-tight text-white">
-                            {decodeHtmlEntities(entry.title) || 'Untitled'}
-                        </h2>
-                    </div>
-                </div>
-                <div className="space-y-3 p-4">
-                    <div className="grid grid-cols-2 gap-2 text-[12px] sm:grid-cols-3">
-                        <div className="rounded-lg bg-slate-50 p-2">
-                            <p className="text-slate-500">Last read</p>
-                            <p className="mt-0.5 font-semibold text-slate-900">{entry.lastChapterLabel || '—'}</p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50 p-2">
-                            <p className="text-slate-500">Latest</p>
-                            <p className="mt-0.5 font-semibold text-slate-900">{entry.remoteLatestChapterLabel || '—'}</p>
-                        </div>
-                        <div className="rounded-lg bg-slate-50 p-2">
-                            <p className="text-slate-500">Last release</p>
-                            <p className="mt-0.5 font-semibold text-slate-900">{formatDateLabel(latestReleaseDate)}</p>
-                        </div>
-                    </div>
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3">
-                        <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700">
-                            <span>Current: {chapterProgress.currentLabel}</span>
-                            <span>Latest: {chapterProgress.latestLabel}</span>
-                        </div>
-                        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                            <div
-                                className="lifesync-manga-history-progress-fill h-full rounded-full"
-                                style={{ width: `${chapterProgress.percent}%`, backgroundColor: 'var(--mx-color-c6ff00)' }}
-                            />
-                        </div>
-                    </div>
-                    {tags.length > 0 ? (
-                        <div className="flex flex-wrap gap-1.5">
-                            {tags.map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="rounded-full border border-lime-200 bg-lime-50 px-2.5 py-1 text-[10px] font-semibold text-slate-700"
-                                >
-                                    {tag}
-                                </span>
-                            ))}
-                        </div>
-                    ) : null}
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => onContinue(entry)}
-                            className="inline-flex min-h-[42px] flex-1 items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-4 text-[13px] font-bold text-slate-900 hover:brightness-95"
-                        >
-                            Continue
-                        </button>
-                        <Link
-                            to={MANGA_BASE}
-                            className="inline-flex min-h-[42px] flex-1 items-center justify-center rounded-xl border border-slate-200 bg-[var(--color-surface)] px-4 text-[13px] font-semibold text-slate-700 hover:bg-slate-50"
-                        >
-                            Browse
-                        </Link>
-                    </div>
-                </div>
-            </MotionDiv>
-        </MotionDiv>
-    )
-}
-
 function statusLabel(status) {
-    if (!status) return 'No status'
-    const row = STATUS_OPTIONS.find((opt) => opt.id === status)
-    return row?.label || status
+    return STATUS_OPTIONS.find((o) => o.id === status)?.label || (status ? status : 'No status')
 }
-
 function parseChapterNum(label) {
     if (!label) return NaN
-    const match = String(label).match(/Ch\.?\s*([\d.]+)/i)
-    return match ? parseFloat(match[1]) : NaN
+    const m = String(label).match(/Ch\.?\s*([\d.]+)/i)
+    return m ? parseFloat(m[1]) : NaN
 }
-
-function clampPercent(value) {
-    const n = Number(value)
-    if (!Number.isFinite(n)) return 0
-    return Math.min(100, Math.max(0, n))
+function clampPct(v) { const n = Number(v); return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0 }
+function fmtChapter(v) {
+    if (!Number.isFinite(v)) return ''
+    return Math.abs(v - Math.round(v)) < 0.001 ? String(Math.round(v)) : String(Math.round(v * 10) / 10)
 }
-
-function formatChapterNum(value) {
-    if (!Number.isFinite(value)) return ''
-    if (Math.abs(value - Math.round(value)) < 0.001) return String(Math.round(value))
-    return String(Math.round(value * 10) / 10)
-}
-
-function calculateProgressPercent(entry) {
-    const lastNum = parseChapterNum(entry?.lastChapterLabel)
-    const latestNum = parseChapterNum(entry?.remoteLatestChapterLabel)
-    if (Number.isFinite(lastNum) && Number.isFinite(latestNum) && latestNum > 0) {
-        return Math.round(clampPercent((lastNum / latestNum) * 100) * 10) / 10
-    }
-
-    if (entry?.caughtUp && !entry?.hasNewChapter) return 100
-    return clampPercent(Number(entry?.lastReadPercent || 0))
-}
-
-function chapterProgressSnapshot(entry) {
-    const lastNum = parseChapterNum(entry?.lastChapterLabel)
-    const latestNum = parseChapterNum(entry?.remoteLatestChapterLabel)
-    if (Number.isFinite(lastNum) && Number.isFinite(latestNum) && latestNum > 0) {
-        const normalizedCurrent = Math.min(lastNum, latestNum)
-        return {
-            currentLabel: `Ch ${formatChapterNum(normalizedCurrent)}`,
-            latestLabel: `Ch ${formatChapterNum(latestNum)}`,
-            percent: Math.round(clampPercent((normalizedCurrent / latestNum) * 100) * 10) / 10,
-        }
+function chapterSnapshot(entry) {
+    const last = parseChapterNum(entry?.lastChapterLabel)
+    const latest = parseChapterNum(entry?.remoteLatestChapterLabel)
+    if (Number.isFinite(last) && Number.isFinite(latest) && latest > 0) {
+        const cur = Math.min(last, latest)
+        return { currentLabel: `Ch ${fmtChapter(cur)}`, latestLabel: `Ch ${fmtChapter(latest)}`, percent: Math.round(clampPct((cur / latest) * 100) * 10) / 10 }
     }
     return {
         currentLabel: entry?.lastChapterLabel || '—',
         latestLabel: entry?.remoteLatestChapterLabel || (entry?.needsSync ? 'Sync needed' : '—'),
-        percent: calculateProgressPercent(entry),
+        percent: clampPct(Number(entry?.caughtUp && !entry?.hasNewChapter ? 100 : entry?.lastReadPercent || 0)),
     }
 }
-
-function progressDetailLabel(entry) {
-    const lastNum = parseChapterNum(entry?.lastChapterLabel)
-    const latestNum = parseChapterNum(entry?.remoteLatestChapterLabel)
-    if (Number.isFinite(lastNum) && Number.isFinite(latestNum) && latestNum > 0) {
-        return `Ch ${formatChapterNum(lastNum)} / ${formatChapterNum(latestNum)}`
+function latestChapterDate(entry) {
+    const candidates = [entry?.remoteLatestChapterReleaseAt, entry?.remoteLatestChapterReadableAt, entry?.remoteLatestChapterPublishAt]
+    let best = 0, bestIso = ''
+    for (const iso of candidates) {
+        const t = Date.parse(String(iso || ''))
+        if (t && t >= best) { best = t; bestIso = String(iso) }
     }
-    if (entry?.remoteLatestChapterLabel) return `Latest: ${entry.remoteLatestChapterLabel}`
-    return entry?.needsSync ? 'Latest chapter needs sync' : 'Latest chapter unavailable'
+    return bestIso
+}
+function isSyncTerminal(s) { const v = String(s || '').toLowerCase(); return v === 'completed' || v === 'completed_with_errors' || v === 'failed' }
+function syncStateChip(state) {
+    const s = String(state || '').toLowerCase()
+    const map = { queued: 'bg-[--color-surface-muted] text-(--color-text-secondary)', syncing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', done: 'bg-primary/10 text-primary', error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', skipped: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' }
+    const label = { queued: 'Queued', syncing: 'Syncing', done: 'Done', error: 'Error', skipped: 'Skip' }
+    return { cls: map[s] || map.queued, label: label[s] || '' }
 }
 
-function isSyncTerminal(status) {
-    const s = String(status || '').trim().toLowerCase()
-    return s === 'completed' || s === 'completed_with_errors' || s === 'failed'
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function SkeletonRow() {
+    return (
+        <div className="flex items-center gap-3 px-4 py-3 animate-pulse">
+            <div className="h-[54px] w-[38px] shrink-0 rounded-lg bg-(--color-surface-muted)" />
+            <div className="flex-1 space-y-2">
+                <div className="h-3 w-2/3 rounded bg-(--color-surface-muted)" />
+                <div className="h-1.5 w-full rounded-full bg-(--color-surface-muted)" />
+                <div className="h-2 w-1/3 rounded bg-(--color-surface-muted)" />
+            </div>
+            <div className="h-8 w-20 shrink-0 rounded-xl bg-(--color-surface-muted)" />
+        </div>
+    )
+}
+function SkeletonCard() {
+    return (
+        <div className="animate-pulse overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+            <div className="aspect-2/3 w-full bg-(--color-surface-muted)" />
+            <div className="p-2.5 space-y-1.5">
+                <div className="h-3 w-3/4 rounded bg-(--color-surface-muted)" />
+                <div className="h-1.5 w-full rounded-full bg-(--color-surface-muted)" />
+                <div className="h-2 w-1/2 rounded bg-(--color-surface-muted)" />
+            </div>
+        </div>
+    )
 }
 
-function syncStateLabel(state) {
-    const s = String(state || '').trim().toLowerCase()
-    if (s === 'queued') return 'Queued'
-    if (s === 'syncing') return 'Syncing'
-    if (s === 'done') return 'Done'
-    if (s === 'error') return 'Error'
-    if (s === 'skipped') return 'Skipped'
-    return ''
-}
-
-function syncStateClass(state) {
-    const s = String(state || '').trim().toLowerCase()
-    if (s === 'queued') return 'border-slate-300 bg-slate-100 text-slate-700'
-    if (s === 'syncing') return 'border-blue-300 bg-blue-100 text-blue-700'
-    if (s === 'done') return 'border-lime-300 bg-lime-100 text-lime-700'
-    if (s === 'error') return 'border-red-300 bg-red-100 text-red-700'
-    if (s === 'skipped') return 'border-amber-300 bg-amber-100 text-amber-700'
-    return 'border-slate-300 bg-slate-100 text-slate-700'
-}
-
-function normalizeSyncJobPayload(raw) {
-    if (!raw || typeof raw !== 'object') return null
-    const source = raw.job && typeof raw.job === 'object' ? raw.job : raw
-    const jobId = String(source.jobId || '').trim()
-    if (!jobId) return null
-    return source
-}
-
-function syncJobStatusLabel(status) {
-    const s = String(status || '').trim().toLowerCase()
-    if (s === 'queued') return 'Queued'
-    if (s === 'running') return 'Running'
-    if (s === 'completed') return 'Completed'
-    if (s === 'completed_with_errors') return 'Completed with errors'
-    if (s === 'failed') return 'Failed'
-    return 'Idle'
-}
-
-function syncScopeLabel(scope) {
-    return String(scope || '').trim().toLowerCase() === 'needs_sync' ? 'Needs sync only' : 'All titles'
-}
-
+// ─── Status select ────────────────────────────────────────────────────────────
 function StatusSelect({ value, onChange, disabled, className = '' }) {
     return (
         <select
-            value={value || ''}
-            onChange={(event) => onChange(event.target.value || null)}
-            disabled={disabled}
-            className={`min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:opacity-50 ${className}`}
+            value={value || ''} onChange={(e) => onChange(e.target.value || null)} disabled={disabled}
+            className={`rounded-lg border border-(--color-border-soft) bg-(--color-surface) px-2 text-[11px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 disabled:opacity-50 ${className}`}
         >
             <option value="">No status</option>
-            {STATUS_OPTIONS.filter((opt) => opt.id !== 'all').map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                </option>
-            ))}
+            {STATUS_OPTIONS.filter((o) => o.id !== 'all').map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
         </select>
     )
 }
 
-function ConfirmationModal({ isOpen, title, message, confirmLabel, cancelLabel, onConfirm, onCancel }) {
-    if (!isOpen) return null
+// ─── Detail drawer ────────────────────────────────────────────────────────────
+function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
+    if (!entry) return null
+    const snap = chapterSnapshot(entry)
+    const heroUrl = entry.backgroundImageUrl || entry.coverUrl || ''
+    const releaseDate = latestChapterDate(entry)
+
+    useEffect(() => {
+        const fn = (e) => { if (e.key === 'Escape') onClose() }
+        window.addEventListener('keydown', fn)
+        return () => window.removeEventListener('keydown', fn)
+    }, [onClose])
 
     return (
         <MotionDiv
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.18 }}
-            onClick={onCancel}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
         >
             <MotionDiv
-                className="w-full max-w-md rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-5 shadow-2xl"
-                initial={{ scale: 0.94, y: 14 }}
-                animate={{ scale: 1, y: 0 }}
-                exit={{ scale: 0.94, y: 14 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-                onClick={(event) => event.stopPropagation()}
+                className="relative w-full max-w-sm overflow-hidden rounded-t-3xl sm:rounded-3xl bg-(--color-surface) shadow-2xl"
+                initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+                transition={{ type: 'spring', stiffness: 340, damping: 32 }}
+                onClick={(e) => e.stopPropagation()}
             >
-                <div className="mb-3 flex justify-center">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
-                        <FaExclamationTriangle className="h-4 w-4" />
-                    </span>
+                <div className="flex justify-center pt-3 pb-1 sm:hidden">
+                    <div className="h-1 w-10 rounded-full bg-(--color-border-soft)" />
                 </div>
-                <h2 className="text-center text-[18px] font-bold text-slate-900">{title}</h2>
-                <p className="mt-2 text-center text-[14px] leading-relaxed text-slate-600">{message}</p>
-                <div className="mt-5 grid grid-cols-2 gap-2">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="min-h-[42px] rounded-xl border border-slate-200 bg-[var(--color-surface)] px-4 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                        {cancelLabel || 'Cancel'}
+                {/* Cover + meta */}
+                <div className="flex gap-4 px-5 pt-4 pb-3">
+                    <div className="relative h-[88px] w-[60px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted)">
+                        {entry.coverUrl && (
+                            <LifesyncEpisodeThumbnail src={entry.coverUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover" imgProps={mangaImageProps(entry.coverUrl)} />
+                        )}
+                    </div>
+                    <div className="min-w-0 flex-1 pt-0.5">
+                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-primary">{sourceLabel(entry.source)}</p>
+                        <h2 className="mt-0.5 line-clamp-3 text-[15px] font-bold leading-snug text-(--color-text-primary)">{decodeHtmlEntities(entry.title) || 'Untitled'}</h2>
+                        <p className="mt-1 text-[10px] text-(--color-text-secondary)">{statusLabel(entry.readingStatus)}</p>
+                    </div>
+                    <button type="button" onClick={onClose} className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-(--color-surface-muted) text-(--color-text-secondary) hover:text-(--color-text-primary) transition">
+                        <IconX className="h-3 w-3" />
                     </button>
-                    <button
-                        type="button"
-                        onClick={onConfirm}
-                        className="min-h-[42px] rounded-xl border border-red-200 bg-red-600 px-4 text-[13px] font-semibold text-white transition hover:bg-red-700"
-                    >
-                        {confirmLabel || 'Confirm'}
+                </div>
+                {/* Progress */}
+                <div className="px-5 pb-3">
+                    <div className="rounded-2xl bg-(--color-surface-muted) p-3.5 space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-semibold text-(--color-text-secondary)">Chapter progress</span>
+                            <span className="font-bold text-(--color-text-primary)">{snap.currentLabel} / {snap.latestLabel}</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
+                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${snap.percent}%` }} />
+                        </div>
+                        <div className="flex justify-between text-[10px] text-(--color-text-secondary)">
+                            <span>{snap.percent}% complete</span>
+                            {releaseDate && <span>Latest: {formatDateLabel(releaseDate)}</span>}
+                        </div>
+                    </div>
+                </div>
+                {/* Actions */}
+                <div className="flex gap-2.5 px-5 pb-6">
+                    <button type="button" onClick={() => onContinue(entry)}
+                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95 active:scale-[0.98]">
+                        <IconBook className="h-4 w-4" /> Continue
                     </button>
+                    <Link to={MANGA_BASE}
+                        className="flex min-h-12 items-center justify-center rounded-2xl border border-(--color-border-soft) px-4 text-[13px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
+                        Browse
+                    </Link>
                 </div>
             </MotionDiv>
         </MotionDiv>
     )
 }
 
-function LibraryMangaCard({
-    entry,
-    browseTranslatedLang,
-    selected,
-    busy,
-    removeBusy,
-    syncState,
-    syncMessage,
-    onToggleSelect,
-    onStatusChange,
-    onRequestRemove,
-    onOpenDetail,
-}) {
-    const { to, state } = resumeTarget(entry, browseTranslatedLang)
-    const progressPercent = calculateProgressPercent(entry)
-    const chapterProgress = chapterProgressSnapshot(entry)
-    const latestReleaseDate = latestChapterReleaseAt(entry)
-    const cardTags = collectEntryTags(entry, 5)
-
+// ─── Confirm modal ────────────────────────────────────────────────────────────
+function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
+    if (!isOpen) return null
     return (
-        <MotionLi
-            variants={lifeSyncStaggerItemFade}
-            className="group relative flex min-w-0 flex-col overflow-visible rounded-2xl border border-slate-200 bg-[var(--color-surface)] shadow-sm transition hover:shadow-md"
-            whileHover={{ y: -2, transition: { type: 'tween', duration: 0.2, ease: lifeSyncEaseOut } }}
-        >
-            <div className="relative aspect-[2/3] w-full overflow-hidden bg-slate-100">
-                <button type="button" onClick={() => onOpenDetail(entry)} className="absolute inset-0 block text-left">
-                    {entry.coverUrl ? (
-                        <LifesyncEpisodeThumbnail
-                            src={entry.coverUrl}
-                            className="absolute inset-0 h-full w-full"
-                            imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-[1.05]"
-                            imgProps={mangaImageProps(entry.coverUrl)}
-                        />
-                    ) : (
-                        <div className="flex h-full items-center justify-center text-slate-300">
-                            <FaBookOpen className="h-12 w-12" />
-                        </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                </button>
-
-                <div className="absolute left-2 top-2 z-20 flex items-center gap-1.5">
-                    <button
-                        type="button"
-                        onClick={() => onToggleSelect(entry)}
-                        className={`flex h-6 w-6 items-center justify-center rounded border text-[11px] ${
-                            selected
-                                ? 'border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-black'
-                                : 'border-[var(--color-border-strong)]/70 bg-[var(--color-surface)]/90 text-transparent hover:border-[var(--color-border-strong)]'
-                        }`}
-                        aria-label={selected ? 'Unselect' : 'Select'}
-                    >
-                        ✓
-                    </button>
-                    {entry.hasNewChapter ? (
-                        <span className="lifesync-manga-history-accent rounded-full bg-[var(--mx-color-c6ff00)] px-2 py-0.5 text-[9px] font-bold text-slate-900">New</span>
-                    ) : null}
-                    {syncState ? (
-                        <span
-                            className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${syncStateClass(syncState)}`}
-                            title={syncMessage || syncStateLabel(syncState)}
-                        >
-                            {syncStateLabel(syncState)}
-                        </span>
-                    ) : null}
+        <MotionDiv className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel}>
+            <MotionDiv className="w-full max-w-sm rounded-3xl bg-(--color-surface) p-5 shadow-2xl" initial={{ scale: 0.94, y: 14 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.94, y: 14 }} transition={{ type: 'spring', stiffness: 300, damping: 28 }} onClick={(e) => e.stopPropagation()}>
+                <div className="mb-3 flex justify-center">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
+                        <IconAlert className="h-5 w-5" />
+                    </span>
                 </div>
-
-                <button
-                    type="button"
-                    onClick={() => onRequestRemove(entry)}
-                    disabled={removeBusy}
-                    className="lifesync-manga-history-accent absolute right-2 top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)]/90 text-black opacity-0 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/50 transition group-hover:opacity-100 hover:bg-[var(--mx-color-c6ff00)] disabled:opacity-50"
-                    aria-label="Remove"
-                >
-                    {removeBusy ? '…' : '✕'}
-                </button>
-
-                <div className="absolute inset-x-0 bottom-0 p-3">
-                    <h3 className="line-clamp-2 text-[13px] font-bold leading-tight text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]">
-                        {decodeHtmlEntities(entry.title) || 'Untitled'}
-                    </h3>
-                    <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-white/85">{sourceLabel(entry.source)}</p>
+                <h2 className="text-center text-[17px] font-bold text-(--color-text-primary)">{title}</h2>
+                <p className="mt-2 text-center text-[13px] text-(--color-text-secondary)">{message}</p>
+                <div className="mt-5 grid grid-cols-2 gap-2">
+                    <button type="button" onClick={onCancel} className="min-h-11 rounded-2xl border border-(--color-border-soft) text-[13px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">Cancel</button>
+                    <button type="button" onClick={onConfirm} className="min-h-11 rounded-2xl bg-red-600 text-[13px] font-semibold text-white transition hover:bg-red-700">Remove</button>
                 </div>
-            </div>
-
-            <div className="flex flex-1 flex-col gap-2 border-t border-slate-100 px-3 pb-2 pt-3">
-                {/* Reading Status & Progress */}
-                <div>
-                    <div className="flex items-center justify-between gap-2 text-[10px] font-semibold">
-                        <span className="text-slate-600">{statusLabel(entry.readingStatus)}</span>
-                        <span className="text-slate-800">{Math.round(progressPercent)}%</span>
-                    </div>
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[9px] font-medium text-slate-500">
-                        <span className="truncate">Current: {chapterProgress.currentLabel}</span>
-                        <span className="truncate text-right">Latest: {chapterProgress.latestLabel}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
-                        <div
-                            className="lifesync-manga-history-progress-fill h-full rounded-full"
-                            style={{ width: `${progressPercent}%`, backgroundColor: 'var(--mx-color-c6ff00)' }}
-                        />
-                    </div>
-                    <p className="mt-0.5 text-[9px] text-slate-500">{progressDetailLabel(entry)}</p>
-                </div>
-
-                {/* Chapter Info Compact */}
-                <div className="flex gap-2 text-[9px]">
-                    <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-slate-500 uppercase tracking-wide">Last read</p>
-                        <p className="mt-0.5 truncate text-slate-700 font-medium">{entry.lastChapterLabel || '—'}</p>
-                        <p className="text-slate-400">{relativeTouch(entry.updatedAt)}</p>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-slate-500 uppercase tracking-wide">Latest</p>
-                        <p className="mt-0.5 truncate text-slate-700 font-medium">
-                            {entry.remoteLatestChapterLabel || (entry.needsSync ? 'Sync needed' : '—')}
-                        </p>
-                        <p className="text-slate-400">{latestReleaseDate ? formatDateLabel(latestReleaseDate) : (entry.needsSync ? 'pending' : 'up to date')}</p>
-                    </div>
-                </div>
-                {cardTags.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                        {cardTags.slice(0, 4).map((tag) => (
-                            <span
-                                key={tag}
-                                className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-semibold text-slate-600"
-                            >
-                                {tag}
-                            </span>
-                        ))}
-                        {cardTags.length > 4 ? (
-                            <span className="rounded-full border border-slate-200 bg-[var(--color-surface)] px-2 py-0.5 text-[9px] font-semibold text-slate-500">
-                                +{cardTags.length - 4}
-                            </span>
-                        ) : null}
-                    </div>
-                ) : null}
-
-                {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-1.5 pt-1">
-                    <Link
-                        to={to}
-                        state={state}
-                        className="lifesync-manga-history-accent inline-flex items-center justify-center rounded-lg px-3 py-2 text-[11px] font-bold text-black transition hover:shadow-lg active:scale-95"
-                        style={{ backgroundColor: 'var(--mx-color-c6ff00)' }}
-                    >
-                        Continue
-                    </Link>
-                    <StatusSelect
-                        value={entry.readingStatus}
-                        onChange={(value) => onStatusChange(entry, value)}
-                        disabled={busy}
-                        className="min-h-[32px] text-[10px]"
-                    />
-                </div>
-            </div>
-        </MotionLi>
+            </MotionDiv>
+        </MotionDiv>
     )
 }
 
+// ─── List row ─────────────────────────────────────────────────────────────────
+function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onRequestRemove, onOpenDetail, isLast }) {
+    const snap = chapterSnapshot(entry)
+    const rel = relativeTouch(entry.updatedAt)
+    const title = decodeHtmlEntities(entry.title) || 'Untitled'
+    const chip = syncState ? syncStateChip(syncState) : null
+
+    return (
+        <motion.div
+            layout initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -12 }}
+            transition={{ type: 'tween', duration: 0.18, ease: lifeSyncEaseOut }}
+            className={`group relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-(--color-surface-muted) ${!isLast ? 'border-b border-(--color-border-soft)' : ''}`}
+        >
+            {/* Select checkbox */}
+            <button type="button" onClick={() => onToggleSelect(entry)}
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${selected ? 'border-primary bg-primary text-(--color-ink-strong)' : 'border-(--color-border-strong) bg-(--color-surface) hover:border-primary'}`}
+                aria-label={selected ? 'Deselect' : 'Select'}>
+                {selected && <IconCheck className="h-2.5 w-2.5" />}
+            </button>
+
+            {/* Cover */}
+            <button type="button" onClick={() => onOpenDetail(entry)}
+                className="relative h-[54px] w-[38px] shrink-0 overflow-hidden rounded-lg bg-(--color-surface-muted) shadow-sm transition group-hover:shadow-md">
+                {entry.coverUrl ? (
+                    <LifesyncEpisodeThumbnail src={entry.coverUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover transition duration-300 group-hover:scale-105" imgProps={mangaImageProps(entry.coverUrl)} />
+                ) : (
+                    <div className="flex h-full items-center justify-center text-(--color-border-strong)"><IconBook className="h-4 w-4" /></div>
+                )}
+                {entry.hasNewChapter && (
+                    <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-(--color-surface)" />
+                )}
+            </button>
+
+            {/* Info */}
+            <button type="button" onClick={() => onOpenDetail(entry)} className="min-w-0 flex-1 text-left">
+                <div className="flex items-center gap-1.5">
+                    <p className="truncate text-[13px] font-semibold leading-snug text-(--color-text-primary)">{title}</p>
+                    {chip && <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${chip.cls}`}>{chip.label}</span>}
+                </div>
+                <div className="mt-0.5 flex items-center gap-2">
+                    <span className="text-[10px] text-(--color-text-secondary)">{snap.currentLabel} / {snap.latestLabel}</span>
+                    {rel && <span className="text-[10px] text-(--color-text-secondary)">· {rel}</span>}
+                </div>
+                <div className="mt-1.5 h-[3px] w-full overflow-hidden rounded-full bg-(--color-border-soft)">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${snap.percent}%` }} />
+                </div>
+            </button>
+
+            {/* Actions */}
+            <div className="flex shrink-0 items-center gap-1.5 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+                <StatusSelect value={entry.readingStatus} onChange={(v) => onStatusChange(entry, v)} disabled={busy} className="h-8 min-w-[84px]" />
+                <button type="button" onClick={() => onRequestRemove(entry)} disabled={removeBusy}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-red-50 hover:text-red-500 disabled:opacity-30 dark:hover:bg-red-900/20"
+                    aria-label="Remove">
+                    {removeBusy ? <span className="text-[10px]">…</span> : <IconX className="h-3.5 w-3.5" />}
+                </button>
+                <Link to={resumeTarget(entry, browseTranslatedLang).to} state={resumeTarget(entry, browseTranslatedLang).state}
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95"
+                    aria-label="Continue reading">
+                    <IconBook className="h-3.5 w-3.5" />
+                </Link>
+            </div>
+        </motion.div>
+    )
+}
+
+// ─── Grid card ────────────────────────────────────────────────────────────────
+function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onRequestRemove, onOpenDetail }) {
+    const snap = chapterSnapshot(entry)
+    const title = decodeHtmlEntities(entry.title) || 'Untitled'
+    const chip = syncState ? syncStateChip(syncState) : null
+    const { to, state } = resumeTarget(entry, browseTranslatedLang)
+
+    return (
+        <motion.div
+            layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }}
+            transition={{ type: 'tween', duration: 0.18, ease: lifeSyncEaseOut }}
+            className="group relative flex flex-col overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm transition-shadow hover:shadow-md"
+        >
+            {/* Cover */}
+            <button type="button" onClick={() => onOpenDetail(entry)} className="relative block w-full aspect-2/3 overflow-hidden bg-(--color-surface-muted)">
+                {entry.coverUrl ? (
+                    <LifesyncEpisodeThumbnail src={entry.coverUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" imgProps={mangaImageProps(entry.coverUrl)} />
+                ) : (
+                    <div className="flex h-full items-center justify-center text-(--color-border-strong)"><IconBook className="h-8 w-8" /></div>
+                )}
+                <div className="absolute inset-0 bg-linear-to-t from-black/75 via-black/10 to-transparent" />
+
+                {/* Select */}
+                <button type="button" onClick={(e) => { e.stopPropagation(); onToggleSelect(entry) }}
+                    className={`absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-md border transition ${selected ? 'border-primary bg-primary text-(--color-ink-strong)' : 'border-white/60 bg-black/30 text-transparent hover:border-white'}`}>
+                    {selected && <IconCheck className="h-2.5 w-2.5" />}
+                </button>
+
+                {entry.hasNewChapter && (
+                    <span className="absolute right-2 top-2 z-10 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-(--color-ink-strong)">New</span>
+                )}
+                {chip && (
+                    <span className={`absolute left-2 top-8 z-10 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${chip.cls}`}>{chip.label}</span>
+                )}
+
+                {/* Remove on hover */}
+                <button type="button" onClick={(e) => { e.stopPropagation(); onRequestRemove(entry) }} disabled={removeBusy}
+                    className="absolute right-2 bottom-10 z-10 flex h-6 w-6 items-center justify-center rounded-lg bg-black/50 text-white/70 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 hover:bg-red-600/80 hover:text-white disabled:opacity-30">
+                    {removeBusy ? <span className="text-[9px]">…</span> : <IconX className="h-3 w-3" />}
+                </button>
+
+                {/* Progress + title */}
+                <div className="absolute bottom-0 left-0 right-0">
+                    {snap.percent > 0 && (
+                        <div className="h-[3px] bg-black/20">
+                            <div className="h-full bg-primary" style={{ width: `${snap.percent}%` }} />
+                        </div>
+                    )}
+                    <div className="p-2.5">
+                        <h3 className="line-clamp-2 text-[12px] font-bold leading-snug text-white drop-shadow">{title}</h3>
+                    </div>
+                </div>
+            </button>
+
+            {/* Footer */}
+            <div className="flex items-center gap-1.5 border-t border-(--color-border-soft) px-2.5 py-2">
+                <div className="min-w-0 flex-1">
+                    <p className="truncate text-[9px] text-(--color-text-secondary)">{snap.currentLabel}</p>
+                </div>
+                <StatusSelect value={entry.readingStatus} onChange={(v) => onStatusChange(entry, v)} disabled={busy} className="h-6 min-w-[60px] text-[9px]" />
+                <Link to={to} state={state} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95" aria-label="Continue reading">
+                    <IconBook className="h-3 w-3" />
+                </Link>
+            </div>
+        </motion.div>
+    )
+}
+
+function resumeTarget(entry, browseTranslatedLang) {
+    const lastChapterId = String(entry?.lastChapterId || '').trim()
+    const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
+    const chapterId = lastChapterId || latestChapterId
+    if (entry?.mangaId != null && entry?.source && chapterId) {
+        const q = new URLSearchParams({ source: String(entry.source), lang: browseTranslatedLang === 'all' ? 'all' : 'en' }).toString()
+        return {
+            to: `${MANGA_BASE}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(chapterId)}?${q}`,
+            state: { from: MANGA_LIBRARY_PATH, source: entry.source, browseTranslatedLang, resumeChapterId: chapterId, resumePercent: Number(entry?.lastReadPercent || 0) },
+        }
+    }
+    return { to: MANGA_BASE, state: { resumeEntry: entry } }
+}
+
+// ─── Main page ────────────────────────────────────────────────────────────────
 export default function LifeSyncMangaLibrary() {
     const navigate = useNavigate()
     const { isLifeSyncConnected, lifeSyncUser } = useLifeSync()
@@ -636,6 +465,7 @@ export default function LifeSyncMangaLibrary() {
     const hManhwaEnabled = isLifeSyncHManhwaVisible(prefs)
     const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false
     const browseTranslatedLang = mangaEnglishReleasesOnly ? 'en' : 'all'
+    const searchRef = useRef(null)
 
     const [queryInput, setQueryInput] = useState('')
     const [query, setQuery] = useState('')
@@ -645,742 +475,416 @@ export default function LifeSyncMangaLibrary() {
     const [sortBy, setSortBy] = useState('updatedAt')
     const [sortOrder, setSortOrder] = useState('desc')
     const [page, setPage] = useState(1)
-    const limit = PAGE_SIZE
+    const [layout, setLayout] = useState('list')
 
     const [syncBusy, setSyncBusy] = useState(false)
     const [syncError, setSyncError] = useState('')
     const [syncScope, setSyncScope] = useState('needs_sync')
     const [syncJob, setSyncJob] = useState(null)
+    const [syncDismissed, setSyncDismissed] = useState(false)
     const syncPollRef = useRef(null)
+    const syncDismissTimerRef = useRef(null)
+
     const [actionBusyKeys, setActionBusyKeys] = useState(() => new Set())
     const [removeBusyKey, setRemoveBusyKey] = useState('')
     const [bulkBusy, setBulkBusy] = useState(false)
     const [selectedKeys, setSelectedKeys] = useState(() => new Set())
-
-    const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, entry: null })
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, entry: null })
     const [detailEntry, setDetailEntry] = useState(null)
 
-    const sourceOptions = useMemo(() => {
-        if (hManhwaEnabled) return SOURCE_OPTIONS
-        return SOURCE_OPTIONS.filter((opt) => opt.id !== 'mangadistrict')
-    }, [hManhwaEnabled])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected) {
-            navigate('/dashboard/profile?tab=integrations', { replace: true })
-        }
-    }, [isLifeSyncConnected, navigate])
-
-    useEffect(() => {
-        const id = window.setTimeout(() => setQuery(queryInput.trim()), 260)
-        return () => window.clearTimeout(id)
-    }, [queryInput])
-
-    useEffect(() => {
-        setPage(1)
-    }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder])
-
-    useEffect(() => {
-        if (!hManhwaEnabled && sourceFilter === 'mangadistrict') {
-            setSourceFilter('all')
-        }
-    }, [hManhwaEnabled, sourceFilter])
-
-    const listFilters = useMemo(
-        () => ({
-            q: query,
-            source: sourceFilter,
-            status: statusFilter,
-            updateState: updateStateFilter,
-            sortBy,
-            order: sortOrder,
-            page,
-            limit,
-        }),
-        [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, page, limit],
+    const sourceOptions = useMemo(
+        () => hManhwaEnabled ? SOURCE_OPTIONS : SOURCE_OPTIONS.filter((o) => o.id !== 'mangadistrict'),
+        [hManhwaEnabled],
     )
 
-    const {
-        entries: listEntries,
-        visibleEntries,
-        visibleSummary,
-        pageInfo,
-        error,
-        initialLoading,
-        refreshing,
-        refresh: refreshList,
-        patchEntry,
-        removeEntry,
-        bulkPatch,
-        bulkDelete,
-    } = useMangaReadingList({
-        enabled: isLifeSyncConnected && mangaPluginOn,
-        nsfwEnabled,
-        hManhwaEnabled,
-        filters: listFilters,
-    })
+    useEffect(() => { if (!isLifeSyncConnected) navigate('/dashboard/profile?tab=integrations', { replace: true }) }, [isLifeSyncConnected, navigate])
+    useEffect(() => { const id = setTimeout(() => setQuery(queryInput.trim()), 260); return () => clearTimeout(id) }, [queryInput])
+    useEffect(() => { setPage(1) }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder])
+    useEffect(() => { if (!hManhwaEnabled && sourceFilter === 'mangadistrict') setSourceFilter('all') }, [hManhwaEnabled, sourceFilter])
 
+    const listFilters = useMemo(() => ({ q: query, source: sourceFilter, status: statusFilter, updateState: updateStateFilter, sortBy, order: sortOrder, page, limit: PAGE_SIZE }), [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, page])
 
+    const { entries: listEntries, visibleEntries, visibleSummary, pageInfo, error, initialLoading, refreshing, refresh: refreshList, patchEntry, removeEntry, bulkPatch, bulkDelete } = useMangaReadingList({ enabled: isLifeSyncConnected && mangaPluginOn, nsfwEnabled, hManhwaEnabled, filters: listFilters })
 
     useEffect(() => {
-        const totalPages = Math.max(1, Number(pageInfo?.totalPages || 1))
-        if (page > totalPages) setPage(totalPages)
+        const total = Math.max(1, Number(pageInfo?.totalPages || 1))
+        if (page > total) setPage(total)
     }, [page, pageInfo?.totalPages])
 
     const selectableEntries = useMemo(() => {
-        const byKey = new Map()
-        for (const entry of visibleEntries) {
-            const key = entryKey(entry)
-            if (key && key !== ':') byKey.set(key, entry)
-        }
-        return [...byKey.values()]
+        const m = new Map()
+        for (const e of visibleEntries) { const k = entryKey(e); if (k && k !== ':') m.set(k, e) }
+        return [...m.values()]
     }, [visibleEntries])
 
     const selectableKeySet = useMemo(() => new Set(selectableEntries.map(entryKey)), [selectableEntries])
     useEffect(() => {
         setSelectedKeys((prev) => {
-            const next = new Set([...prev].filter((key) => selectableKeySet.has(key)))
-            if (next.size === prev.size) return prev
-            return next
+            const next = new Set([...prev].filter((k) => selectableKeySet.has(k)))
+            return next.size === prev.size ? prev : next
         })
     }, [selectableKeySet])
 
-    const selectedEntries = useMemo(
-        () => selectableEntries.filter((entry) => selectedKeys.has(entryKey(entry))),
-        [selectedKeys, selectableEntries],
-    )
-
-    const hiddenByPreferencesCount = Math.max(0, listEntries.length - visibleEntries.length)
-
-    const anyRefreshing = refreshing
+    const selectedEntries = useMemo(() => selectableEntries.filter((e) => selectedKeys.has(entryKey(e))), [selectedKeys, selectableEntries])
+    const hiddenCount = Math.max(0, listEntries.length - visibleEntries.length)
     const syncRunning = syncJob != null && (syncJob.status === 'queued' || syncJob.status === 'running')
-    const syncTotal = Number(syncJob?.total || 0)
-    const syncProcessed = Number(syncJob?.processed || 0)
-    const syncPercent = syncTotal > 0 ? Math.min(100, Math.round((syncProcessed / syncTotal) * 100)) : (syncJob?.percent ?? 0)
-    const syncItemStates = syncJob?.itemStates || {}
+    const syncPercent = (() => { const t = Number(syncJob?.total || 0); const p = Number(syncJob?.processed || 0); return t > 0 ? Math.min(100, Math.round((p / t) * 100)) : (syncJob?.percent ?? 0) })()
 
-    const refreshAll = useCallback(async () => {
-        await refreshList()
-    }, [refreshList])
-
-    const runEntryAction = useCallback(async (entry, action) => {
-        const key = entryKey(entry)
-        setActionBusyKeys((prev) => {
-            const next = new Set(prev)
-            next.add(key)
-            return next
-        })
-        try {
-            await action()
-            return true
-        } catch {
-            return false
-        } finally {
-            setActionBusyKeys((prev) => {
-                const next = new Set(prev)
-                next.delete(key)
-                return next
-            })
-        }
+    const stopSyncPoll = useCallback(() => { if (syncPollRef.current) { clearInterval(syncPollRef.current); syncPollRef.current = null } }, [])
+    const scheduleSyncDismiss = useCallback(() => {
+        if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current)
+        syncDismissTimerRef.current = window.setTimeout(() => { setSyncDismissed(true); syncDismissTimerRef.current = null }, 8000)
     }, [])
 
-    const onStatusChange = useCallback(
-        async (entry, nextStatus) => {
-            await runEntryAction(entry, async () => {
-                await patchEntry(entry, { readingStatus: nextStatus || null })
-                await refreshList()
-            })
-        },
-        [patchEntry, refreshList, runEntryAction],
-    )
-
-    const onRequestDelete = useCallback((entry) => {
-        setDeleteConfirmation({ isOpen: true, entry })
-    }, [])
-    const onOpenDetail = useCallback((entry) => {
-        setDetailEntry(entry || null)
-    }, [])
-    const onCloseDetail = useCallback(() => {
-        setDetailEntry(null)
-    }, [])
-    const onContinueFromDetail = useCallback((entry) => {
-        const { to, state } = resumeTarget(entry, browseTranslatedLang)
-        setDetailEntry(null)
-        navigate(to, { state: state || undefined })
-    }, [browseTranslatedLang, navigate])
-
-    const onCancelDelete = useCallback(() => {
-        setDeleteConfirmation({ isOpen: false, entry: null })
-    }, [])
-
-    const onRemove = useCallback(
-        async (entry) => {
-            const key = entryKey(entry)
-            if (!entry || removeBusyKey) return false
-            setRemoveBusyKey(key)
-            try {
-                await removeEntry(entry)
-                setSelectedKeys((prev) => {
-                    const next = new Set(prev)
-                    next.delete(key)
-                    return next
-                })
-                return true
-            } catch {
-                return false
-            } finally {
-                setRemoveBusyKey('')
-            }
-        },
-        [removeBusyKey, removeEntry],
-    )
-
-    const onConfirmDelete = useCallback(async () => {
-        if (!deleteConfirmation.entry) return
-        await onRemove(deleteConfirmation.entry)
-        setDeleteConfirmation({ isOpen: false, entry: null })
-    }, [deleteConfirmation.entry, onRemove])
-
-    const stopSyncPoll = useCallback(() => {
-        if (syncPollRef.current) {
-            clearInterval(syncPollRef.current)
-            syncPollRef.current = null
-        }
-    }, [])
+    const refreshAll = useCallback(async () => { await refreshList() }, [refreshList])
 
     const startSyncPoll = useCallback(() => {
         stopSyncPoll()
+        setSyncDismissed(false)
         syncPollRef.current = setInterval(async () => {
             try {
                 const data = await lifesyncFetch('/api/v1/progress/sync', { method: 'GET' })
                 const job = data?.job || null
                 setSyncJob(job)
-                const terminal = !job || job.status === 'completed' || job.status === 'completed_with_errors' || job.status === 'failed'
-                if (terminal) {
-                    stopSyncPoll()
-                    await refreshAll()
-                }
-            } catch {
-                stopSyncPoll()
-            }
+                if (!job || isSyncTerminal(job.status)) { stopSyncPoll(); await refreshAll(); scheduleSyncDismiss() }
+            } catch { stopSyncPoll(); scheduleSyncDismiss() }
         }, 2000)
-    }, [refreshAll, stopSyncPoll])
+    }, [refreshAll, scheduleSyncDismiss, stopSyncPoll])
 
-    useEffect(() => () => stopSyncPoll(), [stopSyncPoll])
+    useEffect(() => () => { stopSyncPoll(); if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current) }, [stopSyncPoll])
 
     const onSync = useCallback(async () => {
         if (syncBusy || syncRunning) return
-        setSyncBusy(true)
-        setSyncError('')
+        setSyncBusy(true); setSyncError(''); setSyncDismissed(false)
+        if (syncDismissTimerRef.current) { clearTimeout(syncDismissTimerRef.current); syncDismissTimerRef.current = null }
         try {
             const data = await lifesyncFetch('/api/v1/progress/sync', { method: 'POST', json: { scope: syncScope } })
-            const job = data?.job || null
-            setSyncJob(job)
-            if (job && (job.status === 'queued' || job.status === 'running')) {
-                startSyncPoll()
-            } else {
-                await refreshAll()
-            }
-        } catch (err) {
-            setSyncError(String(err?.message || 'Failed to start sync'))
-        } finally {
-            setSyncBusy(false)
-        }
-    }, [refreshAll, startSyncPoll, syncBusy, syncRunning, syncScope])
+            const job = data?.job || null; setSyncJob(job)
+            if (job && !isSyncTerminal(job.status)) startSyncPoll(); else { await refreshAll(); scheduleSyncDismiss() }
+        } catch (err) { setSyncError(String(err?.message || 'Failed to start sync')) }
+        finally { setSyncBusy(false) }
+    }, [refreshAll, scheduleSyncDismiss, startSyncPoll, syncBusy, syncRunning, syncScope])
+
+    const runEntryAction = useCallback(async (entry, action) => {
+        const k = entryKey(entry)
+        setActionBusyKeys((p) => new Set([...p, k]))
+        try { await action(); return true } catch { return false }
+        finally { setActionBusyKeys((p) => { const n = new Set(p); n.delete(k); return n }) }
+    }, [])
+
+    const onStatusChange = useCallback(async (entry, nextStatus) => {
+        await runEntryAction(entry, async () => { await patchEntry(entry, { readingStatus: nextStatus || null }); await refreshList() })
+    }, [patchEntry, refreshList, runEntryAction])
+
+    const onRemove = useCallback(async (entry) => {
+        const k = entryKey(entry)
+        if (!entry || removeBusyKey) return false
+        setRemoveBusyKey(k)
+        try { await removeEntry(entry); setSelectedKeys((p) => { const n = new Set(p); n.delete(k); return n }); return true }
+        catch { return false }
+        finally { setRemoveBusyKey('') }
+    }, [removeBusyKey, removeEntry])
+
+    const onRequestDelete = useCallback((entry) => setDeleteConfirm({ isOpen: true, entry }), [])
+    const onCancelDelete = useCallback(() => setDeleteConfirm({ isOpen: false, entry: null }), [])
+    const onConfirmDelete = useCallback(async () => {
+        if (!deleteConfirm.entry) return
+        await onRemove(deleteConfirm.entry)
+        setDeleteConfirm({ isOpen: false, entry: null })
+    }, [deleteConfirm.entry, onRemove])
+
+    const onOpenDetail = useCallback((entry) => setDetailEntry(entry || null), [])
+    const onCloseDetail = useCallback(() => setDetailEntry(null), [])
+    const onContinueFromDetail = useCallback((entry) => {
+        const { to, state } = resumeTarget(entry, browseTranslatedLang)
+        setDetailEntry(null); navigate(to, { state: state || undefined })
+    }, [browseTranslatedLang, navigate])
 
     const onToggleSelect = useCallback((entry) => {
-        const key = entryKey(entry)
-        setSelectedKeys((prev) => {
-            const next = new Set(prev)
-            if (next.has(key)) next.delete(key)
-            else next.add(key)
-            return next
-        })
+        const k = entryKey(entry)
+        setSelectedKeys((p) => { const n = new Set(p); if (n.has(k)) n.delete(k); else n.add(k); return n })
     }, [])
-
-    const onSelectAllVisible = useCallback(() => {
-        setSelectedKeys(new Set(selectableEntries.map(entryKey)))
-    }, [selectableEntries])
-
-    const onClearSelection = useCallback(() => {
-        setSelectedKeys(new Set())
-    }, [])
+    const onSelectAll = useCallback(() => setSelectedKeys(new Set(selectableEntries.map(entryKey))), [selectableEntries])
+    const onClearSelection = useCallback(() => setSelectedKeys(new Set()), [])
 
     const onBulkDelete = useCallback(async () => {
-        if (bulkBusy || selectedEntries.length === 0) return
+        if (bulkBusy || !selectedEntries.length) return
         setBulkBusy(true)
-        try {
-            await bulkDelete(selectedEntries)
-            setSelectedKeys(new Set())
-        } catch {
-            // ignored for now
-        } finally {
-            setBulkBusy(false)
-        }
+        try { await bulkDelete(selectedEntries); setSelectedKeys(new Set()) } catch { } finally { setBulkBusy(false) }
     }, [bulkBusy, bulkDelete, selectedEntries])
 
-    const onBulkSetStatus = useCallback(
-        async (status) => {
-            if (bulkBusy || selectedEntries.length === 0) return
-            setBulkBusy(true)
-            try {
-                await bulkPatch(selectedEntries, { readingStatus: status || null })
-                setSelectedKeys(new Set())
-            } catch {
-                // ignored for now
-            } finally {
-                setBulkBusy(false)
-            }
-        },
-        [bulkBusy, bulkPatch, selectedEntries],
-    )
+    const onBulkSetStatus = useCallback(async (status) => {
+        if (bulkBusy || !selectedEntries.length) return
+        setBulkBusy(true)
+        try { await bulkPatch(selectedEntries, { readingStatus: status || null }); setSelectedKeys(new Set()) } catch { } finally { setBulkBusy(false) }
+    }, [bulkBusy, bulkPatch, selectedEntries])
 
     if (!isLifeSyncConnected) return null
 
     if (!mangaPluginOn) {
         return (
-            <MotionDiv
-                className="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 via-[var(--color-surface)] to-lime-50/40 px-6 py-14 text-center shadow-sm"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={lifeSyncPageTransition}
-            >
-                <FaBookOpen className="mx-auto h-10 w-10 text-amber-600" aria-hidden />
-                <p className="mt-4 text-[19px] font-bold text-slate-900">Manga is turned off</p>
-                <p className="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-slate-600">
-                    Turn on the Manga plugin in LifeSync preferences to see your shelf and reading progress here.
-                </p>
-                <Link
-                    to="/dashboard/profile"
-                    className="mt-7 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-amber-600 px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-amber-700"
-                >
-                    Open preferences
-                </Link>
+            <MotionDiv className="rounded-3xl border border-dashed border-(--color-border-soft) bg-(--color-surface) px-6 py-14 text-center" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncPageTransition}>
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--color-surface-muted)">
+                    <IconBook className="h-5 w-5 text-(--color-text-secondary)" />
+                </div>
+                <p className="text-[17px] font-bold text-(--color-text-primary)">Manga is turned off</p>
+                <p className="mx-auto mt-2 max-w-md text-[14px] text-(--color-text-secondary)">Turn on the manga plugin in LifeSync preferences to see your shelf here.</p>
+                <Link to="/dashboard/profile?tab=preferences" className="mt-8 inline-flex min-h-12 items-center justify-center rounded-2xl bg-(--color-text-primary) px-6 text-[14px] font-semibold text-(--color-surface) transition hover:opacity-90">Open preferences</Link>
             </MotionDiv>
         )
     }
 
     return (
-        <MotionDiv
-            className="lifesync-manga-history relative min-w-0 space-y-4"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={lifeSyncPageTransition}
-        >
-            <MotionDiv
-                className="space-y-4"
-                variants={lifeSyncStaggerContainer}
-                initial="hidden"
-                animate="show"
-            >
-            <MotionDiv variants={lifeSyncStaggerItem}>
-            <section className="rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">Library</p>
-                        <h1 className="text-[22px] font-black leading-tight text-slate-900">Reading History</h1>
-                        <p className="mt-1 text-[13px] text-slate-600">Track progress, manage status, and continue reading quickly.</p>
+        <MotionDiv className="min-w-0 space-y-4" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncPageTransition}>
+
+            {/* ── Header ── */}
+            <div className="flex items-center gap-3">
+                <Link to={MANGA_BASE} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-primary) transition hover:bg-(--color-surface-muted)" aria-label="Back">
+                    <IconChevronLeft />
+                </Link>
+                <h1 className="min-w-0 flex-1 text-[20px] font-black leading-none text-(--color-text-primary)">Manga Library</h1>
+                <Link to={MANGA_BASE} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
+                    Browse
+                </Link>
+            </div>
+
+            {/* ── Stats ── */}
+            <div className="grid grid-cols-3 gap-2">
+                {[
+                    { label: 'Total', value: initialLoading ? '—' : visibleEntries.length },
+                    { label: 'New chapters', value: initialLoading ? '—' : visibleSummary.withNewChapter, accent: true },
+                    { label: 'Needs sync', value: initialLoading ? '—' : visibleSummary.needsSync, warn: true },
+                ].map((s) => (
+                    <div key={s.label} className={`rounded-2xl px-3 py-3 text-center ${s.accent ? 'bg-primary/10 ring-1 ring-primary/20' : s.warn ? 'bg-(--color-surface) border border-(--color-border-soft)' : 'bg-(--color-surface) border border-(--color-border-soft)'}`}>
+                        <p className={`text-[22px] font-black tabular-nums leading-none ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{s.value}</p>
+                        <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary)">{s.label}</p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        <label className="sr-only" htmlFor="manga-sync-scope">Sync scope</label>
-                        <select
-                            id="manga-sync-scope"
-                            value={syncScope}
-                            onChange={(event) => setSyncScope(event.target.value)}
-                            disabled={syncBusy || syncRunning || anyRefreshing || Number(pageInfo?.total || 0) === 0}
-                            className="min-h-[40px] rounded-xl border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:opacity-50"
-                            title="Choose what to sync"
-                        >
-                            {SYNC_SCOPE_OPTIONS.map((opt) => (
-                                <option key={opt.id} value={opt.id}>
-                                    {opt.label}
-                                </option>
-                            ))}
+                ))}
+            </div>
+
+            {/* ── Sync bar ── */}
+            <div className="flex flex-wrap items-center gap-2">
+                <select value={syncScope} onChange={(e) => setSyncScope(e.target.value)} disabled={syncBusy || syncRunning || !Number(pageInfo?.total || 0)}
+                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-semibold text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition disabled:opacity-50">
+                    {SYNC_SCOPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+                <button type="button" onClick={() => void onSync()} disabled={syncBusy || syncRunning || !Number(pageInfo?.total || 0)}
+                    className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-[12px] font-bold text-(--color-ink-strong) transition hover:brightness-95 disabled:opacity-50">
+                    <IconSync className={syncBusy || syncRunning ? 'animate-spin' : ''} />
+                    {syncBusy ? 'Starting…' : syncRunning ? `Syncing ${Math.round(syncPercent)}%` : 'Sync latest'}
+                </button>
+                <button type="button" onClick={() => void refreshAll()} disabled={refreshing}
+                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
+                    aria-label="Reload">
+                    <IconSync className={refreshing ? 'animate-spin h-3.5 w-3.5' : 'h-3.5 w-3.5'} />
+                </button>
+            </div>
+
+            {/* Sync progress */}
+            {syncJob && !syncDismissed && (
+                <div className={`rounded-2xl border px-4 py-3 ${syncJob.status === 'failed' ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : syncJob.status === 'completed' ? 'border-primary/30 bg-primary/5' : 'border-(--color-border-soft) bg-(--color-surface-muted)'}`}>
+                    <div className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="font-semibold text-(--color-text-primary)">{syncJob.status === 'failed' ? 'Sync failed' : syncJob.status === 'completed' ? 'Sync complete' : `Syncing ${Math.round(syncPercent)}%`}</span>
+                        <div className="flex items-center gap-2">
+                            <span className="text-(--color-text-secondary)">{Number(syncJob?.processed || 0)}/{Number(syncJob?.total || 0)}</span>
+                            {!syncRunning && <button type="button" onClick={() => setSyncDismissed(true)} className="text-(--color-text-secondary) hover:text-(--color-text-primary)"><IconX className="h-3 w-3" /></button>}
+                        </div>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-(--color-border-soft)">
+                        <div className={`h-full rounded-full bg-primary transition-all ${syncRunning ? 'animate-pulse' : ''}`} style={{ width: `${syncPercent}%` }} />
+                    </div>
+                </div>
+            )}
+            {syncError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{syncError}</div>}
+
+            {/* ── Controls ── */}
+            <div className="flex flex-wrap gap-2">
+                {/* Search */}
+                <div className="relative min-w-0 flex-1 basis-48">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)"><IconSearch /></span>
+                    <input ref={searchRef} type="search" value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="Search titles…"
+                        className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 transition" />
+                </div>
+
+                {/* Source */}
+                <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}
+                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
+                    {sourceOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+
+                {/* Status */}
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
+                    {STATUS_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+
+                {/* Update state */}
+                <select value={updateStateFilter} onChange={(e) => setUpdateStateFilter(e.target.value)}
+                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
+                    {UPDATE_STATE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+
+                {/* Sort */}
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
+                    {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+
+                {/* Sort order */}
+                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                    {[{ id: 'desc', label: '↓' }, { id: 'asc', label: '↑' }].map((o) => (
+                        <button key={o.id} type="button" onClick={() => setSortOrder(o.id)}
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg text-[12px] font-bold transition ${sortOrder === o.id ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
+                            {o.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Layout toggle */}
+                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                    <button type="button" onClick={() => setLayout('list')}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        aria-label="List view"><IconList /></button>
+                    <button type="button" onClick={() => setLayout('grid')}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        aria-label="Grid view"><IconGrid /></button>
+                </div>
+            </div>
+
+            {/* Bulk action bar */}
+            {selectedEntries.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-(--color-border-soft) bg-(--color-surface-muted) px-4 py-2.5">
+                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{selectedEntries.length} selected</p>
+                    <div className="flex flex-1 flex-wrap justify-end gap-2">
+                        <select defaultValue="" onChange={(e) => { if (e.target.value) { void onBulkSetStatus(e.target.value); e.target.value = '' } }} disabled={bulkBusy}
+                            className="h-8 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-2 text-[11px] font-semibold text-(--color-text-secondary) focus:outline-none disabled:opacity-50">
+                            <option value="">Set status…</option>
+                            {STATUS_OPTIONS.filter((o) => o.id !== 'all').map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                         </select>
-                        <button
-                            type="button"
-                            onClick={() => void onSync()}
-                            disabled={syncBusy || syncRunning || anyRefreshing || Number(pageInfo?.total || 0) === 0}
-                            className="lifesync-manga-history-accent inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-3 text-[12px] font-bold text-slate-900 transition hover:brightness-95 disabled:opacity-50"
-                        >
-                            <FaSyncAlt className={`h-3 w-3 ${syncBusy || syncRunning ? 'animate-spin' : ''}`} />
-                            {syncBusy ? 'Starting sync' : syncRunning ? `Syncing ${Math.round(syncPercent)}%` : 'Sync latest'}
+                        <button type="button" onClick={() => void onBulkDelete()} disabled={bulkBusy}
+                            className="flex h-8 items-center gap-1.5 rounded-xl border border-red-200 bg-(--color-surface) px-3 text-[11px] font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:hover:bg-red-950/30">
+                            <IconX className="h-3 w-3" /> Remove
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => void refreshAll()}
-                            disabled={syncBusy || anyRefreshing}
-                            className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
-                        >
-                            {anyRefreshing ? 'Refreshing' : 'Reload'}
+                        <button type="button" onClick={onClearSelection}
+                            className="h-8 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
+                            Clear
                         </button>
                     </div>
                 </div>
+            )}
 
-                {syncJob ? (
-                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
-                            <p className="font-semibold text-slate-700">
-                                Sync {syncJobStatusLabel(syncJob.status)} ({syncScopeLabel(syncJob.scope)}) · {syncProcessed}/{syncTotal}
-                            </p>
-                            <p className="font-semibold text-slate-600">{Math.round(syncPercent)}%</p>
-                        </div>
-                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-200">
-                            <div
-                                className={`h-full rounded-full ${syncRunning ? 'animate-pulse' : ''}`}
-                                style={{ width: `${syncPercent}%`, backgroundColor: 'var(--mx-color-c6ff00)' }}
-                            />
-                        </div>
-                        {Number(syncJob?.errorCount || 0) > 0 ? (
-                            <p className="mt-1 text-[10px] font-semibold text-amber-700">
-                                {Number(syncJob.errorCount)} item{Number(syncJob.errorCount) === 1 ? '' : 's'} failed
-                            </p>
-                        ) : null}
-                    </div>
-                ) : null}
-
-                {syncError ? (
-                    <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-700">
-                        {syncError}
-                    </div>
-                ) : null}
-
-                <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center">
-                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : visibleEntries.length}</p>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Visible</p>
-                    </div>
-                    <div className="rounded-xl border border-lime-200 bg-lime-50 px-3 py-2.5 text-center">
-                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : visibleSummary.withNewChapter}</p>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-lime-700">New</p>
-                    </div>
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-center">
-                        <p className="text-[20px] font-black text-slate-900">{initialLoading ? '…' : visibleSummary.needsSync}</p>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-700">Needs sync</p>
-                    </div>
+            {/* Loading indicator */}
+            {refreshing && !initialLoading && (
+                <div className="overflow-hidden rounded-lg">
+                    <div className="h-0.5 w-full animate-pulse bg-linear-to-r from-transparent via-primary to-transparent" />
                 </div>
-            </section>
-            </MotionDiv>
+            )}
 
-            <MotionDiv variants={lifeSyncStaggerItem}>
-            <section className="rounded-2xl border border-slate-200 bg-[var(--color-surface)] p-4 shadow-sm sm:p-5">
-                <div className="flex items-center justify-between gap-2">
-                    <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-600">
-                        <FaFilter className="h-3 w-3" />
-                        Filter and Search
-                    </p>
-                    <Link
-                        to={`${MANGA_BASE}`}
-                        className="text-[12px] font-semibold text-amber-700 transition hover:text-amber-900"
-                    >
-                        Browse manga
-                    </Link>
-                </div>
-
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                    <input
-                        type="search"
-                        value={queryInput}
-                        onChange={(event) => setQueryInput(event.target.value)}
-                        placeholder="Search titles, chapters, notes"
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 sm:col-span-2 lg:col-span-3 xl:col-span-2"
-                    />
-                    <select
-                        value={sourceFilter}
-                        onChange={(event) => setSourceFilter(event.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
-                    >
-                        {sourceOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                                {opt.label}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={statusFilter}
-                        onChange={(event) => setStatusFilter(event.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
-                    >
-                        {STATUS_OPTIONS.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                                {opt.label}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={updateStateFilter}
-                        onChange={(event) => setUpdateStateFilter(event.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
-                    >
-                        {UPDATE_STATE_OPTIONS.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                                {opt.label}
-                            </option>
-                        ))}
-                    </select>
-                    <select
-                        value={sortBy}
-                        onChange={(event) => setSortBy(event.target.value)}
-                        className="min-h-[40px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[12px] font-medium text-slate-700 focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100"
-                    >
-                        {SORT_OPTIONS.map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                                {opt.label}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-                        className="min-h-[34px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                        Order: {sortOrder === 'desc' ? 'Desc' : 'Asc'}
-                    </button>
-                    <span className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-700">
-                        25 per page
-                    </span>
-                    {hiddenByPreferencesCount > 0 ? (
-                        <span className="ml-auto rounded-lg border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold text-amber-800">
-                            {hiddenByPreferencesCount} hidden by preferences
-                        </span>
-                    ) : null}
-                </div>
-            </section>
-            </MotionDiv>
-
-            {anyRefreshing && !initialLoading ? (
-                <div className="overflow-hidden rounded-lg border border-amber-100 bg-[var(--color-surface)]">
-                    <div className="h-1 w-full animate-pulse bg-gradient-to-r from-amber-200 via-[var(--mx-color-c6ff00)] to-amber-200" />
-                </div>
-            ) : null}
-
-            {selectedEntries.length > 0 ? (
-                <section className="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 shadow-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-amber-900">{selectedEntries.length} selected</p>
-                        <div className="flex flex-wrap gap-2">
-                            <select
-                                defaultValue=""
-                                onChange={(event) => {
-                                    const value = event.target.value
-                                    if (!value) return
-                                    void onBulkSetStatus(value)
-                                    event.target.value = ''
-                                }}
-                                disabled={bulkBusy}
-                                className="min-h-[34px] rounded-lg border border-amber-300 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-200 disabled:opacity-50"
-                            >
-                                <option value="">Set status</option>
-                                {STATUS_OPTIONS.filter((opt) => opt.id !== 'all').map((opt) => (
-                                    <option key={opt.id} value={opt.id}>
-                                        {opt.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <button
-                                type="button"
-                                onClick={() => void onBulkDelete()}
-                                disabled={bulkBusy}
-                                className="inline-flex min-h-[34px] items-center gap-1 rounded-lg border border-red-200 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                            >
-                                <FaTrashAlt className="h-3 w-3" />
-                                Remove
-                            </button>
-                            <button
-                                type="button"
-                                onClick={onClearSelection}
-                                className="min-h-[34px] rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
-                            >
-                                Clear
-                            </button>
-                        </div>
-                    </div>
-                </section>
-            ) : null}
-
-            <MotionDiv variants={lifeSyncStaggerItem}>
+            {/* ── Content ── */}
             {initialLoading && listEntries.length === 0 ? (
-                <div className="rounded-2xl border border-slate-100 bg-[var(--color-surface)]/60 p-5 sm:p-6">
-                    <LifesyncMediaLibraryPageSkeleton
-                        gridCount={Math.max(8, limit)}
-                        showSpotlight={false}
-                        spotlightHistoryRows={2}
-                        cardHistoryRows={2}
-                    />
-                </div>
+                layout === 'list' ? (
+                    <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+                        {Array.from({ length: 8 }).map((_, i) => <div key={i} className={i < 7 ? 'border-b border-(--color-border-soft)' : ''}><SkeletonRow /></div>)}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                        {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+                    </div>
+                )
             ) : error ? (
-                <MotionDiv
-                    className="rounded-2xl border border-red-200 bg-red-50/70 px-6 py-10 text-center"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                >
-                    <p className="text-[17px] font-semibold text-red-900">Failed to load reading history</p>
-                    <p className="mt-2 text-[13px] text-red-700">{error}</p>
-                    <button
-                        type="button"
-                        onClick={() => void refreshList({ forceInitial: true })}
-                        className="mt-4 rounded-lg border border-red-200 bg-[var(--color-surface)] px-4 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100"
-                    >
-                        Retry
-                    </button>
+                <MotionDiv className="rounded-2xl border border-red-200 bg-red-50 px-6 py-10 text-center dark:border-red-800 dark:bg-red-950/20" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <p className="text-[16px] font-semibold text-red-900 dark:text-red-300">Failed to load library</p>
+                    <p className="mt-2 text-[13px] text-red-700 dark:text-red-400">{error}</p>
+                    <button type="button" onClick={() => void refreshList({ forceInitial: true })} className="mt-4 rounded-xl border border-red-200 px-4 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100">Retry</button>
                 </MotionDiv>
             ) : listEntries.length === 0 ? (
-                <MotionDiv
-                    className="rounded-2xl border border-dashed border-amber-200 bg-gradient-to-br from-[var(--color-surface)] via-amber-50/40 to-lime-50/25 px-6 py-14 text-center"
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                >
-                    <FaBookOpen className="mx-auto h-10 w-10 text-amber-400" />
-                    <p className="mt-4 text-[18px] font-bold text-slate-900">
-                        {query || sourceFilter !== 'all' || statusFilter !== 'all' || updateStateFilter !== 'all'
-                            ? 'No matches for current filters'
-                            : 'Your shelf is empty'}
-                    </p>
-                    <p className="mx-auto mt-2 max-w-md text-[14px] leading-relaxed text-slate-600">
-                        Open any chapter in the reader to track progress here.
-                    </p>
-                    <Link
-                        to={`${MANGA_BASE}`}
-                        className="mt-7 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-slate-800"
-                    >
-                        Browse popular manga
+                <MotionDiv className="rounded-2xl border border-dashed border-(--color-border-soft) bg-(--color-surface) px-6 py-16 text-center" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={lifeSyncPageTransition}>
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--color-surface-muted)">
+                        <IconBook className="h-5 w-5 text-(--color-text-secondary)" />
+                    </div>
+                    <p className="text-[16px] font-bold text-(--color-text-primary)">{query || sourceFilter !== 'all' || statusFilter !== 'all' || updateStateFilter !== 'all' ? 'No matches' : 'Your shelf is empty'}</p>
+                    <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-(--color-text-secondary)">Open any chapter in the reader to track progress here.</p>
+                    <Link to={MANGA_BASE} className="mt-6 inline-flex min-h-[42px] items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
+                        <IconBook className="h-3.5 w-3.5" /> Browse manga
                     </Link>
                 </MotionDiv>
             ) : visibleEntries.length === 0 ? (
-                <div className="space-y-3">
-                    <MotionDiv
-                        className="rounded-2xl border border-amber-200 bg-amber-50/70 px-6 py-10 text-center"
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    >
-                        <p className="text-[17px] font-bold text-amber-900">This page is hidden by your preferences</p>
-                        <p className="mx-auto mt-2 max-w-md text-[13px] text-amber-800">
-                            Move to another page, change source filters, or enable Manga District in preferences.
-                        </p>
-                    </MotionDiv>
-                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-[var(--color-surface)] px-4 py-3 shadow-sm">
-                        <button
-                            type="button"
-                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                            disabled={pageInfo.page <= 1 || refreshing}
-                            className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
-                        >
-                            Previous
-                        </button>
-                        <p className="text-[12px] font-semibold text-slate-700">
-                            Page {pageInfo.page} of {pageInfo.totalPages}
-                        </p>
-                        <button
-                            type="button"
-                            onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!pageInfo.hasMore || refreshing}
-                            className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
+                <MotionDiv className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-12 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <p className="text-[14px] font-semibold text-(--color-text-primary)">Hidden by preferences</p>
+                    <p className="mt-1 text-[12px] text-(--color-text-secondary)">Change source filters or enable Manga District in preferences.</p>
+                </MotionDiv>
             ) : (
                 <>
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-slate-600">
-                        <p>
-                            Showing {visibleEntries.length} of {pageInfo.total} results · Page {pageInfo.page} of {pageInfo.totalPages}
+                    {/* Count + select row */}
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-[11px] text-(--color-text-secondary)">
+                            {visibleEntries.length} of {pageInfo.total} · Page {pageInfo.page}/{pageInfo.totalPages}
+                            {hiddenCount > 0 && <span className="ml-2 text-(--color-text-secondary)">({hiddenCount} hidden)</span>}
                         </p>
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
-                                onClick={onSelectAllVisible}
-                                className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
-                            >
-                                Select all
-                            </button>
-                            <button
-                                type="button"
-                                onClick={onClearSelection}
-                                className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-slate-50"
-                            >
-                                Clear
-                            </button>
+                        <div className="flex gap-1.5">
+                            <button type="button" onClick={onSelectAll} className="rounded-lg border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">Select all</button>
+                            <button type="button" onClick={onClearSelection} className="rounded-lg border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">Clear</button>
                         </div>
                     </div>
 
-                    <MotionUl
-                        className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-                        variants={lifeSyncStaggerContainerDense}
-                        initial="hidden"
-                        animate="show"
-                    >
-                        {visibleEntries.map((entry) => {
-                            const key = entryKey(entry)
-                            const itemState = syncItemStates[key]
-                            return (
-                                <LibraryMangaCard
-                                    key={key}
-                                    entry={entry}
-                                    browseTranslatedLang={browseTranslatedLang}
-                                    selected={selectedKeys.has(key)}
-                                    busy={actionBusyKeys.has(key)}
-                                    removeBusy={removeBusyKey === key}
-                                    syncState={itemState?.state}
-                                    syncMessage={itemState?.message}
-                                    onToggleSelect={onToggleSelect}
-                                    onStatusChange={onStatusChange}
-                                    onRequestRemove={onRequestDelete}
-                                    onOpenDetail={onOpenDetail}
-                                />
-                            )
-                        })}
-                    </MotionUl>
+                    {/* List */}
+                    {layout === 'list' ? (
+                        <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+                            <AnimatePresence initial={false}>
+                                {visibleEntries.map((entry, idx) => {
+                                    const k = entryKey(entry)
+                                    return (
+                                        <MangaRow key={k} entry={entry} browseTranslatedLang={browseTranslatedLang}
+                                            busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
+                                            syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
+                                            onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
+                                            onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
+                                            isLast={idx === visibleEntries.length - 1} />
+                                    )
+                                })}
+                            </AnimatePresence>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                            <AnimatePresence initial={false}>
+                                {visibleEntries.map((entry) => {
+                                    const k = entryKey(entry)
+                                    return (
+                                        <MangaCard key={k} entry={entry} browseTranslatedLang={browseTranslatedLang}
+                                            busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
+                                            syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
+                                            onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
+                                            onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail} />
+                                    )
+                                })}
+                            </AnimatePresence>
+                        </div>
+                    )}
 
-                    <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-[var(--color-surface)] px-4 py-3 shadow-sm">
-                        <button
-                            type="button"
-                            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                            disabled={pageInfo.page <= 1 || refreshing}
-                            className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
-                        >
-                            Previous
+                    {/* Pagination */}
+                    <div className="flex items-center justify-between rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-4 py-2.5">
+                        <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageInfo.page <= 1 || refreshing}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
+                            <IconChevronLeft />
                         </button>
-                        <p className="text-[12px] font-semibold text-slate-700">
-                            Page {pageInfo.page} of {pageInfo.totalPages}
-                        </p>
-                        <button
-                            type="button"
-                            onClick={() => setPage((prev) => prev + 1)}
-                            disabled={!pageInfo.hasMore || refreshing}
-                            className="rounded-lg border border-slate-200 bg-[var(--color-surface)] px-3 py-1.5 text-[12px] font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
-                        >
-                            Next
+                        <p className="text-[12px] font-semibold text-(--color-text-primary)">Page {pageInfo.page} of {pageInfo.totalPages}</p>
+                        <button type="button" onClick={() => setPage((p) => p + 1)} disabled={!pageInfo.hasMore || refreshing}
+                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
+                            <IconChevronRight />
                         </button>
                     </div>
                 </>
             )}
-            </MotionDiv>
 
-            <ConfirmationModal
-                isOpen={deleteConfirmation.isOpen}
-                title="Remove from reading history"
-                message={`Remove "${decodeHtmlEntities(deleteConfirmation.entry?.title) || 'this manga'}" from your shelf?`}
-                confirmLabel="Remove"
-                cancelLabel="Cancel"
-                onConfirm={onConfirmDelete}
-                onCancel={onCancelDelete}
-            />
+            {/* ── Modals ── */}
             <AnimatePresence>
-                {detailEntry ? (
-                    <DetailModal
-                        entry={detailEntry}
-                        onClose={onCloseDetail}
-                        onContinue={onContinueFromDetail}
-                    />
-                ) : null}
+                {detailEntry && <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} browseTranslatedLang={browseTranslatedLang} />}
             </AnimatePresence>
-            </MotionDiv>
+            <AnimatePresence>
+                {deleteConfirm.isOpen && (
+                    <ConfirmModal isOpen title="Remove from library" message={`Remove "${decodeHtmlEntities(deleteConfirm.entry?.title) || 'this manga'}" from your shelf?`} onConfirm={onConfirmDelete} onCancel={onCancelDelete} />
+                )}
+            </AnimatePresence>
         </MotionDiv>
     )
 }
