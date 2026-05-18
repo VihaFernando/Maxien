@@ -71,7 +71,7 @@ export default function GithubIntegrations({ embedded = false }) {
             <div className="rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-4 shadow-sm sm:rounded-[24px] sm:p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-[var(--mx-color-1d1d1f)] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <div className="w-11 h-11 rounded-2xl bg-black flex items-center justify-center flex-shrink-0 shadow-sm">
                             <GitHubIcon className="w-[22px] h-[22px] text-white" />
                         </div>
                         <div className="min-w-0">
@@ -92,7 +92,7 @@ export default function GithubIntegrations({ embedded = false }) {
                     <div className="flex flex-shrink-0 flex-wrap items-center gap-2 lg:justify-end">
                         <Link
                             to="/dashboard/github"
-                            className="flex items-center justify-center gap-2 bg-[var(--mx-color-1d1d1f)] hover:bg-black text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98] whitespace-nowrap"
+                            className="flex items-center justify-center gap-2 bg-black hover:bg-black/80 text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl transition-all shadow-sm active:scale-[0.98] whitespace-nowrap"
                         >
                             <GitHubIcon className="w-4 h-4" />
                             Open GitHub

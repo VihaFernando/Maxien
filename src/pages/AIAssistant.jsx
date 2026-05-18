@@ -71,13 +71,13 @@ const VoiceWave = ({ color = "var(--mx-color-c6ff00)", size = 16 }) => (
 
 // ─── Action badge colours ─────────────────────────────────────────────────────
 const ACTION_STYLES = {
-    create_task: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100", label: "Task Created" },
-    create_project: { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-100", label: "Project Created" },
-    update_task: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100", label: "Task Updated" },
-    update_project: { bg: "bg-orange-50", text: "text-orange-700", border: "border-orange-100", label: "Project Updated" },
-    link_task_project: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100", label: "Task Linked" },
-    none: { bg: "bg-[var(--mx-color-f5f5f7)]", text: "text-[var(--mx-color-86868b)]", border: "border-[var(--mx-color-e5e5ea)]", label: "No Action" },
-    clarify: { bg: "bg-sky-50", text: "text-sky-700", border: "border-sky-100", label: "Select One" },
+    create_task: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/30", label: "Task Created" },
+    create_project: { bg: "bg-violet-500/10", text: "text-violet-400", border: "border-violet-500/30", label: "Project Created" },
+    update_task: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/30", label: "Task Updated" },
+    update_project: { bg: "bg-orange-500/10", text: "text-orange-400", border: "border-orange-500/30", label: "Project Updated" },
+    link_task_project: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/30", label: "Task Linked" },
+    none: { bg: "bg-(--color-surface-muted)", text: "text-(--color-text-secondary)", border: "border-(--color-border-soft)", label: "No Action" },
+    clarify: { bg: "bg-sky-500/10", text: "text-sky-400", border: "border-sky-500/30", label: "Select One" },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -109,14 +109,14 @@ function MessageBubble({ msg }) {
 
     const getStatusColor = (status) => {
         switch (status?.split("•")[0]?.trim()?.toLowerCase()) {
-            case "to do": return "bg-gray-100 text-gray-700"
-            case "in progress": return "bg-blue-100 text-blue-700"
-            case "done": return "bg-green-100 text-green-700"
-            case "active": return "bg-blue-100 text-blue-700"
-            case "on hold": return "bg-amber-100 text-amber-700"
-            case "paused": return "bg-amber-100 text-amber-700"
-            case "completed": return "bg-green-100 text-green-700"
-            default: return "bg-gray-100 text-gray-700"
+            case "to do": return "bg-(--color-surface-soft) text-(--color-text-secondary)"
+            case "in progress": return "bg-blue-500/15 text-blue-400"
+            case "done": return "bg-green-500/15 text-green-400"
+            case "active": return "bg-blue-500/15 text-blue-400"
+            case "on hold": return "bg-amber-500/15 text-amber-400"
+            case "paused": return "bg-amber-500/15 text-amber-400"
+            case "completed": return "bg-green-500/15 text-green-400"
+            default: return "bg-(--color-surface-soft) text-(--color-text-secondary)"
         }
     }
 
@@ -149,8 +149,8 @@ function MessageBubble({ msg }) {
             <div className={`flex flex-col gap-2 max-w-[85%] sm:max-w-[72%] ${isUser ? "items-end" : "items-start"}`}>
                 {/* Bubble */}
                 <div className={`px-4 py-3 rounded-[18px] ${isUser
-                    ? "bg-[var(--mx-color-1d1d1f)] text-white rounded-br-[6px]"
-                    : "bg-[var(--color-surface)] border border-[var(--mx-color-e5e5ea)] text-[var(--mx-color-1d1d1f)] rounded-bl-[6px] shadow-sm"
+                    ? "bg-(--color-text-primary) text-(--color-surface) rounded-br-[6px]"
+                    : "bg-(--color-surface) border border-(--color-border-soft) text-(--color-text-primary) rounded-bl-[6px] shadow-sm"
                     }`}>
                     {isLoading ? (
                         <div className="flex items-center gap-1.5 px-1 py-0.5">
@@ -159,7 +159,7 @@ function MessageBubble({ msg }) {
                             ))}
                         </div>
                     ) : (
-                        <p className={`text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-wrap ${isUser ? "text-white" : "text-[var(--mx-color-1d1d1f)]"}`}>
+                        <p className={`text-[13px] sm:text-[14px] leading-relaxed whitespace-pre-wrap ${isUser ? "text-(--color-surface)" : "text-(--color-text-primary)"}`}>
                             {getDisplayContent()}
                         </p>
                     )}
@@ -173,11 +173,11 @@ function MessageBubble({ msg }) {
                                 key={`${item.type}-${item.id}`}
                                 onClick={() => handleItemClick(item)}
                                 className={`flex flex-col gap-1.5 p-3 rounded-[12px] border text-left transition-colors hover:bg-opacity-100 active:scale-95 ${item.type === "task"
-                                    ? "bg-blue-50 border-blue-100 hover:bg-blue-75"
-                                    : "bg-violet-50 border-violet-100 hover:bg-violet-75"
+                                    ? "bg-blue-500/10 border-blue-500/25 hover:bg-blue-500/15"
+                                    : "bg-violet-500/10 border-violet-500/25 hover:bg-violet-500/15"
                                     }`}
                             >
-                                <p className="font-semibold text-[13px] text-[var(--mx-color-1d1d1f)] line-clamp-2">
+                                <p className="font-semibold text-[13px] text-(--color-text-primary) line-clamp-2">
                                     {item.title}
                                 </p>
                                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -203,7 +203,7 @@ function MessageBubble({ msg }) {
 
                 {/* Error badge */}
                 {msg.status === "error" && (
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border bg-red-50 text-red-600 border-red-100">
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border bg-red-500/10 text-red-400 border-red-500/30">
                         <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                         Error
                     </div>
@@ -510,8 +510,8 @@ export default function AIAssistant() {
                             <button
                                 onClick={() => { voice.setVoiceEnabled(v => !v); if (voice.isSpeaking) voice.stopSpeaking() }}
                                 className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-2 rounded-xl text-[12px] font-semibold transition-all border ${voice.voiceEnabled
-                                    ? "bg-[var(--mx-color-1d1d1f)] text-white border-[var(--mx-color-1d1d1f)]"
-                                    : "bg-[var(--color-surface)] text-[var(--mx-color-86868b)] border-[var(--mx-color-d2d2d7)] hover:bg-[var(--mx-color-f5f5f7)]"
+                                    ? "bg-[var(--mx-color-1d1d1f)] text-black border-[var(--mx-color-1d1d1f)]"
+                                    : "bg-[var(--color-surface)] text-white border-[var(--mx-color-d2d2d7)] hover:bg-[var(--mx-color-f5f5f7)]"
                                     }`}
                                 title={voice.voiceEnabled ? "Voice responses on" : "Voice responses off"}
                             >
@@ -544,7 +544,7 @@ export default function AIAssistant() {
             {showVoiceSettings && voice.ttsSupported && hasKey && (
                 <div className="flex-shrink-0 mb-4 bg-[var(--color-surface)] rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
                     <div className="px-5 sm:px-6 py-4 border-b border-[var(--mx-color-f0f0f0)] flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-xl bg-blue-500/15 flex items-center justify-center">
                             <SpeakerOnIcon className="w-3.5 h-3.5 text-blue-600" />
                         </div>
                         <div>
@@ -639,13 +639,13 @@ export default function AIAssistant() {
                     </div>
                     <div className="px-5 sm:px-6 py-4">
                         {keyError && (
-                            <div className="mb-3 bg-red-50 text-red-600 text-[12px] font-medium px-4 py-2.5 rounded-xl border border-red-100 flex items-center gap-2">
+                            <div className="mb-3 bg-red-500/10 text-red-400 text-[12px] font-medium px-4 py-2.5 rounded-xl border border-red-500/30 flex items-center gap-2">
                                 <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                 {keyError}
                             </div>
                         )}
                         {keySuccess && (
-                            <div className="mb-3 bg-green-50 text-green-700 text-[12px] font-medium px-4 py-2.5 rounded-xl border border-green-100 flex items-center gap-2">
+                            <div className="mb-3 bg-green-500/10 text-green-400 text-[12px] font-medium px-4 py-2.5 rounded-xl border border-green-500/30 flex items-center gap-2">
                                 <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                                 {keySuccess}
                             </div>
@@ -671,7 +671,7 @@ export default function AIAssistant() {
                                     type="button"
                                     onClick={handleDeleteKey}
                                     disabled={keyLoading}
-                                    className="px-3 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-colors disabled:opacity-50 border border-red-100"
+                                    className="px-3 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors disabled:opacity-50 border border-red-500/30"
                                     title="Remove API key"
                                 >
                                     <TrashIcon className="w-4 h-4" />
@@ -687,7 +687,7 @@ export default function AIAssistant() {
                 <div className="flex-1 flex items-center justify-center">
                     <div className="w-full max-w-lg bg-[var(--color-surface)] rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
                         {/* Header */}
-                        <div className="bg-gradient-to-br from-[var(--mx-color-f0f9d4)] via-[var(--mx-color-e2f5a0)] to-[var(--mx-color-f5f5f7)] px-6 pt-8 pb-6 flex flex-col items-center gap-4 text-center">
+                        <div className="bg-(--color-surface-muted) px-6 pt-8 pb-6 flex flex-col items-center gap-4 text-center">
                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a8db00)] flex items-center justify-center shadow-lg">
                                 <SparkleIcon className="w-8 h-8 text-[var(--mx-color-1d1d1f)]" />
                             </div>
@@ -702,7 +702,7 @@ export default function AIAssistant() {
                         {/* Form */}
                         <div className="px-6 py-6">
                             {/* Instruction steps */}
-                            <div className="bg-[var(--mx-color-f5f5f7)] rounded-xl p-4 mb-5">
+                            <div className="bg-(--color-surface-muted) rounded-xl p-4 mb-5">
                                 <p className="text-[11px] font-bold text-[var(--mx-color-1d1d1f)] uppercase tracking-wider mb-3">How to get your free API key</p>
                                 {[
                                     ["1", "Go to", "console.groq.com", "https://console.groq.com"],
@@ -722,7 +722,7 @@ export default function AIAssistant() {
                             </div>
 
                             {keyError && (
-                                <div className="mb-4 bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100 flex items-center gap-2">
+                                <div className="mb-4 bg-red-500/10 text-red-400 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-500/30 flex items-center gap-2">
                                     <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                                     {keyError}
                                 </div>
@@ -804,14 +804,14 @@ export default function AIAssistant() {
 
                     {/* Pending clarification banner */}
                     {pendingClarification && (
-                        <div className="px-4 sm:px-5 py-2.5 bg-sky-50 border-b border-sky-100 flex items-center gap-2.5 flex-shrink-0">
-                            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse flex-shrink-0"></span>
-                            <p className="text-[11px] text-sky-700 font-medium flex-1">
+                        <div className="px-4 sm:px-5 py-2.5 bg-sky-500/10 border-b border-sky-500/25 flex items-center gap-2.5 flex-shrink-0">
+                            <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse flex-shrink-0"></span>
+                            <p className="text-[11px] text-sky-400 font-medium flex-1">
                                 Waiting for your selection — type a number or the name
                             </p>
                             <button
                                 onClick={() => setPendingClarification(null)}
-                                className="text-[10px] text-sky-500 hover:text-sky-700 font-semibold flex-shrink-0"
+                                className="text-[10px] text-sky-400 hover:text-sky-300 font-semibold flex-shrink-0"
                             >
                                 Cancel
                             </button>

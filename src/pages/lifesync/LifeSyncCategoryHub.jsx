@@ -590,7 +590,7 @@ export function LifeSyncGamesHub() {
                             </div>
 
                             <div className="mt-3 flex items-start gap-3 sm:gap-4">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)] text-slate-900 shadow-lg shadow-[var(--mx-color-c6ff00)]/30 sm:h-14 sm:w-14">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)] text-black shadow-lg shadow-[var(--mx-color-c6ff00)]/30 sm:h-14 sm:w-14">
                                     <FaGamepad className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden />
                                 </div>
                                 <div className="min-w-0 pt-0.5">
@@ -630,7 +630,7 @@ export function LifeSyncGamesHub() {
                                 </Link>
                                 <Link
                                     to="/dashboard/lifesync/games/deals"
-                                    className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-[var(--mx-color-c6ff00)] px-4 text-[12px] font-semibold text-slate-900 shadow-sm transition hover:brightness-95 ${focusRing}`}
+                                    className={`inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl bg-[var(--mx-color-c6ff00)] px-4 text-[12px] font-semibold text-black shadow-sm transition hover:brightness-95 ${focusRing}`}
                                 >
                                     View live deals
                                     <FaChevronRight className="h-3.5 w-3.5" aria-hidden />
@@ -758,7 +758,7 @@ export function LifeSyncGamesHub() {
                                 Shortcut grid for direct jumps into each game lane.
                             </p>
                         </div>
-                        <span className="inline-flex w-fit items-center rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-900 ring-1 ring-[var(--mx-color-c6ff00)]/45">
+                        <span className="inline-flex w-fit items-center rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black ring-1 ring-[var(--mx-color-c6ff00)]/45">
                             {fastTravelRouteCount} routes
                         </span>
                     </div>
@@ -930,7 +930,7 @@ function AnimeHubExploreSection({ tiles }) {
                         <span className="hidden lg:inline">Primary lane on the left, with adaptive destination cards on the right for faster routing.</span>
                     </p>
                 </div>
-                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-[var(--mx-color-c6ff00)]/25 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-800 ring-1 ring-[var(--mx-color-c6ff00)]/40 sm:mt-0">
+                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-[var(--mx-color-c6ff00)]/25 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black ring-1 ring-[var(--mx-color-c6ff00)]/40 sm:mt-0">
                     {tiles.length} destinations
                 </span>
             </div>
@@ -1098,7 +1098,7 @@ function AnimeHubBroadcastWeekSection({
                                 </div>
                                 <Link
                                     to={`${ANIME_HUB_PATHS.calendar}?date=${encodeURIComponent(selectedKey)}`}
-                                    className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-3.5 text-[11px] font-bold text-slate-900 shadow-sm transition hover:brightness-95 ${focusRing}`}
+                                    className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-3.5 text-[11px] font-bold text-black shadow-sm transition hover:brightness-95 ${focusRing}`}
                                 >
                                     Open in calendar
                                 </Link>

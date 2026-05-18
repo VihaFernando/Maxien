@@ -295,7 +295,7 @@ export default function GithubDashboard() {
                 <div>
                     <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest mb-1">Workspace</p>
                     <h1 className="text-[20px] sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-tight flex items-center gap-2.5">
-                        <span className="inline-flex w-7 h-7 rounded-lg bg-[var(--mx-color-1d1d1f)] items-center justify-center flex-shrink-0">
+                        <span className="inline-flex w-7 h-7 rounded-lg bg-black items-center justify-center flex-shrink-0">
                             <GitHubIcon className="w-4 h-4 text-white" />
                         </span>
                         GitHub
@@ -308,7 +308,7 @@ export default function GithubDashboard() {
             <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-4 sm:p-5 mb-5 sm:mb-6">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
-                        <div className="w-11 h-11 rounded-2xl bg-[var(--mx-color-1d1d1f)] flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <div className="w-11 h-11 rounded-2xl bg-black flex items-center justify-center flex-shrink-0 shadow-sm">
                             <GitHubIcon className="w-[22px] h-[22px] text-white" />
                         </div>
                         <div className="min-w-0">

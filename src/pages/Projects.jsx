@@ -54,10 +54,10 @@ export default function Projects() {
 
     const statusOptions = ["Active", "On Hold", "Completed", "Archived"]
     const statusColors = {
-        "Active": "bg-green-50 text-green-600 border-green-200",
-        "On Hold": "bg-yellow-50 text-yellow-600 border-yellow-200",
-        "Completed": "bg-blue-50 text-blue-600 border-blue-200",
-        "Archived": "bg-gray-50 text-gray-600 border-gray-200"
+        "Active": "bg-green-500/10 text-green-500 border-green-500/30",
+        "On Hold": "bg-yellow-500/10 text-yellow-500 border-yellow-500/30",
+        "Completed": "bg-blue-500/10 text-blue-500 border-blue-500/30",
+        "Archived": "bg-(--color-surface-muted) text-(--color-text-secondary) border-(--color-border-soft)"
     }
 
     useEffect(() => {
@@ -327,7 +327,7 @@ export default function Projects() {
                 </div>
                 <button
                     onClick={() => setShowForm(true)}
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1d1d1f)] rounded-xl font-semibold text-[13px] hover:bg-[var(--mx-color-b3e600)] transition-colors shadow-sm flex-shrink-0"
+                    className="flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-[var(--mx-color-c6ff00)] text-black rounded-xl font-semibold text-[13px] hover:bg-[var(--mx-color-b3e600)] transition-colors shadow-sm flex-shrink-0"
                 >
                     <FaPlus className="w-3.5 h-3.5" />
                     New Project
@@ -362,13 +362,13 @@ export default function Projects() {
 
             {/* Status Messages */}
             {error && (
-                <div className="mb-4 p-3 sm:p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-[13px] flex items-start gap-2">
+                <div className="mb-4 p-3 sm:p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl text-[13px] flex items-start gap-2">
                     <span className="text-red-600 font-bold text-lg leading-none">!</span>
                     <span>{error}</span>
                 </div>
             )}
             {message && (
-                <div className="mb-4 p-3 sm:p-4 bg-green-50 border border-green-200 text-green-600 rounded-xl text-[13px] flex items-start gap-2">
+                <div className="mb-4 p-3 sm:p-4 bg-green-500/10 border border-green-500/30 text-green-500 rounded-xl text-[13px] flex items-start gap-2">
                     <span className="text-green-600 font-bold text-lg leading-none">✓</span>
                     <span>{message}</span>
                 </div>
@@ -472,7 +472,7 @@ export default function Projects() {
                                                         )}
                                                         <button
                                                             onClick={() => deleteProject(project.id)}
-                                                            className="w-full text-left px-4 py-2 text-[13px] font-medium text-red-600 hover:bg-red-50"
+                                                            className="w-full text-left px-4 py-2 text-[13px] font-medium text-red-400 hover:bg-red-500/10"
                                                         >
                                                             Delete
                                                         </button>
@@ -527,7 +527,7 @@ export default function Projects() {
                                 )}
 
                                 {/* Timestamps */}
-                                <div className="px-4 sm:px-5 md:px-6 py-2.5 bg-[var(--mx-color-f9f9fb)] text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] space-y-0.5">
+                                <div className="px-4 sm:px-5 md:px-6 py-2.5 bg-(--color-surface-muted) text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] space-y-0.5">
                                     <div className="flex justify-between">
                                         <span>Created:</span>
                                         <span>{formatTimestamp(project.created_at)}</span>
@@ -550,7 +550,7 @@ export default function Projects() {
                 <div className="fixed inset-0 z-50 overflow-y-auto bg-[var(--mx-color-151418)]/45 backdrop-blur-[3px]" onClick={cancelEdit}>
                     <div className="flex min-h-full items-start justify-center p-0 pt-12 sm:items-center sm:p-4 sm:pt-0">
                         <div className="w-full overflow-hidden rounded-t-3xl border border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)] shadow-2xl sm:max-w-[720px] sm:rounded-3xl" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-between border-b border-[var(--mx-color-eef2f7)] bg-[var(--mx-color-f8fafc)] px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
+                            <div className="flex items-center justify-between border-b border-(--color-border-soft) bg-(--color-surface-muted) px-4.5 pb-3.5 pt-4 sm:px-5 sm:pt-4.5">
                                 <div>
                                     <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Project editor</p>
                                     <h3 className="mt-0.5 text-[15px] font-bold text-[var(--mx-color-111827)] sm:text-[17px]">{editing ? "Edit Project" : "New Project"}</h3>
@@ -570,7 +570,7 @@ export default function Projects() {
                                             value={form.name}
                                             onChange={(e) => setForm({ ...form, name: e.target.value })}
                                             placeholder="Enter project name"
-                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-(--color-surface-muted) px-3 py-2.5 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-(--color-surface)"
                                         />
                                     </div>
 
@@ -579,7 +579,7 @@ export default function Projects() {
                                         <select
                                             value={form.type_id}
                                             onChange={(e) => setForm({ ...form, type_id: e.target.value })}
-                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-(--color-surface-muted) px-3 py-2.5 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-(--color-surface)"
                                         >
                                             <option value="">Select a type</option>
                                             {types.map(t => (
@@ -593,7 +593,7 @@ export default function Projects() {
                                         <select
                                             value={form.status}
                                             onChange={(e) => setForm({ ...form, status: e.target.value })}
-                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-(--color-surface-muted) px-3 py-2.5 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-(--color-surface)"
                                         >
                                             {statusOptions.map(s => (
                                                 <option key={s} value={s}>{s}</option>
@@ -607,7 +607,7 @@ export default function Projects() {
                                             type="date"
                                             value={form.start_date}
                                             onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-(--color-surface-muted) px-3 py-2.5 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-(--color-surface)"
                                         />
                                     </div>
 
@@ -617,7 +617,7 @@ export default function Projects() {
                                             type="date"
                                             value={form.target_end_date}
                                             onChange={(e) => setForm({ ...form, target_end_date: e.target.value })}
-                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
+                                            className="w-full rounded-lg border border-[var(--mx-color-e2e8f0)] bg-(--color-surface-muted) px-3 py-2.5 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-(--color-surface)"
                                         />
                                     </div>
 
@@ -628,19 +628,19 @@ export default function Projects() {
                                             onChange={(e) => setForm({ ...form, description: e.target.value })}
                                             placeholder="Add project description (optional)"
                                             rows="3"
-                                            className="w-full resize-none rounded-lg border border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] px-3 py-2.5 text-[13px] text-[var(--mx-color-111827)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-[var(--color-surface)]"
+                                            className="w-full resize-none rounded-lg border border-[var(--mx-color-e2e8f0)] bg-(--color-surface-muted) px-3 py-2.5 text-[13px] text-[var(--mx-color-1d1d1f)] outline-none transition-all focus:border-[var(--mx-color-c6ff00)]/70 focus:bg-(--color-surface)"
                                         />
                                     </div>
                                 </div>
 
                                 {error && (
-                                    <p className="rounded-lg bg-red-50 px-3 py-2 text-[12px] font-medium text-red-600">
+                                    <p className="rounded-lg bg-red-500/10 px-3 py-2 text-[12px] font-medium text-red-400">
                                         {error}
                                     </p>
                                 )}
 
                                 {message && (
-                                    <p className="rounded-lg bg-green-50 px-3 py-2 text-[12px] font-medium text-green-700">
+                                    <p className="rounded-lg bg-green-500/10 px-3 py-2 text-[12px] font-medium text-green-500">
                                         {message}
                                     </p>
                                 )}
@@ -656,7 +656,7 @@ export default function Projects() {
                                     <button
                                         type="button"
                                         onClick={cancelEdit}
-                                        className="rounded-lg border border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f7fa)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-334155)] transition-colors hover:bg-[var(--color-surface)]"
+                                        className="rounded-lg border border-(--color-border-strong) bg-(--color-surface-muted) px-4 py-2.5 text-[13px] font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-surface)"
                                     >
                                         Cancel
                                     </button>

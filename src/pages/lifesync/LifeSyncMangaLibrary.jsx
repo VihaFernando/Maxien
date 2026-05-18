@@ -272,7 +272,7 @@ function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
                 {/* Actions */}
                 <div className="flex gap-2.5 px-5 pb-6">
                     <button type="button" onClick={() => onContinue(entry)}
-                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95 active:scale-[0.98]">
+                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-black transition hover:brightness-95 active:scale-[0.98]">
                         <IconBook className="h-4 w-4" /> Continue
                     </button>
                     <Link to={MANGA_BASE}
@@ -643,7 +643,7 @@ export default function LifeSyncMangaLibrary() {
                     <IconChevronLeft />
                 </Link>
                 <h1 className="min-w-0 flex-1 text-[20px] font-black leading-none text-(--color-text-primary)">Manga Library</h1>
-                <Link to={MANGA_BASE} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
+                <Link to={MANGA_BASE} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-black transition hover:brightness-95">
                     Browse
                 </Link>
             </div>
@@ -669,7 +669,7 @@ export default function LifeSyncMangaLibrary() {
                     {SYNC_SCOPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
                 <button type="button" onClick={() => void onSync()} disabled={syncBusy || syncRunning || !Number(pageInfo?.total || 0)}
-                    className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-[12px] font-bold text-(--color-ink-strong) transition hover:brightness-95 disabled:opacity-50">
+                    className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-[12px] font-bold text-black transition hover:brightness-95 disabled:opacity-50">
                     <IconSync className={syncBusy || syncRunning ? 'animate-spin' : ''} />
                     {syncBusy ? 'Starting…' : syncRunning ? `Syncing ${Math.round(syncPercent)}%` : 'Sync latest'}
                 </button>

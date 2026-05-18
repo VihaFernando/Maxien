@@ -967,7 +967,7 @@ export default function Profile() {
                                                 <button
                                                     type="submit"
                                                     disabled={loading}
-                                                    className="bg-[var(--color-text-primary)] hover:bg-black text-white font-semibold py-2.5 px-7 rounded-xl text-[13px] transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50"
+                                                    className="bg-black hover:bg-black text-white font-semibold py-2.5 px-7 rounded-xl text-[13px] transition-all duration-200 shadow-sm active:scale-[0.98] disabled:opacity-50"
                                                 >
                                                     {loading ? "Saving..." : "Save Changes"}
                                                 </button>

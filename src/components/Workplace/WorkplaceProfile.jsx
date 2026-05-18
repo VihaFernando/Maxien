@@ -176,7 +176,7 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                             <button
                                 type="submit"
                                 disabled={editLoading}
-                                className="w-full rounded-2xl bg-[var(--mx-color-c6ff00)] px-4 py-3 text-sm font-bold text-[var(--mx-color-111827)] transition hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60"
+                                className="w-full rounded-2xl bg-[var(--mx-color-c6ff00)] px-4 py-3 text-sm font-bold text-black transition hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60"
                             >
                                 {editLoading ? (
                                     <span className="flex items-center justify-center gap-2">
@@ -233,10 +233,10 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                             </div>
                             {workplace?.banner_url && imageLoadError && (
                                 <div className="text-center px-6 relative z-10">
-                                    <p className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)] mb-1">
+                                    <p className="text-[14px] font-bold text-black mb-1">
                                         Image couldn't load
                                     </p>
-                                    <p className="text-[12px] text-[var(--mx-color-1d1d1f)]/60">
+                                    <p className="text-[12px] text-black/60">
                                         Make sure the file is shared with "Anyone with the link"
                                     </p>
                                 </div>
@@ -291,7 +291,7 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                         {isOwner && !loading && (
                             <button
                                 onClick={() => setIsEditing(true)}
-                                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--mx-color-c6ff00)] px-3 py-2 text-[12px] font-bold text-[var(--mx-color-111827)] transition hover:bg-[var(--mx-color-b8f000)] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--mx-color-c6ff00)] px-3 py-2 text-[12px] font-bold text-black transition hover:bg-[var(--mx-color-b8f000)] sm:gap-2 sm:rounded-2xl sm:px-4 sm:py-2.5 sm:text-sm"
                             >
                                 <FaEdit className="w-4 h-4" />
                                 Edit

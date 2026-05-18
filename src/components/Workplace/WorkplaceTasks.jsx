@@ -539,7 +539,7 @@ export default function WorkplaceTasks({
                                 setShowForm(true)
                                 setEditingId(null)
                             }}
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] rounded-lg text-[13px] font-bold"
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black rounded-lg text-[13px] font-bold"
                         >
                             <FaPlus className="w-3.5 h-3.5" />
                             New Task

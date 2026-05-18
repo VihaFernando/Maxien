@@ -8,7 +8,7 @@ const CANCELED_STATUSES = new Set(["canceled", "cancelled"])
 
 function StatCard({ label, value, accent = "var(--mx-color-1d1d1f)" }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-[var(--mx-color-e8e8ed)] bg-gradient-to-br from-[var(--color-surface)] via-[var(--color-surface)] to-[var(--mx-color-f8fafc)] p-4 shadow-[0_8px_30px_rgba(21, 20, 24,0.05)]">
+    <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-4 shadow-[0_8px_30px_rgba(21,20,24,0.05)]">
       <div className="pointer-events-none absolute -right-7 -top-7 h-20 w-20 rounded-full opacity-15" style={{ backgroundColor: accent }} />
       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--mx-color-86868b)]">{label}</p>
       <p className="mt-1.5 text-[26px] font-bold leading-none" style={{ color: accent }}>{value}</p>
@@ -182,7 +182,7 @@ export default function WorkplaceAnalytics({
 
   return (
     <div className="animate-in fade-in duration-500">
-      <div className="mb-6 rounded-[26px] border border-[var(--mx-color-e8e8ed)] bg-[radial-gradient(120%_120%_at_100%_0%,var(--mx-color-eef4ff)_0%,var(--mx-color-ffffff)_45%,var(--mx-color-ffffff)_100%)] p-5 sm:p-6 shadow-[0_14px_36px_rgba(21, 20, 24,0.05)]">
+      <div className="mb-6 rounded-[26px] border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-5 sm:p-6 shadow-[0_14px_36px_rgba(21,20,24,0.05)]">
         <p className="text-[10px] font-bold text-[var(--mx-color-7a8392)] uppercase tracking-[0.2em] mb-3">Workplace Intelligence</p>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
@@ -254,7 +254,7 @@ export default function WorkplaceAnalytics({
                 ) : (
                   <div className="space-y-3">
                     {userPerformance.map((row) => (
-                      <div key={row.memberId} className="rounded-xl border border-[var(--mx-color-ebedf2)] bg-gradient-to-br from-[var(--mx-color-ffffff)] to-[var(--mx-color-f8fafc)] p-3.5">
+                      <div key={row.memberId} className="rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] p-3.5">
                         <div className="flex items-center justify-between gap-3 mb-2">
                           <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] truncate">{row.label}</p>
                           <span className="text-[11px] font-bold rounded-full px-2 py-1 bg-[var(--mx-color-e2fbe8)] text-[var(--mx-color-166534)]">{row.rate}%</span>
@@ -284,7 +284,7 @@ export default function WorkplaceAnalytics({
                   ) : (
                     <div className="space-y-3">
                       {projectPerformance.map((item) => (
-                        <div key={item.id} className="rounded-xl border border-[var(--mx-color-ebedf2)] bg-gradient-to-br from-[var(--mx-color-ffffff)] to-[var(--mx-color-f8fafc)] p-3.5">
+                        <div key={item.id} className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-3.5">
                           <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] mb-2 truncate">{item.name}</p>
                           <CompletionBar done={item.done} total={item.total} color="var(--mx-color-3b82f6)" />
                         </div>
@@ -305,7 +305,7 @@ export default function WorkplaceAnalytics({
                   ) : (
                     <div className="space-y-3">
                       {departmentPerformance.map((item) => (
-                        <div key={item.id} className="rounded-xl border border-[var(--mx-color-ebedf2)] bg-gradient-to-br from-[var(--mx-color-ffffff)] to-[var(--mx-color-f8fafc)] p-3.5">
+                        <div key={item.id} className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-3.5">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
                             <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] truncate">{item.name}</p>
@@ -332,7 +332,7 @@ export default function WorkplaceAnalytics({
             ) : (
               <div className="space-y-2.5">
                 {upcomingTasks.map((task) => (
-                  <div key={task.id} className="rounded-xl border border-[var(--mx-color-ebedf2)] bg-gradient-to-br from-[var(--mx-color-ffffff)] to-[var(--mx-color-f8fafc)] p-3.5 flex items-center justify-between gap-3">
+                  <div key={task.id} className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-3.5 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] truncate">{task.title}</p>
                       <p className="text-[11px] text-[var(--mx-color-64748b)] mt-0.5">

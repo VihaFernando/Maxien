@@ -131,7 +131,7 @@ export default function Workplaces() {
         </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] font-bold rounded-[12px] text-[13px] transition-colors"
+          className="flex items-center gap-2 px-4 py-2.5 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black font-bold rounded-[12px] text-[13px] transition-colors"
         >
           <FaPlus className="w-3 h-3" />
           New Workplace

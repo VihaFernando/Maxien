@@ -210,7 +210,7 @@ function DetailDrawer({ entry, onClose, onContinue, onRemove, removeBusy }) {
                 <div className="flex gap-2.5 px-5 pb-6">
                     <button
                         type="button" onClick={() => onContinue(entry)}
-                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95 active:scale-[0.98]"
+                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-black transition hover:brightness-95 active:scale-[0.98]"
                     >
                         <IconPlay className="h-4 w-4" /> Resume Ep {current}
                     </button>
@@ -500,7 +500,7 @@ export default function LifeSyncAnimeHistory() {
                     <IconBack />
                 </Link>
                 <h1 className="min-w-0 flex-1 text-[20px] font-black leading-none text-(--color-text-primary)">Watch History</h1>
-                <Link to={`${ANIME_BASE}/home/page/1`} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
+                <Link to={`${ANIME_BASE}/home/page/1`} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-black transition hover:brightness-95">
                     Browse
                 </Link>
             </div>

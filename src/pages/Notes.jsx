@@ -423,7 +423,7 @@ export default function Notes() {
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="px-5 py-2.5 rounded-xl bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-60"
+                                    className="px-5 py-2.5 rounded-xl bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-60"
                                 >
                                     {saving ? "Saving..." : editingNote ? "Update Note" : "Save Note"}
                                 </button>

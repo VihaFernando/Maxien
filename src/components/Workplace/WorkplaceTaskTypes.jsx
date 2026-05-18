@@ -123,7 +123,7 @@ export default function WorkplaceTaskTypes({
                             setEditingId(null)
                             setShowForm(true)
                         }}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-[var(--mx-color-1d1d1f)] rounded-xl text-[13px] font-bold"
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black rounded-xl text-[13px] font-bold"
                     >
                         <FaPlus className="w-3.5 h-3.5" />
                         New Type
@@ -257,7 +257,7 @@ export default function WorkplaceTaskTypes({
                                 <button
                                     type="submit"
                                     disabled={formLoading}
-                                    className="flex-1 py-3 rounded-xl bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60 text-[var(--mx-color-1d1d1f)] font-bold text-[14px]"
+                                    className="flex-1 py-3 rounded-xl bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] disabled:opacity-60 text-black font-bold text-[14px]"
                                 >
                                     {formLoading ? (editingId ? "Updating..." : "Creating...") : (editingId ? "Update type" : "Create type")}
                                 </button>

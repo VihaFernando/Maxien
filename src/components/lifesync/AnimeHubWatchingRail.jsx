@@ -20,7 +20,7 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
         <div className={`relative border-l-4 border-l-[var(--mx-color-c6ff00)] pl-4 sm:pl-5 ${className}`}>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div className="flex min-w-0 items-start gap-3">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)]/25 text-slate-900 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/40">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)]/25 text-black shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/40">
                         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
                             <path d="M8 5v14l11-7L8 5z" />
                         </svg>
@@ -67,7 +67,7 @@ export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
                                         EP {entry.lastEpisodeNumber}
                                     </span>
                                     <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-[var(--color-surface)]/80 via-transparent to-transparent pb-3 opacity-100 transition duration-200 sm:opacity-0 sm:group-hover:opacity-100">
-                                        <span className="rounded-full bg-[var(--mx-color-c6ff00)] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-slate-900">
+                                        <span className="rounded-full bg-[var(--mx-color-c6ff00)] px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.14em] text-black">
                                             Resume
                                         </span>
                                     </div>
