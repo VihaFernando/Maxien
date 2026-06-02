@@ -12,6 +12,7 @@ import { animePosterLayoutId } from '../../lib/lifesyncAnimeSharedLayout'
 import { peekAnimeWatchHandoff } from '../../lib/lifesyncWatchHandoff'
 import { LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT } from '../../hooks/useAnimeWatchHistory'
 import AdvancedVideoPlayer from '../../components/lifesync/AdvancedVideoPlayer'
+import { ControllerHintOverlay } from '../../components/lifesync/ControllerHintOverlay'
 import {
     LifesyncEpisodeThumbnail,
     WatchPageLoadSkeleton,
@@ -978,6 +979,22 @@ export default function LifeSyncAnimeWatch() {
                     </div>
                 </div>
             </div>
+
+            {/* Controller hint overlay */}
+            <ControllerHintOverlay
+                dark
+                position="bottom-right"
+                cols={2}
+                hints={[
+                    { btns: ['A'], label: 'Play / Pause' },
+                    { btns: ['LB'], label: 'Prev episode' },
+                    { btns: ['RB'], label: 'Next episode' },
+                    { btns: ['LT'], label: 'Seek back' },
+                    { btns: ['RT'], label: 'Seek forward' },
+                    { btns: ['↑↓'], label: 'Volume' },
+                    { btns: ['X'], label: 'Fullscreen' },
+                ]}
+            />
         </MotionDiv>
     )
 }

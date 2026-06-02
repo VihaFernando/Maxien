@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
+import { ControllerHintOverlay } from './ControllerHintOverlay'
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 const SKIP_SEC = 10
@@ -686,6 +687,22 @@ export default function AdvancedVideoPlayer({
 
             {/* Keyboard shortcut hint (shows briefly on first mount) */}
             <ShortcutHint />
+
+            {/* Controller hint overlay */}
+            <ControllerHintOverlay
+                dark
+                position="bottom-left"
+                cols={2}
+                hints={[
+                    { btns: ['A'], label: 'Play / Pause' },
+                    { btns: ['X'], label: 'Fullscreen' },
+                    { btns: ['LB'], label: 'Prev episode' },
+                    { btns: ['RB'], label: 'Next episode' },
+                    { btns: ['LT'], label: 'Seek back' },
+                    { btns: ['RT'], label: 'Seek forward' },
+                    { btns: ['↑↓'], label: 'Volume' },
+                ]}
+            />
         </div>
     )
 }

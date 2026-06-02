@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
+import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
+import { ControllerHintBar } from '../../components/lifesync/ControllerHintOverlay'
 import {
     FaArrowRight,
     FaBolt,
@@ -1332,7 +1336,21 @@ export function LifeSyncAnimeHub() {
         ? resumeMobileTab
         : (resumeMobileTabs[0]?.id || 'anime')
 
-    
+    const controllerSupportEnabledHub = useControllerSupportEnabled()
+
+    const hubGamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            if (animePluginOn) setResumeMobileTab('anime')
+        },
+        [XBOX_GAMEPAD_BUTTONS.Y]: () => {
+            if (mangaPluginOn) setResumeMobileTab('manga')
+        },
+    }), [animePluginOn, mangaPluginOn])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabledHub && (animePluginOn || mangaPluginOn),
+        handlers: hubGamepadHandlers,
+    })
 
     useEffect(() => {
         if (!isLifeSyncConnected || !animePluginOn) return
@@ -1497,9 +1515,20 @@ export function LifeSyncAnimeHub() {
                                         <span className="hidden lg:inline">Pick up streams and chapters without hunting through menus.</span>
                                     </p>
                                 </div>
-                                <span className="w-fit rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-900 ring-1 ring-[var(--mx-color-c6ff00)]/50">
-                                    Live sync
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {(animePluginOn || mangaPluginOn) && (
+                                        <ControllerHintBar
+                                            cols={1}
+                                            hints={[
+                                                ...(animePluginOn ? [{ btns: ['X'], label: 'Anime history' }] : []),
+                                                ...(mangaPluginOn ? [{ btns: ['Y'], label: 'Manga history' }] : []),
+                                            ]}
+                                        />
+                                    )}
+                                    <span className="w-fit rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-900 ring-1 ring-[var(--mx-color-c6ff00)]/50">
+                                        Live sync
+                                    </span>
+                                </div>
                             </div>
 
                             {resumeMobileTabs.length > 1 ? (

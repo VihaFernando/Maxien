@@ -3,6 +3,10 @@ import { createPortal } from 'react-dom'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, lifesyncFetch } from '../../lib/lifesyncApi'
+import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
+import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
+import { ControllerHintBar } from '../../components/lifesync/ControllerHintOverlay'
 import {
     LifesyncChapterPagesSkeleton,
     LifesyncEpisodeThumbnail,
@@ -1319,6 +1323,9 @@ export default function LifeSyncManga() {
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
     const [selectedManga, setSelectedManga] = useState(null)
+    const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
+    const searchInputRef = useRef(null)
+    const controllerSupportEnabled = useControllerSupportEnabled()
 
     const listPath = useMemo(() => {
         const src = route.src || 'roliascan'
@@ -2637,6 +2644,56 @@ export default function LifeSyncManga() {
         currentItems.length > 0 &&
         currentItems.length <= lifeSyncBrowseGridStaggerMaxItems
 
+    const mangaCanPrevPage = source === 'mangadistrict' ? mdCurPage > 1 : roliascanPage > 1
+    const mangaCanNextPage = source === 'mangadistrict' ? mdCurPage < mdLastPage : roliascanPage < roliascanLastPage
+
+    const mangaGamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+            if (!mangaCanPrevPage || busy) return
+            const cur = source === 'mangadistrict' ? mdCurPage : roliascanPage
+            goToPage(cur - 1)
+            setFocusedCardIndex(0)
+        },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+            if (!mangaCanNextPage || busy) return
+            const cur = source === 'mangadistrict' ? mdCurPage : roliascanPage
+            goToPage(cur + 1)
+            setFocusedCardIndex(0)
+        },
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            if (searchInputRef.current) {
+                searchInputRef.current.focus()
+            }
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_LEFT]: () => {
+            setFocusedCardIndex(prev => Math.max(0, prev <= 0 ? currentItems.length - 1 : prev - 1))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT]: () => {
+            setFocusedCardIndex(prev => (prev + 1) % Math.max(1, currentItems.length))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+            setFocusedCardIndex(prev => Math.max(0, prev - 6))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+            setFocusedCardIndex(prev => Math.min(currentItems.length - 1, prev + 6))
+        },
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            const item = currentItems[focusedCardIndex]
+            if (item) openMangaFromCard(item)
+        },
+    }), [busy, currentItems, focusedCardIndex, goToPage, mangaCanNextPage, mangaCanPrevPage, mdCurPage, roliascanPage, source])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabled && !selectedManga,
+        handlers: mangaGamepadHandlers,
+        repeatableButtons: [
+            XBOX_GAMEPAD_BUTTONS.DPAD_LEFT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+            XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+        ],
+    })
+
     if (!isLifeSyncConnected) {
         return (
             <div className="max-w-4xl mx-auto">
@@ -2692,12 +2749,24 @@ export default function LifeSyncManga() {
                         Browse manga, manhwa and manhua, find chapters here and starts here.
                     </p>
                 </div>
-                <Link
-                    to="/dashboard/profile?tab=integrations"
-                    className="shrink-0 self-start whitespace-nowrap rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2 text-center text-[12px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 sm:pt-0.5"
-                >
-                    Link / Disconnect
-                </Link>
+                <div className="flex shrink-0 items-start gap-2">
+                    <ControllerHintBar
+                        cols={2}
+                        hints={[
+                            { btns: ['LB'], label: 'Prev page' },
+                            { btns: ['RB'], label: 'Next page' },
+                            { btns: ['X'], label: 'Search' },
+                            { btns: ['←→'], label: 'Navigate cards' },
+                            { btns: ['A'], label: 'Open manga' },
+                        ]}
+                    />
+                    <Link
+                        to="/dashboard/profile?tab=integrations"
+                        className="shrink-0 self-start whitespace-nowrap rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2 text-center text-[12px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 sm:pt-0.5"
+                    >
+                        Link / Disconnect
+                    </Link>
+                </div>
             </div>
 
             {error && <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{error}</div>}
@@ -2707,10 +2776,11 @@ export default function LifeSyncManga() {
                 <div className="min-w-0 w-full max-w-full space-y-3">
                     <form onSubmit={handleDexSearch} className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row">
                         <input
+                            ref={searchInputRef}
                             type="search"
                             value={searchQ}
                             onChange={e => setSearchQ(e.target.value)}
-                            placeholder="Search Roliascan..."
+                            placeholder="Search Roliascan…"
                             className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
                         />
                         <button
@@ -2982,10 +3052,11 @@ export default function LifeSyncManga() {
                 <div className="min-w-0 w-full max-w-full space-y-3">
                     <form onSubmit={handleRoliascanSearch} className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row">
                         <input
+                            ref={searchInputRef}
                             type="search"
                             value={roliascanSearchQ}
                             onChange={(e) => setRoliascanSearchQ(e.target.value)}
-                            placeholder="Search Roliascan..."
+                            placeholder="Search Roliascan…"
                             className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
                         />
                         <button
@@ -3272,10 +3343,11 @@ export default function LifeSyncManga() {
                         }}
                     >
                         <input
+                            ref={searchInputRef}
                             type="search"
                             value={mdFilter}
                             onChange={e => setMdFilter(e.target.value)}
-                            placeholder="Search Manga District..."
+                            placeholder="Search Manga District…"
                             className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
                         />
                         <button
@@ -3720,7 +3792,7 @@ export default function LifeSyncManga() {
                         {currentItems.map((manga, i) => (
                             <MotionDiv
                                 key={`${manga.source || source}-${manga.id || i}`}
-                                className="min-h-0"
+                                className={`min-h-0${focusedCardIndex === i ? ' rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}`}
                                 variants={lifeSyncStaggerItemFade}
                             >
                                 <MangaCard manga={{ ...manga, source: manga.source || source }} onClick={openMangaFromCard} />
@@ -3735,7 +3807,7 @@ export default function LifeSyncManga() {
                         transition={lifeSyncPageTransition}
                     >
                         {currentItems.map((manga, i) => (
-                            <div key={`${manga.source || source}-${manga.id || i}`} className="min-h-0">
+                            <div key={`${manga.source || source}-${manga.id || i}`} className={`min-h-0${focusedCardIndex === i ? ' rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}`}>
                                 <MangaCard manga={{ ...manga, source: manga.source || source }} onClick={openMangaFromCard} />
                             </div>
                         ))}

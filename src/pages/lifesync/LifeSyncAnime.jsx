@@ -1,6 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import useControllerSupportEnabled from "../../hooks/useControllerSupportEnabled";
+import useLifeSyncGamepadInput from "../../hooks/useLifeSyncGamepadInput";
+import { XBOX_GAMEPAD_BUTTONS } from "../../lib/lifeSyncControllerInput";
+import { ControllerHintBar } from "../../components/lifesync/ControllerHintOverlay";
 import {
   DetailWatchGridSkeleton,
   LifesyncTextLinesSkeleton,
@@ -984,6 +988,9 @@ export default function LifeSyncAnime() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [detailId, setDetailId] = useState(null);
+  const [focusedCardIndex, setFocusedCardIndex] = useState(-1);
+  const searchInputRef = useRef(null);
+  const controllerSupportEnabled = useControllerSupportEnabled();
 
   // Layout — seeded from server pref, persisted on toggle
   const [layout, setLayoutState] = useState(() => getAnimeLibraryLayout(null));
@@ -1216,22 +1223,6 @@ export default function LifeSyncAnime() {
     return () => { cancelled = true; };
   }, [isLifeSyncConnected, tab, searchCommittedQ, searchPage]);
 
-  if (!isLifeSyncConnected) {
-    return (
-      <div className="mx-auto max-w-4xl">
-        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-(--color-text-primary)">Anime</h1>
-        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-(--color-text-secondary)">Browse featured anime, ongoing series, and latest updates—connect LifeSync to get started.</p>
-        <div className="rounded-[22px] border border-(--color-border-strong) bg-(--color-surface) px-8 py-16 text-center shadow-sm">
-          <p className="mb-2 text-[15px] font-bold text-(--color-text-primary)">LifeSync Not Connected</p>
-          <p className="mb-4 text-[13px] text-(--color-text-secondary)">Connect LifeSync in your profile to access anime tracking.</p>
-          <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-95">
-            Go to Integrations
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   const tabs = [
     { id: "home", label: "Home" },
     { id: "ongoing", label: "Ongoing" },
@@ -1254,6 +1245,71 @@ export default function LifeSyncAnime() {
     if (tab === "search") return { page: searchPage, onPage: setSearchPage, canPrev: searchPage > 1, canNext: searchHasNext };
     return null;
   })();
+
+  const animeGamepadHandlers = useMemo(() => ({
+    [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+      if (pager?.canPrev) goToPage(pager.page - 1);
+      setFocusedCardIndex(0);
+    },
+    [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+      if (pager?.canNext) goToPage(pager.page + 1);
+      setFocusedCardIndex(0);
+    },
+    [XBOX_GAMEPAD_BUTTONS.X]: () => {
+      if (tab === "search" || tab === "browse") {
+        if (searchInputRef.current) searchInputRef.current.focus();
+      } else {
+        goToTab("search");
+        setTimeout(() => searchInputRef.current?.focus(), 120);
+      }
+    },
+    [XBOX_GAMEPAD_BUTTONS.Y]: () => {
+      setLayout(layout === "grid" ? "list" : "grid");
+    },
+    [XBOX_GAMEPAD_BUTTONS.DPAD_LEFT]: () => {
+      setFocusedCardIndex(prev => Math.max(0, prev <= 0 ? paginatedItems.length - 1 : prev - 1));
+    },
+    [XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT]: () => {
+      setFocusedCardIndex(prev => (prev + 1) % Math.max(1, paginatedItems.length));
+    },
+    [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+      setFocusedCardIndex(prev => Math.max(0, prev - 6));
+    },
+    [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+      setFocusedCardIndex(prev => Math.min(paginatedItems.length - 1, prev + 6));
+    },
+    [XBOX_GAMEPAD_BUTTONS.A]: () => {
+      const item = paginatedItems[focusedCardIndex];
+      if (item?.node) goToDetail(item.node);
+    },
+  }), [focusedCardIndex, goToDetail, goToPage, goToTab, layout, pager, paginatedItems, setLayout, tab]);
+
+  useLifeSyncGamepadInput({
+    enabled: controllerSupportEnabled && !detailId && tab !== "home",
+    handlers: animeGamepadHandlers,
+    repeatableButtons: [
+      XBOX_GAMEPAD_BUTTONS.DPAD_LEFT,
+      XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT,
+      XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+      XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+    ],
+  });
+
+  if (!isLifeSyncConnected) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-(--color-text-primary)">Anime</h1>
+        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-(--color-text-secondary)">Browse featured anime, ongoing series, and latest updates—connect LifeSync to get started.</p>
+        <div className="rounded-[22px] border border-(--color-border-strong) bg-(--color-surface) px-8 py-16 text-center shadow-sm">
+          <p className="mb-2 text-[15px] font-bold text-(--color-text-primary)">LifeSync Not Connected</p>
+          <p className="mb-4 text-[13px] text-(--color-text-secondary)">Connect LifeSync in your profile to access anime tracking.</p>
+          <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-95">
+            Go to Integrations
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <MotionDiv
@@ -1289,26 +1345,41 @@ export default function LifeSyncAnime() {
             <h1 className="text-[24px] sm:text-[28px] font-black text-(--color-text-primary) tracking-tight leading-none mt-0.5">Anime</h1>
           </div>
           {/* Layout toggle — only shown outside home tab */}
-          {tab !== "home" && (
-            <div className="flex items-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) p-0.5">
-              <button
-                type="button"
-                onClick={() => setLayout("grid")}
-                title="Grid view"
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${layout === "grid" ? "bg-primary text-(--color-ink-strong) shadow-sm" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
-              >
-                <IconGrid />
-              </button>
-              <button
-                type="button"
-                onClick={() => setLayout("list")}
-                title="List view"
-                className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${layout === "list" ? "bg-primary text-(--color-ink-strong) shadow-sm" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
-              >
-                <IconList />
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {tab !== "home" && (
+              <div className="flex items-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setLayout("grid")}
+                  title="Grid view"
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${layout === "grid" ? "bg-primary text-(--color-ink-strong) shadow-sm" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+                >
+                  <IconGrid />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLayout("list")}
+                  title="List view"
+                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${layout === "list" ? "bg-primary text-(--color-ink-strong) shadow-sm" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+                >
+                  <IconList />
+                </button>
+              </div>
+            )}
+            <ControllerHintBar
+              cols={2}
+              hints={tab === "home" ? [
+                { btns: ['X'], label: 'Go to search' },
+              ] : [
+                { btns: ['LB'], label: 'Prev page' },
+                { btns: ['RB'], label: 'Next page' },
+                { btns: ['X'], label: 'Search' },
+                { btns: ['Y'], label: 'Grid / List' },
+                { btns: ['←→'], label: 'Navigate cards' },
+                { btns: ['A'], label: 'Open' },
+              ]}
+            />
+          </div>
         </MotionDiv>
 
         {error && (
@@ -1323,10 +1394,11 @@ export default function LifeSyncAnime() {
                 <IconSearch />
               </span>
               <input
+                ref={searchInputRef}
                 type="search"
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
-                placeholder="Search anime..."
+                placeholder="Search anime…"
                 className="w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) pl-9 pr-4 py-2.5 text-[13px] text-(--color-text-primary) transition-all focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none focus:ring-2 focus:ring-primary/15"
               />
             </div>
@@ -1504,12 +1576,13 @@ export default function LifeSyncAnime() {
                           className="grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
                         >
                           {paginatedItems.map((item, i) => (
-                            <AnimeCard
-                              key={item.node?.slug || item.node?.id || i}
-                              node={item.node}
-                              ranking={tab === "browse" ? item.ranking?.rank : undefined}
-                              onSelect={goToDetail}
-                            />
+                            <div key={item.node?.slug || item.node?.id || i} className={focusedCardIndex === i ? "rounded-2xl ring-2 ring-primary ring-offset-2" : ""}>
+                              <AnimeCard
+                                node={item.node}
+                                ranking={tab === "browse" ? item.ranking?.rank : undefined}
+                                onSelect={goToDetail}
+                              />
+                            </div>
                           ))}
                         </MotionDiv>
                       ) : (
@@ -1520,13 +1593,14 @@ export default function LifeSyncAnime() {
                           className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)"
                         >
                           {paginatedItems.map((item, i) => (
-                            <AnimeRow
-                              key={item.node?.slug || item.node?.id || i}
-                              node={item.node}
-                              ranking={tab === "browse" ? item.ranking?.rank : undefined}
-                              onSelect={goToDetail}
-                              isLast={i === paginatedItems.length - 1}
-                            />
+                            <div key={item.node?.slug || item.node?.id || i} className={focusedCardIndex === i ? "ring-2 ring-primary ring-inset" : ""}>
+                              <AnimeRow
+                                node={item.node}
+                                ranking={tab === "browse" ? item.ranking?.rank : undefined}
+                                onSelect={goToDetail}
+                                isLast={i === paginatedItems.length - 1}
+                              />
+                            </div>
                           ))}
                         </MotionDiv>
                       )}

@@ -19,6 +19,7 @@ import {
     XBOX_GAMEPAD_BUTTONS,
 } from '../../lib/lifeSyncControllerInput'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
+import { ControllerHintBar, ControllerHintOverlay } from '../../components/lifesync/ControllerHintOverlay'
 import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lifeSyncDetailBodyRevealTransition, lifeSyncDetailOverlayFadeTransition, lifeSyncDetailSheetEnterAnimate, lifeSyncDetailSheetEnterInitial, lifeSyncDetailSheetExitVariant, lifeSyncDetailSheetMainTransition, lifeSyncDollyPageTransition, lifeSyncDollyPageVariants, lifeSyncSharedLayoutTransitionProps, MotionDiv } from '../../lib/lifesyncMotion'
 
 const WATCH_HENTAI_SITE = 'https://watchhentai.net'
@@ -756,6 +757,22 @@ function StreamPlayerPopup({
                     </aside>
                 </div>
             </div>
+
+            {/* Controller hint overlay */}
+            <ControllerHintOverlay
+                dark
+                position="bottom-right"
+                cols={2}
+                hints={[
+                    { btns: ['A'], label: 'Play / Pause' },
+                    { btns: ['LB'], label: 'Prev episode' },
+                    { btns: ['RB'], label: 'Next episode' },
+                    { btns: ['LT'], label: 'Seek back' },
+                    { btns: ['RT'], label: 'Seek forward' },
+                    { btns: ['↑↓'], label: 'Volume' },
+                    { btns: ['X'], label: 'Fullscreen' },
+                ]}
+            />
         </div>,
         document.body,
     )
@@ -813,6 +830,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
     const randomWatchBackdrop = source === 'watchhentai'
         ? pickStableRandomBackdrop(detail?.backdropUrls, `${series.seriesKey || series.title}-${hentaiSlug}`)
         : null
+    const storyboardBg = detail?.backdropUrl || detail?.backdropUrls?.[0] || null
     const usingStoryboardBg = Boolean(source !== 'watchhentai' && storyboardBg && !storyboardFailed)
     const heroBackground = source === 'watchhentai' ? (randomWatchBackdrop || coverImg) : (usingStoryboardBg ? storyboardBg : coverImg)
     const playbackSeries = {
@@ -1126,6 +1144,9 @@ export default function LifeSyncHentai() {
     const [seriesGenreVersion, setSeriesGenreVersion] = useState(0)
     const seriesGenresRef = useRef(new Map())
     const pageMountedRef = useRef(true)
+    const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
+    const searchInputRef = useRef(null)
+    const controllerSupportEnabledCatalog = useControllerSupportEnabled()
     useEffect(() => {
         pageMountedRef.current = true
         return () => {
@@ -1428,6 +1449,64 @@ export default function LifeSyncHentai() {
     const watchGenreOptions = Array.isArray(watchFilters.genres) ? watchFilters.genres : []
     const watchYearOptions = Array.isArray(watchFilters.years) ? watchFilters.years : []
 
+    const catalogCards = useFlatOnly ? flatItems : seriesList
+
+    const catalogGamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+            if (page <= 1 || busy) return
+            goPage(page - 1)
+            setFocusedCardIndex(0)
+        },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+            if (busy || catalog?.hasMore === false) return
+            goPage(page + 1)
+            setFocusedCardIndex(0)
+        },
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            if (searchInputRef.current) {
+                searchInputRef.current.focus()
+            } else {
+                setFiltersExpanded(p => !p)
+            }
+        },
+        [XBOX_GAMEPAD_BUTTONS.Y]: () => {
+            setFiltersExpanded(p => !p)
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_LEFT]: () => {
+            setFocusedCardIndex(prev => Math.max(0, prev <= 0 ? catalogCards.length - 1 : prev - 1))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT]: () => {
+            setFocusedCardIndex(prev => (prev + 1) % Math.max(1, catalogCards.length))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+            setFocusedCardIndex(prev => Math.max(0, prev - 6))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+            setFocusedCardIndex(prev => Math.min(catalogCards.length - 1, prev + 6))
+        },
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            const cards = useFlatOnly ? flatItems : seriesList
+            const item = cards[focusedCardIndex]
+            if (!item) return
+            if (useFlatOnly) {
+                setSelectedSeries({ seriesKey: item.slug, title: item.title, posterUrl: item.posterUrl, episodeCount: 1, episodes: [item] })
+            } else {
+                setSelectedSeries(item)
+            }
+        },
+    }), [busy, catalog?.hasMore, catalogCards.length, debouncedSearch, flatItems, focusedCardIndex, page, seriesList, useFlatOnly])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabledCatalog && !selectedSeries && !playerState,
+        handlers: catalogGamepadHandlers,
+        repeatableButtons: [
+            XBOX_GAMEPAD_BUTTONS.DPAD_LEFT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+            XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+        ],
+    })
+
     const genreTagOptions = useMemo(() => {
         const map = new Map()
         for (const opt of watchGenreOptions) {
@@ -1559,6 +1638,17 @@ export default function LifeSyncHentai() {
                     </p>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 self-stretch sm:self-start">
+                    <ControllerHintBar
+                        cols={2}
+                        hints={[
+                            { btns: ['LB'], label: 'Prev page' },
+                            { btns: ['RB'], label: 'Next page' },
+                            { btns: ['X'], label: 'Search' },
+                            { btns: ['Y'], label: 'Filters' },
+                            { btns: ['←→'], label: 'Navigate cards' },
+                            { btns: ['A'], label: 'Open series' },
+                        ]}
+                    />
                     <button
                         onClick={() => load(page, debouncedSearch, true)}
                         disabled={busy}
@@ -1575,6 +1665,7 @@ export default function LifeSyncHentai() {
             {/* Search */}
             <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
                 <input
+                    ref={searchInputRef}
                     type="search"
                     value={searchQ}
                     onChange={e => { setSearchQ(e.target.value) }}
@@ -1741,7 +1832,9 @@ export default function LifeSyncHentai() {
                                 episodes: [item],
                             }
                             return (
-                                <SeriesCard key={item.slug || item.watchUrl || i} series={wrappedSeries} onOpenDetail={setSelectedSeries} />
+                                <div key={item.slug || item.watchUrl || i} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}>
+                                    <SeriesCard series={wrappedSeries} onOpenDetail={setSelectedSeries} />
+                                </div>
                             )
                         })}
                     </div>
@@ -1755,9 +1848,9 @@ export default function LifeSyncHentai() {
                 <>
                     <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                         {seriesList.map((s, i) => (
-                            <SeriesCard key={s.seriesKey || i} series={s} onOpenDetail={ser => {
-                                setSelectedSeries(ser)
-                            }} />
+                            <div key={s.seriesKey || i} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}>
+                                <SeriesCard series={s} onOpenDetail={ser => setSelectedSeries(ser)} />
+                            </div>
                         ))}
                     </div>
                     <div className="flex items-center justify-center gap-2 flex-wrap">

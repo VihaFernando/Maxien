@@ -3,6 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
+import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
+import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
+import { ControllerHintBar } from '../../components/lifesync/ControllerHintOverlay'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
 import { mangaImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 import { LifesyncEpisodeThumbnail } from '../../components/lifesync/EpisodeLoadingSkeletons'
@@ -476,6 +480,8 @@ export default function LifeSyncMangaLibrary() {
     const [sortOrder, setSortOrder] = useState('desc')
     const [page, setPage] = useState(1)
     const [layout, setLayout] = useState('list')
+    const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
+    const controllerSupportEnabled = useControllerSupportEnabled()
 
     const [syncBusy, setSyncBusy] = useState(false)
     const [syncError, setSyncError] = useState('')
@@ -619,6 +625,55 @@ export default function LifeSyncMangaLibrary() {
         try { await bulkPatch(selectedEntries, { readingStatus: status || null }); setSelectedKeys(new Set()) } catch { } finally { setBulkBusy(false) }
     }, [bulkBusy, bulkPatch, selectedEntries])
 
+    const libGamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.Y]: () => {
+            setLayout(l => l === 'list' ? 'grid' : 'list')
+            setFocusedCardIndex(-1)
+        },
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+            setPage(p => Math.max(1, p - 1))
+            setFocusedCardIndex(0)
+        },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+            if (pageInfo?.hasMore) {
+                setPage(p => p + 1)
+                setFocusedCardIndex(0)
+            }
+        },
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            if (searchRef.current) searchRef.current.focus()
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_LEFT]: () => {
+            setFocusedCardIndex(prev => Math.max(0, prev <= 0 ? visibleEntries.length - 1 : prev - 1))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT]: () => {
+            setFocusedCardIndex(prev => (prev + 1) % Math.max(1, visibleEntries.length))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+            setFocusedCardIndex(prev => layout === 'grid' ? Math.max(0, prev - 3) : Math.max(0, prev - 1))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+            setFocusedCardIndex(prev => layout === 'grid'
+                ? Math.min(visibleEntries.length - 1, prev + 3)
+                : Math.min(visibleEntries.length - 1, prev + 1))
+        },
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            const entry = visibleEntries[focusedCardIndex]
+            if (entry) onOpenDetail(entry)
+        },
+    }), [focusedCardIndex, layout, onOpenDetail, pageInfo?.hasMore, visibleEntries])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabled && !detailEntry && !deleteConfirm.isOpen,
+        handlers: libGamepadHandlers,
+        repeatableButtons: [
+            XBOX_GAMEPAD_BUTTONS.DPAD_LEFT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT,
+            XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+            XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+        ],
+    })
+
     if (!isLifeSyncConnected) return null
 
     if (!mangaPluginOn) {
@@ -643,6 +698,17 @@ export default function LifeSyncMangaLibrary() {
                     <IconChevronLeft />
                 </Link>
                 <h1 className="min-w-0 flex-1 text-[20px] font-black leading-none text-(--color-text-primary)">Manga Library</h1>
+                <ControllerHintBar
+                    cols={2}
+                    hints={[
+                        { btns: ['Y'], label: 'Grid / List' },
+                        { btns: ['X'], label: 'Search' },
+                        { btns: ['LB'], label: 'Prev page' },
+                        { btns: ['RB'], label: 'Next page' },
+                        { btns: ['←→'], label: 'Navigate cards' },
+                        { btns: ['A'], label: 'Open detail' },
+                    ]}
+                />
                 <Link to={MANGA_BASE} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-black transition hover:brightness-95">
                     Browse
                 </Link>
@@ -834,12 +900,14 @@ export default function LifeSyncMangaLibrary() {
                                 {visibleEntries.map((entry, idx) => {
                                     const k = entryKey(entry)
                                     return (
-                                        <MangaRow key={k} entry={entry} browseTranslatedLang={browseTranslatedLang}
-                                            busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
-                                            syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
-                                            onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
-                                            onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
-                                            isLast={idx === visibleEntries.length - 1} />
+                                        <div key={k} className={focusedCardIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}>
+                                            <MangaRow entry={entry} browseTranslatedLang={browseTranslatedLang}
+                                                busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
+                                                syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
+                                                onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
+                                                onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
+                                                isLast={idx === visibleEntries.length - 1} />
+                                        </div>
                                     )
                                 })}
                             </AnimatePresence>
@@ -847,14 +915,16 @@ export default function LifeSyncMangaLibrary() {
                     ) : (
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                             <AnimatePresence initial={false}>
-                                {visibleEntries.map((entry) => {
+                                {visibleEntries.map((entry, idx) => {
                                     const k = entryKey(entry)
                                     return (
-                                        <MangaCard key={k} entry={entry} browseTranslatedLang={browseTranslatedLang}
-                                            busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
-                                            syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
-                                            onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
-                                            onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail} />
+                                        <div key={k} className={focusedCardIndex === idx ? 'rounded-2xl ring-2 ring-primary ring-offset-2' : ''}>
+                                            <MangaCard entry={entry} browseTranslatedLang={browseTranslatedLang}
+                                                busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
+                                                syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
+                                                onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
+                                                onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail} />
+                                        </div>
                                     )
                                 })}
                             </AnimatePresence>
