@@ -186,6 +186,35 @@ const MD_FILTER_OPTIONS = [...MD_FILTER_SLUG_LIST]
     .sort((a, b) => mdFilterLabel(a).localeCompare(mdFilterLabel(b)))
     .map(slug => ({ slug, label: mdFilterLabel(slug) }))
 
+/** ManhuaTop section browse options. */
+const MHT_SECTION_OPTIONS = [
+    { id: 'latest', label: 'Latest Update' },
+    { id: 'new-manga', label: 'New Manga' },
+    { id: 'top-manhua', label: 'Top Manhua' },
+    { id: 'top-manhwa', label: 'Top Manhwa' },
+    { id: 'latest-update', label: 'Latest Manga Update' },
+]
+
+const MHT_ORDER_BY_OPTIONS = [
+    { id: 'latest', label: 'Latest' },
+    { id: 'relevance', label: 'Relevance' },
+    { id: 'alphabet', label: 'A-Z' },
+    { id: 'rating', label: 'Rating' },
+    { id: 'trending', label: 'Trending' },
+    { id: 'views', label: 'Most Views' },
+    { id: 'new-manga', label: 'New' },
+]
+
+const MHT_GENRE_OPTIONS = [
+    'action', 'romance', 'fantasy', 'drama', 'martial-arts', 'adult', 'shounen', 'shoujo', 'yaoi',
+    'isekai', 'historical', 'dungeons', 'magic', 'game', 'mature', 'music', 'mystery', 'magical',
+    'reincarnation', 'school-life', 'seinen', 'smut', 'supernatural',
+]
+
+function mhtGenreLabel(slug) {
+    return slug.split('-').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ')
+}
+
 function buildMangaDistrictListQuery(section, genreType, genreFilter, browseId) {
     const q = new URLSearchParams()
     q.set('section', section || 'uncensored')
@@ -570,7 +599,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
             )}
             {manga.source && manga.source !== 'roliascan' && (
                 <span className="pointer-events-none absolute bottom-12 left-2 z-[2] rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase text-white backdrop-blur-sm">
-                    {manga.source === 'mangadistrict' ? 'District' : manga.source}
+                    {manga.source === 'mangadistrict' ? 'District' : manga.source === 'manhuatop' ? 'ManhuaTop' : manga.source}
                 </span>
             )}
         </>
@@ -722,7 +751,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
         if (!manga?.id) return undefined
         const src = manga.source || source
 
-        if (src === 'mangadistrict' || src === 'roliascan') {
+        if (src === 'mangadistrict' || src === 'roliascan' || src === 'manhuatop') {
             const list = Array.isArray(manga.chapters) ? manga.chapters : []
             setChapters({ data: [...list] })
             setDetail(src === 'roliascan' ? { ...manga } : null)
@@ -1145,7 +1174,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
                             ) : chaptersInSeriesOrder.length === 0 ? (
                                 <div className="rounded-xl bg-[var(--mx-color-f5f5f7)] px-4 py-6 text-center">
                                     <p className="text-[12px] text-[var(--mx-color-86868b)]">
-                                        {src === 'mangadistrict' || src === 'roliascan'
+                                        {src === 'mangadistrict' || src === 'roliascan' || src === 'manhuatop'
                                             ? 'No chapters in listing.'
                                             : 'No chapters for this language filter.'}
                                     </p>
@@ -1278,11 +1307,12 @@ export default function LifeSyncManga() {
     const navigate = useNavigate()
     const resumeKeyDone = useRef(null)
 
-    const basePath = '/dashboard/lifesync/anime/manga'
+    const MANGA_BASE_PATHS = ['/dashboard/lifesync/anime/manga', '/dashboard/lifesync/manga']
+    const basePath = MANGA_BASE_PATHS.find((p) => location.pathname.startsWith(p)) || '/dashboard/lifesync/anime/manga'
     const route = useMemo(() => {
         const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : ''
         const parts = rel.split('/').filter(Boolean)
-        const allowedSources = new Set(['mangadistrict', 'roliascan'])
+        const allowedSources = new Set(['mangadistrict', 'roliascan', 'manhuatop'])
         const src = allowedSources.has(parts[0]) ? parts[0] : 'roliascan'
 
         const tab = normalizeTabForSource(src, parts[1] || defaultTabForSource(src))
@@ -1479,6 +1509,20 @@ export default function LifeSyncManga() {
         setDexSearchPage(1)
     }, [dexFilterSig, dexListSigBound])
 
+    // ManhuaTop state
+    const [mhtRows, setMhtRows] = useState([])
+    const [mhtLoading, setMhtLoading] = useState(false)
+    const [mhtPage, setMhtPage] = useState(1)
+    const [mhtLastPage, setMhtLastPage] = useState(1)
+    const [mhtSection, setMhtSection] = useState('latest')
+    const [mhtGenre, setMhtGenre] = useState('')
+    const [mhtOrderBy, setMhtOrderBy] = useState('latest')
+    const [mhtSearchQ, setMhtSearchQ] = useState('')
+    const [mhtCommittedSearch, setMhtCommittedSearch] = useState('')
+    const [mhtFiltersOpen, setMhtFiltersOpen] = useState(false)
+    /** Invalidates in-flight ManhuaTop fetches. */
+    const mhtFetchGenRef = useRef(0)
+
     // Manga District state
     const [mdLatest, setMdLatest] = useState(null)
     const [mdPage, setMdPage] = useState(1)
@@ -1580,6 +1624,9 @@ export default function LifeSyncManga() {
         if (source !== 'roliascan') {
             roliascanFetchGenRef.current += 1
         }
+        if (source !== 'manhuatop') {
+            mhtFetchGenRef.current += 1
+        }
     }, [source])
 
     useEffect(() => {
@@ -1626,12 +1673,14 @@ export default function LifeSyncManga() {
         if (false && nextTab === 'search' && dexSearchPage !== route.page) setDexSearchPage(route.page)
         if (route.src === 'mangadistrict' && mdPage !== route.page) setMdPage(route.page)
         if (route.src === 'roliascan' && roliascanPage !== route.page) setRoliascanPage(route.page)
+        if (route.src === 'manhuatop' && mhtPage !== route.page) setMhtPage(route.page)
     }, [
         roliascanPage,
         dexPopularPage,
         dexRecentPage,
         dexSearchPage,
         mdPage,
+        mhtPage,
         route.page,
         route.src,
         route.tab,
@@ -1713,6 +1762,27 @@ export default function LifeSyncManga() {
                 setSelectedManga(null)
                 setSource('roliascan')
                 goToRead(entry.mangaId, ch.id, 'roliascan', {
+                    resumeChapterId: String(ch.id),
+                    resumePercent: preferredResumePercent,
+                })
+                return
+            }
+            if (entry.source === 'manhuatop') {
+                const data = await lifesyncFetch(`/api/v1/manga/manhuatop/info/${encodeURIComponent(entry.mangaId)}?view=full`)
+                const list = [...(data.chapters || [])]
+                list.sort(compareChapters)
+                let ch = list.find(c => String(c?.id) === preferredChapterId)
+                if (!ch && preferredChapterId !== lastChapterId) {
+                    ch = list.find(c => String(c?.id) === lastChapterId)
+                }
+                if (!ch && list.length) ch = list[list.length - 1]
+                if (!ch) {
+                    setError('No chapters available to resume.')
+                    return
+                }
+                setSelectedManga(null)
+                setSource('manhuatop')
+                goToRead(entry.mangaId, ch.id, 'manhuatop', {
                     resumeChapterId: String(ch.id),
                     resumePercent: preferredResumePercent,
                 })
@@ -2197,6 +2267,55 @@ export default function LifeSyncManga() {
         source,
     ])
 
+    // ManhuaTop fetch effect
+    useEffect(() => {
+        if (!isLifeSyncConnected || lifeSyncLoading || source !== 'manhuatop') return
+        const gen = ++mhtFetchGenRef.current
+        const page = clampPage(mhtPage)
+        setMhtLoading(true)
+        setError('')
+        ;(async () => {
+            try {
+                const committedSearch = mhtCommittedSearch.trim()
+                let d
+                if (committedSearch) {
+                    const qs = new URLSearchParams({ q: committedSearch })
+                    if (mhtOrderBy && mhtOrderBy !== 'latest') qs.set('orderBy', mhtOrderBy)
+                    if (page > 1) qs.set('page', String(page))
+                    d = await lifesyncFetch(`/api/v1/manga/manhuatop/search?${qs.toString()}&view=standard`)
+                } else {
+                    const qs = new URLSearchParams()
+                    qs.set('section', mhtSection)
+                    if (mhtGenre) qs.set('genre', mhtGenre)
+                    if (mhtOrderBy && mhtOrderBy !== 'latest') qs.set('orderBy', mhtOrderBy)
+                    d = await lifesyncFetch(`/api/v1/manga/manhuatop/latest/${page}?${qs.toString()}&view=standard`)
+                }
+                if (mhtFetchGenRef.current !== gen) return
+                const rows = (Array.isArray(d?.data) ? d.data : []).map((row) => ({ ...row, source: 'manhuatop' }))
+                const lastPage = Math.max(1, Number(d?.lastPage || d?.pageInfo?.totalPages || (rows.length >= 24 ? page + 1 : page)) || 1)
+                setMhtRows(rows)
+                setMhtLastPage(lastPage)
+                setMhtPage(page)
+            } catch (e) {
+                if (mhtFetchGenRef.current !== gen) return
+                setMhtRows([])
+                setMhtLastPage(1)
+                setError(e?.message || 'Failed to load ManhuaTop')
+            } finally {
+                if (mhtFetchGenRef.current === gen) setMhtLoading(false)
+            }
+        })()
+    }, [
+        isLifeSyncConnected,
+        lifeSyncLoading,
+        source,
+        mhtPage,
+        mhtSection,
+        mhtGenre,
+        mhtOrderBy,
+        mhtCommittedSearch,
+    ])
+
     function handleDexSearch(e) {
         e.preventDefault()
         if (!searchQ.trim()) return
@@ -2266,6 +2385,18 @@ export default function LifeSyncManga() {
                         ...data,
                         id: data.id || id,
                         source: 'roliascan',
+                        coverUrl: data.coverUrl || prev?.coverUrl,
+                    }))
+                    return
+                }
+                if (src === 'manhuatop') {
+                    const data = await lifesyncFetch(`/api/v1/manga/manhuatop/info/${encodeURIComponent(id)}?view=full`)
+                    if (mangaDetailEnrichGenRef.current !== gen) return
+                    setSelectedManga(prev => ({
+                        ...prev,
+                        ...data,
+                        id: data.id || id,
+                        source: 'manhuatop',
                         coverUrl: data.coverUrl || prev?.coverUrl,
                     }))
                     return
@@ -2575,6 +2706,9 @@ export default function LifeSyncManga() {
         if (source === 'roliascan') {
             return roliascanRows
         }
+        if (source === 'manhuatop') {
+            return mhtRows
+        }
         return []
     }, [
         source,
@@ -2585,10 +2719,10 @@ export default function LifeSyncManga() {
         dexFollows,
         dexLibraryList,
         roliascanRows,
+        mhtRows,
         mdLatest,
         mdFilter,
         mdSearchResults,
-        roliascanRows,
     ])
 
     const mangaGridLoading = useMemo(() => {
@@ -2603,6 +2737,7 @@ export default function LifeSyncManga() {
         }
         if (source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy) return true
         if (source === 'roliascan' && roliascanLoading) return true
+        if (source === 'manhuatop' && mhtLoading) return true
         return false
     }, [
         currentItems.length,
@@ -2616,6 +2751,7 @@ export default function LifeSyncManga() {
         popularLoading,
         recentLoading,
         roliascanLoading,
+        mhtLoading,
         mdFilter,
         mdSearchBusy,
     ])
@@ -3415,6 +3551,134 @@ export default function LifeSyncManga() {
                 </div>
             )}
 
+            {/* ManhuaTop toolbar */}
+            {source === 'manhuatop' && (
+                <div className="min-w-0 w-full max-w-full space-y-3">
+                    <form
+                        className="flex min-w-0 w-full max-w-full flex-wrap items-stretch gap-2"
+                        onSubmit={e => {
+                            e.preventDefault()
+                            const q = mhtSearchQ.trim()
+                            setMhtCommittedSearch(q)
+                            setMhtPage(1)
+                            navigate(`${basePath}/manhuatop/latest/page/1${location.search || ''}`)
+                        }}
+                    >
+                        <input
+                            type="search"
+                            value={mhtSearchQ}
+                            onChange={e => setMhtSearchQ(e.target.value)}
+                            placeholder="Search ManhuaTop..."
+                            className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setMhtFiltersOpen(v => !v)}
+                            aria-expanded={mhtFiltersOpen}
+                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                        >
+                            Filters
+                            <svg className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${mhtFiltersOpen ? '-rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={mhtLoading && Boolean(mhtCommittedSearch.trim())}
+                            className="shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
+                        >
+                            {mhtLoading && mhtCommittedSearch.trim() ? 'Searching...' : 'Search'}
+                        </button>
+                        {mhtCommittedSearch.trim() && (
+                            <button
+                                type="button"
+                                onClick={() => { setMhtSearchQ(''); setMhtCommittedSearch(''); setMhtPage(1) }}
+                                className="shrink-0 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-86868b)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </form>
+
+                    <AnimatePresence initial={false}>
+                        {mhtFiltersOpen && (
+                            <MotionDiv
+                                key="manga-mht-toolbar-filters"
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: 'auto', opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={mangaFilterExpandTransition}
+                                className="w-full min-w-0 max-w-full overflow-hidden"
+                            >
+                                <div className="min-w-0 max-w-full space-y-4 border-t border-[var(--mx-color-f0f0f0)] pt-3">
+                                    {!mhtCommittedSearch.trim() && (
+                                        <div className="space-y-1.5">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Section</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {MHT_SECTION_OPTIONS.map(({ id, label }) => (
+                                                    <button
+                                                        key={id}
+                                                        type="button"
+                                                        onClick={() => { setMhtSection(id); setMhtGenre(''); setMhtPage(1); goToPage(1) }}
+                                                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                            mhtSection === id && !mhtGenre
+                                                                ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                                : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                        }`}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    {!mhtCommittedSearch.trim() && (
+                                        <div className="space-y-1.5">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Genre</p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {MHT_GENRE_OPTIONS.map(slug => (
+                                                    <button
+                                                        key={slug}
+                                                        type="button"
+                                                        onClick={() => { setMhtGenre(prev => prev === slug ? '' : slug); setMhtPage(1); goToPage(1) }}
+                                                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                            mhtGenre === slug
+                                                                ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                                : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                        }`}
+                                                    >
+                                                        {mhtGenreLabel(slug)}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <div className="space-y-1.5">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Order by</p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {MHT_ORDER_BY_OPTIONS.map(({ id, label }) => (
+                                                <button
+                                                    key={id}
+                                                    type="button"
+                                                    onClick={() => { setMhtOrderBy(id); setMhtPage(1); goToPage(1) }}
+                                                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                                        mhtOrderBy === id
+                                                            ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
+                                                            : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                    }`}
+                                                >
+                                                    {label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </MotionDiv>
+                        )}
+                    </AnimatePresence>
+                </div>
+            )}
+
             {/* Content tabs (Roliascan + Roliascan type tabs) */}
             {tabs.length > 0 && (
                 <LifeSyncSectionNav
@@ -3542,6 +3806,30 @@ export default function LifeSyncManga() {
                             type="button"
                             disabled={roliascanLoading || roliascanPage >= roliascanLastPage}
                             onClick={() => goToPage(roliascanPage + 1)}
+                            className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {source === 'manhuatop' && mhtLastPage > 1 && (
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <p className="text-[11px] text-[var(--mx-color-86868b)]">Page {mhtPage} of {mhtLastPage}</p>
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            disabled={mhtLoading || mhtPage <= 1}
+                            onClick={() => goToPage(mhtPage - 1)}
+                            className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                        >
+                            Previous
+                        </button>
+                        <button
+                            type="button"
+                            disabled={mhtLoading || mhtPage >= mhtLastPage}
+                            onClick={() => goToPage(mhtPage + 1)}
                             className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
                         >
                             Next
@@ -3753,6 +4041,10 @@ export default function LifeSyncManga() {
                                 ? 'No Roliascan titles matched your search.'
                                 : source === 'roliascan'
                                     ? 'No Roliascan titles matched this tab and filter set.'
+                            : source === 'manhuatop' && mhtCommittedSearch.trim()
+                                ? 'No ManhuaTop titles matched your search.'
+                                : source === 'manhuatop'
+                                    ? 'No ManhuaTop titles found for this section or filter.'
                             : false && tab === 'search' && committedSearchQuery.trim() && searching ? 'Searching…'
                             : false && tab === 'search' && committedSearchQuery.trim() && !searching ? 'No titles matched your search.'
                             : false && tab === 'library' && dexAuthStatus?.connected

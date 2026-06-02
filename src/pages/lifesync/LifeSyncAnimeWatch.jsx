@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { getAnimeStreamAudio, getLifesyncApiBase, lifesyncFetch } from '../../lib/lifesyncApi'
+import { getAnimeStreamAudio, getLifesyncApiBase, lifesyncFetch, lifesyncPatchPreferences } from '../../lib/lifesyncApi'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import {
@@ -16,7 +16,7 @@ import {
     LifesyncEpisodeThumbnail,
     WatchPageLoadSkeleton,
 } from '../../components/lifesync/EpisodeLoadingSkeletons'
-import { streamIframeSandboxProps } from '../../lib/lifesyncStreamIframe'
+import { streamIframeSandboxProps, withStreamIframeAutoplayUrl } from '../../lib/lifesyncStreamIframe'
 import {
     lifeSyncDollyPageTransition,
     lifeSyncDollyPageVariants,
@@ -67,6 +67,22 @@ function safeText(x) {
     return x == null ? '' : String(x)
 }
 
+function isDirectVideoMirror(mirrorLabel, effectiveAudio) {
+    const label = String(mirrorLabel || '').toLowerCase().replace(/[\s\-_]/g, '')
+    if (/hd\d/.test(label)) return true
+    if (label.includes('hardsub') || label.includes('hsub')) return true
+    if (label.includes('dub')) return true
+    if (effectiveAudio === 'dub') return true
+    return false
+}
+
+function isEditableElement(target) {
+    if (!target) return false
+    if (target.isContentEditable) return true
+    const tag = String(target.tagName || '').toUpperCase()
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON'
+}
+
 export default function LifeSyncAnimeWatch() {
     const { animeId: animeIdParam, ep: epParam } = useParams()
     const location = useLocation()
@@ -99,6 +115,8 @@ export default function LifeSyncAnimeWatch() {
     const [audioAvailByEp, setAudioAvailByEp] = useState(() => (/** @type {Record<string, { sub: boolean, dub: boolean }>} */ ({})))
     const audioAvailRef = useRef(audioAvailByEp)
     audioAvailRef.current = audioAvailByEp
+    const [autoplayCountdown, setAutoplayCountdown] = useState(/** @type {number|null} */ (null))
+    const autoplayTimerRef = useRef(/** @type {ReturnType<typeof setInterval>|null} */ (null))
 
     const seedCatalogQuietRef = useRef(false)
     const skipStreamResolveOnceRef = useRef(false)
@@ -117,6 +135,19 @@ export default function LifeSyncAnimeWatch() {
             // ignore
         }
     }, [])
+
+    const cancelAutoplay = useCallback(() => {
+        if (autoplayTimerRef.current != null) {
+            clearInterval(autoplayTimerRef.current)
+            autoplayTimerRef.current = null
+        }
+        setAutoplayCountdown(null)
+    }, [])
+
+    // Called when episode changes — reset autoplay state
+    useEffect(() => {
+        cancelAutoplay()
+    }, [episodeIdx, cancelAutoplay])
 
     const resolveAnimeStream = useCallback(
         async (epObj, audioOverride, mirrorId, signal) => {
@@ -165,26 +196,63 @@ export default function LifeSyncAnimeWatch() {
             const effectiveAudio =
                 meta.effectiveAudio === 'dub' || meta.effectiveAudio === 'sub' ? meta.effectiveAudio : type
 
+            const resolvedMirrorLabel = meta.selectedMirrorLabel ?? null
+            const useDirect = isDirectVideoMirror(resolvedMirrorLabel, effectiveAudio)
+
+            // For HD/DUB/HSUB mirrors, prefer direct HLS/MP4 sources over iframe embed
+            const sources = Array.isArray(pack?.sources) ? pack.sources : []
+            const srcKind = (s) => (s?.kind || s?.type || '').toLowerCase()
+            if (useDirect && sources.length > 0) {
+                const pickDirect =
+                    sources.find(s => srcKind(s) === 'hls') ||
+                    sources.find(s => srcKind(s) === 'mp4') ||
+                    sources.find(s => srcKind(s) !== 'iframe' && srcKind(s) !== 'embed')
+                if (pickDirect?.url) {
+                    const url = String(pickDirect.url).startsWith('http') ? pickDirect.url : `${apiBase}${pickDirect.url}`
+                    const rawSubs = Array.isArray(pack?.subtitles) ? pack.subtitles : []
+                    const textTracks = rawSubs.map((s, i) => ({
+                        src: String(s?.url || '').startsWith('http') ? s.url : `${apiBase}${s.url}`,
+                        label: s?.label || `Subtitles ${i + 1}`,
+                        srclang: s?.lang || 'und',
+                        default: i === 0,
+                    }))
+                    return {
+                        ...base,
+                        title: epObj?.title || base.title,
+                        videoUrl: url,
+                        iframeUrl: null,
+                        isDirect: true,
+                        textTracks,
+                        mirrors: meta.mirrors || [],
+                        selectedMirrorId: meta.selectedMirrorId ?? null,
+                        selectedMirrorLabel: resolvedMirrorLabel,
+                        provider: meta.provider ?? null,
+                        audioAvailability,
+                        effectiveAudio,
+                    }
+                }
+            }
+
             if (iframeFromPack) {
                 return {
                     ...base,
                     title: epObj?.title || base.title,
                     iframeUrl: iframeFromPack,
+                    isDirect: false,
                     mirrors: meta.mirrors || [],
                     selectedMirrorId: meta.selectedMirrorId ?? null,
-                    selectedMirrorLabel: meta.selectedMirrorLabel ?? null,
+                    selectedMirrorLabel: resolvedMirrorLabel,
                     provider: meta.provider ?? null,
                     audioAvailability,
                     effectiveAudio,
                 }
             }
-            const sources = Array.isArray(pack?.sources) ? pack.sources : []
             const preferIframe = isIOSDevice()
             const pick = preferIframe
-                ? sources.find(s => s?.kind === 'iframe') || sources.find(s => s?.kind === 'hls') || sources.find(s => s?.kind === 'mp4') || sources[0]
-                : sources.find(s => s?.kind === 'hls') || sources.find(s => s?.kind === 'mp4') || sources[0]
+                ? sources.find(s => srcKind(s) === 'iframe') || sources.find(s => srcKind(s) === 'hls') || sources.find(s => srcKind(s) === 'mp4') || sources[0]
+                : sources.find(s => srcKind(s) === 'hls') || sources.find(s => srcKind(s) === 'mp4') || sources[0]
             if (!pick?.url) {
-                return { ...base, title: epObj?.title || base.title, audioAvailability, effectiveAudio }
+                return { ...base, title: epObj?.title || base.title, isDirect: false, audioAvailability, effectiveAudio }
             }
             const url = String(pick.url).startsWith('http') ? pick.url : `${apiBase}${pick.url}`
             const rawSubs = Array.isArray(pack?.subtitles) ? pack.subtitles : []
@@ -194,15 +262,17 @@ export default function LifeSyncAnimeWatch() {
                 srclang: s?.lang || 'und',
                 default: i === 0,
             }))
+            const pickKind = srcKind(pick)
             return {
                 ...base,
                 title: epObj?.title || base.title,
-                videoUrl: pick.kind === 'iframe' ? null : url,
-                iframeUrl: pick.kind === 'iframe' ? url : null,
+                videoUrl: pickKind === 'iframe' ? null : url,
+                iframeUrl: pickKind === 'iframe' ? url : null,
+                isDirect: pickKind !== 'iframe' && pickKind !== 'embed',
                 textTracks,
                 mirrors: meta.mirrors || [],
                 selectedMirrorId: meta.selectedMirrorId ?? null,
-                selectedMirrorLabel: meta.selectedMirrorLabel ?? null,
+                selectedMirrorLabel: resolvedMirrorLabel,
                 provider: meta.provider ?? null,
                 audioAvailability,
                 effectiveAudio,
@@ -435,6 +505,30 @@ export default function LifeSyncAnimeWatch() {
     const canPrev = episodeIdx > 0
     const canNext = episodeIdx < (episodes?.length || 0) - 1
     const backdropUrl = typeof anime?.poster === 'string' ? anime.poster : ''
+    const iframeAutoplayUrl = useMemo(
+        () => withStreamIframeAutoplayUrl(stream?.iframeUrl || ''),
+        [stream?.iframeUrl],
+    )
+
+    const startAutoplayCountdown = useCallback((nextIdx, secs = 12) => {
+        if (!canNext) return
+        if (autoplayTimerRef.current != null) {
+            clearInterval(autoplayTimerRef.current)
+            autoplayTimerRef.current = null
+        }
+        setAutoplayCountdown(secs)
+        autoplayTimerRef.current = setInterval(() => {
+            setAutoplayCountdown(prev => {
+                if (prev == null || prev <= 1) {
+                    clearInterval(autoplayTimerRef.current)
+                    autoplayTimerRef.current = null
+                    goEpisode(nextIdx)
+                    return null
+                }
+                return prev - 1
+            })
+        }, 1000)
+    }, [canNext, goEpisode])
     const audioValue = audioOverride === 'dub' || audioOverride === 'sub' ? audioOverride : ''
 
     const epAudioAvail = epObj?.episodeId ? audioAvailByEp[epObj.episodeId] : null
@@ -477,6 +571,14 @@ export default function LifeSyncAnimeWatch() {
         [XBOX_GAMEPAD_BUTTONS.A]: () => {
             dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'Spacebar', 'MediaPlayPause'])
         },
+        [XBOX_GAMEPAD_BUTTONS.B]: () => {
+            if (autoplayCountdown != null) {
+                cancelAutoplay()
+                return
+            }
+            if (!canNext) return
+            startAutoplayCountdown(episodeIdx + 1)
+        },
         [XBOX_GAMEPAD_BUTTONS.Y]: () => {
             dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'MediaPlay', 'MediaPlayPause'])
         },
@@ -498,10 +600,10 @@ export default function LifeSyncAnimeWatch() {
         },
         [XBOX_GAMEPAD_BUTTONS.LB]: () => { if (!canPrev) return; goEpisode(episodeIdx - 1) },
         [XBOX_GAMEPAD_BUTTONS.RB]: () => { if (!canNext) return; goEpisode(episodeIdx + 1) },
-    }), [canNext, canPrev, episodeIdx, goEpisode, toggleIframeContainerFullscreen])
+    }), [autoplayCountdown, canNext, canPrev, cancelAutoplay, episodeIdx, goEpisode, startAutoplayCountdown, toggleIframeContainerFullscreen])
 
     useLifeSyncGamepadInput({
-        enabled: controllerSupportEnabled && Boolean(stream?.iframeUrl),
+        enabled: controllerSupportEnabled && Boolean(stream?.iframeUrl) && !stream?.isDirect,
         handlers: iframeGamepadHandlers,
         repeatableButtons: [
             XBOX_GAMEPAD_BUTTONS.LT,
@@ -512,13 +614,70 @@ export default function LifeSyncAnimeWatch() {
     })
 
     useEffect(() => {
-        if (!stream?.iframeUrl || typeof window === 'undefined') return undefined
+        if (!stream?.iframeUrl || stream?.isDirect || typeof window === 'undefined') return undefined
         const id = window.setTimeout(() => { focusIframeForControllerInput(streamIframeRef.current) }, 180)
         return () => window.clearTimeout(id)
-    }, [stream?.iframeUrl])
+    }, [stream?.iframeUrl, stream?.isDirect])
 
     useEffect(() => {
-        if (!stream?.iframeUrl || typeof window === 'undefined') return undefined
+        if (!stream?.iframeUrl || stream?.isDirect || typeof window === 'undefined') return undefined
+        const timers = []
+        const kickoff = () => {
+            focusIframeForControllerInput(streamIframeRef.current)
+            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['MediaPlay'])
+        }
+        timers.push(window.setTimeout(kickoff, 120))
+        timers.push(window.setTimeout(kickoff, 420))
+        timers.push(window.setTimeout(kickoff, 900))
+        return () => {
+            for (const id of timers) window.clearTimeout(id)
+        }
+    }, [stream?.iframeUrl, stream?.isDirect, episodeIdx])
+
+    useEffect(() => {
+        if (!stream?.iframeUrl || stream?.isDirect || typeof window === 'undefined') return undefined
+        const onKey = (e) => {
+            if (e.defaultPrevented) return
+            if (isEditableElement(e.target)) return
+            if (e.metaKey || e.ctrlKey || e.altKey) return
+
+            let handled = true
+            if (e.key === ' ' || e.key === 'k' || e.key === 'K') {
+                dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'Spacebar', 'MediaPlayPause'])
+            } else if (e.key === 'ArrowLeft') {
+                dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['j', 'ArrowLeft'])
+            } else if (e.key === 'ArrowRight') {
+                dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['l', 'ArrowRight'])
+            } else if (e.key === 'ArrowUp') {
+                dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowUp'])
+            } else if (e.key === 'ArrowDown') {
+                dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowDown'])
+            } else if (e.key === 'f' || e.key === 'F') {
+                toggleIframeContainerFullscreen()
+                dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['f'])
+            } else if (e.key === 'PageUp') {
+                if (canPrev) goEpisode(episodeIdx - 1)
+                else handled = false
+            } else if (e.key === 'PageDown') {
+                if (canNext) goEpisode(episodeIdx + 1)
+                else handled = false
+            } else if (e.key === 'n' || e.key === 'N') {
+                if (canNext) startAutoplayCountdown(episodeIdx + 1)
+                else handled = false
+            } else {
+                handled = false
+            }
+
+            if (!handled) return
+            e.preventDefault()
+            e.stopPropagation()
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [canNext, canPrev, episodeIdx, goEpisode, startAutoplayCountdown, stream?.iframeUrl, toggleIframeContainerFullscreen])
+
+    useEffect(() => {
+        if (!stream?.iframeUrl || stream?.isDirect || typeof window === 'undefined') return undefined
         const onFullscreenChange = () => {
             const container = streamIframeContainerRef.current
             const fullscreenEl = document.fullscreenElement
@@ -673,26 +832,11 @@ export default function LifeSyncAnimeWatch() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                            ) : stream?.iframeUrl ? (
-                                                <iframe
-                                                    ref={streamIframeRef}
-                                                    key={stream.iframeUrl}
-                                                    title={stream.title || 'Episode'}
-                                                    src={stream.iframeUrl}
-                                                    tabIndex={0}
-                                                    onLoad={() => { focusIframeForControllerInput(streamIframeRef.current) }}
-                                                    className="lifesync-anime-watch-media h-full w-full border-0 bg-black"
-                                                    allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
-                                                    {...streamIframeSandboxProps(stream.iframeUrl, {
-                                                        provider: stream.provider,
-                                                        selectedMirrorLabel: stream.selectedMirrorLabel,
-                                                    })}
-                                                    referrerPolicy="no-referrer-when-downgrade"
-                                                />
-                                            ) : stream?.videoUrl ? (
+                                            ) : (stream?.isDirect && stream?.videoUrl) || (!stream?.isDirect && !stream?.iframeUrl && stream?.videoUrl) ? (
                                                 <AdvancedVideoPlayer
                                                     key={stream.videoUrl}
                                                     src={stream.videoUrl}
+                                                    autoPlay
                                                     preload={videoPreload}
                                                     textTracks={stream.textTracks || []}
                                                     skipSegments={[]}
@@ -700,8 +844,30 @@ export default function LifeSyncAnimeWatch() {
                                                     onNextEpisode={canNext ? () => goEpisode(episodeIdx + 1) : undefined}
                                                     canPrevEpisode={canPrev}
                                                     canNextEpisode={canNext}
-                                                    onEnded={() => { if (canNext) goEpisode(episodeIdx + 1) }}
+                                                    onEnded={() => { if (canNext) startAutoplayCountdown(episodeIdx + 1) }}
                                                 />
+                                            ) : stream?.iframeUrl ? (
+                                                <>
+                                                <iframe
+                                                    ref={streamIframeRef}
+                                                    key={iframeAutoplayUrl}
+                                                    title={stream.title || 'Episode'}
+                                                    src={iframeAutoplayUrl}
+                                                    tabIndex={0}
+                                                    onLoad={() => {
+                                                        focusIframeForControllerInput(streamIframeRef.current)
+                                                        dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['MediaPlay'])
+                                                    }}
+                                                    className="lifesync-anime-watch-media h-full w-full border-0 bg-black"
+                                                    allow="fullscreen; encrypted-media; autoplay; picture-in-picture; web-share; clipboard-write"
+                                                    allowFullScreen
+                                                    {...streamIframeSandboxProps(stream.iframeUrl, {
+                                                        provider: stream.provider,
+                                                        selectedMirrorLabel: stream.selectedMirrorLabel,
+                                                    })}
+                                                    referrerPolicy="no-referrer-when-downgrade"
+                                                />
+                                                </>
                                             ) : (
                                                 <div className="lifesync-anime-watch-media flex h-full w-full items-center justify-center bg-[var(--mx-color-0f0f12)] px-4 text-center">
                                                     <div className="max-w-md">
@@ -716,8 +882,67 @@ export default function LifeSyncAnimeWatch() {
                                                     </div>
                                                 </div>
                                             )}
+                                            {autoplayCountdown != null && canNext && !stream?.resolving && (
+                                                <div className="absolute bottom-4 right-4 z-20 flex items-center gap-3 rounded-2xl border border-(--color-border-strong)/20 bg-black/75 px-4 py-3 backdrop-blur-md">
+                                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 border-(--mx-color-c6ff00)/60 bg-black/40">
+                                                        <span className="text-[13px] font-black tabular-nums text-(--mx-color-c6ff00)">{autoplayCountdown}</span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[11px] font-semibold text-white/90">Up Next</p>
+                                                        <p className="text-[10px] text-white/55 truncate max-w-[140px]">
+                                                            {episodes?.[episodeIdx + 1]?.number != null ? `Ep ${episodes[episodeIdx + 1].number}` : `Ep ${episodeIdx + 2}`}
+                                                            {episodes?.[episodeIdx + 1]?.title ? ` · ${episodes[episodeIdx + 1].title}` : ''}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { cancelAutoplay(); goEpisode(episodeIdx + 1) }}
+                                                            className="rounded-xl bg-(--mx-color-c6ff00) px-3 py-1.5 text-[11px] font-bold text-black transition hover:brightness-95"
+                                                        >
+                                                            Play
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={cancelAutoplay}
+                                                            className="rounded-xl border border-(--color-border-strong)/20 bg-black/30 px-3 py-1.5 text-[11px] font-semibold text-white/80 transition hover:bg-black/50"
+                                                        >
+                                                            Cancel
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
+
+                                    {/* Up Next auto-play card */}
+                                    {canNext && (stream?.iframeUrl || stream?.videoUrl) && !stream?.resolving && autoplayCountdown == null && (
+                                        <div className="flex items-center justify-between gap-3 rounded-2xl border border-(--color-border-strong)/14 bg-black/30 px-4 py-3">
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/45">Up Next</p>
+                                                <p className="mt-0.5 truncate text-[12px] font-semibold text-white/85">
+                                                    {episodes?.[episodeIdx + 1]?.number != null ? `Ep ${episodes[episodeIdx + 1].number}` : `Ep ${episodeIdx + 2}`}
+                                                    {episodes?.[episodeIdx + 1]?.title ? ` · ${episodes[episodeIdx + 1].title}` : ''}
+                                                </p>
+                                            </div>
+                                            <div className="flex shrink-0 gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => startAutoplayCountdown(episodeIdx + 1)}
+                                                    className="rounded-xl border border-(--mx-color-c6ff00)/35 bg-(--mx-color-c6ff00)/10 px-3 py-1.5 text-[11px] font-semibold text-(--mx-color-c6ff00) transition hover:bg-(--mx-color-c6ff00)/20"
+                                                >
+                                                    Auto-play
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => goEpisode(episodeIdx + 1)}
+                                                    className="rounded-xl bg-(--color-surface)/10 px-3 py-1.5 text-[11px] font-semibold text-white/80 transition hover:bg-(--color-surface)/18"
+                                                >
+                                                    Skip
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {episodes.length > 0 ? (
                                         <div className="lg:hidden">
@@ -810,66 +1035,62 @@ export default function LifeSyncAnimeWatch() {
                                                 </div>
                                             </div>
 
-                                            <div className="flex w-full shrink-0 flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-2.5 lg:w-[min(100%,15.5rem)] lg:grid-cols-1 lg:gap-2">
-                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/12 bg-black/28 p-3.5">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Audio</p>
-                                                        {showSubDubPicker ? (
-                                                            <span className="text-[10px] font-medium text-white/35" aria-hidden>Sub / Dub</span>
-                                                        ) : null}
-                                                    </div>
-                                                    {showSubDubPicker ? (
-                                                        <select
-                                                            value={audioValue}
-                                                            onChange={(e) => {
-                                                                const v = safeText(e.target.value).trim()
-                                                                setAudioOverride(v === 'sub' || v === 'dub' ? v : null)
-                                                                setMirrorOverrideId('')
-                                                            }}
-                                                            className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-[var(--color-border-strong)]/14 bg-black/42 px-3 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-[var(--mx-color-c6ff00)]/30 focus:border-[var(--mx-color-c6ff00)]/45 focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/20"
-                                                        >
-                                                            <option value="" className="bg-[var(--mx-color-111)]">{autoAudioLabel}</option>
-                                                            <option value="sub" className="bg-[var(--mx-color-111)]">Sub</option>
-                                                            <option value="dub" className="bg-[var(--mx-color-111)]">Dub</option>
-                                                        </select>
-                                                    ) : subOnlyTrack ? (
-                                                        <p className="mt-2 rounded-xl border border-[var(--color-border-strong)]/10 bg-black/25 px-3 py-2.5 text-[12px] font-semibold text-white/75">
-                                                            Sub only — no dub track for this episode.
-                                                        </p>
-                                                    ) : dubOnlyTrack ? (
-                                                        <p className="mt-2 rounded-xl border border-[var(--color-border-strong)]/10 bg-black/25 px-3 py-2.5 text-[12px] font-semibold text-white/75">
-                                                            Dub only for this episode.
-                                                        </p>
-                                                    ) : (
-                                                        <p className="mt-2 text-[12px] text-white/45">No audio tracks reported.</p>
-                                                    )}
-                                                </div>
+                                            <div className="w-full shrink-0 lg:w-[min(100%,22rem)]">
+                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/12 bg-black/28 p-3 sm:p-3.5">
+                                                    <div className="flex items-center gap-2">
+                                                        {/* Audio */}
+                                                        <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">Audio</p>
+                                                            {showSubDubPicker ? (
+                                                                <select
+                                                                    value={audioValue}
+                                                                    onChange={(e) => {
+                                                                        const v = safeText(e.target.value).trim()
+                                                                        setAudioOverride(v === 'sub' || v === 'dub' ? v : null)
+                                                                        setMirrorOverrideId('')
+                                                                        if (v === 'sub' || v === 'dub') {
+                                                                            lifesyncPatchPreferences({ animeStreamAudio: v }).catch(() => {})
+                                                                        }
+                                                                    }}
+                                                                    className="h-9 w-full cursor-pointer rounded-xl border border-[var(--color-border-strong)]/14 bg-black/42 px-2.5 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-[var(--mx-color-c6ff00)]/30 focus:border-[var(--mx-color-c6ff00)]/45 focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/20"
+                                                                >
+                                                                    <option value="" className="bg-[var(--mx-color-111)]">{autoAudioLabel}</option>
+                                                                    <option value="sub" className="bg-[var(--mx-color-111)]">Sub</option>
+                                                                    <option value="dub" className="bg-[var(--mx-color-111)]">Dub</option>
+                                                                </select>
+                                                            ) : (
+                                                                <div className="flex h-9 items-center rounded-xl border border-[var(--color-border-strong)]/10 bg-black/25 px-2.5 text-[11px] font-semibold text-white/60">
+                                                                    {subOnlyTrack ? 'Sub only' : dubOnlyTrack ? 'Dub only' : '—'}
+                                                                </div>
+                                                            )}
+                                                        </div>
 
-                                                <div className="rounded-2xl border border-[var(--color-border-strong)]/12 bg-black/28 p-3.5">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Mirror</p>
-                                                        <svg className="h-3.5 w-3.5 shrink-0 text-white/30" viewBox="0 0 24 24" fill="none" aria-hidden>
-                                                            <path d="M7 17l10-10M7 7h10v10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                                        </svg>
+                                                        {/* Divider */}
+                                                        <div className="h-10 w-px shrink-0 bg-[var(--color-border-strong)]/10" />
+
+                                                        {/* Mirror */}
+                                                        <div className="flex min-w-0 flex-1 flex-col gap-1">
+                                                            <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/40">Mirror</p>
+                                                            <select
+                                                                value={mirrorOverrideId}
+                                                                onChange={(e) => setMirrorOverrideId(safeText(e.target.value).trim())}
+                                                                className="h-9 w-full cursor-pointer rounded-xl border border-[var(--color-border-strong)]/14 bg-black/42 px-2.5 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-[var(--mx-color-c6ff00)]/30 focus:border-[var(--mx-color-c6ff00)]/45 focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/20 disabled:cursor-not-allowed disabled:opacity-45"
+                                                                disabled={!Array.isArray(stream?.mirrors) || stream.mirrors.length === 0}
+                                                            >
+                                                                <option value="" className="bg-[var(--mx-color-111)]">
+                                                                    {stream?.selectedMirrorLabel ? stream.selectedMirrorLabel : 'Auto'}
+                                                                </option>
+                                                                {(Array.isArray(stream?.mirrors) ? stream.mirrors : []).map((m, idx) => {
+                                                                    const id = m?.id != null ? String(m.id) : ''
+                                                                    const label = m?.label ? String(m.label) : id || `Mirror ${idx + 1}`
+                                                                    if (!id) return null
+                                                                    return (
+                                                                        <option key={id} value={id} className="bg-[var(--mx-color-111)]">{label}</option>
+                                                                    )
+                                                                })}
+                                                            </select>
+                                                        </div>
                                                     </div>
-                                                    <select
-                                                        value={mirrorOverrideId}
-                                                        onChange={(e) => setMirrorOverrideId(safeText(e.target.value).trim())}
-                                                        className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-[var(--color-border-strong)]/14 bg-black/42 px-3 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-[var(--mx-color-c6ff00)]/30 focus:border-[var(--mx-color-c6ff00)]/45 focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/20 disabled:cursor-not-allowed disabled:opacity-45"
-                                                        disabled={!Array.isArray(stream?.mirrors) || stream.mirrors.length === 0}
-                                                    >
-                                                        <option value="" className="bg-[var(--mx-color-111)]">
-                                                            Auto{stream?.selectedMirrorLabel ? ` (${stream.selectedMirrorLabel})` : ''}
-                                                        </option>
-                                                        {(Array.isArray(stream?.mirrors) ? stream.mirrors : []).map((m, idx) => {
-                                                            const id = m?.id != null ? String(m.id) : ''
-                                                            const label = m?.label ? String(m.label) : id || `Mirror ${idx + 1}`
-                                                            if (!id) return null
-                                                            return (
-                                                                <option key={id} value={id} className="bg-[var(--mx-color-111)]">{label}</option>
-                                                            )
-                                                        })}
-                                                    </select>
                                                 </div>
                                             </div>
                                         </div>

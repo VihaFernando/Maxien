@@ -102,6 +102,13 @@ function App() {
                       <Route path="manga/*" element={<LifeSyncManga />} />
                       <Route path="hentai/*" element={<LifeSyncHentai />} />
                     </Route>
+                    {/* Direct /manga shortcut — same layout, redirects into the anime hub */}
+                    <Route path="lifesync/manga" element={<LifeSyncAnimeMediaLayout />}>
+                      <Route index element={<Navigate to="/dashboard/lifesync/anime/manga" replace />} />
+                      <Route path="read/:mangaId/:chapterId" element={<LifeSyncMangaRead />} />
+                      <Route path="library" element={<LifeSyncMangaLibrary />} />
+                      <Route path="*" element={<LifeSyncManga />} />
+                    </Route>
                   </Route>
                   <Route path="/auth/github/callback" element={<GithubCallback />} />
                   <Route path="/auth/lifesync/callback" element={<LifeSyncOAuthCallback />} />

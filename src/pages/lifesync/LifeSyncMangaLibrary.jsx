@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
@@ -12,14 +12,13 @@ import {
     lifeSyncPageTransition,
 } from '../../lib/lifesyncMotion'
 
-const MANGA_BASE = '/dashboard/lifesync/anime/manga'
-const MANGA_LIBRARY_PATH = `${MANGA_BASE}/library`
 const PAGE_SIZE = 25
 
 const SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
     { id: 'roliascan', label: 'Roliascan' },
     { id: 'mangadistrict', label: 'Manga District' },
+    { id: 'manhuatop', label: 'ManhuaTop' },
 ]
 const STATUS_OPTIONS = [
     { id: 'all', label: 'Any status' },
@@ -106,6 +105,7 @@ const IconAlert = ({ className = 'h-4 w-4' }) => (
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
     if (source === 'roliascan') return 'Roliascan'
+    if (source === 'manhuatop') return 'ManhuaTop'
     return source || 'Manga'
 }
 function entryKey(entry) { return `${entry?.source || ''}:${entry?.mangaId || ''}` }
@@ -210,7 +210,7 @@ function StatusSelect({ value, onChange, disabled, className = '' }) {
 }
 
 // ─── Detail drawer ────────────────────────────────────────────────────────────
-function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
+function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang, mangaBase }) {
     if (!entry) return null
     const snap = chapterSnapshot(entry)
     const heroUrl = entry.backgroundImageUrl || entry.coverUrl || ''
@@ -275,7 +275,7 @@ function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
                         className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-black transition hover:brightness-95 active:scale-[0.98]">
                         <IconBook className="h-4 w-4" /> Continue
                     </button>
-                    <Link to={MANGA_BASE}
+                    <Link to={mangaBase || '/dashboard/lifesync/anime/manga'}
                         className="flex min-h-12 items-center justify-center rounded-2xl border border-(--color-border-soft) px-4 text-[13px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
                         Browse
                     </Link>
@@ -308,7 +308,7 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
 }
 
 // ─── List row ─────────────────────────────────────────────────────────────────
-function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onRequestRemove, onOpenDetail, isLast }) {
+function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onRequestRemove, onOpenDetail, isLast, mangaBase }) {
     const snap = chapterSnapshot(entry)
     const rel = relativeTouch(entry.updatedAt)
     const title = decodeHtmlEntities(entry.title) || 'Untitled'
@@ -363,7 +363,7 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
                     aria-label="Remove">
                     {removeBusy ? <span className="text-[10px]">…</span> : <IconX className="h-3.5 w-3.5" />}
                 </button>
-                <Link to={resumeTarget(entry, browseTranslatedLang).to} state={resumeTarget(entry, browseTranslatedLang).state}
+                <Link to={resumeTarget(entry, browseTranslatedLang, mangaBase).to} state={resumeTarget(entry, browseTranslatedLang, mangaBase).state}
                     className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95"
                     aria-label="Continue reading">
                     <IconBook className="h-3.5 w-3.5" />
@@ -374,11 +374,11 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
 }
 
 // ─── Grid card ────────────────────────────────────────────────────────────────
-function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onRequestRemove, onOpenDetail }) {
+function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onRequestRemove, onOpenDetail, mangaBase }) {
     const snap = chapterSnapshot(entry)
     const title = decodeHtmlEntities(entry.title) || 'Untitled'
     const chip = syncState ? syncStateChip(syncState) : null
-    const { to, state } = resumeTarget(entry, browseTranslatedLang)
+    const { to, state } = resumeTarget(entry, browseTranslatedLang, mangaBase)
 
     return (
         <motion.div
@@ -441,23 +441,28 @@ function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, s
     )
 }
 
-function resumeTarget(entry, browseTranslatedLang) {
+function resumeTarget(entry, browseTranslatedLang, mangaBase = '/dashboard/lifesync/anime/manga') {
+    const mangaLibraryPath = `${mangaBase}/library`
     const lastChapterId = String(entry?.lastChapterId || '').trim()
     const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
     const chapterId = lastChapterId || latestChapterId
     if (entry?.mangaId != null && entry?.source && chapterId) {
         const q = new URLSearchParams({ source: String(entry.source), lang: browseTranslatedLang === 'all' ? 'all' : 'en' }).toString()
         return {
-            to: `${MANGA_BASE}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(chapterId)}?${q}`,
-            state: { from: MANGA_LIBRARY_PATH, source: entry.source, browseTranslatedLang, resumeChapterId: chapterId, resumePercent: Number(entry?.lastReadPercent || 0) },
+            to: `${mangaBase}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(chapterId)}?${q}`,
+            state: { from: mangaLibraryPath, source: entry.source, browseTranslatedLang, resumeChapterId: chapterId, resumePercent: Number(entry?.lastReadPercent || 0) },
         }
     }
-    return { to: MANGA_BASE, state: { resumeEntry: entry } }
+    return { to: mangaBase, state: { resumeEntry: entry } }
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function LifeSyncMangaLibrary() {
     const navigate = useNavigate()
+    const location = useLocation()
+    const MANGA_BASE = location.pathname.startsWith('/dashboard/lifesync/manga')
+        ? '/dashboard/lifesync/manga'
+        : '/dashboard/lifesync/anime/manga'
     const { isLifeSyncConnected, lifeSyncUser } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
     const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
@@ -596,9 +601,9 @@ export default function LifeSyncMangaLibrary() {
     const onOpenDetail = useCallback((entry) => setDetailEntry(entry || null), [])
     const onCloseDetail = useCallback(() => setDetailEntry(null), [])
     const onContinueFromDetail = useCallback((entry) => {
-        const { to, state } = resumeTarget(entry, browseTranslatedLang)
+        const { to, state } = resumeTarget(entry, browseTranslatedLang, MANGA_BASE)
         setDetailEntry(null); navigate(to, { state: state || undefined })
-    }, [browseTranslatedLang, navigate])
+    }, [browseTranslatedLang, MANGA_BASE, navigate])
 
     const onToggleSelect = useCallback((entry) => {
         const k = entryKey(entry)
@@ -839,7 +844,7 @@ export default function LifeSyncMangaLibrary() {
                                             syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
                                             onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
                                             onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
-                                            isLast={idx === visibleEntries.length - 1} />
+                                            isLast={idx === visibleEntries.length - 1} mangaBase={MANGA_BASE} />
                                     )
                                 })}
                             </AnimatePresence>
@@ -854,7 +859,7 @@ export default function LifeSyncMangaLibrary() {
                                             busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
                                             syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
                                             onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
-                                            onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail} />
+                                            onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail} mangaBase={MANGA_BASE} />
                                     )
                                 })}
                             </AnimatePresence>
@@ -878,7 +883,7 @@ export default function LifeSyncMangaLibrary() {
 
             {/* ── Modals ── */}
             <AnimatePresence>
-                {detailEntry && <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} browseTranslatedLang={browseTranslatedLang} />}
+                {detailEntry && <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} browseTranslatedLang={browseTranslatedLang} mangaBase={MANGA_BASE} />}
             </AnimatePresence>
             <AnimatePresence>
                 {deleteConfirm.isOpen && (

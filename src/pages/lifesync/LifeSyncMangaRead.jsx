@@ -12,7 +12,7 @@ import { readProgressQueueSync, writeProgressQueueSync } from '../../features/ma
 const MANGA_PROGRESS_LOCAL_SAVE_MS = 8000
 const MANGA_PROGRESS_REMOTE_FLUSH_DEBOUNCE_MS = 6000
 const MANGA_PROGRESS_FLUSH_BATCH = 16
-const MANGA_PROGRESS_SOURCES = new Set(['mangadistrict', 'roliascan'])
+const MANGA_PROGRESS_SOURCES = new Set(['mangadistrict', 'roliascan', 'manhuatop'])
 const MANGA_READER_INITIAL_PAGE_BURST = 4
 const MANGA_ZOOM_TRANSITION_MS = 180
 const MANGA_ZOOM_STEP = 10
@@ -71,6 +71,7 @@ function normalizeMangaSource(value) {
     const source = String(value || '').trim().toLowerCase()
     if (source === 'mangadistrict') return 'mangadistrict'
     if (source === 'roliascan') return 'roliascan'
+    if (source === 'manhuatop') return 'manhuatop'
     return ''
 }
 
@@ -204,7 +205,7 @@ function mangaImageProps(url) {
     try {
         const u = new URL(src, window.location.origin)
         const host = u.hostname || ''
-        if (host.includes('mangadistrict') || host.includes('roliascan')) {
+        if (host.includes('mangadistrict') || host.includes('roliascan') || host.includes('manhuatop')) {
             return { referrerPolicy: 'no-referrer' }
         }
     } catch {
@@ -242,10 +243,13 @@ export default function LifeSyncMangaRead() {
     const chapterId = useMemo(() => String(chapterIdParam || '').trim(), [chapterIdParam])
 
     const from = location.state?.from
+    const mangaHubBase = location.pathname.startsWith('/dashboard/lifesync/manga')
+        ? '/dashboard/lifesync/manga'
+        : '/dashboard/lifesync/anime/manga'
     const closeTo =
-        typeof from === 'string' && from.startsWith('/dashboard/lifesync/anime/manga')
+        typeof from === 'string' && (from.startsWith('/dashboard/lifesync/anime/manga') || from.startsWith('/dashboard/lifesync/manga'))
             ? from
-            : '/dashboard/lifesync/anime/manga'
+            : mangaHubBase
 
     const searchParams = useMemo(() => new URLSearchParams(location.search || ''), [location.search])
 
@@ -344,6 +348,8 @@ export default function LifeSyncMangaRead() {
                 ? 'mangadistrict'
                 : manga.source === 'roliascan'
                     ? 'roliascan'
+                    : manga.source === 'manhuatop'
+                        ? 'manhuatop'
                 : ''
         if (!sourceName) return null
         return sanitizeProgressPayload({
@@ -466,6 +472,17 @@ export default function LifeSyncMangaRead() {
                         setSortedChapters(list)
                         setChapter(ch)
                     }
+                } else if (source === 'manhuatop') {
+                    const data = await lifesyncFetch(`/api/v1/manga/manhuatop/info/${encodeURIComponent(mangaId)}?view=full`)
+                    const list = [...(data?.chapters || [])]
+                    list.sort(compareChapters)
+                    const ch = list.find(c => String(c?.id) === chapterId) || pickLatestChapter(list)
+                    if (!ch) throw new Error('No chapters available.')
+                    if (!cancelled) {
+                        setManga({ ...data, source: 'manhuatop' })
+                        setSortedChapters(list)
+                        setChapter(ch)
+                    }
                 }
             } catch (e) {
                 if (!cancelled) setError(e?.message || 'Could not open reader')
@@ -546,6 +563,8 @@ export default function LifeSyncMangaRead() {
                         ? `/api/v1/manga/mangadistrict/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
                         : manga.source === 'roliascan'
                             ? `/api/v1/manga/roliascan/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
+                            : manga.source === 'manhuatop'
+                                ? `/api/v1/manga/manhuatop/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
                         : `/api/v1/manga/pages/${chapter.id}`
             try {
                 const data = await lifesyncFetch(`${path}${path.includes('?') ? '&' : '?'}view=full`)
@@ -786,7 +805,7 @@ export default function LifeSyncMangaRead() {
         void flushReadingProgress({ queueFirst: true })
         setNavBusy(true)
         navigate(
-            `/dashboard/lifesync/anime/manga/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(ch.id))}${readerSearch}`,
+            `${mangaHubBase}/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(ch.id))}${readerSearch}`,
             {
                 replace: true,
                 state: {
@@ -797,7 +816,7 @@ export default function LifeSyncMangaRead() {
                 },
             },
         )
-    }, [browseTranslatedLang, closeTo, flushReadingProgress, location.state, mangaId, navBusy, navigate, persistCurrentProgressLocal, readerSearch, source])
+    }, [browseTranslatedLang, closeTo, flushReadingProgress, location.state, mangaHubBase, mangaId, navBusy, navigate, persistCurrentProgressLocal, readerSearch, source])
 
     const closeReader = useCallback(() => {
         persistCurrentProgressLocal()

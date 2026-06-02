@@ -160,7 +160,7 @@ function DetailDrawer({ entry, onClose, onContinue, onRemove, removeBusy }) {
                     <div className="h-1 w-10 rounded-full bg-(--color-border-soft)" />
                 </div>
                 <div className="flex gap-4 px-5 pt-4 pb-3">
-                    <div className="relative h-[88px] w-[60px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted)">
+                    <div className="relative h-[96px] w-[66px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted)">
                         {entry.imageUrl && (
                             <LifesyncEpisodeThumbnail
                                 src={entry.imageUrl}
@@ -176,13 +176,22 @@ function DetailDrawer({ entry, onClose, onContinue, onRemove, removeBusy }) {
                         )}
                     </div>
                     <div className="min-w-0 flex-1 pt-0.5">
-                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-primary">
-                            {complete ? 'Finished' : 'Watching'}
-                        </p>
-                        <h2 className="mt-0.5 line-clamp-3 text-[15px] font-bold leading-snug text-(--color-text-primary)">
+                        <div className="flex items-center gap-1.5">
+                            <span className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide ${
+                                complete ? 'bg-primary/15 text-primary' : 'bg-blue-500/10 text-blue-500'
+                            }`}>
+                                {complete ? <><IconCheck className="h-2.5 w-2.5" /> Finished</> : 'Watching'}
+                            </span>
+                        </div>
+                        <h2 className="mt-1 line-clamp-2 text-[15px] font-bold leading-snug text-(--color-text-primary)">
                             {title || 'Untitled'}
                         </h2>
-                        <p className="mt-1 text-[11px] text-(--color-text-secondary)">{relativeTouch(entry.updatedAt)}</p>
+                        <p className="mt-0.5 text-[11px] text-(--color-text-secondary)">{relativeTouch(entry.updatedAt)}</p>
+                        {total != null && (
+                            <p className="mt-0.5 text-[10px] font-semibold text-(--color-text-secondary) tabular-nums">
+                                {total} episodes total
+                            </p>
+                        )}
                     </div>
                     <button
                         type="button" onClick={onClose}
@@ -191,19 +200,32 @@ function DetailDrawer({ entry, onClose, onContinue, onRemove, removeBusy }) {
                         <IconX className="h-3 w-3" />
                     </button>
                 </div>
-                <div className="px-5 pb-4">
+                <div className="px-5 pb-4 space-y-2">
                     <div className="rounded-2xl bg-(--color-surface-muted) p-3.5 space-y-2.5">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] font-semibold text-(--color-text-secondary)">Episode progress</span>
-                            <span className="text-[11px] font-bold text-(--color-text-primary)">
+                            <span className="text-[11px] font-bold tabular-nums text-(--color-text-primary)">
                                 {current}{total != null ? ` / ${total}` : ''}{pct != null ? ` · ${pct}%` : ''}
                             </span>
                         </div>
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
                             <div
-                                className="h-full rounded-full bg-primary transition-all"
+                                className={`h-full rounded-full transition-all ${complete ? 'bg-primary/60' : 'bg-primary'}`}
                                 style={{ width: `${frac != null ? Math.round(frac * 100) : 30}%` }}
                             />
+                        </div>
+                    </div>
+                    {/* Status details row */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="rounded-xl bg-(--color-surface-muted) px-3 py-2">
+                            <p className="text-[9px] font-bold uppercase tracking-wide text-(--color-text-secondary)">Status</p>
+                            <p className={`mt-0.5 text-[12px] font-bold ${complete ? 'text-primary' : 'text-blue-500'}`}>
+                                {complete ? 'Completed' : 'Watching'}
+                            </p>
+                        </div>
+                        <div className="rounded-xl bg-(--color-surface-muted) px-3 py-2">
+                            <p className="text-[9px] font-bold uppercase tracking-wide text-(--color-text-secondary)">Last watched</p>
+                            <p className="mt-0.5 text-[12px] font-bold text-(--color-text-primary)">{relativeTouch(entry.updatedAt) || '—'}</p>
                         </div>
                     </div>
                 </div>
@@ -275,11 +297,14 @@ function FeedRow({ entry, onOpenDetail, onRemove, removeBusyKey, isLast }) {
 
             <button type="button" onClick={() => onOpenDetail(entry)} className="min-w-0 flex-1 text-left">
                 <p className="truncate text-[13px] font-semibold leading-snug text-(--color-text-primary)">{title || 'Untitled'}</p>
-                <div className="mt-0.5 flex items-center gap-2">
-                    <span className={`inline-flex h-[18px] items-center rounded-md px-1.5 text-[9px] font-bold uppercase tracking-wide ${
-                        complete ? 'bg-primary/15 text-primary' : 'bg-(--color-surface-soft) text-(--color-text-secondary) border border-(--color-border-soft)'
+                <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
+                    <span className={`inline-flex h-[18px] items-center gap-0.5 rounded-md px-1.5 text-[9px] font-bold uppercase tracking-wide ${
+                        complete ? 'bg-primary/15 text-primary' : 'bg-blue-500/10 text-blue-500'
                     }`}>
-                        {complete ? 'Done' : `Ep ${current}${total != null ? ` / ${total}` : ''}`}
+                        {complete ? <><IconCheck className="h-2 w-2" /> Done</> : 'Watching'}
+                    </span>
+                    <span className="inline-flex h-[18px] items-center rounded-md border border-(--color-border-soft) bg-(--color-surface-muted) px-1.5 text-[9px] font-semibold text-(--color-text-secondary) tabular-nums">
+                        Ep {current}{total != null ? ` / ${total}` : ''}
                     </span>
                     {rel && <span className="text-[10px] text-(--color-text-secondary)">{rel}</span>}
                 </div>
@@ -323,6 +348,7 @@ function GridCard({ entry, onOpenDetail, onRemove, removeBusyKey }) {
     const rel = relativeTouch(entry.updatedAt)
     const title = cleanAnimeTitle(entry.title)
     const busy = removeBusyKey === entryKey(entry)
+    const pct = frac != null ? Math.round(frac * 100) : null
 
     return (
         <motion.div
@@ -349,31 +375,32 @@ function GridCard({ entry, onOpenDetail, onRemove, removeBusyKey }) {
                         <IconPlay className="h-8 w-8" />
                     </div>
                 )}
-                <div className="absolute inset-0 bg-linear-to-t from-black/75 via-black/10 to-transparent" />
+                <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/15 to-transparent" />
 
-                {/* EP badge */}
-                <span className="absolute left-2 top-2 z-10 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm">
-                    EP {current}
+                {/* Status badge top-left */}
+                <span className={`absolute left-2 top-2 z-10 inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[9px] font-bold backdrop-blur-sm ${
+                    complete ? 'bg-primary/90 text-black' : 'bg-black/60 text-white'
+                }`}>
+                    {complete ? <><IconCheck className="h-2.5 w-2.5" /> Done</> : 'Watching'}
                 </span>
                 {rel && (
                     <span className="absolute right-2 top-2 z-10 rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] font-medium text-white/80 backdrop-blur-sm">
                         {rel}
                     </span>
                 )}
-                {complete && (
-                    <span className="absolute left-2 bottom-10 z-10 flex items-center gap-1 rounded-md bg-primary/90 px-1.5 py-0.5 text-[9px] font-bold text-black">
-                        <IconCheck className="h-2.5 w-2.5" /> Done
-                    </span>
-                )}
+                {/* Progress bar */}
                 {frac != null && (
-                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/20">
-                        <div className={`h-full ${complete ? 'bg-primary/60' : 'bg-primary'}`} style={{ width: `${Math.round(frac * 100)}%` }} />
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-black/30">
+                        <div className={`h-full transition-all ${complete ? 'bg-primary/70' : 'bg-primary'}`} style={{ width: `${Math.round(frac * 100)}%` }} />
                     </div>
                 )}
-                <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                <div className="absolute bottom-0 left-0 right-0 p-2.5 pb-3">
                     <h3 className="line-clamp-2 text-[12px] font-bold leading-snug text-white drop-shadow">
                         {title || 'Untitled'}
                     </h3>
+                    <p className="mt-0.5 text-[10px] font-semibold tabular-nums text-white/70">
+                        Ep {current}{total != null ? ` / ${total}` : ''}{pct != null ? ` · ${pct}%` : ''}
+                    </p>
                 </div>
 
                 {/* Remove on hover */}
@@ -389,8 +416,12 @@ function GridCard({ entry, onOpenDetail, onRemove, removeBusyKey }) {
             {/* Footer */}
             <div className="flex items-center gap-1.5 px-2.5 py-2 border-t border-(--color-border-soft)">
                 <div className="min-w-0 flex-1">
-                    <p className="text-[10px] text-(--color-text-secondary) tabular-nums">
+                    <p className="truncate text-[11px] font-semibold text-(--color-text-primary) leading-snug">
+                        {title || 'Untitled'}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-(--color-text-secondary) tabular-nums">
                         {complete ? 'Finished' : `Ep ${current}${total != null ? ` / ${total}` : ''}`}
+                        {rel ? ` · ${rel}` : ''}
                     </p>
                 </div>
                 <Link
@@ -423,7 +454,7 @@ export default function LifeSyncAnimeHistory() {
     const [sortBy, setSortBy] = useState('recent')
     const [query, setQuery] = useState('')
     const [detailEntry, setDetailEntry] = useState(null)
-    const [layout, setLayout] = useState('list') // 'list' | 'grid'
+    const [layout, setLayout] = useState('grid') // 'list' | 'grid'
 
     useEffect(() => {
         if (!isLifeSyncConnected) navigate('/dashboard/profile?tab=integrations', { replace: true })
