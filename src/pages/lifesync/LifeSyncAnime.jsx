@@ -5,6 +5,8 @@ import useControllerSupportEnabled from "../../hooks/useControllerSupportEnabled
 import useLifeSyncGamepadInput from "../../hooks/useLifeSyncGamepadInput";
 import { XBOX_GAMEPAD_BUTTONS } from "../../lib/lifeSyncControllerInput";
 import { ControllerHintBar } from "../../components/lifesync/ControllerHintOverlay";
+import { useFocusedCardScroll } from "../../hooks/useFocusedCardScroll";
+import { useHideCursorOnDpad } from "../../hooks/useHideCursorOnDpad";
 import {
   DetailWatchGridSkeleton,
   LifesyncTextLinesSkeleton,
@@ -578,6 +580,28 @@ function DetailWatchSection({ animeId, animeTitle, pic, animeStreamAudio, onPlay
     onPlayStream?.({ seriesKey: `anineko:${animeId}`, animeId, title: animeTitle, poster: pic || "", episodes: streamEps }, ep, i);
   }, [animeId, animeTitle, onPlayStream, pic, streamEps]);
 
+  const [focusedEpIndex, setFocusedEpIndex] = useState(-1);
+  const detailControllerEnabled = useControllerSupportEnabled();
+
+  const detailEpHandlers = useMemo(() => ({
+    [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => setFocusedEpIndex(prev => Math.max(0, prev <= 0 ? streamEps.length - 1 : prev - 1)),
+    [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => setFocusedEpIndex(prev => (prev + 1) % Math.max(1, streamEps.length)),
+    [XBOX_GAMEPAD_BUTTONS.A]: () => {
+      if (focusedEpIndex >= 0 && streamEps[focusedEpIndex]) openSeries(streamEps[focusedEpIndex], focusedEpIndex);
+    },
+  }), [focusedEpIndex, openSeries, streamEps]);
+
+  useLifeSyncGamepadInput({
+    enabled: detailControllerEnabled && streamEps.length > 0,
+    handlers: detailEpHandlers,
+    repeatableButtons: [XBOX_GAMEPAD_BUTTONS.DPAD_UP, XBOX_GAMEPAD_BUTTONS.DPAD_DOWN],
+  });
+
+  useEffect(() => {
+    if (focusedEpIndex < 0) return;
+    document.querySelector('[data-focused-ep="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [focusedEpIndex]);
+
   const isDarkTheme = typeof document !== "undefined" && document.documentElement?.dataset?.maxienTheme === "dark";
 
   return (
@@ -624,13 +648,16 @@ function DetailWatchSection({ animeId, animeTitle, pic, animeStreamAudio, onPlay
                     <button
                       key={ep.episodeId}
                       type="button"
+                      data-focused-ep={focusedEpIndex === i ? "true" : undefined}
                       onMouseEnter={warmStreamCatalog}
                       onFocus={warmStreamCatalog}
                       onClick={() => openSeries(ep, i)}
                       className={`group flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
-                        isResume
-                          ? "bg-primary/8 border border-primary/25 hover:bg-primary/12"
-                          : "border border-transparent hover:bg-(--color-surface-muted) hover:border-(--color-border-soft)"
+                        focusedEpIndex === i
+                          ? "bg-primary/10 border border-primary/50 ring-1 ring-primary/40"
+                          : isResume
+                            ? "bg-primary/8 border border-primary/25 hover:bg-primary/12"
+                            : "border border-transparent hover:bg-(--color-surface-muted) hover:border-(--color-border-soft)"
                       }`}
                     >
                       <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-(--color-surface-muted) text-[11px] font-bold tabular-nums text-(--color-text-secondary) group-hover:bg-primary group-hover:text-(--color-ink-strong) transition-colors">
@@ -989,6 +1016,13 @@ export default function LifeSyncAnime() {
   const [busy, setBusy] = useState(false);
   const [detailId, setDetailId] = useState(null);
   const [focusedCardIndex, setFocusedCardIndex] = useState(-1);
+  useFocusedCardScroll(focusedCardIndex);
+  useHideCursorOnDpad();
+  useEffect(() => {
+    const onMove = () => setFocusedCardIndex(-1);
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => window.removeEventListener('mousemove', onMove);
+  }, []);
   const searchInputRef = useRef(null);
   const controllerSupportEnabled = useControllerSupportEnabled();
 
@@ -1282,7 +1316,16 @@ export default function LifeSyncAnime() {
       const item = paginatedItems[focusedCardIndex];
       if (item?.node) goToDetail(item.node);
     },
-  }), [focusedCardIndex, goToDetail, goToPage, goToTab, layout, pager, paginatedItems, setLayout, tab]);
+    [XBOX_GAMEPAD_BUTTONS.B]: () => {
+      if (focusedCardIndex >= 0) {
+        setFocusedCardIndex(-1);
+      } else if (detailId) {
+        goToList({ replace: true });
+      } else {
+        navigate(-1);
+      }
+    },
+  }), [detailId, focusedCardIndex, goToDetail, goToList, goToPage, goToTab, layout, navigate, pager, paginatedItems, setLayout, tab]);
 
   useLifeSyncGamepadInput({
     enabled: controllerSupportEnabled && !detailId && tab !== "home",
@@ -1576,7 +1619,7 @@ export default function LifeSyncAnime() {
                           className="grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
                         >
                           {paginatedItems.map((item, i) => (
-                            <div key={item.node?.slug || item.node?.id || i} className={focusedCardIndex === i ? "rounded-2xl ring-2 ring-primary ring-offset-2" : ""}>
+                            <div key={item.node?.slug || item.node?.id || i} data-focused-card={focusedCardIndex === i ? "true" : undefined} className={focusedCardIndex === i ? "rounded-2xl ring-2 ring-primary ring-offset-2" : ""}>
                               <AnimeCard
                                 node={item.node}
                                 ranking={tab === "browse" ? item.ranking?.rank : undefined}
@@ -1593,7 +1636,7 @@ export default function LifeSyncAnime() {
                           className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)"
                         >
                           {paginatedItems.map((item, i) => (
-                            <div key={item.node?.slug || item.node?.id || i} className={focusedCardIndex === i ? "ring-2 ring-primary ring-inset" : ""}>
+                            <div key={item.node?.slug || item.node?.id || i} data-focused-card={focusedCardIndex === i ? "true" : undefined} className={focusedCardIndex === i ? "ring-2 ring-primary ring-inset" : ""}>
                               <AnimeRow
                                 node={item.node}
                                 ranking={tab === "browse" ? item.ranking?.rank : undefined}

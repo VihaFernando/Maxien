@@ -7,6 +7,8 @@ import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { ControllerHintBar } from '../../components/lifesync/ControllerHintOverlay'
+import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
+import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import {
     LifesyncChapterPagesSkeleton,
     LifesyncEpisodeThumbnail,
@@ -794,6 +796,36 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
         })
     }, [chapBusy, displayChapters, highlightedChapterId])
 
+    // D-pad chapter navigation — must be before early returns (rules of hooks)
+    const [focusedChIndex, setFocusedChIndex] = useState(-1)
+    const mangaDetailControllerEnabled = useControllerSupportEnabled()
+
+    const detailChHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () =>
+            setFocusedChIndex(prev => Math.max(0, prev <= 0 ? displayChapters.length - 1 : prev - 1)),
+        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () =>
+            setFocusedChIndex(prev => (prev + 1) % Math.max(1, displayChapters.length)),
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            const ch = displayChapters[focusedChIndex]
+            const d = detail || manga
+            const src = manga?.source || source
+            const mm = d ? { ...d, id: d.id || manga?.id, source: src } : null
+            if (focusedChIndex >= 0 && ch && mm) onStartRead(mm, ch)
+        },
+        [XBOX_GAMEPAD_BUTTONS.B]: () => { onClose?.() },
+    }), [detail, displayChapters, focusedChIndex, manga, onClose, onStartRead, source])
+
+    useLifeSyncGamepadInput({
+        enabled: mangaDetailControllerEnabled && Boolean(manga),
+        handlers: detailChHandlers,
+        repeatableButtons: [XBOX_GAMEPAD_BUTTONS.DPAD_UP, XBOX_GAMEPAD_BUTTONS.DPAD_DOWN],
+    })
+
+    useEffect(() => {
+        if (focusedChIndex < 0) return
+        document.querySelector('[data-focused-ep="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, [focusedChIndex])
+
     if (!manga) return null
 
     const coverLayoutId = mangaCoverLayoutId(manga.source || source, manga.id)
@@ -823,6 +855,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
     const isDarkTheme =
         typeof document !== 'undefined' &&
         document.documentElement?.dataset?.maxienTheme === 'dark'
+
     const heroFadeClass = blurDetailHero
         ? 'absolute inset-0 lifesync-detail-hero-fade-soft'
         : 'absolute inset-0 lifesync-detail-hero-fade-strong'
@@ -1157,19 +1190,23 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
                             ) : (
                                 <div className="overflow-hidden rounded-xl">
                                     <ul ref={chapterListRef} className="max-h-80 overflow-y-auto">
-                                        {displayChapters.map(ch => {
+                                        {displayChapters.map((ch, chIdx) => {
                                             const isCurrentChapter = highlightedChapterId && String(ch?.id || '') === highlightedChapterId
+                                            const isFocusedCh = focusedChIndex === chIdx
                                             return (
                                             <li key={ch.id}>
                                                 <button
                                                     ref={isCurrentChapter ? currentChapterButtonRef : null}
                                                     type="button"
+                                                    data-focused-ep={isFocusedCh ? 'true' : undefined}
                                                     onClick={() => onStartRead(mergedManga, ch)}
                                                     aria-current={isCurrentChapter ? 'true' : undefined}
                                                     className={`group flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left transition-colors ${
-                                                        isCurrentChapter
-                                                            ? 'bg-[var(--mx-color-c6ff00)]/18 ring-1 ring-[var(--mx-color-c6ff00)]/45'
-                                                            : 'hover:bg-[var(--mx-color-f5f5f7)]'
+                                                        isFocusedCh
+                                                            ? 'bg-[var(--mx-color-c6ff00)]/25 ring-2 ring-[var(--mx-color-c6ff00)]/70'
+                                                            : isCurrentChapter
+                                                                ? 'bg-[var(--mx-color-c6ff00)]/18 ring-1 ring-[var(--mx-color-c6ff00)]/45'
+                                                                : 'hover:bg-[var(--mx-color-f5f5f7)]'
                                                     }`}
                                                 >
                                                     <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold transition-colors ${
@@ -1324,6 +1361,13 @@ export default function LifeSyncManga() {
     const [busy, setBusy] = useState(false)
     const [selectedManga, setSelectedManga] = useState(null)
     const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
+    useFocusedCardScroll(focusedCardIndex)
+    useHideCursorOnDpad()
+    useEffect(() => {
+        const onMove = () => setFocusedCardIndex(-1)
+        window.addEventListener('mousemove', onMove, { passive: true })
+        return () => window.removeEventListener('mousemove', onMove)
+    }, [])
     const searchInputRef = useRef(null)
     const controllerSupportEnabled = useControllerSupportEnabled()
 
@@ -2681,7 +2725,16 @@ export default function LifeSyncManga() {
             const item = currentItems[focusedCardIndex]
             if (item) openMangaFromCard(item)
         },
-    }), [busy, currentItems, focusedCardIndex, goToPage, mangaCanNextPage, mangaCanPrevPage, mdCurPage, roliascanPage, source])
+        [XBOX_GAMEPAD_BUTTONS.B]: () => {
+            if (focusedCardIndex >= 0) {
+                setFocusedCardIndex(-1)
+            } else if (selectedManga) {
+                goToList({ replace: true })
+            } else {
+                navigate(-1)
+            }
+        },
+    }), [busy, currentItems, focusedCardIndex, goToPage, mangaCanNextPage, mangaCanPrevPage, mdCurPage, navigate, openMangaFromCard, roliascanPage, selectedManga, source])
 
     useLifeSyncGamepadInput({
         enabled: controllerSupportEnabled && !selectedManga,
@@ -3792,6 +3845,7 @@ export default function LifeSyncManga() {
                         {currentItems.map((manga, i) => (
                             <MotionDiv
                                 key={`${manga.source || source}-${manga.id || i}`}
+                                data-focused-card={focusedCardIndex === i ? 'true' : undefined}
                                 className={`min-h-0${focusedCardIndex === i ? ' rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}`}
                                 variants={lifeSyncStaggerItemFade}
                             >
@@ -3807,7 +3861,7 @@ export default function LifeSyncManga() {
                         transition={lifeSyncPageTransition}
                     >
                         {currentItems.map((manga, i) => (
-                            <div key={`${manga.source || source}-${manga.id || i}`} className={`min-h-0${focusedCardIndex === i ? ' rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}`}>
+                            <div key={`${manga.source || source}-${manga.id || i}`} data-focused-card={focusedCardIndex === i ? 'true' : undefined} className={`min-h-0${focusedCardIndex === i ? ' rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}`}>
                                 <MangaCard manga={{ ...manga, source: manga.source || source }} onClick={openMangaFromCard} />
                             </div>
                         ))}

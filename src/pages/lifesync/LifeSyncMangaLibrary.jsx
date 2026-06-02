@@ -7,6 +7,8 @@ import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { ControllerHintBar } from '../../components/lifesync/ControllerHintOverlay'
+import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
+import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
 import { mangaImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 import { LifesyncEpisodeThumbnail } from '../../components/lifesync/EpisodeLoadingSkeletons'
@@ -481,6 +483,13 @@ export default function LifeSyncMangaLibrary() {
     const [page, setPage] = useState(1)
     const [layout, setLayout] = useState('list')
     const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
+    useFocusedCardScroll(focusedCardIndex)
+    useHideCursorOnDpad()
+    useEffect(() => {
+        const onMove = () => setFocusedCardIndex(-1)
+        window.addEventListener('mousemove', onMove, { passive: true })
+        return () => window.removeEventListener('mousemove', onMove)
+    }, [])
     const controllerSupportEnabled = useControllerSupportEnabled()
 
     const [syncBusy, setSyncBusy] = useState(false)
@@ -661,7 +670,16 @@ export default function LifeSyncMangaLibrary() {
             const entry = visibleEntries[focusedCardIndex]
             if (entry) onOpenDetail(entry)
         },
-    }), [focusedCardIndex, layout, onOpenDetail, pageInfo?.hasMore, visibleEntries])
+        [XBOX_GAMEPAD_BUTTONS.B]: () => {
+            if (detailEntry) {
+                onCloseDetail()
+            } else if (focusedCardIndex >= 0) {
+                setFocusedCardIndex(-1)
+            } else {
+                navigate(-1)
+            }
+        },
+    }), [detailEntry, focusedCardIndex, layout, navigate, onCloseDetail, onOpenDetail, pageInfo?.hasMore, visibleEntries])
 
     useLifeSyncGamepadInput({
         enabled: controllerSupportEnabled && !detailEntry && !deleteConfirm.isOpen,
@@ -900,7 +918,7 @@ export default function LifeSyncMangaLibrary() {
                                 {visibleEntries.map((entry, idx) => {
                                     const k = entryKey(entry)
                                     return (
-                                        <div key={k} className={focusedCardIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}>
+                                        <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}>
                                             <MangaRow entry={entry} browseTranslatedLang={browseTranslatedLang}
                                                 busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
                                                 syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
@@ -918,7 +936,7 @@ export default function LifeSyncMangaLibrary() {
                                 {visibleEntries.map((entry, idx) => {
                                     const k = entryKey(entry)
                                     return (
-                                        <div key={k} className={focusedCardIndex === idx ? 'rounded-2xl ring-2 ring-primary ring-offset-2' : ''}>
+                                        <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'rounded-2xl ring-2 ring-primary ring-offset-2' : ''}>
                                             <MangaCard entry={entry} browseTranslatedLang={browseTranslatedLang}
                                                 busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
                                                 syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}

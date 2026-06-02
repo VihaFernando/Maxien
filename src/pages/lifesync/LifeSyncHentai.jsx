@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import AdvancedVideoPlayer from '../../components/lifesync/AdvancedVideoPlayer'
 import { FadeInImg } from '../../components/lifesync/FadeInImg'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
@@ -20,6 +20,8 @@ import {
 } from '../../lib/lifeSyncControllerInput'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
 import { ControllerHintBar, ControllerHintOverlay } from '../../components/lifesync/ControllerHintOverlay'
+import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
+import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lifeSyncDetailBodyRevealTransition, lifeSyncDetailOverlayFadeTransition, lifeSyncDetailSheetEnterAnimate, lifeSyncDetailSheetEnterInitial, lifeSyncDetailSheetExitVariant, lifeSyncDetailSheetMainTransition, lifeSyncDollyPageTransition, lifeSyncDollyPageVariants, lifeSyncSharedLayoutTransitionProps, MotionDiv } from '../../lib/lifesyncMotion'
 
 const WATCH_HENTAI_SITE = 'https://watchhentai.net'
@@ -787,6 +789,8 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
     const [detailBusy, setDetailBusy] = useState(() => Boolean(initialSlug))
     const [descExpanded, setDescExpanded] = useState(false)
     const [storyboardFailed, setStoryboardFailed] = useState(false)
+    const [focusedEpIndex, setFocusedEpIndex] = useState(-1)
+    const detailControllerEnabled = useControllerSupportEnabled()
 
     useEffect(() => {
         if (!series) return
@@ -806,6 +810,48 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
         return () => { cancelled = true }
     }, [series, source, onGenresLoaded])
 
+    // Derive episodes + playbackSeries before hooks so they can be used in handlers
+    const episodes = useMemo(() =>
+        Array.isArray(detail?.episodes) && detail?.episodes.length > 0
+            ? detail.episodes
+            : (series?.episodes || []),
+    [detail, series])
+
+    const playbackSeries = useMemo(() => ({
+        ...series,
+        posterUrl: detail?.coverUrl || series?.posterUrl,
+        episodes,
+        episodeCount: episodes.length,
+    }), [series, detail, episodes])
+
+    // D-pad episode navigation
+    const detailGamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+            setFocusedEpIndex(prev => Math.max(0, prev <= 0 ? episodes.length - 1 : prev - 1))
+        },
+        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+            setFocusedEpIndex(prev => (prev + 1) % Math.max(1, episodes.length))
+        },
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            if (focusedEpIndex >= 0 && episodes[focusedEpIndex]) {
+                onPlayEpisode(playbackSeries, episodes[focusedEpIndex], focusedEpIndex)
+            }
+        },
+        [XBOX_GAMEPAD_BUTTONS.B]: () => { onClose?.() },
+    }), [episodes, focusedEpIndex, onClose, onPlayEpisode, playbackSeries])
+
+    useLifeSyncGamepadInput({
+        enabled: detailControllerEnabled && Boolean(series),
+        handlers: detailGamepadHandlers,
+        repeatableButtons: [XBOX_GAMEPAD_BUTTONS.DPAD_UP, XBOX_GAMEPAD_BUTTONS.DPAD_DOWN],
+    })
+
+    useEffect(() => {
+        if (focusedEpIndex < 0) return
+        const el = document.querySelector('[data-focused-ep="true"]')
+        el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, [focusedEpIndex])
+
     useEffect(() => {
         const onKey = e => { if (e.key === 'Escape') onClose?.() }
         window.addEventListener('keydown', onKey)
@@ -824,21 +870,14 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
     const coverImg = detail?.coverUrl || series.posterUrl
     const description = detail?.description ? String(detail.description).replace(/<[^>]*>/g, '') : ''
     const genres = detail?.genres || []
-    const episodes = Array.isArray(detail?.episodes) && detail.episodes.length > 0 ? detail.episodes : (series.episodes || [])
     const episodeSkeletonCount = Math.min(12, Math.max(3, episodes.length || 6))
     const hentaiSlug = slugFromItem(detail) || slugFromItem(episodes[0] || series)
+    const storyboardBg = detail?.backdropUrl || detail?.backdropUrls?.[0] || null
     const randomWatchBackdrop = source === 'watchhentai'
         ? pickStableRandomBackdrop(detail?.backdropUrls, `${series.seriesKey || series.title}-${hentaiSlug}`)
         : null
-    const storyboardBg = detail?.backdropUrl || detail?.backdropUrls?.[0] || null
     const usingStoryboardBg = Boolean(source !== 'watchhentai' && storyboardBg && !storyboardFailed)
     const heroBackground = source === 'watchhentai' ? (randomWatchBackdrop || coverImg) : (usingStoryboardBg ? storyboardBg : coverImg)
-    const playbackSeries = {
-        ...series,
-        posterUrl: coverImg || series.posterUrl,
-        episodes,
-        episodeCount: episodes.length,
-    }
     const isDarkTheme =
         typeof document !== 'undefined' &&
         document.documentElement?.dataset?.maxienTheme === 'dark'
@@ -1000,8 +1039,9 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                                 <button
                                     key={ep.watchUrl || ep.slug || i}
                                     type="button"
+                                    data-focused-ep={focusedEpIndex === i ? 'true' : undefined}
                                     onClick={() => onPlayEpisode(playbackSeries, ep, i)}
-                                    className="group text-left overflow-hidden rounded-[14px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm hover:shadow-md hover:border-[var(--mx-color-c6ff00)]/40 transition-all"
+                                    className={`group text-left overflow-hidden rounded-[14px] border bg-[var(--color-surface)] shadow-sm hover:shadow-md transition-all ${focusedEpIndex === i ? 'border-[var(--mx-color-c6ff00)] ring-2 ring-[var(--mx-color-c6ff00)]/60' : 'border-[var(--mx-color-d2d2d7)]/50 hover:border-[var(--mx-color-c6ff00)]/40'}`}
                                 >
                                     <div className="relative aspect-video w-full overflow-hidden bg-[var(--mx-color-1d1d1f)]">
                                         {epThumbSrc ? (
@@ -1118,6 +1158,7 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
 /* ─── Main Component ───────────────────────────────────────────────────── */
 
 export default function LifeSyncHentai() {
+    const navigate = useNavigate()
     const { isLifeSyncConnected, lifeSyncUser, lifeSyncUpdatePreferences } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
     const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
@@ -1147,6 +1188,13 @@ export default function LifeSyncHentai() {
     const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
     const searchInputRef = useRef(null)
     const controllerSupportEnabledCatalog = useControllerSupportEnabled()
+    useFocusedCardScroll(focusedCardIndex)
+    useHideCursorOnDpad()
+    useEffect(() => {
+        const onMove = () => setFocusedCardIndex(-1)
+        window.addEventListener('mousemove', onMove, { passive: true })
+        return () => window.removeEventListener('mousemove', onMove)
+    }, [])
     useEffect(() => {
         pageMountedRef.current = true
         return () => {
@@ -1494,7 +1542,14 @@ export default function LifeSyncHentai() {
                 setSelectedSeries(item)
             }
         },
-    }), [busy, catalog?.hasMore, catalogCards.length, debouncedSearch, flatItems, focusedCardIndex, page, seriesList, useFlatOnly])
+        [XBOX_GAMEPAD_BUTTONS.B]: () => {
+            if (focusedCardIndex >= 0) {
+                setFocusedCardIndex(-1)
+            } else {
+                navigate(-1)
+            }
+        },
+    }), [busy, catalog?.hasMore, catalogCards.length, debouncedSearch, flatItems, focusedCardIndex, navigate, page, seriesList, useFlatOnly])
 
     useLifeSyncGamepadInput({
         enabled: controllerSupportEnabledCatalog && !selectedSeries && !playerState,
@@ -1832,7 +1887,7 @@ export default function LifeSyncHentai() {
                                 episodes: [item],
                             }
                             return (
-                                <div key={item.slug || item.watchUrl || i} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}>
+                                <div key={item.slug || item.watchUrl || i} data-focused-card={focusedCardIndex === i ? 'true' : undefined} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}>
                                     <SeriesCard series={wrappedSeries} onOpenDetail={setSelectedSeries} />
                                 </div>
                             )
@@ -1848,7 +1903,7 @@ export default function LifeSyncHentai() {
                 <>
                     <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
                         {seriesList.map((s, i) => (
-                            <div key={s.seriesKey || i} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}>
+                            <div key={s.seriesKey || i} data-focused-card={focusedCardIndex === i ? 'true' : undefined} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}>
                                 <SeriesCard series={s} onOpenDetail={ser => setSelectedSeries(ser)} />
                             </div>
                         ))}
