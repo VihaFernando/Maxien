@@ -34,7 +34,11 @@ function progressFingerprint(payload) {
     const pageRaw = Number(payload?.locator?.page)
     const page = Number.isFinite(pageRaw) && pageRaw > 0 ? Math.floor(pageRaw) : null
     const pct = normalizePercent(payload?.lastReadPercent ?? payload?.progressPct)
-    return JSON.stringify({ source, mangaId, chapterId, page, pct })
+    const readingStatus = String(payload?.readingStatus || '').trim() || null
+    const isPinned = payload?.isPinned != null ? Boolean(payload.isPinned) : null
+    const labels = Array.isArray(payload?.labels) ? [...payload.labels].sort().join(',') : ''
+    const note = String(payload?.note || '').trim()
+    return JSON.stringify({ source, mangaId, chapterId, page, pct, readingStatus, isPinned, labels, note })
 }
 
 function normalizePercent(value) {
