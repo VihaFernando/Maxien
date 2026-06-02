@@ -11,6 +11,7 @@ export const XBOX_GAMEPAD_BUTTONS = Object.freeze({
     DPAD_DOWN: 13,
     DPAD_LEFT: 14,
     DPAD_RIGHT: 15,
+    START: 9,
 })
 
 function focusIframeElement(iframeEl) {

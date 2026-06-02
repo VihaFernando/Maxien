@@ -20,6 +20,12 @@ import {
     FaUserShield,
 } from "react-icons/fa"
 import AIShortcutHint from "../components/AIShortcutHint"
+import { TVModeProvider } from "../context/TVModeContext"
+import { useTVModeContext } from "../hooks/useTVModeContext"
+import { TVModePortal } from "./lifesync/LifeSyncTVMode"
+import useControllerSupportEnabled from "../hooks/useControllerSupportEnabled"
+import useLifeSyncGamepadInput from "../hooks/useLifeSyncGamepadInput"
+import { XBOX_GAMEPAD_BUTTONS } from "../lib/lifeSyncControllerInput"
 
 const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-chat"))
 const openSpotlight = () => window.dispatchEvent(new CustomEvent("maxien:open-command-palette"))
@@ -52,7 +58,37 @@ function WorkplaceTabLink({ to, label, active, onClick }) {
     )
 }
 
+/** Listens for Start button and toggles TV mode. Must be inside TVModeProvider. */
+function TVStartButtonListener() {
+    const controllerEnabled = useControllerSupportEnabled()
+    const { tvActive, enterTV, exitTV } = useTVModeContext()
+    useLifeSyncGamepadInput({
+        enabled: controllerEnabled,
+        handlers: {
+            [XBOX_GAMEPAD_BUTTONS.START]: () => { if (tvActive) exitTV(); else void enterTV() },
+        },
+    })
+    return null
+}
+
+/** Renders the TV mode portal when active. Must be inside TVModeProvider. */
+function TVModeGate() {
+    const { tvActive, exitTV } = useTVModeContext()
+    if (!tvActive) return null
+    return <TVModePortal onExit={exitTV} />
+}
+
 export default function Dashboard() {
+    return (
+        <TVModeProvider>
+            <DashboardInner />
+            <TVStartButtonListener />
+            <TVModeGate />
+        </TVModeProvider>
+    )
+}
+
+function DashboardInner() {
     const { user, loading, signOut } = useAuth()
     const {
         lifeSyncLogout,
