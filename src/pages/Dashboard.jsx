@@ -90,8 +90,7 @@ export default function Dashboard() {
     const isLifeSyncRoute = location.pathname.startsWith("/dashboard/lifesync")
     const hideSidebarChrome =
         location.pathname.startsWith("/dashboard/lifesync/anime/anime/watch/") ||
-        location.pathname.startsWith("/dashboard/lifesync/anime/manga/read/") ||
-        location.pathname.startsWith("/dashboard/lifesync/manga/read/")
+        location.pathname.startsWith("/dashboard/lifesync/anime/manga/read/")
     const showLifeSyncSidebar = isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
     const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
     const lifeSyncSidebarSceneClass = lifeSyncGamesActive || lifeSyncAnimeActive ? "dashboard-sidebar-scene" : ""

@@ -5,7 +5,6 @@ import { mangaImageProps } from '../../lib/mangaChapterUtils'
 
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
-    if (source === 'manhuatop') return 'ManhuaTop'
     return source || 'Manga'
 }
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lifesyncFetch } from '../lib/lifesyncApi'
-import { useProgressSocket } from '../features/manga-progress/useProgressSocket'
 
 const EMPTY_SUMMARY = {
     total: 0,
@@ -9,7 +8,7 @@ const EMPTY_SUMMARY = {
     caughtUp: 0,
     seriesEnded: 0,
     pinned: 0,
-    sources: { mangadistrict: 0, roliascan: 0, manhuatop: 0 },
+    sources: { mangadistrict: 0, roliascan: 0 },
     statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
 }
 
@@ -50,7 +49,7 @@ function summarizeEntries(entries) {
         caughtUp: 0,
         seriesEnded: 0,
         pinned: 0,
-        sources: { mangadistrict: 0, roliascan: 0, manhuatop: 0 },
+        sources: { mangadistrict: 0, roliascan: 0 },
         statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
     }
     for (const entry of entries) {
@@ -138,28 +137,6 @@ function applyLocalPatch(entry, patch) {
     return next
 }
 
-function mergeSocketRows(existing, incomingRows) {
-    if (!Array.isArray(incomingRows) || incomingRows.length === 0) return existing
-    const updates = new Map()
-    for (const row of incomingRows) {
-        const key = entryKey(row)
-        if (!key || key === ':') continue
-        updates.set(key, row)
-    }
-    let changed = false
-    const next = existing.map((e) => {
-        const key = entryKey(e)
-        const incoming = updates.get(key)
-        if (!incoming) return e
-        const prevTime = e?.serverUpdatedAt ? new Date(e.serverUpdatedAt).getTime() : 0
-        const nextTime = incoming?.serverUpdatedAt ? new Date(incoming.serverUpdatedAt).getTime() : 0
-        if (nextTime <= prevTime) return e
-        changed = true
-        return { ...e, ...incoming }
-    })
-    return changed ? next : existing
-}
-
 function toProgressUpsertBody(entry, patch = {}) {
     const source = String(entry?.source || '').trim().toLowerCase()
     const mangaId = String(entry?.mangaId || '').trim()
@@ -212,26 +189,10 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
     const [error, setError] = useState('')
     const [initialLoading, setInitialLoading] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
-    const socketActiveRef = useRef(false)
 
     const entriesRef = useRef([])
     const requestIdRef = useRef(0)
     const queryString = useMemo(() => buildReadingQuery(filters || {}), [filters])
-
-    const handleBatchResult = useCallback((result) => {
-        if (!Array.isArray(result?.rows) || result.rows.length === 0) return
-        setEntries((prev) => {
-            const merged = mergeSocketRows(prev, result.rows)
-            if (merged !== prev) setSummary(summarizeEntries(merged))
-            return merged
-        })
-    }, [])
-
-    useProgressSocket({ enabled, onBatchResult: handleBatchResult })
-
-    useEffect(() => {
-        socketActiveRef.current = enabled
-    }, [enabled])
 
     useEffect(() => {
         entriesRef.current = entries
@@ -307,21 +268,17 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
 
     const removeEntry = useCallback(
         async (entry) => {
-            const bookId = String(entry?.bookId || `${entry?.source || ''}:${entry?.mangaId || ''}`)
-            // optimistically remove from local state immediately
-            setEntries((prev) => prev.filter((e) => entryKey(e) !== entryKey(entry)))
             await lifesyncFetch('/api/v1/progress/batch', {
                 method: 'POST',
                 json: {
                     items: [{
                         delete: true,
-                        bookId,
+                        bookId: String(entry?.bookId || `${entry?.source || ''}:${entry?.mangaId || ''}`),
                         source: entry?.source,
                         mangaId: entry?.mangaId,
                     }],
                 },
             })
-            // socket won't push rows for deletions, so refresh to reconcile
             await refresh()
         },
         [refresh],
@@ -341,8 +298,7 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
                 method: 'POST',
                 json: payload,
             })
-            // socket delivers the updated rows; only fall back to refresh if socket is not active
-            if (!socketActiveRef.current) await refresh()
+            await refresh()
             return result
         },
         [refresh],
@@ -364,7 +320,6 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
                 method: 'POST',
                 json: payload,
             })
-            // deletions are not pushed via socket, always refresh
             await refresh()
             return result
         },

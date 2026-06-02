@@ -556,20 +556,16 @@ function DetailWatchSection({ animeId, animeTitle, pic, animeStreamAudio, onPlay
 
   const streamEps = useMemo(() => normalizeStreamEpisodesForPlayer(streamData?.episodes), [streamData]);
 
-  const audioAvailability = useMemo(() => {
-    if (!streamEps.length) return { sub: null, dub: null, hsub: null };
-    let subSignal = false, dubSignal = false, hsubSignal = false;
-    let anySub = false, anyDub = false, anyHsub = false;
+  const dubAvailabilityLabel = useMemo(() => {
+    if (!streamEps.length) return "Dub: —";
+    let hasSignal = false, anyDub = false;
     for (const ep of streamEps) {
-      if (typeof ep?.hasSub === "boolean") { subSignal = true; if (ep.hasSub) anySub = true; }
-      if (typeof ep?.hasDub === "boolean") { dubSignal = true; if (ep.hasDub) anyDub = true; }
-      if (typeof ep?.hasHardSub === "boolean") { hsubSignal = true; if (ep.hasHardSub) anyHsub = true; }
+      if (typeof ep?.hasDub !== "boolean") continue;
+      hasSignal = true;
+      if (ep.hasDub) anyDub = true;
     }
-    return {
-      sub: subSignal ? anySub : null,
-      dub: dubSignal ? anyDub : null,
-      hsub: hsubSignal ? anyHsub : null,
-    };
+    if (!hasSignal) return "Dub: Unknown";
+    return anyDub ? "Dub: Available" : "Dub: Not available";
   }, [streamEps]);
 
   const resumeIndex = resumeLastEp != null ? streamEps.findIndex((e) => e.number === resumeLastEp) : -1;
@@ -584,22 +580,9 @@ function DetailWatchSection({ animeId, animeTitle, pic, animeStreamAudio, onPlay
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="text-[10px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Episodes</p>
-        {!streamBusy && (
-          <>
-            {audioAvailability.sub === true && (
-              <span className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-blue-400">SUB</span>
-            )}
-            {audioAvailability.dub === true && (
-              <span className="inline-flex items-center rounded-full border border-green-500/30 bg-green-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-green-400">DUB</span>
-            )}
-            {audioAvailability.hsub === true && (
-              <span className="inline-flex items-center rounded-full border border-purple-500/30 bg-purple-500/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-purple-400">HSUB</span>
-            )}
-            {audioAvailability.dub === false && audioAvailability.sub !== null && (
-              <span className="inline-flex items-center rounded-full border border-(--color-border-soft) bg-(--color-surface-muted) px-2 py-0.5 text-[9px] font-semibold text-(--color-text-secondary)">No Dub</span>
-            )}
-          </>
-        )}
+        <span className="inline-flex items-center rounded-full border border-(--color-border-soft) bg-(--color-surface) px-2 py-0.5 text-[10px] font-semibold text-(--color-text-secondary)">
+          {dubAvailabilityLabel}
+        </span>
       </div>
       <AnimatePresence mode="sync" initial={false}>
         {streamBusy ? (
@@ -676,15 +659,6 @@ function DetailWatchSection({ animeId, animeTitle, pic, animeStreamAudio, onPlay
 }
 
 // ── Detail panel ───────────────────────────────────────────────────────────────
-function cleanDetailTitle(raw) {
-  if (!raw) return "";
-  return String(raw)
-    .replace(/\s*[-–—]\s*Anime\s+Info\s*[-–—]\s*AniNeko\s*$/i, "")
-    .replace(/\s*[-–—]\s*AniNeko\s*$/i, "")
-    .replace(/\s+Anime\s+Info\s*$/i, "")
-    .trim();
-}
-
 function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview }) {
   const [data, setData] = useState(null);
   const [busy, setBusy] = useState(true);
@@ -790,7 +764,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
             </MotionDiv>
             <div className="min-w-0 flex-1 pb-1">
               <h2 className="wrap-anywhere line-clamp-3 text-[17px] font-bold leading-tight text-white drop-shadow sm:text-[20px]">
-                {cleanDetailTitle(data?.title) || cleanDetailTitle(preview?.title) || (busy ? "" : "Couldn't load details")}
+                {data?.title || preview?.title || (busy ? "" : "Couldn't load details")}
                 {busy && !preview?.title && <span className="inline-block h-5 w-48 animate-pulse rounded-md bg-white/20" />}
               </h2>
               {data?.altTitle && data.altTitle !== data.title && (
@@ -844,53 +818,8 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                 </div>
               )}
               <div className="border-b border-(--color-border-soft) px-5 py-4 sm:px-6">
-                <p className="mb-3 text-[9.5px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Details</p>
-                {/* Key stats row */}
-                <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {data.type && (
-                    <div className="rounded-xl bg-(--color-surface-muted) px-3 py-2.5">
-                      <p className="text-[9px] font-bold uppercase tracking-wide text-(--color-text-secondary)">Type</p>
-                      <p className="mt-0.5 text-[12px] font-bold text-(--color-text-primary)">{data.type}</p>
-                    </div>
-                  )}
-                  {data.status && (
-                    <div className="rounded-xl bg-(--color-surface-muted) px-3 py-2.5">
-                      <p className="text-[9px] font-bold uppercase tracking-wide text-(--color-text-secondary)">Status</p>
-                      <p className={`mt-0.5 text-[12px] font-bold ${data.status === "Ongoing" ? "text-green-500" : "text-(--color-text-primary)"}`}>{data.status}</p>
-                    </div>
-                  )}
-                  {data.release && (
-                    <div className="rounded-xl bg-(--color-surface-muted) px-3 py-2.5">
-                      <p className="text-[9px] font-bold uppercase tracking-wide text-(--color-text-secondary)">Release</p>
-                      <p className="mt-0.5 text-[12px] font-bold text-(--color-text-primary)">{data.release}</p>
-                    </div>
-                  )}
-                  {data.quality && (
-                    <div className="rounded-xl bg-(--color-surface-muted) px-3 py-2.5">
-                      <p className="text-[9px] font-bold uppercase tracking-wide text-(--color-text-secondary)">Quality</p>
-                      <p className="mt-0.5 text-[12px] font-bold text-primary">{data.quality}</p>
-                    </div>
-                  )}
-                </div>
-                {/* Availability badges */}
-                {(data.subCount != null || data.dubCount != null) && (
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    {data.subCount != null && (
-                      <div className="flex items-center gap-1.5 rounded-xl border border-blue-500/20 bg-blue-500/8 px-3 py-1.5">
-                        <span className="text-[9px] font-black uppercase tracking-wide text-blue-400">SUB</span>
-                        <span className="text-[12px] font-bold tabular-nums text-(--color-text-primary)">{data.subCount} eps</span>
-                      </div>
-                    )}
-                    {data.dubCount != null && (
-                      <div className="flex items-center gap-1.5 rounded-xl border border-green-500/20 bg-green-500/8 px-3 py-1.5">
-                        <span className="text-[9px] font-black uppercase tracking-wide text-green-400">DUB</span>
-                        <span className="text-[12px] font-bold tabular-nums text-(--color-text-primary)">{data.dubCount} eps</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* Secondary metadata */}
-                <div className="flex flex-col gap-1.5">
+                <p className="mb-3 text-[9.5px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Anime Info</p>
+                <div className="flex flex-col gap-2">
                   {data.japanese && (
                     <div className="flex gap-3">
                       <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Japanese</span>
@@ -899,8 +828,26 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                   )}
                   {Array.isArray(data.synonyms) && data.synonyms.length > 0 && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Also known as</span>
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Synonyms</span>
                       <span className="text-[11px] text-(--color-text-secondary) wrap-break-word min-w-0">{data.synonyms.join(", ")}</span>
+                    </div>
+                  )}
+                  {data.type && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Type</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.type}</span>
+                    </div>
+                  )}
+                  {data.status && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Status</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.status}</span>
+                    </div>
+                  )}
+                  {data.release && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Release</span>
+                      <span className="text-[11px] font-medium text-(--color-text-primary)">{data.release}</span>
                     </div>
                   )}
                   {data.duration && (
@@ -909,9 +856,23 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                       <span className="text-[11px] font-medium text-(--color-text-primary)">{data.duration}</span>
                     </div>
                   )}
+                  {data.quality && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Quality</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.quality}</span>
+                    </div>
+                  )}
+                  {(data.subCount != null || data.dubCount != null) && (
+                    <div className="flex gap-3">
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Episodes</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary)">
+                        {[data.subCount != null && `SUB ${data.subCount}`, data.dubCount != null && `DUB ${data.dubCount}`].filter(Boolean).join(" · ")}
+                      </span>
+                    </div>
+                  )}
                   {data.studios && data.studios !== "?" && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Studio</span>
+                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Studios</span>
                       <span className="text-[11px] font-medium text-(--color-text-primary)">{data.studios}</span>
                     </div>
                   )}
@@ -1006,8 +967,6 @@ export default function LifeSyncAnime() {
   const [latestItems, setLatestItems] = useState([]);
   const [latestPage, setLatestPage] = useState(1);
   const [latestHasNext, setLatestHasNext] = useState(false);
-  const [latestLastUpdated, setLatestLastUpdated] = useState(/** @type {Date|null} */ (null));
-  const [latestRefreshing, setLatestRefreshing] = useState(false);
   const [browseItems, setBrowseItems] = useState([]);
   const [browsePage, setBrowsePage] = useState(1);
   const [browseHasNext, setBrowseHasNext] = useState(false);
@@ -1190,22 +1149,8 @@ export default function LifeSyncAnime() {
       const data = await lifesyncFetch(`/api/v1/anime/latest?limit=${PAGE_SIZE}&page=${Math.max(1, latestPage)}`);
       if (!listFetchMountedRef.current) return;
       setLatestItems(data?.data || []); setLatestHasNext(Boolean(data?.paging?.next));
-      setLatestLastUpdated(new Date());
     } catch { /* ignore */ }
   }, [latestPage, nsfwContentEnabled]);
-
-  const refreshLatest = useCallback(async () => {
-    if (latestRefreshing) return;
-    setLatestRefreshing(true);
-    try {
-      const data = await lifesyncFetch(`/api/v1/anime/latest?limit=${PAGE_SIZE}&page=1`);
-      if (!listFetchMountedRef.current) return;
-      setLatestItems(data?.data || []); setLatestHasNext(Boolean(data?.paging?.next));
-      setLatestPage(1);
-      setLatestLastUpdated(new Date());
-    } catch { /* ignore */ }
-    finally { if (listFetchMountedRef.current) setLatestRefreshing(false); }
-  }, [latestRefreshing]);
 
   const loadBrowse = useCallback(async () => {
     try {
@@ -1547,27 +1492,6 @@ export default function LifeSyncAnime() {
               {/* ── PAGINATED TABS ──────────────────────────────────── */}
               {tab !== "home" && (
                 <>
-                  {/* Latest tab: refresh bar */}
-                  {tab === "latest" && (
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[11px] text-(--color-text-secondary)">
-                        {latestLastUpdated
-                          ? `Updated ${latestLastUpdated.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`
-                          : "Latest episodes"}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => void refreshLatest()}
-                        disabled={latestRefreshing}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
-                        aria-label="Refresh latest"
-                      >
-                        <svg className={`h-3.5 w-3.5 ${latestRefreshing ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
                   {busy && paginatedItems.length === 0 ? (
                     layout === "grid" ? <SkeletonGrid count={12} /> : <SkeletonList count={8} />
                   ) : paginatedItems.length > 0 ? (

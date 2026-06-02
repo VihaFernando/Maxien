@@ -47,7 +47,6 @@ function normalizeSource(value) {
     const source = String(value || '').trim().toLowerCase()
     if (source === 'mangadistrict') return 'mangadistrict'
     if (source === 'roliascan') return 'roliascan'
-    if (source === 'manhuatop') return 'manhuatop'
     return ''
 }
 

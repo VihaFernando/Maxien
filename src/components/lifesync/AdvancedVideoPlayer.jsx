@@ -36,7 +36,7 @@ export default function AdvancedVideoPlayer({
     onNextEpisode,
     canPrevEpisode = false,
     canNextEpisode = false,
-    autoPlay = true,
+    autoPlay = false,
     textTracks = [],
     /** @type {'none' | 'metadata' | 'auto'} */
     preload = 'metadata',
@@ -242,40 +242,6 @@ export default function AdvancedVideoPlayer({
             v.removeEventListener('leavepictureinpicture', onPipLeave)
         }
     }, [src])
-
-    useEffect(() => {
-        const v = videoRef.current
-        if (!v || !autoPlay) return
-        let cancelled = false
-
-        const tryPlay = () => {
-            if (cancelled || !v.paused) return
-            const maybePromise = v.play()
-            if (maybePromise && typeof maybePromise.catch === 'function') {
-                maybePromise.catch(() => {
-                    if (cancelled || !v.paused || v.muted) return
-                    // Browser policy often blocks unmuted autoplay; retry muted.
-                    v.muted = true
-                    const retry = v.play()
-                    if (retry && typeof retry.catch === 'function') {
-                        retry.catch(() => {})
-                    }
-                })
-            }
-        }
-
-        if (v.readyState >= 2) {
-            tryPlay()
-        }
-        v.addEventListener('loadedmetadata', tryPlay)
-        v.addEventListener('canplay', tryPlay)
-
-        return () => {
-            cancelled = true
-            v.removeEventListener('loadedmetadata', tryPlay)
-            v.removeEventListener('canplay', tryPlay)
-        }
-    }, [autoPlay, src, trackKey])
 
     const togglePlay = useCallback(() => {
         const v = videoRef.current
