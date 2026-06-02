@@ -212,8 +212,6 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
     const [error, setError] = useState('')
     const [initialLoading, setInitialLoading] = useState(false)
     const [refreshing, setRefreshing] = useState(false)
-    // Socket-driven sync job state — eliminates HTTP polling
-    const [syncJob, setSyncJob] = useState(null)
     const socketActiveRef = useRef(false)
 
     const entriesRef = useRef([])
@@ -229,11 +227,7 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
         })
     }, [])
 
-    const handleSyncJob = useCallback((job) => {
-        setSyncJob(job || null)
-    }, [])
-
-    useProgressSocket({ enabled, onBatchResult: handleBatchResult, onSyncJob: handleSyncJob })
+    useProgressSocket({ enabled, onBatchResult: handleBatchResult })
 
     useEffect(() => {
         socketActiveRef.current = enabled
@@ -296,25 +290,15 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
         async (entry, patch, opts = {}) => {
             const key = entryKey(entry)
             const optimistic = opts?.optimistic !== false
-            // snapshot before optimistic update for rollback
-            let snapshot = null
             if (optimistic) {
-                setEntries((prev) => {
-                    snapshot = prev.find((row) => entryKey(row) === key) || null
-                    return prev.map((row) => (entryKey(row) === key ? applyLocalPatch(row, patch) : row))
-                })
+                setEntries((prev) => prev.map((row) => (entryKey(row) === key ? applyLocalPatch(row, patch) : row)))
             }
             try {
                 const payload = toProgressUpsertBody(entry, patch)
                 if (!payload) throw new Error('Missing progress locator')
                 await lifesyncFetch('/api/v1/progress', { method: 'POST', json: payload })
             } catch (err) {
-                // roll back optimistic update to the snapshot
-                if (optimistic && snapshot) {
-                    setEntries((prev) => prev.map((row) => (entryKey(row) === key ? snapshot : row)))
-                } else {
-                    await refresh()
-                }
+                await refresh()
                 throw err
             }
         },
@@ -324,16 +308,20 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
     const removeEntry = useCallback(
         async (entry) => {
             const bookId = String(entry?.bookId || `${entry?.source || ''}:${entry?.mangaId || ''}`)
+            // optimistically remove from local state immediately
             setEntries((prev) => prev.filter((e) => entryKey(e) !== entryKey(entry)))
-            try {
-                await lifesyncFetch('/api/v1/progress/batch', {
-                    method: 'POST',
-                    json: { items: [{ delete: true, bookId, source: entry?.source, mangaId: entry?.mangaId }] },
-                })
-            } catch (err) {
-                await refresh()
-                throw err
-            }
+            await lifesyncFetch('/api/v1/progress/batch', {
+                method: 'POST',
+                json: {
+                    items: [{
+                        delete: true,
+                        bookId,
+                        source: entry?.source,
+                        mangaId: entry?.mangaId,
+                    }],
+                },
+            })
+            // socket won't push rows for deletions, so refresh to reconcile
             await refresh()
         },
         [refresh],
@@ -343,19 +331,19 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
         async (items, patch) => {
             const rows = Array.isArray(items) ? items : []
             if (rows.length === 0) return { matched: 0, modified: 0 }
-            // optimistic update for immediate feedback
-            const patchedKeys = new Set(rows.map(entryKey))
-            setEntries((prev) => prev.map((row) => patchedKeys.has(entryKey(row)) ? applyLocalPatch(row, patch) : row))
-            const payload = { items: rows.map((row) => toProgressUpsertBody(row, patch)).filter(Boolean) }
-            if (!payload.items.length) return { matched: 0, modified: 0 }
-            try {
-                const result = await lifesyncFetch('/api/v1/progress/batch', { method: 'POST', json: payload })
-                if (!socketActiveRef.current) await refresh()
-                return result
-            } catch (err) {
-                await refresh()
-                throw err
+            const payload = {
+                items: rows
+                    .map((row) => toProgressUpsertBody(row, patch))
+                    .filter(Boolean),
             }
+            if (!payload.items.length) return { matched: 0, modified: 0 }
+            const result = await lifesyncFetch('/api/v1/progress/batch', {
+                method: 'POST',
+                json: payload,
+            })
+            // socket delivers the updated rows; only fall back to refresh if socket is not active
+            if (!socketActiveRef.current) await refresh()
+            return result
         },
         [refresh],
     )
@@ -364,8 +352,6 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
         async (items) => {
             const rows = Array.isArray(items) ? items : []
             if (rows.length === 0) return { deleted: 0 }
-            const deletedKeys = new Set(rows.map(entryKey))
-            setEntries((prev) => prev.filter((e) => !deletedKeys.has(entryKey(e))))
             const payload = {
                 items: rows.map((row) => ({
                     delete: true,
@@ -374,14 +360,13 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
                     mangaId: row.mangaId,
                 })),
             }
-            try {
-                const result = await lifesyncFetch('/api/v1/progress/batch', { method: 'POST', json: payload })
-                await refresh()
-                return result
-            } catch (err) {
-                await refresh()
-                throw err
-            }
+            const result = await lifesyncFetch('/api/v1/progress/batch', {
+                method: 'POST',
+                json: payload,
+            })
+            // deletions are not pushed via socket, always refresh
+            await refresh()
+            return result
         },
         [refresh],
     )
@@ -403,7 +388,6 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
         loading: initialLoading || refreshing,
         initialLoading,
         refreshing,
-        syncJob,
         refresh,
         patchEntry,
         removeEntry,

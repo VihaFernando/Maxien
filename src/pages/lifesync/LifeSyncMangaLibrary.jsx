@@ -100,16 +100,6 @@ const IconAlert = ({ className = 'h-4 w-4' }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
     </svg>
 )
-const IconPin = ({ className = 'h-3.5 w-3.5', filled = false }) => (
-    <svg className={className} fill={filled ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-    </svg>
-)
-const IconNote = ({ className = 'h-3.5 w-3.5' }) => (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-    </svg>
-)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function sourceLabel(source) {
@@ -219,108 +209,18 @@ function StatusSelect({ value, onChange, disabled, className = '' }) {
     )
 }
 
-// ─── Label pill editor ────────────────────────────────────────────────────────
-function LabelEditor({ labels = [], onChange, disabled }) {
-    const [input, setInput] = useState('')
-
-    const addLabel = useCallback((raw) => {
-        const text = String(raw || '').trim().slice(0, 30)
-        if (!text) return
-        const next = [...new Set([...labels, text])].slice(0, 12)
-        onChange(next)
-        setInput('')
-    }, [labels, onChange])
-
-    const removeLabel = useCallback((label) => {
-        onChange(labels.filter((l) => l !== label))
-    }, [labels, onChange])
-
-    const onKeyDown = useCallback((e) => {
-        if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addLabel(input) }
-        if (e.key === 'Backspace' && !input && labels.length > 0) removeLabel(labels[labels.length - 1])
-    }, [addLabel, input, labels, removeLabel])
-
-    return (
-        <div className="flex flex-wrap gap-1.5">
-            {labels.map((l) => (
-                <span key={l} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
-                    {l}
-                    {!disabled && (
-                        <button type="button" onClick={() => removeLabel(l)} className="text-primary/60 hover:text-primary transition">
-                            <IconX className="h-2.5 w-2.5" />
-                        </button>
-                    )}
-                </span>
-            ))}
-            {!disabled && labels.length < 12 && (
-                <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={onKeyDown}
-                    onBlur={() => addLabel(input)}
-                    placeholder="Add label…"
-                    className="min-w-[80px] flex-1 rounded-full border border-(--color-border-soft) bg-(--color-surface) px-2.5 py-0.5 text-[11px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:outline-none"
-                />
-            )}
-        </div>
-    )
-}
-
 // ─── Detail drawer ────────────────────────────────────────────────────────────
-function DetailDrawer({ entry, onClose, onContinue, onPatch, browseTranslatedLang, mangaBase }) {
+function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang, mangaBase }) {
     if (!entry) return null
     const snap = chapterSnapshot(entry)
     const heroUrl = entry.backgroundImageUrl || entry.coverUrl || ''
     const releaseDate = latestChapterDate(entry)
 
-    const [editStatus, setEditStatus] = useState(entry.readingStatus || '')
-    const [editPinned, setEditPinned] = useState(Boolean(entry.isPinned))
-    const [editLabels, setEditLabels] = useState(Array.isArray(entry.labels) ? [...entry.labels] : [])
-    const [editNote, setEditNote] = useState(String(entry.note || ''))
-    const [saving, setSaving] = useState(false)
-    const [activeTab, setActiveTab] = useState('info')
-
-    // Reset edit state when switching to a different entry
-    const entryId = entry.bookId || entryKey(entry)
     useEffect(() => {
-        setEditStatus(entry.readingStatus || '')
-        setEditPinned(Boolean(entry.isPinned))
-        setEditLabels(Array.isArray(entry.labels) ? [...entry.labels] : [])
-        setEditNote(String(entry.note || ''))
-        setActiveTab('info')
-    }, [entryId]) // eslint-disable-line react-hooks/exhaustive-deps
-
-    const isDirty = editStatus !== (entry.readingStatus || '') ||
-        editPinned !== Boolean(entry.isPinned) ||
-        JSON.stringify(editLabels) !== JSON.stringify(Array.isArray(entry.labels) ? entry.labels : []) ||
-        editNote !== String(entry.note || '')
-
-    const onSave = useCallback(async () => {
-        if (!isDirty || saving) return
-        setSaving(true)
-        try {
-            await onPatch(entry, {
-                readingStatus: editStatus || null,
-                isPinned: editPinned,
-                labels: editLabels,
-                note: editNote || null,
-            })
-            setActiveTab('info')
-        } finally {
-            setSaving(false)
-        }
-    }, [entry, editLabels, editNote, editPinned, editStatus, isDirty, onPatch, saving])
-
-    useEffect(() => {
-        const fn = (e) => {
-            if (e.key === 'Escape') {
-                if (activeTab === 'edit') setActiveTab('info')
-                else onClose()
-            }
-        }
+        const fn = (e) => { if (e.key === 'Escape') onClose() }
         window.addEventListener('keydown', fn)
         return () => window.removeEventListener('keydown', fn)
-    }, [activeTab, onClose])
+    }, [onClose])
 
     return (
         <MotionDiv
@@ -337,147 +237,49 @@ function DetailDrawer({ entry, onClose, onContinue, onPatch, browseTranslatedLan
                 <div className="flex justify-center pt-3 pb-1 sm:hidden">
                     <div className="h-1 w-10 rounded-full bg-(--color-border-soft)" />
                 </div>
-
                 {/* Cover + meta */}
                 <div className="flex gap-4 px-5 pt-4 pb-3">
                     <div className="relative h-[88px] w-[60px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted)">
-                        {heroUrl && (
-                            <LifesyncEpisodeThumbnail src={heroUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover" imgProps={mangaImageProps(heroUrl)} />
+                        {entry.coverUrl && (
+                            <LifesyncEpisodeThumbnail src={entry.coverUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover" imgProps={mangaImageProps(entry.coverUrl)} />
                         )}
                     </div>
                     <div className="min-w-0 flex-1 pt-0.5">
                         <p className="text-[9px] font-black uppercase tracking-[0.18em] text-primary">{sourceLabel(entry.source)}</p>
-                        <h2 className="mt-0.5 line-clamp-2 text-[15px] font-bold leading-snug text-(--color-text-primary)">{decodeHtmlEntities(entry.title) || 'Untitled'}</h2>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                            {entry.isPinned && <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"><IconPin className="h-2.5 w-2.5" filled /> Pinned</span>}
-                            {entry.hasNewChapter && <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">New chapter</span>}
-                            {entry.seriesEnded && <span className="rounded-full bg-(--color-surface-muted) px-2 py-0.5 text-[10px] font-bold text-(--color-text-secondary)">Series ended</span>}
-                            {entry.caughtUp && !entry.hasNewChapter && <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 dark:bg-green-900/30 dark:text-green-300">Caught up</span>}
-                        </div>
+                        <h2 className="mt-0.5 line-clamp-3 text-[15px] font-bold leading-snug text-(--color-text-primary)">{decodeHtmlEntities(entry.title) || 'Untitled'}</h2>
+                        <p className="mt-1 text-[10px] text-(--color-text-secondary)">{statusLabel(entry.readingStatus)}</p>
                     </div>
                     <button type="button" onClick={onClose} className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-(--color-surface-muted) text-(--color-text-secondary) hover:text-(--color-text-primary) transition">
                         <IconX className="h-3 w-3" />
                     </button>
                 </div>
-
-                {/* Tabs */}
-                <div className="flex gap-0.5 border-b border-(--color-border-soft) px-5">
-                    {[{ id: 'info', label: 'Info' }, { id: 'edit', label: 'Edit' }].map((tab) => (
-                        <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)}
-                            className={`pb-2 px-3 text-[12px] font-semibold border-b-2 transition -mb-px ${activeTab === tab.id ? 'border-primary text-(--color-text-primary)' : 'border-transparent text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-
-                {activeTab === 'info' ? (
-                    <>
-                        {/* Progress */}
-                        <div className="px-5 pt-4 pb-3">
-                            <div className="rounded-2xl bg-(--color-surface-muted) p-3.5 space-y-2">
-                                <div className="flex items-center justify-between text-[11px]">
-                                    <span className="font-semibold text-(--color-text-secondary)">Chapter progress</span>
-                                    <span className="font-bold text-(--color-text-primary)">{snap.currentLabel} / {snap.latestLabel}</span>
-                                </div>
-                                <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
-                                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${snap.percent}%` }} />
-                                </div>
-                                <div className="flex justify-between text-[10px] text-(--color-text-secondary)">
-                                    <span>{snap.percent}% through series</span>
-                                    {releaseDate && <span>Latest: {formatDateLabel(releaseDate)}</span>}
-                                </div>
-                            </div>
+                {/* Progress */}
+                <div className="px-5 pb-3">
+                    <div className="rounded-2xl bg-(--color-surface-muted) p-3.5 space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-semibold text-(--color-text-secondary)">Chapter progress</span>
+                            <span className="font-bold text-(--color-text-primary)">{snap.currentLabel} / {snap.latestLabel}</span>
                         </div>
-
-                        {/* Status + meta */}
-                        <div className="px-5 pb-3 space-y-2">
-                            <div className="flex items-center justify-between text-[11px]">
-                                <span className="font-semibold text-(--color-text-secondary)">Status</span>
-                                <span className="font-medium text-(--color-text-primary)">{statusLabel(entry.readingStatus)}</span>
-                            </div>
-                            {Array.isArray(entry.labels) && entry.labels.length > 0 && (
-                                <div className="flex flex-wrap gap-1">
-                                    {entry.labels.map((l) => (
-                                        <span key={l} className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{l}</span>
-                                    ))}
-                                </div>
-                            )}
-                            {entry.note && (
-                                <p className="text-[11px] text-(--color-text-secondary) line-clamp-3 italic">"{entry.note}"</p>
-                            )}
-                            {(entry.lastOpenedAt || entry.updatedAt) && (
-                                <p className="text-[10px] text-(--color-text-secondary)">Last read {relativeTouch(entry.lastOpenedAt || entry.updatedAt)}</p>
-                            )}
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
+                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${snap.percent}%` }} />
                         </div>
-
-                        {/* Actions */}
-                        <div className="flex gap-2.5 px-5 pb-6">
-                            <button type="button" onClick={() => onContinue(entry)}
-                                className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-black transition hover:brightness-95 active:scale-[0.98]">
-                                <IconBook className="h-4 w-4" /> Continue
-                            </button>
-                            <button type="button" onClick={() => setActiveTab('edit')}
-                                className="flex min-h-12 w-12 items-center justify-center rounded-2xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
-                                <IconNote className="h-4 w-4" />
-                            </button>
-                            <Link to={mangaBase || '/dashboard/lifesync/anime/manga'}
-                                className="flex min-h-12 items-center justify-center rounded-2xl border border-(--color-border-soft) px-4 text-[13px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
-                                Browse
-                            </Link>
-                        </div>
-                    </>
-                ) : (
-                    <div className="px-5 pt-4 pb-6 space-y-4">
-                        {/* Status */}
-                        <div>
-                            <label className="mb-1.5 block text-[11px] font-semibold text-(--color-text-secondary)">Reading status</label>
-                            <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}
-                                className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[13px] text-(--color-text-primary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 transition">
-                                <option value="">No status</option>
-                                {STATUS_OPTIONS.filter((o) => o.id !== 'all').map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                            </select>
-                        </div>
-
-                        {/* Pin toggle */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-[13px] font-semibold text-(--color-text-primary)">Pin to top</span>
-                            <button type="button" onClick={() => setEditPinned((p) => !p)}
-                                className={`flex h-6 w-11 items-center rounded-full transition-colors ${editPinned ? 'bg-amber-400' : 'bg-(--color-border-soft)'}`}>
-                                <span className={`mx-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-150 ${editPinned ? 'translate-x-5' : 'translate-x-0'}`} />
-                            </button>
-                        </div>
-
-                        {/* Labels */}
-                        <div>
-                            <label className="mb-1.5 block text-[11px] font-semibold text-(--color-text-secondary)">Labels <span className="font-normal">(max 12, press Enter to add)</span></label>
-                            <LabelEditor labels={editLabels} onChange={setEditLabels} disabled={saving} />
-                        </div>
-
-                        {/* Note */}
-                        <div>
-                            <label className="mb-1.5 block text-[11px] font-semibold text-(--color-text-secondary)">Personal note</label>
-                            <textarea
-                                value={editNote}
-                                onChange={(e) => setEditNote(e.target.value.slice(0, 300))}
-                                rows={3}
-                                placeholder="Add a personal note about this series…"
-                                className="w-full resize-none rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 py-2 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 transition"
-                            />
-                            <p className="mt-0.5 text-right text-[10px] text-(--color-text-secondary)">{editNote.length}/300</p>
-                        </div>
-
-                        <div className="flex gap-2">
-                            <button type="button" onClick={() => setActiveTab('info')}
-                                className="flex-1 min-h-10 rounded-2xl border border-(--color-border-soft) text-[13px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
-                                Cancel
-                            </button>
-                            <button type="button" onClick={onSave} disabled={!isDirty || saving}
-                                className="flex-1 min-h-10 rounded-2xl bg-primary text-[13px] font-bold text-black transition hover:brightness-95 disabled:opacity-40">
-                                {saving ? 'Saving…' : 'Save changes'}
-                            </button>
+                        <div className="flex justify-between text-[10px] text-(--color-text-secondary)">
+                            <span>{snap.percent}% complete</span>
+                            {releaseDate && <span>Latest: {formatDateLabel(releaseDate)}</span>}
                         </div>
                     </div>
-                )}
+                </div>
+                {/* Actions */}
+                <div className="flex gap-2.5 px-5 pb-6">
+                    <button type="button" onClick={() => onContinue(entry)}
+                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-black transition hover:brightness-95 active:scale-[0.98]">
+                        <IconBook className="h-4 w-4" /> Continue
+                    </button>
+                    <Link to={mangaBase || '/dashboard/lifesync/anime/manga'}
+                        className="flex min-h-12 items-center justify-center rounded-2xl border border-(--color-border-soft) px-4 text-[13px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
+                        Browse
+                    </Link>
+                </div>
             </MotionDiv>
         </MotionDiv>
     )
@@ -506,9 +308,9 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
 }
 
 // ─── List row ─────────────────────────────────────────────────────────────────
-function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onPinToggle, onRequestRemove, onOpenDetail, isLast, mangaBase }) {
+function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onRequestRemove, onOpenDetail, isLast, mangaBase }) {
     const snap = chapterSnapshot(entry)
-    const rel = relativeTouch(entry.lastOpenedAt || entry.updatedAt)
+    const rel = relativeTouch(entry.updatedAt)
     const title = decodeHtmlEntities(entry.title) || 'Untitled'
     const chip = syncState ? syncStateChip(syncState) : null
 
@@ -518,7 +320,7 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
             transition={{ type: 'tween', duration: 0.18, ease: lifeSyncEaseOut }}
             className={`group relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-(--color-surface-muted) ${!isLast ? 'border-b border-(--color-border-soft)' : ''}`}
         >
-            {/* Select */}
+            {/* Select checkbox */}
             <button type="button" onClick={() => onToggleSelect(entry)}
                 className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${selected ? 'border-primary bg-primary text-(--color-ink-strong)' : 'border-(--color-border-strong) bg-(--color-surface) hover:border-primary'}`}
                 aria-label={selected ? 'Deselect' : 'Select'}>
@@ -536,37 +338,25 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
                 {entry.hasNewChapter && (
                     <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-(--color-surface)" />
                 )}
-                {entry.isPinned && (
-                    <span className="absolute left-0.5 top-0.5 text-amber-400 drop-shadow"><IconPin className="h-2.5 w-2.5" filled /></span>
-                )}
             </button>
 
             {/* Info */}
             <button type="button" onClick={() => onOpenDetail(entry)} className="min-w-0 flex-1 text-left">
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1.5">
                     <p className="truncate text-[13px] font-semibold leading-snug text-(--color-text-primary)">{title}</p>
                     {chip && <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${chip.cls}`}>{chip.label}</span>}
-                    {entry.hasNewChapter && !chip && <span className="shrink-0 rounded-full bg-primary/15 px-1.5 py-0.5 text-[9px] font-bold text-primary">New</span>}
                 </div>
-                <div className="mt-0.5 flex items-center gap-2 flex-wrap">
+                <div className="mt-0.5 flex items-center gap-2">
                     <span className="text-[10px] text-(--color-text-secondary)">{snap.currentLabel} / {snap.latestLabel}</span>
                     {rel && <span className="text-[10px] text-(--color-text-secondary)">· {rel}</span>}
-                    {Array.isArray(entry.labels) && entry.labels.slice(0, 2).map((l) => (
-                        <span key={l} className="rounded-full bg-primary/10 px-1.5 py-px text-[9px] font-semibold text-primary">{l}</span>
-                    ))}
                 </div>
                 <div className="mt-1.5 h-[3px] w-full overflow-hidden rounded-full bg-(--color-border-soft)">
-                    <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${snap.percent}%` }} />
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${snap.percent}%` }} />
                 </div>
             </button>
 
             {/* Actions */}
             <div className="flex shrink-0 items-center gap-1.5 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-                <button type="button" onClick={() => onPinToggle(entry)} disabled={busy}
-                    className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${entry.isPinned ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20' : 'text-(--color-text-secondary) hover:bg-(--color-surface-muted)'} disabled:opacity-30`}
-                    aria-label={entry.isPinned ? 'Unpin' : 'Pin'}>
-                    <IconPin className="h-3.5 w-3.5" filled={Boolean(entry.isPinned)} />
-                </button>
                 <StatusSelect value={entry.readingStatus} onChange={(v) => onStatusChange(entry, v)} disabled={busy} className="h-8 min-w-[84px]" />
                 <button type="button" onClick={() => onRequestRemove(entry)} disabled={removeBusy}
                     className="flex h-8 w-8 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-red-50 hover:text-red-500 disabled:opacity-30 dark:hover:bg-red-900/20"
@@ -611,9 +401,7 @@ function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, s
                     {selected && <IconCheck className="h-2.5 w-2.5" />}
                 </button>
 
-                {/* Badges */}
-                {entry.isPinned && <span className="absolute right-2 top-2 z-10 text-amber-400 drop-shadow"><IconPin className="h-3.5 w-3.5" filled /></span>}
-                {entry.hasNewChapter && !entry.isPinned && (
+                {entry.hasNewChapter && (
                     <span className="absolute right-2 top-2 z-10 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-(--color-ink-strong)">New</span>
                 )}
                 {chip && (
@@ -630,12 +418,11 @@ function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, s
                 <div className="absolute bottom-0 left-0 right-0">
                     {snap.percent > 0 && (
                         <div className="h-[3px] bg-black/20">
-                            <div className="h-full bg-primary transition-all duration-300" style={{ width: `${snap.percent}%` }} />
+                            <div className="h-full bg-primary" style={{ width: `${snap.percent}%` }} />
                         </div>
                     )}
-                    <div className="p-2.5 pt-1.5">
+                    <div className="p-2.5">
                         <h3 className="line-clamp-2 text-[12px] font-bold leading-snug text-white drop-shadow">{title}</h3>
-                        <p className="text-[9px] text-white/60 mt-0.5">{snap.currentLabel}{snap.latestLabel !== '—' ? ` / ${snap.latestLabel}` : ''}</p>
                     </div>
                 </div>
             </button>
@@ -643,11 +430,7 @@ function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, s
             {/* Footer */}
             <div className="flex items-center gap-1.5 border-t border-(--color-border-soft) px-2.5 py-2">
                 <div className="min-w-0 flex-1">
-                    {Array.isArray(entry.labels) && entry.labels.length > 0 ? (
-                        <span className="truncate text-[9px] font-semibold text-primary">{entry.labels[0]}{entry.labels.length > 1 ? ` +${entry.labels.length - 1}` : ''}</span>
-                    ) : (
-                        <p className="truncate text-[9px] text-(--color-text-secondary)">{snap.percent > 0 ? `${snap.percent}%` : sourceLabel(entry.source)}</p>
-                    )}
+                    <p className="truncate text-[9px] text-(--color-text-secondary)">{snap.currentLabel}</p>
                 </div>
                 <StatusSelect value={entry.readingStatus} onChange={(v) => onStatusChange(entry, v)} disabled={busy} className="h-6 min-w-[60px] text-[9px]" />
                 <Link to={to} state={state} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95" aria-label="Continue reading">
@@ -699,11 +482,12 @@ export default function LifeSyncMangaLibrary() {
     const [page, setPage] = useState(1)
     const [layout, setLayout] = useState('list')
 
-    // Sync state — driven by socket progress:sync events, no HTTP polling
     const [syncBusy, setSyncBusy] = useState(false)
     const [syncError, setSyncError] = useState('')
     const [syncScope, setSyncScope] = useState('needs_sync')
+    const [syncJob, setSyncJob] = useState(null)
     const [syncDismissed, setSyncDismissed] = useState(false)
+    const syncPollRef = useRef(null)
     const syncDismissTimerRef = useRef(null)
 
     const [actionBusyKeys, setActionBusyKeys] = useState(() => new Set())
@@ -725,30 +509,7 @@ export default function LifeSyncMangaLibrary() {
 
     const listFilters = useMemo(() => ({ q: query, source: sourceFilter, status: statusFilter, updateState: updateStateFilter, sortBy, order: sortOrder, page, limit: PAGE_SIZE }), [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, page])
 
-    const {
-        entries: listEntries, visibleEntries, visibleSummary, pageInfo, error,
-        initialLoading, refreshing, syncJob,
-        refresh: refreshList, patchEntry, removeEntry, bulkPatch, bulkDelete,
-    } = useMangaReadingList({ enabled: isLifeSyncConnected && mangaPluginOn, nsfwEnabled, hManhwaEnabled, filters: listFilters })
-
-    const syncRunning = syncJob != null && (syncJob.status === 'queued' || syncJob.status === 'running')
-    const syncTerminal = syncJob != null && isSyncTerminal(syncJob.status)
-    const syncPercent = (() => {
-        const t = Number(syncJob?.total || 0)
-        const p = Number(syncJob?.processed || 0)
-        return t > 0 ? Math.min(100, Math.round((p / t) * 100)) : Number(syncJob?.percent ?? 0)
-    })()
-
-    // Auto-refresh list and dismiss sync bar when job finishes
-    useEffect(() => {
-        if (!syncTerminal) return
-        void refreshList()
-        setSyncDismissed(false)
-        if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current)
-        syncDismissTimerRef.current = window.setTimeout(() => setSyncDismissed(true), 8000)
-    }, [syncTerminal, refreshList])
-
-    useEffect(() => () => { if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current) }, [])
+    const { entries: listEntries, visibleEntries, visibleSummary, pageInfo, error, initialLoading, refreshing, refresh: refreshList, patchEntry, removeEntry, bulkPatch, bulkDelete } = useMangaReadingList({ enabled: isLifeSyncConnected && mangaPluginOn, nsfwEnabled, hManhwaEnabled, filters: listFilters })
 
     useEffect(() => {
         const total = Math.max(1, Number(pageInfo?.totalPages || 1))
@@ -771,22 +532,43 @@ export default function LifeSyncMangaLibrary() {
 
     const selectedEntries = useMemo(() => selectableEntries.filter((e) => selectedKeys.has(entryKey(e))), [selectedKeys, selectableEntries])
     const hiddenCount = Math.max(0, listEntries.length - visibleEntries.length)
+    const syncRunning = syncJob != null && (syncJob.status === 'queued' || syncJob.status === 'running')
+    const syncPercent = (() => { const t = Number(syncJob?.total || 0); const p = Number(syncJob?.processed || 0); return t > 0 ? Math.min(100, Math.round((p / t) * 100)) : (syncJob?.percent ?? 0) })()
+
+    const stopSyncPoll = useCallback(() => { if (syncPollRef.current) { clearInterval(syncPollRef.current); syncPollRef.current = null } }, [])
+    const scheduleSyncDismiss = useCallback(() => {
+        if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current)
+        syncDismissTimerRef.current = window.setTimeout(() => { setSyncDismissed(true); syncDismissTimerRef.current = null }, 8000)
+    }, [])
+
+    const refreshAll = useCallback(async () => { await refreshList() }, [refreshList])
+
+    const startSyncPoll = useCallback(() => {
+        stopSyncPoll()
+        setSyncDismissed(false)
+        syncPollRef.current = setInterval(async () => {
+            try {
+                const data = await lifesyncFetch('/api/v1/progress/sync', { method: 'GET' })
+                const job = data?.job || null
+                setSyncJob(job)
+                if (!job || isSyncTerminal(job.status)) { stopSyncPoll(); await refreshAll(); scheduleSyncDismiss() }
+            } catch { stopSyncPoll(); scheduleSyncDismiss() }
+        }, 2000)
+    }, [refreshAll, scheduleSyncDismiss, stopSyncPoll])
+
+    useEffect(() => () => { stopSyncPoll(); if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current) }, [stopSyncPoll])
 
     const onSync = useCallback(async () => {
         if (syncBusy || syncRunning) return
-        setSyncBusy(true)
-        setSyncError('')
-        setSyncDismissed(false)
+        setSyncBusy(true); setSyncError(''); setSyncDismissed(false)
         if (syncDismissTimerRef.current) { clearTimeout(syncDismissTimerRef.current); syncDismissTimerRef.current = null }
         try {
-            // Just kick off the job — all progress arrives via socket (progress:sync events)
-            await lifesyncFetch('/api/v1/progress/sync', { method: 'POST', json: { scope: syncScope } })
-        } catch (err) {
-            setSyncError(String(err?.message || 'Failed to start sync'))
-        } finally {
-            setSyncBusy(false)
-        }
-    }, [syncBusy, syncRunning, syncScope])
+            const data = await lifesyncFetch('/api/v1/progress/sync', { method: 'POST', json: { scope: syncScope } })
+            const job = data?.job || null; setSyncJob(job)
+            if (job && !isSyncTerminal(job.status)) startSyncPoll(); else { await refreshAll(); scheduleSyncDismiss() }
+        } catch (err) { setSyncError(String(err?.message || 'Failed to start sync')) }
+        finally { setSyncBusy(false) }
+    }, [refreshAll, scheduleSyncDismiss, startSyncPoll, syncBusy, syncRunning, syncScope])
 
     const runEntryAction = useCallback(async (entry, action) => {
         const k = entryKey(entry)
@@ -796,16 +578,8 @@ export default function LifeSyncMangaLibrary() {
     }, [])
 
     const onStatusChange = useCallback(async (entry, nextStatus) => {
-        await runEntryAction(entry, () => patchEntry(entry, { readingStatus: nextStatus || null }))
-    }, [patchEntry, runEntryAction])
-
-    const onPinToggle = useCallback(async (entry) => {
-        await runEntryAction(entry, () => patchEntry(entry, { isPinned: !entry.isPinned }))
-    }, [patchEntry, runEntryAction])
-
-    const onPatch = useCallback(async (entry, patch) => {
-        await runEntryAction(entry, () => patchEntry(entry, patch))
-    }, [patchEntry, runEntryAction])
+        await runEntryAction(entry, async () => { await patchEntry(entry, { readingStatus: nextStatus || null }); await refreshList() })
+    }, [patchEntry, refreshList, runEntryAction])
 
     const onRemove = useCallback(async (entry) => {
         const k = entryKey(entry)
@@ -826,14 +600,6 @@ export default function LifeSyncMangaLibrary() {
 
     const onOpenDetail = useCallback((entry) => setDetailEntry(entry || null), [])
     const onCloseDetail = useCallback(() => setDetailEntry(null), [])
-
-    // Keep detail drawer in sync with live entry data (socket updates apply here too)
-    useEffect(() => {
-        if (!detailEntry) return
-        const live = listEntries.find((e) => entryKey(e) === entryKey(detailEntry))
-        if (live && live !== detailEntry) setDetailEntry(live)
-    }, [listEntries, detailEntry])
-
     const onContinueFromDetail = useCallback((entry) => {
         const { to, state } = resumeTarget(entry, browseTranslatedLang, MANGA_BASE)
         setDetailEntry(null); navigate(to, { state: state || undefined })
@@ -856,12 +622,6 @@ export default function LifeSyncMangaLibrary() {
         if (bulkBusy || !selectedEntries.length) return
         setBulkBusy(true)
         try { await bulkPatch(selectedEntries, { readingStatus: status || null }); setSelectedKeys(new Set()) } catch { } finally { setBulkBusy(false) }
-    }, [bulkBusy, bulkPatch, selectedEntries])
-
-    const onBulkPin = useCallback(async (pin) => {
-        if (bulkBusy || !selectedEntries.length) return
-        setBulkBusy(true)
-        try { await bulkPatch(selectedEntries, { isPinned: pin }); setSelectedKeys(new Set()) } catch { } finally { setBulkBusy(false) }
     }, [bulkBusy, bulkPatch, selectedEntries])
 
     if (!isLifeSyncConnected) return null
@@ -894,16 +654,15 @@ export default function LifeSyncMangaLibrary() {
             </div>
 
             {/* ── Stats ── */}
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
                 {[
                     { label: 'Total', value: initialLoading ? '—' : visibleEntries.length },
                     { label: 'New chapters', value: initialLoading ? '—' : visibleSummary.withNewChapter, accent: true },
-                    { label: 'Caught up', value: initialLoading ? '—' : visibleSummary.caughtUp, green: true },
-                    { label: 'Needs sync', value: initialLoading ? '—' : visibleSummary.needsSync },
+                    { label: 'Needs sync', value: initialLoading ? '—' : visibleSummary.needsSync, warn: true },
                 ].map((s) => (
-                    <div key={s.label} className={`rounded-2xl px-3 py-3 text-center ${s.accent ? 'bg-primary/10 ring-1 ring-primary/20' : s.green ? 'bg-green-50 dark:bg-green-950/20 border border-green-200/40 dark:border-green-900/30' : 'bg-(--color-surface) border border-(--color-border-soft)'}`}>
-                        <p className={`text-[20px] font-black tabular-nums leading-none ${s.accent ? 'text-primary' : s.green ? 'text-green-600 dark:text-green-400' : 'text-(--color-text-primary)'}`}>{s.value}</p>
-                        <p className="mt-1 text-[8px] font-bold uppercase tracking-widest text-(--color-text-secondary)">{s.label}</p>
+                    <div key={s.label} className={`rounded-2xl px-3 py-3 text-center ${s.accent ? 'bg-primary/10 ring-1 ring-primary/20' : s.warn ? 'bg-(--color-surface) border border-(--color-border-soft)' : 'bg-(--color-surface) border border-(--color-border-soft)'}`}>
+                        <p className={`text-[22px] font-black tabular-nums leading-none ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{s.value}</p>
+                        <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary)">{s.label}</p>
                     </div>
                 ))}
             </div>
@@ -919,75 +678,64 @@ export default function LifeSyncMangaLibrary() {
                     <IconSync className={syncBusy || syncRunning ? 'animate-spin' : ''} />
                     {syncBusy ? 'Starting…' : syncRunning ? `Syncing ${Math.round(syncPercent)}%` : 'Sync latest'}
                 </button>
-                <button type="button" onClick={() => void refreshList()} disabled={refreshing}
+                <button type="button" onClick={() => void refreshAll()} disabled={refreshing}
                     className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
                     aria-label="Reload">
                     <IconSync className={refreshing ? 'animate-spin h-3.5 w-3.5' : 'h-3.5 w-3.5'} />
                 </button>
             </div>
 
-            {/* Sync progress — real-time via socket.io, no polling */}
+            {/* Sync progress */}
             {syncJob && !syncDismissed && (
-                <div className={`rounded-2xl border px-4 py-3 ${syncJob.status === 'failed' ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : syncJob.status === 'completed' || syncJob.status === 'completed_with_errors' ? 'border-primary/30 bg-primary/5' : 'border-(--color-border-soft) bg-(--color-surface-muted)'}`}>
+                <div className={`rounded-2xl border px-4 py-3 ${syncJob.status === 'failed' ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : syncJob.status === 'completed' ? 'border-primary/30 bg-primary/5' : 'border-(--color-border-soft) bg-(--color-surface-muted)'}`}>
                     <div className="flex items-center justify-between gap-2 text-[11px]">
-                        <span className="font-semibold text-(--color-text-primary)">
-                            {syncJob.status === 'failed' ? 'Sync failed'
-                                : syncJob.status === 'completed' ? 'Sync complete'
-                                : syncJob.status === 'completed_with_errors' ? `Sync done · ${syncJob.errorCount} errors`
-                                : `Syncing ${Math.round(syncPercent)}%`}
-                        </span>
+                        <span className="font-semibold text-(--color-text-primary)">{syncJob.status === 'failed' ? 'Sync failed' : syncJob.status === 'completed' ? 'Sync complete' : `Syncing ${Math.round(syncPercent)}%`}</span>
                         <div className="flex items-center gap-2">
-                            <span className="tabular-nums text-(--color-text-secondary)">{Number(syncJob?.processed || 0)}/{Number(syncJob?.total || 0)}</span>
-                            {!syncRunning && (
-                                <button type="button" onClick={() => setSyncDismissed(true)} className="text-(--color-text-secondary) hover:text-(--color-text-primary) transition">
-                                    <IconX className="h-3 w-3" />
-                                </button>
-                            )}
+                            <span className="text-(--color-text-secondary)">{Number(syncJob?.processed || 0)}/{Number(syncJob?.total || 0)}</span>
+                            {!syncRunning && <button type="button" onClick={() => setSyncDismissed(true)} className="text-(--color-text-secondary) hover:text-(--color-text-primary)"><IconX className="h-3 w-3" /></button>}
                         </div>
                     </div>
                     <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-(--color-border-soft)">
-                        <div className="h-full rounded-full bg-primary transition-all duration-300" style={{ width: `${syncPercent}%` }} />
+                        <div className={`h-full rounded-full bg-primary transition-all ${syncRunning ? 'animate-pulse' : ''}`} style={{ width: `${syncPercent}%` }} />
                     </div>
-                    {syncRunning && syncJob?.itemStates && Object.keys(syncJob.itemStates).length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                            {Object.values(syncJob.itemStates).slice(0, 10).map((item, i) => {
-                                const c = syncStateChip(item.state)
-                                return <span key={i} className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${c.cls}`}>{c.label}</span>
-                            })}
-                            {Object.keys(syncJob.itemStates).length > 10 && (
-                                <span className="text-[9px] text-(--color-text-secondary)">+{Object.keys(syncJob.itemStates).length - 10} more</span>
-                            )}
-                        </div>
-                    )}
                 </div>
             )}
-            {syncError && (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{syncError}</div>
-            )}
+            {syncError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{syncError}</div>}
 
             {/* ── Controls ── */}
             <div className="flex flex-wrap gap-2">
+                {/* Search */}
                 <div className="relative min-w-0 flex-1 basis-48">
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)"><IconSearch /></span>
-                    <input ref={searchRef} type="search" value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="Search titles, labels…"
+                    <input ref={searchRef} type="search" value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="Search titles…"
                         className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 transition" />
                 </div>
+
+                {/* Source */}
                 <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}
                     className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
                     {sourceOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
+
+                {/* Status */}
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
                     className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
                     {STATUS_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
+
+                {/* Update state */}
                 <select value={updateStateFilter} onChange={(e) => setUpdateStateFilter(e.target.value)}
                     className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
                     {UPDATE_STATE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
+
+                {/* Sort */}
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
                     className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
                     {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
+
+                {/* Sort order */}
                 <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
                     {[{ id: 'desc', label: '↓' }, { id: 'asc', label: '↑' }].map((o) => (
                         <button key={o.id} type="button" onClick={() => setSortOrder(o.id)}
@@ -996,6 +744,8 @@ export default function LifeSyncMangaLibrary() {
                         </button>
                     ))}
                 </div>
+
+                {/* Layout toggle */}
                 <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
                     <button type="button" onClick={() => setLayout('list')}
                         className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
@@ -1016,14 +766,6 @@ export default function LifeSyncMangaLibrary() {
                             <option value="">Set status…</option>
                             {STATUS_OPTIONS.filter((o) => o.id !== 'all').map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                         </select>
-                        <button type="button" onClick={() => void onBulkPin(true)} disabled={bulkBusy}
-                            className="flex h-8 items-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[11px] font-semibold text-amber-600 transition hover:bg-amber-50 disabled:opacity-50 dark:hover:bg-amber-900/20">
-                            <IconPin className="h-3 w-3" filled /> Pin
-                        </button>
-                        <button type="button" onClick={() => void onBulkPin(false)} disabled={bulkBusy}
-                            className="flex h-8 items-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-50">
-                            Unpin
-                        </button>
                         <button type="button" onClick={() => void onBulkDelete()} disabled={bulkBusy}
                             className="flex h-8 items-center gap-1.5 rounded-xl border border-red-200 bg-(--color-surface) px-3 text-[11px] font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:hover:bg-red-950/30">
                             <IconX className="h-3 w-3" /> Remove
@@ -1036,7 +778,7 @@ export default function LifeSyncMangaLibrary() {
                 </div>
             )}
 
-            {/* Loading bar */}
+            {/* Loading indicator */}
             {refreshing && !initialLoading && (
                 <div className="overflow-hidden rounded-lg">
                     <div className="h-0.5 w-full animate-pulse bg-linear-to-r from-transparent via-primary to-transparent" />
@@ -1078,10 +820,11 @@ export default function LifeSyncMangaLibrary() {
                 </MotionDiv>
             ) : (
                 <>
+                    {/* Count + select row */}
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-[11px] text-(--color-text-secondary)">
                             {visibleEntries.length} of {pageInfo.total} · Page {pageInfo.page}/{pageInfo.totalPages}
-                            {hiddenCount > 0 && <span className="ml-2">({hiddenCount} hidden)</span>}
+                            {hiddenCount > 0 && <span className="ml-2 text-(--color-text-secondary)">({hiddenCount} hidden)</span>}
                         </p>
                         <div className="flex gap-1.5">
                             <button type="button" onClick={onSelectAll} className="rounded-lg border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">Select all</button>
@@ -1089,6 +832,7 @@ export default function LifeSyncMangaLibrary() {
                         </div>
                     </div>
 
+                    {/* List */}
                     {layout === 'list' ? (
                         <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
                             <AnimatePresence initial={false}>
@@ -1099,7 +843,6 @@ export default function LifeSyncMangaLibrary() {
                                             busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
                                             syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
                                             onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
-                                            onPinToggle={onPinToggle}
                                             onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
                                             isLast={idx === visibleEntries.length - 1} mangaBase={MANGA_BASE} />
                                     )
@@ -1123,6 +866,7 @@ export default function LifeSyncMangaLibrary() {
                         </div>
                     )}
 
+                    {/* Pagination */}
                     <div className="flex items-center justify-between rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-4 py-2.5">
                         <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageInfo.page <= 1 || refreshing}
                             className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
@@ -1139,16 +883,7 @@ export default function LifeSyncMangaLibrary() {
 
             {/* ── Modals ── */}
             <AnimatePresence>
-                {detailEntry && (
-                    <DetailDrawer
-                        entry={detailEntry}
-                        onClose={onCloseDetail}
-                        onContinue={onContinueFromDetail}
-                        onPatch={onPatch}
-                        browseTranslatedLang={browseTranslatedLang}
-                        mangaBase={MANGA_BASE}
-                    />
-                )}
+                {detailEntry && <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} browseTranslatedLang={browseTranslatedLang} mangaBase={MANGA_BASE} />}
             </AnimatePresence>
             <AnimatePresence>
                 {deleteConfirm.isOpen && (
