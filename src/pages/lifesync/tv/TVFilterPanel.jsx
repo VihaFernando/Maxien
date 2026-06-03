@@ -21,6 +21,7 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
     const [editingSearchId, setEditingSearchId] = useState('')
     const openedAtRef = useRef(typeof performance !== 'undefined' ? performance.now() : Date.now())
     const searchInputRefs = useRef({})
+    const blurTimeoutRef = useRef(null)
     const rows = filterConfig.filter(Boolean)
 
     const activeRow = rows[rowIndex]
@@ -131,13 +132,13 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
 
     return (
         <>
-            {/* Backdrop */}
+            {/* Backdrop — tap outside to close, but not while the search keyboard is open */}
             <M.div
                 className="absolute inset-0 z-20 bg-black/50"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={onClose}
+                onClick={() => { if (!editingSearchId) onClose() }}
             />
 
             {/* Panel */}
@@ -201,8 +202,19 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
                                         value={curValue}
                                         readOnly={!editing}
                                         placeholder={row.placeholder || 'Search...'}
-                                        onClick={() => setEditingSearchId(row.id)}
-                                        onBlur={() => setEditingSearchId(current => current === row.id ? '' : current)}
+                                        onClick={() => {
+                                            if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current)
+                                            setEditingSearchId(row.id)
+                                        }}
+                                        onFocus={() => {
+                                            if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current)
+                                            setEditingSearchId(row.id)
+                                        }}
+                                        onBlur={() => {
+                                            blurTimeoutRef.current = setTimeout(() => {
+                                                setEditingSearchId(current => current === row.id ? '' : current)
+                                            }, 150)
+                                        }}
                                         onChange={(event) => onFilterChange(row.id, event.target.value)}
                                         className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-[14px] font-semibold text-white outline-none placeholder:text-white/25 focus:border-[var(--mx-color-c6ff00)]/60"
                                     />

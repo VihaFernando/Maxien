@@ -50,6 +50,21 @@ export function TVModeProvider({ children }) {
         return () => document.removeEventListener('fullscreenchange', onFullscreenChange)
     }, [tvActive])
 
+    // Block Escape / browser-back key events while in TV mode so the Xbox B button
+    // (which the browser maps to Escape) cannot exit fullscreen outside of our own
+    // B-button handler in the TV UI.
+    useEffect(() => {
+        if (!tvActive) return
+        const block = (e) => {
+            if (e.key === 'Escape' || e.key === 'BrowserBack' || e.key === 'GoBack') {
+                e.preventDefault()
+                e.stopImmediatePropagation()
+            }
+        }
+        document.addEventListener('keydown', block, true)
+        return () => document.removeEventListener('keydown', block, true)
+    }, [tvActive])
+
     const enterTV = useCallback(async () => {
         await requestTVFullscreen()
         playIntroRef.current = true

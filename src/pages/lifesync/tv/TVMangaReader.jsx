@@ -39,7 +39,7 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                 setError('')
                 setPages([])
                 setPageIndex(0)
-                scrollRef.current?.scrollTo({ top: 0 })
+                scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' })
             }
         })
 
@@ -64,7 +64,9 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
     const scrollByAmount = useCallback((delta) => {
         const el = scrollRef.current
         if (!el) return
-        el.scrollBy({ top: delta, behavior: 'smooth' })
+        // Use instant scroll for controller input — smooth scroll on Xbox One causes
+        // visible frame drops because the browser keeps repainting during the animation.
+        el.scrollBy({ top: delta, behavior: 'instant' })
     }, [])
 
     const setZoom = useCallback((delta) => {
@@ -83,7 +85,7 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
             const el = scrollRef.current
             if (el) {
                 const maxScroll = Math.max(1, el.scrollHeight - el.clientHeight)
-                el.scrollTo({ top: maxScroll * anchor })
+                el.scrollTo({ top: maxScroll * anchor, behavior: 'instant' })
             }
             zoomAnchorRef.current = null
         })
@@ -203,14 +205,27 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                 {!loading && !error && pages.length > 0 && (
                     <div className="mx-auto flex flex-col items-center gap-0">
                         {pages.map((page, index) => (
-                            <img
+                            <div
                                 key={`${currentChapterId}-${index}`}
-                                src={page}
-                                alt={`Page ${index + 1}`}
-                                className="h-auto max-w-full object-contain transition-[width] duration-200 ease-out"
-                                style={{ width: `${zoomPct}%` }}
-                                referrerPolicy="no-referrer"
-                            />
+                                style={{
+                                    width: `${zoomPct}%`,
+                                    // Reserve vertical space so scroll position is stable before images load.
+                                    // 1.4 aspect ratio covers most manga pages; browser replaces with real size on load.
+                                    minHeight: index > 2 ? `calc(${zoomPct}vw * 1.4)` : undefined,
+                                    contentVisibility: 'auto',
+                                    containIntrinsicSize: `auto ${Math.round(window.innerWidth * zoomPct / 100)}px auto ${Math.round(window.innerWidth * zoomPct / 100 * 1.4)}px`,
+                                }}
+                            >
+                                <img
+                                    src={page}
+                                    alt={`Page ${index + 1}`}
+                                    // First 3 pages load eagerly so there's no blank start; rest are lazy.
+                                    loading={index < 3 ? 'eager' : 'lazy'}
+                                    decoding="async"
+                                    className="h-auto w-full object-contain transition-[width] duration-200 ease-out"
+                                    referrerPolicy="no-referrer"
+                                />
+                            </div>
                         ))}
                     </div>
                 )}
