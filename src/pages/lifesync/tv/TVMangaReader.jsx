@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { List, useDynamicRowHeight, useListRef } from 'react-window'
 import { lifesyncFetch } from '../../../lib/lifesyncApi'
 import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
 import useControllerSupportEnabled from '../../../hooks/useControllerSupportEnabled'
@@ -7,7 +8,61 @@ import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
 /**
  * Fullscreen TV manga reader — vertical scroll pages.
  * LB/RB = prev/next chapter, LT/RT = zoom, X = chapter picker, B = back.
+ *
+ * Uses react-window List so only the visible pages (+2 overscan) exist in the DOM,
+ * preventing OOM crashes and slow loads on memory-constrained devices (Xbox One).
+ * useDynamicRowHeight measures each page's real height via ResizeObserver after load.
  */
+
+function PageRow({ index, style, ariaAttributes, pages, zoomPct, currentChapterId, rowRef }) {
+    const src = pages[index]
+    const [loaded, setLoaded] = useState(false)
+    const isEarly = index < 3
+    const imgRef = useRef(null)
+
+    // rowRef is called with the outer div so react-window can measure the real height
+    const setRef = useCallback((el) => {
+        rowRef?.(el)
+    }, [rowRef])
+
+    return (
+        <div ref={setRef} style={style} {...ariaAttributes}>
+            <div style={{ width: `${zoomPct}%`, margin: '0 auto', position: 'relative' }}>
+                {/* Shimmer skeleton until image loaded */}
+                {!loaded && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            minHeight: 120,
+                            background: 'linear-gradient(90deg,#1a1a1a 25%,#262626 50%,#1a1a1a 75%)',
+                            backgroundSize: '200% 100%',
+                            animation: 'manga-shimmer 1.4s infinite',
+                            borderRadius: 4,
+                        }}
+                    />
+                )}
+                <img
+                    ref={imgRef}
+                    key={`${currentChapterId}-${index}`}
+                    src={src}
+                    alt={`Page ${index + 1}`}
+                    decoding="async"
+                    onLoad={() => setLoaded(true)}
+                    style={{
+                        display: 'block',
+                        width: '100%',
+                        height: 'auto',
+                        opacity: loaded ? 1 : 0,
+                        transition: isEarly ? 'none' : 'opacity 0.3s ease',
+                    }}
+                    referrerPolicy="no-referrer"
+                />
+            </div>
+        </div>
+    )
+}
+
 export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, allChapters = [], onBack, onChapterPickerToggle }) {
     const controllerEnabled = useControllerSupportEnabled()
     const [pages, setPages] = useState([])
@@ -19,13 +74,39 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [currentChapterId, setCurrentChapterId] = useState(initialChapterId)
-    const scrollRef = useRef(null)
+    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+
+    const listRef = useListRef()
+    const containerRef = useRef(null)
     const cancelRef = useRef(false)
     const pickerOpenedAtRef = useRef(0)
     const suppressBackUntilRef = useRef(0)
     const zoomAnchorRef = useRef(null)
+    // Tracks scroll offset for progress + scrollByAmount
+    const scrollOffsetRef = useRef(0)
 
-    // Find chapter navigation
+    // useDynamicRowHeight measures each row after it renders via ResizeObserver.
+    // Reset key forces a fresh measurement cache on chapter change.
+    const estimatedPageHeight = containerSize.width > 0
+        ? Math.round(containerSize.width * (zoomPct / 100) * 1.4)
+        : 400
+    const dynamicRowHeight = useDynamicRowHeight({
+        defaultRowHeight: estimatedPageHeight,
+        key: currentChapterId,
+    })
+
+    // Measure the scroll container so List gets accurate dimensions
+    useEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+        const ro = new ResizeObserver(([entry]) => {
+            setContainerSize({ width: entry.contentRect.width, height: entry.contentRect.height })
+        })
+        ro.observe(el)
+        return () => ro.disconnect()
+    }, [])
+
+    // Chapter navigation
     const sortedChapters = allChapters
     const chapterIdx = sortedChapters.findIndex(c => String(c.id) === String(currentChapterId))
     const prevChapter = chapterIdx > 0 ? sortedChapters[chapterIdx - 1] : null
@@ -39,7 +120,9 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                 setError('')
                 setPages([])
                 setPageIndex(0)
-                scrollRef.current?.scrollTo({ top: 0, behavior: 'instant' })
+                setScrollProgress(0)
+                scrollOffsetRef.current = 0
+                listRef.current?.element?.scrollTo({ top: 0, behavior: 'instant' })
             }
         })
 
@@ -58,39 +141,37 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
             .finally(() => { if (!cancelRef.current) setLoading(false) })
 
         return () => { cancelRef.current = true }
-    }, [currentChapterId, mangaId, source])
-
+    }, [currentChapterId, mangaId, source, listRef])
 
     const scrollByAmount = useCallback((delta) => {
-        const el = scrollRef.current
+        const el = listRef.current?.element
         if (!el) return
-        // Use instant scroll for controller input — smooth scroll on Xbox One causes
-        // visible frame drops because the browser keeps repainting during the animation.
-        el.scrollBy({ top: delta, behavior: 'instant' })
-    }, [])
+        const next = Math.max(0, scrollOffsetRef.current + delta)
+        el.scrollTo({ top: next, behavior: 'instant' })
+    }, [listRef])
 
     const setZoom = useCallback((delta) => {
-        const el = scrollRef.current
-        if (el) {
-            const maxScroll = Math.max(1, el.scrollHeight - el.clientHeight)
-            zoomAnchorRef.current = el.scrollTop / maxScroll
+        const el = listRef.current?.element
+        if (el && el.scrollHeight > el.clientHeight) {
+            zoomAnchorRef.current = el.scrollTop / (el.scrollHeight - el.clientHeight)
         }
         setZoomPct(prev => Math.max(20, Math.min(80, prev + delta)))
-    }, [])
+    }, [listRef])
 
+    // Restore scroll position after zoom reflow
     useEffect(() => {
         const anchor = zoomAnchorRef.current
         if (anchor == null) return
         const id = window.requestAnimationFrame(() => {
-            const el = scrollRef.current
+            const el = listRef.current?.element
             if (el) {
-                const maxScroll = Math.max(1, el.scrollHeight - el.clientHeight)
-                el.scrollTo({ top: maxScroll * anchor, behavior: 'instant' })
+                const maxScroll = el.scrollHeight - el.clientHeight
+                el.scrollTo({ top: Math.round(maxScroll * anchor), behavior: 'instant' })
             }
             zoomAnchorRef.current = null
         })
         return () => window.cancelAnimationFrame(id)
-    }, [zoomPct])
+    }, [zoomPct, listRef])
 
     const openChapterPicker = useCallback(() => {
         pickerOpenedAtRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now()
@@ -112,8 +193,8 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
         [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => scrollByAmount(520),
         [XBOX_GAMEPAD_BUTTONS.DPAD_LEFT]: () => scrollByAmount(-900),
         [XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT]: () => scrollByAmount(900),
-        [XBOX_GAMEPAD_BUTTONS.LB]: () => { if (prevChapter) { setCurrentChapterId(String(prevChapter.id)) } },
-        [XBOX_GAMEPAD_BUTTONS.RB]: () => { if (nextChapter) { setCurrentChapterId(String(nextChapter.id)) } },
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => { if (prevChapter) setCurrentChapterId(String(prevChapter.id)) },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => { if (nextChapter) setCurrentChapterId(String(nextChapter.id)) },
         [XBOX_GAMEPAD_BUTTONS.X]: () => openChapterPicker(),
         [XBOX_GAMEPAD_BUTTONS.B]: () => {
             const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
@@ -160,9 +241,10 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
         document.querySelector('[data-focused-reader-chapter="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     }, [chapterPickerIndex, chapterPickerOpen])
 
-    const handleScroll = useCallback(() => {
-        const el = scrollRef.current
-        if (!el || pages.length <= 1) return
+    const handleScroll = useCallback((e) => {
+        const el = e.currentTarget
+        scrollOffsetRef.current = el.scrollTop
+        if (pages.length <= 1) return
         const maxScroll = Math.max(1, el.scrollHeight - el.clientHeight)
         const ratio = el.scrollTop / maxScroll
         setScrollProgress(Math.max(0, Math.min(1, ratio)))
@@ -177,15 +259,30 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
 
     const currentChapterLabel = sortedChapters[chapterIdx]?.title || sortedChapters[chapterIdx]?.chapter || sortedChapters[chapterIdx]?.name || currentChapterId
 
+    // rowProps passed into every PageRow via List's rowProps — stable when deps don't change
+    const rowProps = useMemo(() => ({ pages, zoomPct, currentChapterId }), [pages, zoomPct, currentChapterId])
+
+    // rowComponent must be stable (defined outside render or memoized)
+    const RowComponent = useCallback(({ index, style, ariaAttributes, pages: p, zoomPct: z, currentChapterId: cid, rowRef }) => (
+        <PageRow
+            index={index}
+            style={style}
+            ariaAttributes={ariaAttributes}
+            pages={p}
+            zoomPct={z}
+            currentChapterId={cid}
+            rowRef={rowRef}
+        />
+    ), [])
+
     return (
         <div className="absolute inset-0 z-20 flex flex-col bg-black" style={{ cursor: 'none' }}>
-            <div
-                ref={scrollRef}
-                onScroll={handleScroll}
-                className="relative min-h-0 flex-1 overflow-y-auto bg-black px-8 py-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
+            <style>{`@keyframes manga-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
+
+            {/* Scroll area */}
+            <div ref={containerRef} className="relative min-h-0 flex-1">
                 {loading && (
-                    <div className="flex min-h-full items-center justify-center text-center">
+                    <div className="flex h-full items-center justify-center text-center">
                         <div>
                             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-(--mx-color-c6ff00) border-t-transparent" />
                             <p className="mt-3 text-[14px] text-white/40">Loading chapter...</p>
@@ -193,44 +290,30 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                     </div>
                 )}
                 {error && !loading && (
-                    <div className="flex min-h-full items-center justify-center">
+                    <div className="flex h-full items-center justify-center">
                         <p className="text-[15px] text-red-400">{error}</p>
                     </div>
                 )}
                 {!loading && !error && pages.length === 0 && (
-                    <div className="flex min-h-full items-center justify-center">
+                    <div className="flex h-full items-center justify-center">
                         <p className="text-[15px] text-white/40">No pages available.</p>
                     </div>
                 )}
-                {!loading && !error && pages.length > 0 && (
-                    <div className="mx-auto flex flex-col items-center gap-0">
-                        {pages.map((page, index) => (
-                            <div
-                                key={`${currentChapterId}-${index}`}
-                                style={{
-                                    width: `${zoomPct}%`,
-                                    // Reserve vertical space so scroll position is stable before images load.
-                                    // 1.4 aspect ratio covers most manga pages; browser replaces with real size on load.
-                                    minHeight: index > 2 ? `calc(${zoomPct}vw * 1.4)` : undefined,
-                                    contentVisibility: 'auto',
-                                    containIntrinsicSize: `auto ${Math.round(window.innerWidth * zoomPct / 100)}px auto ${Math.round(window.innerWidth * zoomPct / 100 * 1.4)}px`,
-                                }}
-                            >
-                                <img
-                                    src={page}
-                                    alt={`Page ${index + 1}`}
-                                    // First 3 pages load eagerly so there's no blank start; rest are lazy.
-                                    loading={index < 3 ? 'eager' : 'lazy'}
-                                    decoding="async"
-                                    className="h-auto w-full object-contain transition-[width] duration-200 ease-out"
-                                    referrerPolicy="no-referrer"
-                                />
-                            </div>
-                        ))}
-                    </div>
+                {!loading && !error && pages.length > 0 && containerSize.height > 0 && (
+                    <List
+                        listRef={listRef}
+                        rowComponent={RowComponent}
+                        rowCount={pages.length}
+                        rowHeight={dynamicRowHeight}
+                        rowProps={rowProps}
+                        overscanCount={2}
+                        style={{ background: 'black', width: '100%', height: `${containerSize.height}px`, overflowY: 'auto' }}
+                        onScroll={handleScroll}
+                    />
                 )}
             </div>
 
+            {/* Progress bar */}
             <div className="h-1 bg-white/10">
                 <div
                     className="h-full bg-(--mx-color-c6ff00) transition-all duration-150"
@@ -238,6 +321,7 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                 />
             </div>
 
+            {/* Bottom toolbar */}
             <div className="shrink-0 flex items-center justify-between gap-4 border-t border-white/8 bg-black/90 px-8 py-3 backdrop-blur-xl">
                 <div className="flex items-center gap-2">
                     <button type="button" onClick={onBack} className="flex items-center gap-1.5 rounded-xl bg-white/5 px-3 py-2 text-[13px] font-semibold text-white/60">
@@ -268,6 +352,7 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                 </div>
             </div>
 
+            {/* Chapter picker overlay */}
             {chapterPickerOpen && (
                 <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm">
                     <div className="flex max-h-[70vh] w-140 flex-col rounded-3xl bg-[#111116] p-5 shadow-2xl">

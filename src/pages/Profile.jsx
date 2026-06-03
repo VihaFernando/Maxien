@@ -1044,13 +1044,13 @@ export default function Profile() {
                                             </button>
                                         </div>
 
-                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--color-border-soft)] pt-6">
+                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-(--color-border-soft) pt-6">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">TV mode</p>
-                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                                                <p className="text-[13px] font-semibold text-(--color-text-primary)">TV mode</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-(--color-text-secondary)">
                                                     Enable Xbox controller mappings for TV mode across anime, hentai, and manga.
                                                 </p>
-                                                <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                                                <p className="mt-1 text-[11px] text-(--color-text-secondary)">
                                                     Local device only. This setting is not synced to your account.
                                                 </p>
                                             </div>

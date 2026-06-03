@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TVModeContext } from './TVModeContextObject'
 
 export { TVModeContext } from './TVModeContextObject'
@@ -30,6 +30,9 @@ export function TVModeProvider({ children }) {
     })
     // Tracks whether the intro should play on the current entry
     const playIntroRef = useRef(false)
+    // Set to true only when we intentionally call exitTV() so the fullscreenchange
+    // handler knows not to fight the exit (e.g. user chose Exit from the menu).
+    const intentionalExitRef = useRef(false)
 
     useEffect(() => {
         if (!tvActive) return
@@ -42,8 +45,16 @@ export function TVModeProvider({ children }) {
 
     useEffect(() => {
         const onFullscreenChange = () => {
-            if (!document.fullscreenElement && tvActive) {
+            if (document.fullscreenElement || !tvActive) return
+            // Fullscreen was lost while TV mode is active.
+            if (intentionalExitRef.current) {
+                // This was our own exitTV() call — accept it.
+                intentionalExitRef.current = false
                 setTvActive(false)
+            } else {
+                // Browser/OS forced fullscreen off (Xbox B button, system overlay, etc.)
+                // Re-request fullscreen to stay in TV mode.
+                requestTVFullscreen()
             }
         }
         document.addEventListener('fullscreenchange', onFullscreenChange)
@@ -72,6 +83,7 @@ export function TVModeProvider({ children }) {
     }, [])
 
     const exitTV = useCallback(() => {
+        intentionalExitRef.current = true
         exitTVFullscreen()
         setTvActive(false)
     }, [])
@@ -82,8 +94,13 @@ export function TVModeProvider({ children }) {
         playIntroRef.current = false
     }, [])
 
+    const value = useMemo(
+        () => ({ tvActive, enterTV, exitTV, introPlayed, markIntroPlayed, playIntroRef }),
+        [tvActive, enterTV, exitTV, introPlayed, markIntroPlayed],
+    )
+
     return (
-        <TVModeContext.Provider value={{ tvActive, enterTV, exitTV, introPlayed, markIntroPlayed, playIntroRef }}>
+        <TVModeContext.Provider value={value}>
             {children}
         </TVModeContext.Provider>
     )

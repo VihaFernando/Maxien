@@ -548,14 +548,16 @@ function FloatingAIChatInner({
             .then(({ data }) => {
                 if (cancelled) return
                 setHasKey(!!data)
-                if (data && messages.length === 0) {
-                    setMessages([{
+                if (data) {
+                    // Use functional update to read current messages without capturing
+                    // a stale closure — this effect only depends on [user, hasKey].
+                    setMessages(prev => prev.length === 0 ? [{
                         id: "welcome",
                         role: "ai",
                         content: "Hi! I can create tasks, projects, and manage your data with natural language. What would you like to do?",
                         ts: new Date(),
                         action: null,
-                    }])
+                    }] : prev)
                 }
             })
         return () => {
@@ -609,7 +611,7 @@ function FloatingAIChatInner({
                 setUnreadCount(c => c + 1)
             }
         }
-    }, [messages])
+    }, [messages, isOpen])
 
     // ── Keyboard shortcut to toggle chat (Alt+C on Windows/Linux, Cmd+/ on Mac) ──
     useEffect(() => {
