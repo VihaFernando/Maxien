@@ -267,12 +267,14 @@ export default function GlobalCommandPalette() {
                         await copyToClipboard(copyValue)
                     },
                 })
-                setCurrencyLoading(false)
             } catch (error) {
                 if (controller.signal.aborted) return
                 setCurrencyEntry(null)
                 setCurrencyError(error?.message || 'Unable to fetch conversion right now')
-                setCurrencyLoading(false)
+            } finally {
+                if (!controller.signal.aborted) {
+                    setCurrencyLoading(false)
+                }
             }
         }
 

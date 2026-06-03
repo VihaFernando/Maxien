@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TVModeContext } from './TVModeContextObject'
 
 export { TVModeContext } from './TVModeContextObject'
@@ -94,13 +94,8 @@ export function TVModeProvider({ children }) {
         playIntroRef.current = false
     }, [])
 
-    const value = useMemo(
-        () => ({ tvActive, enterTV, exitTV, introPlayed, markIntroPlayed, playIntroRef }),
-        [tvActive, enterTV, exitTV, introPlayed, markIntroPlayed],
-    )
-
     return (
-        <TVModeContext.Provider value={value}>
+        <TVModeContext.Provider value={{ tvActive, enterTV, exitTV, introPlayed, markIntroPlayed, playIntroRef }}>
             {children}
         </TVModeContext.Provider>
     )
