@@ -1046,9 +1046,9 @@ export default function Profile() {
 
                                         <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--color-border-soft)] pt-6">
                                             <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Controller support</p>
+                                                <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">TV mode</p>
                                                 <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                                                    Enable Xbox controller mappings for LifeSync anime watch, hentai player, and manga reader.
+                                                    Enable Xbox controller mappings for TV mode across anime, hentai, and manga.
                                                 </p>
                                                 <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
                                                     Local device only. This setting is not synced to your account.
@@ -1084,8 +1084,8 @@ export default function Profile() {
                                                             </svg>
                                                         </div>
                                                         <div>
-                                                            <p className="text-[13px] font-black text-black">Launch TV Mode</p>
-                                                            <p className="text-[11px] font-medium text-black/60">Test fullscreen TV interface</p>
+                                                            <p className="text-[13px] font-black text-black">Launch TV mode</p>
+                                                            <p className="text-[11px] font-medium text-black/60">Open the fullscreen TV interface</p>
                                                         </div>
                                                     </div>
                                                     <svg className="h-4 w-4 text-black/50" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden>
