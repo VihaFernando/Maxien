@@ -23,6 +23,7 @@ import AIShortcutHint from "../components/AIShortcutHint"
 import { TVModeProvider } from "../context/TVModeContext"
 import { useTVModeContext } from "../hooks/useTVModeContext"
 import { TVModePortal } from "./lifesync/LifeSyncTVMode"
+import { TVModeStartPrompt } from "../components/lifesync/TVModeStartPrompt"
 import useControllerSupportEnabled from "../hooks/useControllerSupportEnabled"
 import useLifeSyncGamepadInput from "../hooks/useLifeSyncGamepadInput"
 import { XBOX_GAMEPAD_BUTTONS } from "../lib/lifeSyncControllerInput"
@@ -58,14 +59,17 @@ function WorkplaceTabLink({ to, label, active, onClick }) {
     )
 }
 
-/** Listens for Start button and toggles TV mode. Must be inside TVModeProvider. */
+/**
+ * Listens for START button to enter TV mode (from outside TV mode only).
+ * Inside TV mode, START is handled by LifeSyncTVModeInner with anti-spam.
+ */
 function TVStartButtonListener() {
     const controllerEnabled = useControllerSupportEnabled()
-    const { tvActive, enterTV, exitTV } = useTVModeContext()
+    const { tvActive, enterTV } = useTVModeContext()
     useLifeSyncGamepadInput({
-        enabled: controllerEnabled,
+        enabled: controllerEnabled && !tvActive,
         handlers: {
-            [XBOX_GAMEPAD_BUTTONS.START]: () => { if (tvActive) exitTV(); else void enterTV() },
+            [XBOX_GAMEPAD_BUTTONS.START]: () => { void enterTV() },
         },
     })
     return null
@@ -84,8 +88,14 @@ export default function Dashboard() {
             <DashboardInner />
             <TVStartButtonListener />
             <TVModeGate />
+            <TVModeStartPromptWrapper />
         </TVModeProvider>
     )
+}
+
+function TVModeStartPromptWrapper() {
+    const { tvActive } = useTVModeContext()
+    return <TVModeStartPrompt tvActive={tvActive} />
 }
 
 function DashboardInner() {

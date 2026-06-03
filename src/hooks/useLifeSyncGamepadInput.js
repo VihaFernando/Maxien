@@ -28,8 +28,8 @@ export default function useLifeSyncGamepadInput({
     enabled = false,
     handlers = {},
     repeatableButtons = [],
-    repeatDelayMs = 260,
-    repeatIntervalMs = 130,
+    repeatDelayMs = 420,
+    repeatIntervalMs = 180,
     pressThreshold = 0.5,
 }) {
     const handlersRef = useRef(normalizeHandlers(handlers))
@@ -53,6 +53,9 @@ export default function useLifeSyncGamepadInput({
         }
 
         let rafId = 0
+        pressedRef.current = new Map()
+        nextRepeatAtRef.current.clear()
+
         const tick = () => {
             const handlersMap = handlersRef.current
             if (handlersMap.size > 0) {

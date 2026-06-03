@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { TVModeContext } from './TVModeContextObject'
 
 export { TVModeContext } from './TVModeContextObject'
@@ -10,7 +10,6 @@ async function requestTVFullscreen() {
         }
     } catch {
         // NotAllowedError: gamepad events may not count as user gesture in all browsers.
-        // TV mode proceeds without fullscreen in that case.
     }
 }
 
@@ -19,28 +18,28 @@ function exitTVFullscreen() {
         if (document.fullscreenElement) {
             document.exitFullscreen().catch(() => {})
         }
-    } catch {
-        // ignore
-    }
+    } catch { /* ignore */ }
 }
+
+const SESSION_INTRO_KEY = 'maxien_tv_intro_seen'
 
 export function TVModeProvider({ children }) {
     const [tvActive, setTvActive] = useState(false)
+    const [introPlayed, setIntroPlayed] = useState(() => {
+        try { return sessionStorage.getItem(SESSION_INTRO_KEY) === '1' } catch { return false }
+    })
+    // Tracks whether the intro should play on the current entry
+    const playIntroRef = useRef(false)
 
-    // Inject cursor:none style tag when TV mode is active.
-    // This wins over any inline style.cursor mutations from useHideCursorOnDpad.
     useEffect(() => {
         if (!tvActive) return
         const el = document.createElement('style')
         el.id = 'tv-mode-no-cursor'
         el.textContent = '*, *::before, *::after { cursor: none !important; }'
         document.head.appendChild(el)
-        return () => {
-            document.getElementById('tv-mode-no-cursor')?.remove()
-        }
+        return () => { document.getElementById('tv-mode-no-cursor')?.remove() }
     }, [tvActive])
 
-    // Sync with native fullscreen exit (e.g. user presses Escape)
     useEffect(() => {
         const onFullscreenChange = () => {
             if (!document.fullscreenElement && tvActive) {
@@ -53,6 +52,7 @@ export function TVModeProvider({ children }) {
 
     const enterTV = useCallback(async () => {
         await requestTVFullscreen()
+        playIntroRef.current = true
         setTvActive(true)
     }, [])
 
@@ -61,10 +61,15 @@ export function TVModeProvider({ children }) {
         setTvActive(false)
     }, [])
 
+    const markIntroPlayed = useCallback(() => {
+        try { sessionStorage.setItem(SESSION_INTRO_KEY, '1') } catch { /* ignore */ }
+        setIntroPlayed(true)
+        playIntroRef.current = false
+    }, [])
+
     return (
-        <TVModeContext.Provider value={{ tvActive, enterTV, exitTV }}>
+        <TVModeContext.Provider value={{ tvActive, enterTV, exitTV, introPlayed, markIntroPlayed, playIntroRef }}>
             {children}
         </TVModeContext.Provider>
     )
 }
-
