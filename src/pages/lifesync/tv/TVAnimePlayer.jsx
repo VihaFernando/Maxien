@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lifesyncFetch, getLifesyncApiBase } from '../../../lib/lifesyncApi'
+import { useLifeSync } from '../../../context/LifeSyncContext'
 import AdvancedVideoPlayer from '../../../components/lifesync/AdvancedVideoPlayer'
 import { streamIframeSandboxProps } from '../../../lib/lifesyncStreamIframe'
 import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
@@ -15,7 +16,8 @@ import {
  * B = back to grid (never exits TV mode).
  * LB/RB = prev/next episode, A = play/pause, LT/RT = seek.
  */
-export function TVAnimePlayer({ episodes = [], initialEpisodeIndex = 0, onBack }) {
+export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0, onBack }) {
+    const { isLifeSyncConnected } = useLifeSync()
     const controllerEnabled = useControllerSupportEnabled()
     const [episodeIdx, setEpisodeIdx] = useState(initialEpisodeIndex)
     const [stream, setStream] = useState(null)
@@ -63,6 +65,20 @@ export function TVAnimePlayer({ episodes = [], initialEpisodeIndex = 0, onBack }
             .catch(e => { if (!cancelRef.current && e?.name !== 'AbortError') setStream({ title: initialTitle, resolving: false, error: e?.message }) })
         return () => { cancelRef.current = true; ac.abort() }
     }, [epObj, resolveStream])
+
+    useEffect(() => {
+        if (!isLifeSyncConnected || !animeId) return
+        const epObj = episodes[episodeIdx]
+        if (!epObj) return
+        const lastEpisodeNumber = epObj.number != null ? Math.max(1, Math.floor(Number(epObj.number) || 1)) : episodeIdx + 1
+        const ac = new AbortController()
+        lifesyncFetch('/api/v1/anime/watch-progress', {
+            method: 'PUT',
+            signal: ac.signal,
+            json: { animeId, lastEpisodeNumber },
+        }).catch(() => {})
+        return () => ac.abort()
+    }, [animeId, episodeIdx, episodes, isLifeSyncConnected])
 
     useEffect(() => {
         if (!stream?.iframeUrl) return

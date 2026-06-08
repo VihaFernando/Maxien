@@ -53,10 +53,16 @@ export default function useLifeSyncGamepadInput({
         }
 
         let rafId = 0
+        let frameCount = 0
         pressedRef.current = new Map()
         nextRepeatAtRef.current.clear()
 
         const tick = () => {
+            frameCount++
+            if (frameCount % 2 !== 0) {
+                rafId = window.requestAnimationFrame(tick)
+                return
+            }
             const handlersMap = handlersRef.current
             if (handlersMap.size > 0) {
                 const now = performance.now()

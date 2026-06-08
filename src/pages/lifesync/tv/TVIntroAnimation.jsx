@@ -1,15 +1,31 @@
 import { useEffect } from 'react'
 import { motion as M } from 'framer-motion'
 
+const LOW_END = (() => {
+    try {
+        if (/Xbox/i.test(navigator.userAgent)) return true
+        if (navigator.deviceMemory != null && navigator.deviceMemory < 4) return true
+        if (navigator.hardwareConcurrency != null && navigator.hardwareConcurrency <= 4) return true
+    } catch { /* ignore */ }
+    return false
+})()
+
 /**
  * Cinematic logo reveal played once per session before the TV grid appears.
  * Total duration ~2.2s, then calls onComplete().
+ * Skipped entirely on low-end devices (Xbox One, low RAM/CPU).
  */
 export function TVIntroAnimation({ onComplete }) {
     useEffect(() => {
+        if (LOW_END) {
+            onComplete()
+            return
+        }
         const t = setTimeout(onComplete, 2300)
         return () => clearTimeout(t)
     }, [onComplete])
+
+    if (LOW_END) return null
 
     return (
         <M.div

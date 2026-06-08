@@ -44,7 +44,7 @@ export function TVCard({ imageUrl, title, badge, focused, onSelect, aspectRatio 
                     <span className={`absolute right-2 top-2 rounded-lg px-2.5 py-1 text-[12px] font-black tabular-nums ${
                         focused
                             ? 'bg-[var(--mx-color-c6ff00)] text-black'
-                            : 'bg-black/60 text-white/90 backdrop-blur-sm'
+                            : 'bg-black/80 text-white/90'
                     }`}>
                         {badge}
                     </span>

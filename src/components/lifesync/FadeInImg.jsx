@@ -29,6 +29,7 @@ export function FadeInImg({ src, alt = '', className = '', style, onLoad, onErro
 
     return (
         <img
+            loading="lazy"
             src={src}
             alt={alt}
             style={{

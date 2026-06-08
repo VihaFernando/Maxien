@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { List, useDynamicRowHeight, useListRef } from 'react-window'
 import { lifesyncFetch } from '../../../lib/lifesyncApi'
+import { useLifeSync } from '../../../context/LifeSyncContext'
 import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
 import useControllerSupportEnabled from '../../../hooks/useControllerSupportEnabled'
 import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
@@ -64,6 +65,7 @@ function PageRow({ index, style, ariaAttributes, pages, zoomPct, currentChapterI
 }
 
 export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, allChapters = [], onBack, onChapterPickerToggle }) {
+    const { isLifeSyncConnected } = useLifeSync()
     const controllerEnabled = useControllerSupportEnabled()
     const [pages, setPages] = useState([])
     const [pageIndex, setPageIndex] = useState(0)
@@ -105,6 +107,25 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
+
+    // Save reading progress when the chapter changes
+    useEffect(() => {
+        if (!isLifeSyncConnected || !mangaId || !source || !currentChapterId) return
+        const ac = new AbortController()
+        lifesyncFetch('/api/v1/progress', {
+            method: 'POST',
+            signal: ac.signal,
+            json: {
+                bookId: `${source}:${mangaId}`,
+                source,
+                mangaId,
+                progressPct: 0,
+                locator: { chapterId: currentChapterId },
+                updatedAt: new Date().toISOString(),
+            },
+        }).catch(() => {})
+        return () => ac.abort()
+    }, [currentChapterId, isLifeSyncConnected, mangaId, source])
 
     // Chapter navigation
     const sortedChapters = allChapters

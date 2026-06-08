@@ -36,8 +36,14 @@ export function useHideCursorOnDpad() {
         // Poll for d-pad presses and stick movement
         const STICK_DEADZONE = 0.25
         let prevDpadPressed = false
+        let frameCount = 0
 
         const tick = () => {
+            frameCount++
+            if (frameCount % 2 !== 0) {
+                rafId = requestAnimationFrame(tick)
+                return
+            }
             const pad = getActiveGamepad()
             if (pad) {
                 // D-pad: any of buttons 12-15 pressed → hide cursor

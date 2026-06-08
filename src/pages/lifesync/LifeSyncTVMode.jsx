@@ -22,6 +22,15 @@ import { TVHManhwaSection } from './tv/sections/TVHManhwaSection'
 import { TVHentaiSection } from './tv/sections/TVHentaiSection'
 import { TVHistorySection } from './tv/sections/TVHistorySection'
 
+const LOW_END = (() => {
+    try {
+        if (/Xbox/i.test(navigator.userAgent)) return true
+        if (navigator.deviceMemory != null && navigator.deviceMemory < 4) return true
+        if (navigator.hardwareConcurrency != null && navigator.hardwareConcurrency <= 4) return true
+    } catch { /* ignore */ }
+    return false
+})()
+
 // ─── spatial navigation helpers ──────────────────────────────────────────────
 
 function colsInRow(itemCount, cols, row) {
@@ -64,7 +73,7 @@ function movePos(pos, dir, itemCount, cols) {
 
 function TVTabBar({ tabs, activeIndex, compact = false }) {
     return (
-        <div className={`shrink-0 flex items-center justify-between border-b border-white/8 bg-black/60 backdrop-blur-xl ${compact ? 'px-4 py-1.5' : 'px-6 py-3'}`}>
+        <div className={`shrink-0 flex items-center justify-between border-b border-white/8 ${LOW_END ? 'bg-black' : 'bg-black/60 backdrop-blur-xl'} ${compact ? 'px-4 py-1.5' : 'px-6 py-3'}`}>
             <div className="flex items-center gap-2.5 mr-8">
                 <div className={`flex items-center justify-center rounded-xl bg-(--mx-color-c6ff00) ${compact ? 'h-6 w-6' : 'h-8 w-8'}`}>
                     <svg className={compact ? 'h-3 w-3' : 'h-4 w-4'} fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="black" aria-hidden>
@@ -488,11 +497,13 @@ function LifeSyncTVModeInner({ onExit }) {
 
     return (
         <div className="fixed inset-0 z-9999 flex h-dvh w-full flex-col overflow-hidden bg-[#0a0a0c] text-white" style={{ cursor: 'none' }}>
-            {/* Ambient glow */}
-            <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-                <div className="absolute -left-40 -top-20 h-125 w-125 rounded-full bg-(--mx-color-c6ff00)/4 blur-[200px]" />
-                <div className="absolute right-0 bottom-0 h-100 w-100 rounded-full bg-indigo-500/4 blur-[180px]" />
-            </div>
+            {/* Ambient glow — omitted on low-end devices to avoid GPU compositing */}
+            {!LOW_END && (
+                <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+                    <div className="absolute -left-40 -top-20 h-125 w-125 rounded-full bg-(--mx-color-c6ff00)/4 blur-[200px]" />
+                    <div className="absolute right-0 bottom-0 h-100 w-100 rounded-full bg-indigo-500/4 blur-[180px]" />
+                </div>
+            )}
 
             {/* Intro */}
             <AnimatePresence>
