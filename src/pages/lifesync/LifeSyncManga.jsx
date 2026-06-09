@@ -662,6 +662,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
 
 function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, browseTranslatedLang = 'en', isLifeSyncConnected = false }) {
     const [detail, setDetail] = useState(null)
+    const [metaBusy, setMetaBusy] = useState(false)
     const [chapters, setChapters] = useState(null)
     const [chapBusy, setChapBusy] = useState(false)
     const [currentChapterId, setCurrentChapterId] = useState('')
@@ -728,10 +729,11 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
         if (!manga?.id) return undefined
         const src = manga.source || source
 
-        if (src === 'mangadistrict' || src === 'roliascan') {
+        if (src === 'roliascan') {
             const list = Array.isArray(manga.chapters) ? manga.chapters : []
             setChapters({ data: [...list] })
-            setDetail(src === 'roliascan' ? { ...manga } : null)
+            setDetail({ ...manga })
+            setMetaBusy(false)
             setDexStats(null)
             setIsDexFollowing(null)
             setDexReadingStatus(null)
@@ -739,14 +741,49 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
             return undefined
         }
 
+        if (src === 'mangadistrict') {
+            setDetail(null)
+            setChapters(null)
+            setMetaBusy(true)
+            setChapBusy(true)
+            setDexStats(null)
+            setIsDexFollowing(null)
+            setDexReadingStatus(null)
+
+            let cancelled = false
+            const id = String(manga.id)
+
+            // Fetch metadata from DB (fast)
+            lifesyncFetch(`/api/v1/manga/mangadistrict/meta/${encodeURIComponent(id)}?view=full`)
+                .then(data => {
+                    if (cancelled) return
+                    setDetail(prev => ({ ...prev, ...data, id: data.id || id, source: 'mangadistrict' }))
+                })
+                .catch(() => { /* preview data already shown via manga prop */ })
+                .finally(() => { if (!cancelled) setMetaBusy(false) })
+
+            // Fetch chapters live from scraper (slow)
+            lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(id)}?view=full`)
+                .then(data => {
+                    if (cancelled) return
+                    const list = Array.isArray(data.chapters) ? data.chapters : []
+                    setChapters({ data: list })
+                })
+                .catch(() => { if (!cancelled) setChapters({ data: [] }) })
+                .finally(() => { if (!cancelled) setChapBusy(false) })
+
+            return () => { cancelled = true }
+        }
+
         setDetail(null)
         setChapters({ data: [] })
+        setMetaBusy(false)
         setDexStats(null)
         setIsDexFollowing(null)
         setDexReadingStatus(null)
         setChapBusy(false)
         return undefined
-    }, [manga?.id, manga.source, source, manga.chapters, roliascanConnected, chapterLang, manga])
+    }, [manga?.id, manga.source, source, roliascanConnected, chapterLang])
 
     const chaptersInSeriesOrder = useMemo(() => {
         const list = chapters?.data ? [...chapters.data] : []
@@ -830,11 +867,19 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
 
     const coverLayoutId = mangaCoverLayoutId(manga.source || source, manga.id)
 
-    const d = detail || manga
     const src = manga.source || source
+    // For mangadistrict: merge detail (DB metadata) over manga (card preview).
+    // detail.coverUrl always wins — it's the fresh scraper URL from DB.
+    const d = src === 'mangadistrict' && detail
+        ? { ...manga, ...detail, id: detail.id || manga.id }
+        : detail || manga
     const mergedManga = { ...d, id: d.id || manga.id, source: src }
     const tagList = d.tags?.length ? d.tags : manga.tags
-    const coverImg = resolveMangaCoverDisplayUrl(d.coverUrl || manga.coverUrl, src)
+    // coverUrl: prefer detail (DB/scraper), fall back to card preview only if no detail yet
+    const coverImg = resolveMangaCoverDisplayUrl(
+        detail?.coverUrl || (metaBusy ? manga.coverUrl : (d.coverUrl || manga.coverUrl)),
+        src,
+    )
     const heroBannerUrl =
         resolveMangaCoverDisplayUrl(d.backgroundImageUrl || manga.backgroundImageUrl, src) || null
     const heroBackdropUrl = heroBannerUrl || coverImg
@@ -946,28 +991,39 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
                             <h2 className="text-[18px] sm:text-[22px] font-bold text-[var(--mx-color-1d1d1f)] leading-tight line-clamp-3">
                                 {d.title || manga.title}
                             </h2>
-                            {d.author && (
+                            {metaBusy && src === 'mangadistrict' ? (
+                                <div className="mt-1.5 h-3 w-32 rounded bg-white/30 animate-pulse" />
+                            ) : d.author ? (
                                 <p className="mt-1.5 text-[12px] text-[var(--mx-color-86868b)] flex items-center gap-1.5">
                                     <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                     {d.author}
                                 </p>
-                            )}
+                            ) : null}
                             <div className="flex flex-wrap items-center gap-2 mt-2">
-                                {d.status && (
-                                    <span className="inline-flex items-center gap-1 bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-1d1d1f)] text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
-                                        <span className={`w-1.5 h-1.5 rounded-full ${d.status === 'completed' || d.status === 'cancelled' ? 'bg-[var(--mx-color-86868b)]' : 'bg-[var(--mx-color-c6ff00)]'}`} />
-                                        {d.status}
-                                    </span>
-                                )}
-                                {d.year && <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">{d.year}</span>}
-                                {showRating && (
-                                    <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                                        <svg className="w-2.5 h-2.5 fill-amber-500" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                        {ratingNum.toFixed(1)}
-                                    </span>
-                                )}
-                                {d.contentRating && d.contentRating !== 'safe' && (
-                                    <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase">{d.contentRating}</span>
+                                {metaBusy && src === 'mangadistrict' ? (
+                                    <>
+                                        <span className="h-5 w-16 rounded-full bg-[var(--mx-color-c6ff00)]/20 animate-pulse" />
+                                        <span className="h-5 w-12 rounded-full bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                                    </>
+                                ) : (
+                                    <>
+                                        {d.status && (
+                                            <span className="inline-flex items-center gap-1 bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-1d1d1f)] text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
+                                                <span className={`w-1.5 h-1.5 rounded-full ${d.status === 'completed' || d.status === 'cancelled' ? 'bg-[var(--mx-color-86868b)]' : 'bg-[var(--mx-color-c6ff00)]'}`} />
+                                                {d.status}
+                                            </span>
+                                        )}
+                                        {d.year && <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">{d.year}</span>}
+                                        {showRating && (
+                                            <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                                <svg className="w-2.5 h-2.5 fill-amber-500" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                                                {ratingNum.toFixed(1)}
+                                            </span>
+                                        )}
+                                        {d.contentRating && d.contentRating !== 'safe' && (
+                                            <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase">{d.contentRating}</span>
+                                        )}
+                                    </>
                                 )}
                                 {chaptersInSeriesOrder.length > 0 && (
                                     <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
@@ -1061,7 +1117,13 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
                         transition={lifeSyncDetailBodyRevealTransition}
                     >
                         {/* Tags */}
-                        {tagList?.length > 0 && (
+                        {metaBusy && src === 'mangadistrict' ? (
+                            <div className="flex flex-wrap gap-1.5">
+                                {[60, 80, 50, 70, 55].map((w, i) => (
+                                    <span key={i} className="h-6 rounded-lg bg-[var(--mx-color-f5f5f7)] animate-pulse" style={{ width: w }} />
+                                ))}
+                            </div>
+                        ) : tagList?.length > 0 ? (
                             <div className="flex flex-wrap gap-1.5">
                                 {tagList.map((t, i) => {
                                     const label = mangaTagLabel(t)
@@ -1071,10 +1133,16 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
                                     )
                                 })}
                             </div>
-                        )}
+                        ) : null}
 
                         {/* Description */}
-                        {cleanDesc && (
+                        {metaBusy && src === 'mangadistrict' ? (
+                            <div className="space-y-2">
+                                <div className="h-3 w-full rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                                <div className="h-3 w-5/6 rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                                <div className="h-3 w-4/6 rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                            </div>
+                        ) : cleanDesc ? (
                             <div>
                                 <p className={`text-[13px] leading-relaxed ${descExpanded ? '' : 'line-clamp-3'}`}>
                                     {cleanDesc}
@@ -1085,7 +1153,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
                                     </button>
                                 )}
                             </div>
-                        )}
+                        ) : null}
 
                         {/* Chapters */}
                         <div>
@@ -2293,34 +2361,11 @@ export default function LifeSyncManga() {
         async ({ id, source: srcParam }) => {
             const src = srcParam || source
             if (!id) return
+            // mangadistrict: MangaDetail self-fetches meta + chapters; nothing to do here
+            if (src === 'mangadistrict') return
             const gen = ++mangaDetailEnrichGenRef.current
-            if (!hManhwaEnabled && src === 'mangadistrict') return
             setError('')
             try {
-                if (src === 'mangadistrict') {
-                    const data = await lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(id)}?view=full`)
-                    if (mangaDetailEnrichGenRef.current !== gen) return
-                    setSelectedManga(prev => ({
-                        ...prev,
-                        ...data,
-                        id: data.id || id,
-                        coverUrl: data.coverUrl || prev?.coverUrl,
-                        source: 'mangadistrict',
-                    }))
-                    return
-                }
-                if (src === 'roliascan') {
-                    const data = await lifesyncFetch(`/api/v1/manga/roliascan/info/${encodeURIComponent(id)}?view=full`)
-                    if (mangaDetailEnrichGenRef.current !== gen) return
-                    setSelectedManga(prev => ({
-                        ...prev,
-                        ...data,
-                        id: data.id || id,
-                        source: 'roliascan',
-                        coverUrl: data.coverUrl || prev?.coverUrl,
-                    }))
-                    return
-                }
                 const data = await lifesyncFetch(`/api/v1/manga/roliascan/info/${encodeURIComponent(id)}?view=full`)
                 if (mangaDetailEnrichGenRef.current !== gen) return
                 setSelectedManga(prev => ({
@@ -2335,7 +2380,7 @@ export default function LifeSyncManga() {
                 setError(e.message || 'Could not open manga')
             }
         },
-        [hManhwaEnabled, source]
+        [source]
     )
 
     const routeDetailKey = useRef(null)

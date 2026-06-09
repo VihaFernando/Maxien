@@ -162,11 +162,20 @@ export function TVAnimeSection({ focusPos, onItemSelect, enabled, filterOpen, on
                     const col = i % COLS
                     const focused = !filterOpen && focusPos.row === row && focusPos.col === col
                     const detailItem = buildAnimeDetailItem(node)
+                    const epCount = node?.num_episodes || node?.episodes
+                    const badge = epCount ? `EP ${epCount}` : undefined
+                    const typePart = node?.type || node?.media_type
+                    const statusPart = node?.status
+                    const subtitle = [typePart, statusPart].filter(Boolean).join(' · ') || undefined
+                    const score = node?.score ? String(node.score) : undefined
                     return (
                         <div key={detailItem?.slug || i} data-focused-card={focused ? 'true' : undefined}>
                             <TVCard
                                 imageUrl={detailItem?.imageUrl}
                                 title={node?.title}
+                                badge={badge}
+                                subtitle={subtitle}
+                                score={score}
                                 focused={focused}
                                 onSelect={() => detailItem && onItemSelect(detailItem)}
                             />

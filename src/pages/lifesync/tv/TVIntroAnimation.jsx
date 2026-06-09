@@ -1,14 +1,8 @@
 import { useEffect } from 'react'
 import { motion as M } from 'framer-motion'
+import { readStoredReduceAnimationsSetting } from '../../../lib/lifeSyncReduceMotion'
 
-const LOW_END = (() => {
-    try {
-        if (/Xbox/i.test(navigator.userAgent)) return true
-        if (navigator.deviceMemory != null && navigator.deviceMemory < 4) return true
-        if (navigator.hardwareConcurrency != null && navigator.hardwareConcurrency <= 4) return true
-    } catch { /* ignore */ }
-    return false
-})()
+const LOW_END = readStoredReduceAnimationsSetting() === true
 
 /**
  * Cinematic logo reveal played once per session before the TV grid appears.

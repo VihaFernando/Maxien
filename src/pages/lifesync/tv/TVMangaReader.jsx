@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { List, useDynamicRowHeight, useListRef } from 'react-window'
 import { lifesyncFetch } from '../../../lib/lifesyncApi'
 import { useLifeSync } from '../../../context/LifeSyncContext'
 import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
@@ -10,26 +9,22 @@ import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
  * Fullscreen TV manga reader — vertical scroll pages.
  * LB/RB = prev/next chapter, LT/RT = zoom, X = chapter picker, B = back.
  *
- * Uses react-window List so only the visible pages (+2 overscan) exist in the DOM,
- * preventing OOM crashes and slow loads on memory-constrained devices (Xbox One).
- * useDynamicRowHeight measures each page's real height via ResizeObserver after load.
+ * Uses native overflow-y scroll with content-visibility: auto per page so only
+ * visible pages are rendered by the browser — no JS virtualization library needed.
  */
 
-function PageRow({ index, style, ariaAttributes, pages, zoomPct, currentChapterId, rowRef }) {
-    const src = pages[index]
+function PageRow({ index, src, zoomPct, chapterId, estimatedHeight }) {
     const [loaded, setLoaded] = useState(false)
     const isEarly = index < 3
-    const imgRef = useRef(null)
-
-    // rowRef is called with the outer div so react-window can measure the real height
-    const setRef = useCallback((el) => {
-        rowRef?.(el)
-    }, [rowRef])
 
     return (
-        <div ref={setRef} style={style} {...ariaAttributes}>
+        <div
+            style={{
+                contentVisibility: 'auto',
+                containIntrinsicSize: `auto ${estimatedHeight}px`,
+            }}
+        >
             <div style={{ width: `${zoomPct}%`, margin: '0 auto', position: 'relative' }}>
-                {/* Shimmer skeleton until image loaded */}
                 {!loaded && (
                     <div
                         style={{
@@ -44,8 +39,7 @@ function PageRow({ index, style, ariaAttributes, pages, zoomPct, currentChapterI
                     />
                 )}
                 <img
-                    ref={imgRef}
-                    key={`${currentChapterId}-${index}`}
+                    key={`${chapterId}-${index}`}
                     src={src}
                     alt={`Page ${index + 1}`}
                     decoding="async"
@@ -56,6 +50,7 @@ function PageRow({ index, style, ariaAttributes, pages, zoomPct, currentChapterI
                         height: 'auto',
                         opacity: loaded ? 1 : 0,
                         transition: isEarly ? 'none' : 'opacity 0.3s ease',
+                        willChange: 'transform',
                     }}
                     referrerPolicy="no-referrer"
                 />
@@ -76,33 +71,29 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [currentChapterId, setCurrentChapterId] = useState(initialChapterId)
-    const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+    const [containerHeight, setContainerHeight] = useState(0)
+    const [containerWidth, setContainerWidth] = useState(0)
 
-    const listRef = useListRef()
+    const scrollRef = useRef(null)
     const containerRef = useRef(null)
     const cancelRef = useRef(false)
     const pickerOpenedAtRef = useRef(0)
     const suppressBackUntilRef = useRef(0)
     const zoomAnchorRef = useRef(null)
-    // Tracks scroll offset for progress + scrollByAmount
     const scrollOffsetRef = useRef(0)
 
-    // useDynamicRowHeight measures each row after it renders via ResizeObserver.
-    // Reset key forces a fresh measurement cache on chapter change.
-    const estimatedPageHeight = containerSize.width > 0
-        ? Math.round(containerSize.width * (zoomPct / 100) * 1.4)
+    // Estimated height per page for content-visibility containIntrinsicSize hint
+    const estimatedHeight = containerWidth > 0
+        ? Math.round(containerWidth * (zoomPct / 100) * 1.4)
         : 400
-    const dynamicRowHeight = useDynamicRowHeight({
-        defaultRowHeight: estimatedPageHeight,
-        key: currentChapterId,
-    })
 
-    // Measure the scroll container so List gets accurate dimensions
+    // Measure the scroll container
     useEffect(() => {
         const el = containerRef.current
         if (!el) return
         const ro = new ResizeObserver(([entry]) => {
-            setContainerSize({ width: entry.contentRect.width, height: entry.contentRect.height })
+            setContainerHeight(entry.contentRect.height)
+            setContainerWidth(entry.contentRect.width)
         })
         ro.observe(el)
         return () => ro.disconnect()
@@ -143,7 +134,8 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                 setPageIndex(0)
                 setScrollProgress(0)
                 scrollOffsetRef.current = 0
-                listRef.current?.element?.scrollTo({ top: 0, behavior: 'instant' })
+                const el = scrollRef.current
+                if (el) el.scrollTo({ top: 0, behavior: 'instant' })
             }
         })
 
@@ -162,29 +154,29 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
             .finally(() => { if (!cancelRef.current) setLoading(false) })
 
         return () => { cancelRef.current = true }
-    }, [currentChapterId, mangaId, source, listRef])
+    }, [currentChapterId, mangaId, source])
 
     const scrollByAmount = useCallback((delta) => {
-        const el = listRef.current?.element
+        const el = scrollRef.current
         if (!el) return
         const next = Math.max(0, scrollOffsetRef.current + delta)
         el.scrollTo({ top: next, behavior: 'instant' })
-    }, [listRef])
+    }, [])
 
     const setZoom = useCallback((delta) => {
-        const el = listRef.current?.element
+        const el = scrollRef.current
         if (el && el.scrollHeight > el.clientHeight) {
             zoomAnchorRef.current = el.scrollTop / (el.scrollHeight - el.clientHeight)
         }
         setZoomPct(prev => Math.max(20, Math.min(80, prev + delta)))
-    }, [listRef])
+    }, [])
 
     // Restore scroll position after zoom reflow
     useEffect(() => {
         const anchor = zoomAnchorRef.current
         if (anchor == null) return
         const id = window.requestAnimationFrame(() => {
-            const el = listRef.current?.element
+            const el = scrollRef.current
             if (el) {
                 const maxScroll = el.scrollHeight - el.clientHeight
                 el.scrollTo({ top: Math.round(maxScroll * anchor), behavior: 'instant' })
@@ -192,7 +184,7 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
             zoomAnchorRef.current = null
         })
         return () => window.cancelAnimationFrame(id)
-    }, [zoomPct, listRef])
+    }, [zoomPct])
 
     const openChapterPicker = useCallback(() => {
         pickerOpenedAtRef.current = typeof performance !== 'undefined' ? performance.now() : Date.now()
@@ -280,22 +272,6 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
 
     const currentChapterLabel = sortedChapters[chapterIdx]?.title || sortedChapters[chapterIdx]?.chapter || sortedChapters[chapterIdx]?.name || currentChapterId
 
-    // rowProps passed into every PageRow via List's rowProps — stable when deps don't change
-    const rowProps = useMemo(() => ({ pages, zoomPct, currentChapterId }), [pages, zoomPct, currentChapterId])
-
-    // rowComponent must be stable (defined outside render or memoized)
-    const RowComponent = useCallback(({ index, style, ariaAttributes, pages: p, zoomPct: z, currentChapterId: cid, rowRef }) => (
-        <PageRow
-            index={index}
-            style={style}
-            ariaAttributes={ariaAttributes}
-            pages={p}
-            zoomPct={z}
-            currentChapterId={cid}
-            rowRef={rowRef}
-        />
-    ), [])
-
     return (
         <div className="absolute inset-0 z-20 flex flex-col bg-black" style={{ cursor: 'none' }}>
             <style>{`@keyframes manga-shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
@@ -320,17 +296,23 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                         <p className="text-[15px] text-white/40">No pages available.</p>
                     </div>
                 )}
-                {!loading && !error && pages.length > 0 && containerSize.height > 0 && (
-                    <List
-                        listRef={listRef}
-                        rowComponent={RowComponent}
-                        rowCount={pages.length}
-                        rowHeight={dynamicRowHeight}
-                        rowProps={rowProps}
-                        overscanCount={2}
-                        style={{ background: 'black', width: '100%', height: `${containerSize.height}px`, overflowY: 'auto' }}
+                {!loading && !error && pages.length > 0 && containerHeight > 0 && (
+                    <div
+                        ref={scrollRef}
+                        style={{ width: '100%', height: `${containerHeight}px`, overflowY: 'auto', background: 'black' }}
                         onScroll={handleScroll}
-                    />
+                    >
+                        {pages.map((src, i) => (
+                            <PageRow
+                                key={`${currentChapterId}-${i}`}
+                                index={i}
+                                src={src}
+                                zoomPct={zoomPct}
+                                chapterId={currentChapterId}
+                                estimatedHeight={estimatedHeight}
+                            />
+                        ))}
+                    </div>
                 )}
             </div>
 

@@ -145,11 +145,17 @@ export function TVMangaSection({ focusPos, onItemSelect, enabled, filterOpen, on
                         const col = i % COLS
                         const focused = !filterOpen && focusPos.row === row && focusPos.col === col
                         const detailItem = buildMangaDetailItem(manga, typeOption)
+                        const chCount = manga.totalChapters || manga.chapterCount || manga.chapters
+                        const badge = chCount ? `CH ${chCount}` : undefined
+                        const subtitle = [typeOption?.label, manga.status].filter(Boolean).join(' · ') || undefined
                         return (
                             <div key={manga.id} data-focused-card={focused ? 'true' : undefined}>
                                 <TVCard
                                     imageUrl={manga.coverUrl || manga.cover}
                                     title={manga.title}
+                                    badge={badge}
+                                    subtitle={subtitle}
+                                    ratingBadge={manga.contentRating}
                                     focused={focused}
                                     onSelect={() => detailItem && onItemSelect(detailItem)}
                                 />

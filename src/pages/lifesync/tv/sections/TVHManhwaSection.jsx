@@ -161,12 +161,16 @@ export function TVHManhwaSection({ focusPos, onItemSelect, enabled, filterOpen, 
                         const focused = !filterOpen && focusPos.row === row && focusPos.col === col
                         const id = manga.id || manga.slug
                         const detailItem = buildHManhwaDetailItem(manga)
+                        const typeLabel = TYPE_OPTIONS.find(o => o.id === manga.type)?.label
+                        const subtitle = [typeLabel, manga.status].filter(Boolean).join(' · ') || undefined
                         return (
                             <div key={id || i} data-focused-card={focused ? 'true' : undefined}>
                                 <TVCard
                                     imageUrl={manga.coverUrl || manga.cover || manga.thumbnail}
                                     title={manga.title}
                                     badge={manga.latestChapter ? `Ch ${manga.latestChapter}` : undefined}
+                                    subtitle={subtitle}
+                                    ratingBadge={manga.contentRating || 'mature'}
                                     focused={focused}
                                     onSelect={() => detailItem && onItemSelect(detailItem)}
                                 />

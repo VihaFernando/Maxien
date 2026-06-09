@@ -1,17 +1,21 @@
 import { LifesyncEpisodeThumbnail } from '../../../components/lifesync/EpisodeLoadingSkeletons'
 
-/**
- * TV-scale card for the fullscreen TV mode grid.
- * No hover states — no cursor in TV mode.
- * Focused state shows a lime ring + subtle scale.
- */
-export function TVCard({ imageUrl, title, badge, focused, onSelect, aspectRatio = '2/3' }) {
+function resolveRatingLabel(contentRating) {
+    if (!contentRating) return null
+    const r = String(contentRating).toLowerCase()
+    if (r === 'mature' || r === 'adult' || r === '18+' || r === 'pornographic') return '18+'
+    if (r === 'suggestive' || r === 'erotica' || r === '16+') return '16+'
+    return null
+}
+
+export function TVCard({ imageUrl, title, badge, ratingBadge, score, subtitle, focused, onSelect, aspectRatio = '2/3' }) {
+    const ratingLabel = resolveRatingLabel(ratingBadge)
     return (
         <div
             data-focused-card={focused ? 'true' : undefined}
             className={`group relative flex flex-col overflow-hidden rounded-2xl transition-all duration-150 select-none ${
                 focused
-                    ? 'ring-4 ring-[var(--mx-color-c6ff00)] scale-[1.05] shadow-[0_0_0_8px_rgba(198,255,0,0.18)] z-10'
+                    ? 'ring-4 ring-(--mx-color-c6ff00) scale-[1.05] shadow-[0_0_0_8px_rgba(198,255,0,0.18)] z-10'
                     : 'ring-0 scale-100'
             }`}
             onClick={onSelect}
@@ -26,7 +30,8 @@ export function TVCard({ imageUrl, title, badge, focused, onSelect, aspectRatio 
                         src={imageUrl}
                         className="absolute inset-0 h-full w-full"
                         imgClassName="h-full w-full object-cover"
-                        imgProps={{ referrerPolicy: 'no-referrer' }}
+                        imgProps={{ referrerPolicy: 'no-referrer', style: { willChange: 'transform' } }}
+                        noFade={focused}
                     />
                 ) : (
                     <div className="flex h-full w-full items-center justify-center text-white/20">
@@ -37,16 +42,37 @@ export function TVCard({ imageUrl, title, badge, focused, onSelect, aspectRatio 
                 )}
 
                 {/* Gradient overlay for title legibility */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+                <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/80 via-black/10 to-transparent" />
 
-                {/* Badge (episode / chapter label) */}
+                {/* Badge (episode / chapter label) — top-right */}
                 {badge && (
                     <span className={`absolute right-2 top-2 rounded-lg px-2.5 py-1 text-[12px] font-black tabular-nums ${
                         focused
-                            ? 'bg-[var(--mx-color-c6ff00)] text-black'
+                            ? 'bg-(--mx-color-c6ff00) text-black'
                             : 'bg-black/80 text-white/90'
                     }`}>
                         {badge}
+                    </span>
+                )}
+
+                {/* Score pill — top-left, only when no badge or when there's room */}
+                {score && !badge && (
+                    <span className="absolute left-2 top-2 rounded-lg bg-black/70 px-2 py-0.5 text-[11px] font-black text-amber-300 tabular-nums">
+                        ★ {score}
+                    </span>
+                )}
+
+                {/* Rating badge — bottom-left */}
+                {ratingLabel && (
+                    <span className="absolute bottom-2 left-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-black tracking-wide text-amber-300">
+                        {ratingLabel}
+                    </span>
+                )}
+
+                {/* Score badge — bottom-right (when badge is occupying top-right) */}
+                {score && badge && (
+                    <span className="absolute bottom-2 right-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-black text-amber-300 tabular-nums">
+                        ★ {score}
                     </span>
                 )}
 
@@ -56,13 +82,20 @@ export function TVCard({ imageUrl, title, badge, focused, onSelect, aspectRatio 
                 )}
             </div>
 
-            {/* Title below image */}
+            {/* Title + subtitle below image */}
             <div className="mt-2 px-0.5">
                 <p className={`line-clamp-2 text-[17px] font-bold leading-snug tracking-tight transition-colors ${
-                    focused ? 'text-[var(--mx-color-c6ff00)]' : 'text-white/90'
+                    focused ? 'text-(--mx-color-c6ff00)' : 'text-white/90'
                 }`}>
                     {title || 'Untitled'}
                 </p>
+                {subtitle && (
+                    <p className={`mt-0.5 truncate text-[12px] font-medium leading-tight ${
+                        focused ? 'text-(--mx-color-c6ff00)/70' : 'text-white/40'
+                    }`}>
+                        {subtitle}
+                    </p>
+                )}
             </div>
         </div>
     )
@@ -78,6 +111,7 @@ export function TVCardSkeleton() {
             <div className="mt-2 space-y-1.5 px-0.5">
                 <div className="h-4 w-3/4 animate-pulse rounded-md bg-white/8" />
                 <div className="h-4 w-1/2 animate-pulse rounded-md bg-white/8" />
+                <div className="h-3 w-2/5 animate-pulse rounded-md bg-white/5" />
             </div>
         </div>
     )

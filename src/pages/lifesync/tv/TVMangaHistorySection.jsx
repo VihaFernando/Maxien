@@ -51,6 +51,7 @@ export function TVMangaHistorySection({ focusPos, onItemSelect, enabled }) {
                         imageUrl={entry.coverUrl}
                         title={entry.title}
                         badge={badge}
+                        ratingBadge={entry.contentRating}
                         focused={focused}
                         onSelect={() => onItemSelect({
                             type: 'manga',

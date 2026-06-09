@@ -8,6 +8,7 @@ import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
 import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
+import { readStoredReduceAnimationsSetting } from '../../lib/lifeSyncReduceMotion'
 
 import { TVIntroAnimation } from './tv/TVIntroAnimation'
 import { TVExitConfirmPopup } from './tv/TVExitConfirmPopup'
@@ -22,14 +23,7 @@ import { TVHManhwaSection } from './tv/sections/TVHManhwaSection'
 import { TVHentaiSection } from './tv/sections/TVHentaiSection'
 import { TVHistorySection } from './tv/sections/TVHistorySection'
 
-const LOW_END = (() => {
-    try {
-        if (/Xbox/i.test(navigator.userAgent)) return true
-        if (navigator.deviceMemory != null && navigator.deviceMemory < 4) return true
-        if (navigator.hardwareConcurrency != null && navigator.hardwareConcurrency <= 4) return true
-    } catch { /* ignore */ }
-    return false
-})()
+const LOW_END = readStoredReduceAnimationsSetting() === true
 
 // ─── spatial navigation helpers ──────────────────────────────────────────────
 

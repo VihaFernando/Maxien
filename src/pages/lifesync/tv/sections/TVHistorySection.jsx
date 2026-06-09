@@ -242,12 +242,14 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
 
                         if (subTab === 'anime') {
                             const badge = entry.lastEpisodeNumber != null ? `EP ${entry.lastEpisodeNumber}` : undefined
+                            const subtitle = entry.status ? entry.status : 'Anime'
                             return (
                                 <div key={entry.animeId || i} data-focused-card={focused ? 'true' : undefined}>
                                     <TVCard
                                         imageUrl={entry.imageUrl || entry.posterUrl}
                                         title={entry.title}
                                         badge={badge}
+                                        subtitle={subtitle}
                                         focused={focused}
                                         onSelect={() => detailItem && onItemSelect(detailItem)}
                                     />
@@ -256,17 +258,19 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
                         }
 
                         const badge = entry.lastChapterLabel || undefined
+                        const subtitle = [entry.source, entry.status].filter(Boolean).join(' · ') || 'Manga'
 
                         return (
                             <div key={entry.source && entry.mangaId ? `${entry.source}:${entry.mangaId}` : i} data-focused-card={focused ? 'true' : undefined}>
                                 <TVCard
                                     imageUrl={entry.coverUrl}
-                                title={entry.title}
-                                badge={badge}
-                                focused={focused}
-                                onSelect={() => detailItem && onItemSelect(detailItem)}
-                            />
-                        </div>
+                                    title={entry.title}
+                                    badge={badge}
+                                    subtitle={subtitle}
+                                    focused={focused}
+                                    onSelect={() => detailItem && onItemSelect(detailItem)}
+                                />
+                            </div>
                         )
                     })}
                 </div>

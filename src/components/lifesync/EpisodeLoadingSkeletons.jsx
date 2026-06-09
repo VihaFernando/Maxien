@@ -681,6 +681,7 @@ function LifesyncEpisodeThumbnailInner({
   imgClassName,
   imgProps,
   dark,
+  noFade,
   children,
 }) {
   const [loaded, setLoaded] = useState(false)
@@ -689,6 +690,7 @@ function LifesyncEpisodeThumbnailInner({
   const restImgProps = { ...imgProps }
   if (propOnLoad) delete restImgProps.onLoad
   if (propOnError) delete restImgProps.onError
+  delete restImgProps.style
 
   const onLoad = useCallback(
     (e) => {
@@ -705,18 +707,23 @@ function LifesyncEpisodeThumbnailInner({
     [propOnError]
   )
   const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
+  const opacityClass = noFade
+    ? 'opacity-100'
+    : `transition-opacity duration-500 ease-out ${loaded ? 'opacity-100' : 'opacity-0'}`
 
   return (
     <>
-      {!loaded ? <div className={`absolute inset-0 z-1 ${shimmer}`} aria-hidden /> : null}
+      {!loaded && !noFade ? <div className={`absolute inset-0 z-1 ${shimmer}`} aria-hidden /> : null}
       <img
         src={effective}
         alt={alt}
         onLoad={onLoad}
         onError={onError}
         loading="lazy"
+        decoding="async"
         referrerPolicy="no-referrer"
-        className={`h-full w-full object-cover transition-opacity duration-500 ease-out ${loaded ? 'opacity-100' : 'opacity-0'} ${imgClassName}`}
+        className={`h-full w-full object-cover ${opacityClass} ${imgClassName}`}
+        style={{ willChange: 'transform', ...restImgProps.style }}
         {...restImgProps}
       />
       {children}
@@ -745,6 +752,7 @@ export function LifesyncEpisodeThumbnail({
   imgClassName = '',
   imgProps = {},
   dark = false,
+  noFade = false,
   children,
 }) {
   const raw = typeof src === 'string' && src.trim() ? src.trim() : ''
@@ -761,6 +769,7 @@ export function LifesyncEpisodeThumbnail({
           imgClassName={imgClassName}
           imgProps={imgProps}
           dark={dark}
+          noFade={noFade}
         >
           {children}
         </LifesyncEpisodeThumbnailInner>

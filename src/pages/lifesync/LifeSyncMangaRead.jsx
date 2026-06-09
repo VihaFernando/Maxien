@@ -913,6 +913,7 @@ export default function LifeSyncMangaRead() {
                                 loading={i < INITIAL_PAGE_BURST ? 'eager' : 'lazy'}
                                 fetchPriority={i < INITIAL_PAGE_BURST ? 'high' : 'low'}
                                 decoding="async"
+                                style={{ willChange: 'transform' }}
                                 onLoad={onPageImageLoad}
                                 {...imgProps(src)}
                             />

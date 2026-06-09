@@ -113,12 +113,15 @@ export function TVHentaiSection({ focusPos, onItemSelect, enabled, filterOpen, o
                         const key = series.seriesKey || series.slug || i
                         const epCount = series.episodeCount || series.episodes?.length
                         const detailItem = buildHentaiDetailItem(series)
+                        const subtitle = series.year ? String(series.year) : undefined
                         return (
                             <div key={key} data-focused-card={focused ? 'true' : undefined}>
                                 <TVCard
                                     imageUrl={series.posterUrl}
                                     title={series.title}
                                     badge={epCount ? `${epCount} ep` : undefined}
+                                    subtitle={subtitle}
+                                    ratingBadge="18+"
                                     focused={focused}
                                     onSelect={() => detailItem && onItemSelect(detailItem)}
                                 />
