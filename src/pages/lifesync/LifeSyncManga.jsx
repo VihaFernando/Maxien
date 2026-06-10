@@ -725,21 +725,26 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
         }
     }, [isLifeSyncConnected, manga?.id, manga?.source, source])
 
+    // Roliascan: full detail arrives via parent enrichment (`/roliascan/info`) merged into
+    // the `manga` prop after mount, so sync on every `manga` change — not just id changes.
+    useEffect(() => {
+        if (!manga?.id) return
+        if ((manga.source || source) !== 'roliascan') return
+        const hasChapterPayload = Array.isArray(manga.chapters)
+        setChapters(hasChapterPayload ? { data: [...manga.chapters] } : null)
+        setDetail({ ...manga })
+        setMetaBusy(false)
+        setDexStats(null)
+        setIsDexFollowing(null)
+        setDexReadingStatus(null)
+        setChapBusy(!hasChapterPayload)
+    }, [manga, source])
+
     useEffect(() => {
         if (!manga?.id) return undefined
         const src = manga.source || source
 
-        if (src === 'roliascan') {
-            const list = Array.isArray(manga.chapters) ? manga.chapters : []
-            setChapters({ data: [...list] })
-            setDetail({ ...manga })
-            setMetaBusy(false)
-            setDexStats(null)
-            setIsDexFollowing(null)
-            setDexReadingStatus(null)
-            setChapBusy(false)
-            return undefined
-        }
+        if (src === 'roliascan') return undefined
 
         if (src === 'mangadistrict') {
             setDetail(null)
