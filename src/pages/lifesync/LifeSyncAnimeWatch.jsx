@@ -895,14 +895,28 @@ export default function LifeSyncAnimeWatch() {
                                                                     { replace: true, state: { from: closeTo } },
                                                                 )
                                                             }}
-                                                            className="min-h-11 rounded-2xl border border-[var(--color-border-strong)]/12 bg-black/24 px-3 py-2 text-left text-[12px] font-semibold text-white/85 transition-colors hover:border-[var(--mx-color-c6ff00)]/28 hover:bg-[var(--color-surface)]/8 sm:min-h-0"
+                                                            className="flex w-[calc(50%-4px)] min-w-[130px] flex-1 items-center gap-2.5 rounded-2xl border border-(--color-border-strong)/12 bg-black/24 p-2 text-left transition-colors hover:border-(--mx-color-c6ff00)/28 hover:bg-(--color-surface)/8 sm:w-auto sm:flex-none"
                                                         >
-                                                            {r?.title || slug}
-                                                            {r?.relation ? (
-                                                                <span className="ml-1.5 text-[10px] font-normal text-white/45">
-                                                                    {String(r.relation).replace(/_/g, ' ')}
-                                                                </span>
-                                                            ) : null}
+                                                            {r?.poster ? (
+                                                                <img
+                                                                    src={r.poster}
+                                                                    alt=""
+                                                                    className="h-12 w-8 shrink-0 rounded-lg object-cover"
+                                                                    loading="lazy"
+                                                                />
+                                                            ) : (
+                                                                <div className="h-12 w-8 shrink-0 rounded-lg bg-white/8" />
+                                                            )}
+                                                            <div className="min-w-0">
+                                                                <p className="line-clamp-2 text-[11px] font-semibold leading-tight text-white/85">
+                                                                    {r?.title || slug}
+                                                                </p>
+                                                                {r?.relation ? (
+                                                                    <p className="mt-0.5 text-[10px] capitalize text-white/40">
+                                                                        {String(r.relation).replace(/_/g, ' ')}
+                                                                    </p>
+                                                                ) : null}
+                                                            </div>
                                                         </button>
                                                     )
                                                 })}
