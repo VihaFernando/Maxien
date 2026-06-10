@@ -310,7 +310,7 @@ function DexContentRatingSection({ selectedIds, nsfwEnabled, onToggle }) {
                 <p className="mt-1 text-[10px] leading-relaxed text-[var(--mx-color-86868b)]">
                     Roliascan catalog filter (see{' '}
                     <a
-                        href="https://roliascan.to/"
+                        href="https://roliascan.com/"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="font-medium text-[var(--mx-color-6d28d9)] underline decoration-[var(--mx-color-c4b5fd)] underline-offset-2 hover:text-[var(--mx-color-5b21b6)]"
@@ -894,8 +894,8 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
             ? (mergedManga.url
                 ? String(mergedManga.url)
                 : mergedManga.slug
-                    ? `https://roliascan.to/manga/${encodeURIComponent(String(mergedManga.slug))}/`
-                    : `https://roliascan.to/browse/?title=${encodeURIComponent(String(mergedManga.title || ''))}`)
+                    ? `https://roliascan.com/manga/${encodeURIComponent(String(mergedManga.slug))}/`
+                    : `https://roliascan.com/browse/?title=${encodeURIComponent(String(mergedManga.title || ''))}`)
             : null
     const isDarkTheme =
         typeof document !== 'undefined' &&
@@ -1201,7 +1201,7 @@ function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, 
                                     </div>
                                     {false && mergedManga.id && (
                                         <a
-                                            href={`https://roliascan.to/title/${mergedManga.id}`}
+                                            href={`https://roliascan.com/title/${mergedManga.id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
