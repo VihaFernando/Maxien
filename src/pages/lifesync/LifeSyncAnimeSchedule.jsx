@@ -4,10 +4,12 @@ import { useLifeSync } from "../../context/LifeSyncContext";
 import { lifesyncFetch } from "../../lib/lifesyncApi";
 import {
   AnimatePresence,
-  lifeSyncDollyPageTransition,
-  lifeSyncDollyPageVariants,
+  lifeSyncSpringPageVariants,
+  lifeSyncSpringPageTransition,
   lifeSyncSectionPresenceTransition,
   lifeSyncSectionPresenceVariants,
+  lifeSyncCardGridContainer,
+  lifeSyncCardEnterVariants,
   MotionDiv,
 } from "../../lib/lifesyncMotion";
 
@@ -410,9 +412,9 @@ export default function LifeSyncAnimeSchedule() {
   return (
     <MotionDiv
       className="space-y-5 sm:space-y-7"
+      variants={lifeSyncSpringPageVariants}
       initial="initial" animate="animate"
-      variants={lifeSyncDollyPageVariants}
-      transition={lifeSyncDollyPageTransition}
+      transition={lifeSyncSpringPageTransition}
     >
       {/* Header */}
       <div className="flex items-end justify-between gap-3">
@@ -524,15 +526,21 @@ export default function LifeSyncAnimeSchedule() {
           {busy && !schedule ? (
             <SkeletonCards count={8} />
           ) : sortedEntries.length > 0 ? (
-            <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <MotionDiv
+              className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+              variants={lifeSyncCardGridContainer}
+              initial="hidden"
+              animate="show"
+            >
               {sortedEntries.map((entry, i) => (
-                <ScheduleCard
-                  key={entry?.slug || entry?.id || i}
-                  entry={entry}
-                  onSelect={setSelected}
-                />
+                <MotionDiv key={entry?.slug || entry?.id || i} variants={lifeSyncCardEnterVariants}>
+                  <ScheduleCard
+                    entry={entry}
+                    onSelect={setSelected}
+                  />
+                </MotionDiv>
               ))}
-            </div>
+            </MotionDiv>
           ) : (
             <div className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-14 text-center">
               {busy ? (
@@ -553,7 +561,12 @@ export default function LifeSyncAnimeSchedule() {
 
       {/* Full week overview strip */}
       {schedule && !busy && (
-        <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+        <MotionDiv
+          className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 26, delay: 0.15 }}
+        >
           <div className="border-b border-(--color-border-soft) px-4 py-3">
             <p className="text-[11px] font-black uppercase tracking-widest text-(--color-text-secondary)">This Week</p>
           </div>
@@ -602,7 +615,7 @@ export default function LifeSyncAnimeSchedule() {
               );
             })}
           </div>
-        </div>
+        </MotionDiv>
       )}
 
       {/* Detail drawer */}

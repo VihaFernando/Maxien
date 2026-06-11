@@ -1,3965 +1,5016 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useLifeSync } from '../../context/LifeSyncContext'
-import { isLifeSyncHManhwaVisible, lifesyncFetch } from '../../lib/lifesyncApi'
-import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
-import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
-import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
-import { ControllerHintBar } from '../../components/lifesync/ControllerHintOverlay'
-import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
-import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLifeSync } from "../../context/LifeSyncContext";
+import { isLifeSyncHManhwaVisible, lifesyncFetch } from "../../lib/lifesyncApi";
+import useControllerSupportEnabled from "../../hooks/useControllerSupportEnabled";
+import useLifeSyncGamepadInput from "../../hooks/useLifeSyncGamepadInput";
+import { XBOX_GAMEPAD_BUTTONS } from "../../lib/lifeSyncControllerInput";
+import { ControllerHintBar } from "../../components/lifesync/ControllerHintOverlay";
+import { useFocusedCardScroll } from "../../hooks/useFocusedCardScroll";
+import { useHideCursorOnDpad } from "../../hooks/useHideCursorOnDpad";
 import {
-    LifesyncChapterPagesSkeleton,
-    LifesyncEpisodeThumbnail,
-    LifesyncMangaBrowseGridSkeleton,
-    LifesyncMangaChapterListSkeleton,
-} from '../../components/lifesync/EpisodeLoadingSkeletons'
-import { LifeSyncSectionNav } from '../../components/lifesync/LifeSyncSectionNav'
+  LifesyncChapterPagesSkeleton,
+  LifesyncEpisodeThumbnail,
+  LifesyncMangaBrowseGridSkeleton,
+  LifesyncMangaChapterListSkeleton,
+} from "../../components/lifesync/EpisodeLoadingSkeletons";
+import { LifeSyncSectionNav } from "../../components/lifesync/LifeSyncSectionNav";
 import {
-    AnimatePresence,
-    LayoutGroup,
-    lifeSyncDetailBackdropFadeTransition,
-    lifeSyncBrowseGridStaggerMaxItems,
-    lifeSyncDetailBodyRevealTransition,
-    lifeSyncDetailOverlayFadeTransition,
-    lifeSyncDetailSheetEnterAnimate,
-    lifeSyncDetailSheetEnterInitial,
-    lifeSyncDetailSheetExitVariant,
-    lifeSyncDetailSheetMainTransition,
-    lifeSyncDollyPageTransition,
-    lifeSyncDollyPageVariants,
-    lifeSyncEaseOut,
-    lifeSyncPageTransition,
-    lifeSyncSectionPresenceTransition,
-    lifeSyncSectionPresenceVariants,
-    lifeSyncSharedLayoutTransitionProps,
-    lifeSyncStaggerContainerDense,
-    lifeSyncStaggerItemFade,
-    MotionDiv,
-} from '../../lib/lifesyncMotion'
+  MediaPageHeader,
+  MediaConnectPrompt,
+  MediaEmptyState,
+  mediaPosterFrameClass,
+} from "../../components/lifesync/MediaPageChrome";
 import {
-    buildDexChapterLangSelectOptions,
-    compareChapters,
-    DEX_TRANSLATION_LANG_OPTIONS,
-    formatChapterLabel,
-    mangaImageProps,
-    resolveMangaCoverDisplayUrl,
-} from '../../lib/mangaChapterUtils'
+  AnimatePresence,
+  LayoutGroup,
+  lifeSyncDetailBackdropFadeTransition,
+  lifeSyncBrowseGridStaggerMaxItems,
+  lifeSyncDetailBodyRevealTransition,
+  lifeSyncDetailOverlayFadeTransition,
+  lifeSyncDetailSheetEnterAnimate,
+  lifeSyncDetailSheetEnterInitial,
+  lifeSyncDetailSheetExitVariant,
+  lifeSyncDetailSheetMainTransition,
+  lifeSyncDollyPageTransition,
+  lifeSyncDollyPageVariants,
+  lifeSyncEaseOut,
+  lifeSyncPageTransition,
+  lifeSyncSectionPresenceTransition,
+  lifeSyncSectionPresenceVariants,
+  lifeSyncSharedLayoutTransitionProps,
+  lifeSyncStaggerContainerDense,
+  lifeSyncStaggerItemFade,
+  MotionDiv,
+} from "../../lib/lifesyncMotion";
+import {
+  buildDexChapterLangSelectOptions,
+  compareChapters,
+  DEX_TRANSLATION_LANG_OPTIONS,
+  formatChapterLabel,
+  mangaImageProps,
+  resolveMangaCoverDisplayUrl,
+} from "../../lib/mangaChapterUtils";
 
 /** Expand/collapse for filter drawers (catalog toolbar, Manga District, DexGenreFilter). */
 const mangaFilterExpandTransition = {
-    height: { duration: 0.3, ease: lifeSyncEaseOut },
-    opacity: { duration: 0.22, ease: lifeSyncEaseOut },
-}
+  height: { duration: 0.3, ease: lifeSyncEaseOut },
+  opacity: { duration: 0.22, ease: lifeSyncEaseOut },
+};
 
 function mangaCoverLayoutId(source, id) {
-    return `lifesync-manga-cover-${String(source || 'roliascan')}-${String(id)}`
+  return `lifesync-manga-cover-${String(source || "roliascan")}-${String(id)}`;
 }
 
 /** Serializable list-card fields for instant detail chrome (navigate `state`). */
 function mangaDetailPreviewFromCard(manga, source) {
-    if (!manga || manga.id == null) return null
-    const src = manga.source || source || 'roliascan'
-    return {
-        id: String(manga.id),
-        source: src,
-        title: manga.title,
-        coverUrl: resolveMangaCoverDisplayUrl(manga.coverUrl, src),
-        tags: Array.isArray(manga.tags) ? manga.tags : undefined,
-        status: manga.status,
-        year: manga.year,
-        author: manga.author,
-        contentRating: manga.contentRating,
-        backgroundImageUrl: resolveMangaCoverDisplayUrl(manga.backgroundImageUrl, src),
-        ratingAverage: manga.ratingAverage,
-        ratings: manga.ratings,
-    }
+  if (!manga || manga.id == null) return null;
+  const src = manga.source || source || "roliascan";
+  return {
+    id: String(manga.id),
+    source: src,
+    title: manga.title,
+    coverUrl: resolveMangaCoverDisplayUrl(manga.coverUrl, src),
+    tags: Array.isArray(manga.tags) ? manga.tags : undefined,
+    status: manga.status,
+    year: manga.year,
+    author: manga.author,
+    contentRating: manga.contentRating,
+    backgroundImageUrl: resolveMangaCoverDisplayUrl(
+      manga.backgroundImageUrl,
+      src,
+    ),
+    ratingAverage: manga.ratingAverage,
+    ratings: manga.ratings,
+  };
 }
 
 function clampPage(n) {
-    const v = Number.parseInt(String(n || '1'), 10)
-    return Number.isFinite(v) && v > 0 ? v : 1
+  const v = Number.parseInt(String(n || "1"), 10);
+  return Number.isFinite(v) && v > 0 ? v : 1;
 }
 
 function mangaTagLabel(tag) {
-    if (tag == null) return ''
-    if (typeof tag === 'string') return tag
-    if (typeof tag === 'object' && tag.name != null) return String(tag.name)
-    return ''
+  if (tag == null) return "";
+  if (typeof tag === "string") return tag;
+  if (typeof tag === "object" && tag.name != null) return String(tag.name);
+  return "";
 }
 
-function mangaTagKey(tag, index, prefix = '') {
-    if (tag != null && typeof tag === 'object' && tag.id != null && String(tag.id) !== '') {
-        return `${prefix}${String(tag.id)}`
-    }
-    const label = mangaTagLabel(tag)
-    return `${prefix || 't'}-${index}-${label || 'tag'}`
+function mangaTagKey(tag, index, prefix = "") {
+  if (
+    tag != null &&
+    typeof tag === "object" &&
+    tag.id != null &&
+    String(tag.id) !== ""
+  ) {
+    return `${prefix}${String(tag.id)}`;
+  }
+  const label = mangaTagLabel(tag);
+  return `${prefix || "t"}-${index}-${label || "tag"}`;
 }
 
-const DEX_PAGE_SIZE = 24
-const DEX_MAX_OFFSET = 9900
-const STATUS_FILTERS = ['ongoing', 'completed', 'hiatus', 'cancelled']
-const DEMOGRAPHIC_FILTERS = ['shounen', 'shoujo', 'josei', 'seinen']
-const TAG_GROUP_ORDER = ['genre', 'theme', 'format', 'content']
+const DEX_PAGE_SIZE = 24;
+const DEX_MAX_OFFSET = 9900;
+const STATUS_FILTERS = ["ongoing", "completed", "hiatus", "cancelled"];
+const DEMOGRAPHIC_FILTERS = ["shounen", "shoujo", "josei", "seinen"];
+const TAG_GROUP_ORDER = ["genre", "theme", "format", "content"];
 /** Browse modes for Popular / Recent (maps to Roliascan list `shuffle` or `orderBy`). */
 const BROWSE_SORT_TABS = [
-    { id: 'random', label: 'Random' },
-    { id: 'followedCount', label: 'Follows' },
-    { id: 'latestUploadedChapter', label: 'Latest' },
-    { id: 'year', label: 'Year' },
-    { id: 'title', label: 'Title' },
-    { id: 'createdAt', label: 'Added' },
-    { id: 'updatedAt', label: 'Updated' },
-]
+  { id: "random", label: "Random" },
+  { id: "followedCount", label: "Follows" },
+  { id: "latestUploadedChapter", label: "Latest" },
+  { id: "year", label: "Year" },
+  { id: "title", label: "Title" },
+  { id: "createdAt", label: "Added" },
+  { id: "updatedAt", label: "Updated" },
+];
 const SEARCH_SORT_OPTIONS = [
-    { value: 'relevance', label: 'Relevance' },
-    { value: 'latestUploadedChapter', label: 'Latest chapter' },
-    { value: 'followedCount', label: 'Follow count' },
-    { value: 'year', label: 'Year' },
-    { value: 'title', label: 'Title' },
-    { value: 'createdAt', label: 'Added' },
-    { value: 'updatedAt', label: 'Updated' },
-]
+  { value: "relevance", label: "Relevance" },
+  { value: "latestUploadedChapter", label: "Latest chapter" },
+  { value: "followedCount", label: "Follow count" },
+  { value: "year", label: "Year" },
+  { value: "title", label: "Title" },
+  { value: "createdAt", label: "Added" },
+  { value: "updatedAt", label: "Updated" },
+];
 const ORIGINAL_LANG_OPTIONS = [
-    { value: 'ja', label: 'Japanese' },
-    { value: 'ko', label: 'Korean' },
-    { value: 'zh', label: 'Chinese' },
-    { value: 'zh-hk', label: 'Chinese (HK)' },
-    { value: 'en', label: 'English' },
-]
+  { value: "ja", label: "Japanese" },
+  { value: "ko", label: "Korean" },
+  { value: "zh", label: "Chinese" },
+  { value: "zh-hk", label: "Chinese (HK)" },
+  { value: "en", label: "English" },
+];
 
 /** Manga District — `publication-genre/{slug}/` (type row). */
 const MD_TYPE_OPTIONS = [
-    { slug: 'webtoons', label: 'Webtoons' },
-    { slug: 'manhwa', label: 'Manhwa' },
-    { slug: 'manhua', label: 'Manhua' },
-    { slug: 'uncensored', label: 'Uncensored' },
-    { slug: 'doujinshi', label: 'Doujinshi' },
-    { slug: 'one-shot', label: 'One shot' },
-    { slug: 'full-color', label: 'Full color' },
-    { slug: 'based-on-another-work', label: 'Based on another work' },
-]
+  { slug: "webtoons", label: "Webtoons" },
+  { slug: "manhwa", label: "Manhwa" },
+  { slug: "manhua", label: "Manhua" },
+  { slug: "uncensored", label: "Uncensored" },
+  { slug: "doujinshi", label: "Doujinshi" },
+  { slug: "one-shot", label: "One shot" },
+  { slug: "full-color", label: "Full color" },
+  { slug: "based-on-another-work", label: "Based on another work" },
+];
 
 /** Manga District order-by (maps to `orderBy` query → `m_orderby` on the server). */
 const MD_ORDER_BY_OPTIONS = [
-    { id: 'latest-updates', label: 'Latest' },
-    { id: 'name', label: 'A-Z' },
-    { id: 'rating', label: 'Rating' },
-    { id: 'hot', label: 'Trending' },
-    { id: 'all-time-views', label: 'Most views' },
-    { id: 'new-releases', label: 'New' },
-]
+  { id: "latest-updates", label: "Latest" },
+  { id: "name", label: "A-Z" },
+  { id: "rating", label: "Rating" },
+  { id: "hot", label: "Trending" },
+  { id: "all-time-views", label: "Most views" },
+  { id: "new-releases", label: "New" },
+];
 
-const MD_ORDER_BY_IDS = new Set(MD_ORDER_BY_OPTIONS.map(o => o.id))
+const MD_ORDER_BY_IDS = new Set(MD_ORDER_BY_OPTIONS.map((o) => o.id));
 
-const MD_TYPE_SLUG_SET = new Set(MD_TYPE_OPTIONS.map(t => t.slug))
+const MD_TYPE_SLUG_SET = new Set(MD_TYPE_OPTIONS.map((t) => t.slug));
 
 /** Extra genre slugs for `genre[]` (same paths as site; excludes type row to avoid duplicate chips). */
 const MD_FILTER_SLUG_LIST = [
-    '3d', 'japanese-webtoons', 'comics', 'animation', '3d-anime', 'uncensored-anime', 'adapted-to-anime', 'action', 'comedy', 'mystery',
-    'shoujo', 'school-life', 'seinen', 'aliens', 'crime', 'detectives', 'shounen', 'supernatural', 'thriller', 'crossdressing', 'ecchi',
-    'fantasy', 'josei', 'light-novels', 'mature-romance', 'monsters', 'music', 'sci-fi', 'zombies', 'gyaru', 'adventure', 'animal-characteristics',
-    'cohabitation', 'cooking', 'coworkers', 'delinquents', 'bl', 'bl-uncensored', 'borderline-h', 'fetish', 'ghosts', 'gender-bender', 'gl',
-    'explicit-sex', 'harem', 'historical', 'demons', 'horror', 'isekai', 'mafia', 'magic', 'magical-girl', 'ninja', 'nudity', 'martial-arts',
-    'reincarnation', 'medical', 'mecha', 'military', 'monster-girls', 'reverse-harem', 'salaryman', 'samurai', 'sexual-abuse', 'sexual-content',
-    'shoujo-ai', 'shounen-ai', 'smut', 'siblings', 'incest', 'transfer-students', 'vampires', 'violence', 'virtual-reality', 'web-novels',
-    'work-life', 'sports', 'summoned-into-another-world', 'superheroes', 'survival', 'time-travel', 'person-in-a-strange-world', 'police',
-    'yaoi', 'yuri', 'slice-of-life', 'psychological', 'drama', 'romance', 'ai-art', 'collection-of-stories', 'hentai-anime', 'parody-anime',
-    'western',
-].filter(s => !MD_TYPE_SLUG_SET.has(s))
+  "3d",
+  "japanese-webtoons",
+  "comics",
+  "animation",
+  "3d-anime",
+  "uncensored-anime",
+  "adapted-to-anime",
+  "action",
+  "comedy",
+  "mystery",
+  "shoujo",
+  "school-life",
+  "seinen",
+  "aliens",
+  "crime",
+  "detectives",
+  "shounen",
+  "supernatural",
+  "thriller",
+  "crossdressing",
+  "ecchi",
+  "fantasy",
+  "josei",
+  "light-novels",
+  "mature-romance",
+  "monsters",
+  "music",
+  "sci-fi",
+  "zombies",
+  "gyaru",
+  "adventure",
+  "animal-characteristics",
+  "cohabitation",
+  "cooking",
+  "coworkers",
+  "delinquents",
+  "bl",
+  "bl-uncensored",
+  "borderline-h",
+  "fetish",
+  "ghosts",
+  "gender-bender",
+  "gl",
+  "explicit-sex",
+  "harem",
+  "historical",
+  "demons",
+  "horror",
+  "isekai",
+  "mafia",
+  "magic",
+  "magical-girl",
+  "ninja",
+  "nudity",
+  "martial-arts",
+  "reincarnation",
+  "medical",
+  "mecha",
+  "military",
+  "monster-girls",
+  "reverse-harem",
+  "salaryman",
+  "samurai",
+  "sexual-abuse",
+  "sexual-content",
+  "shoujo-ai",
+  "shounen-ai",
+  "smut",
+  "siblings",
+  "incest",
+  "transfer-students",
+  "vampires",
+  "violence",
+  "virtual-reality",
+  "web-novels",
+  "work-life",
+  "sports",
+  "summoned-into-another-world",
+  "superheroes",
+  "survival",
+  "time-travel",
+  "person-in-a-strange-world",
+  "police",
+  "yaoi",
+  "yuri",
+  "slice-of-life",
+  "psychological",
+  "drama",
+  "romance",
+  "ai-art",
+  "collection-of-stories",
+  "hentai-anime",
+  "parody-anime",
+  "western",
+].filter((s) => !MD_TYPE_SLUG_SET.has(s));
 
 const MD_FILTER_LABEL_OVERRIDES = {
-    '3d': '3D',
-    'sci-fi': 'Sci Fi',
-    bl: 'BL',
-    gl: 'GL',
-    yaoi: 'Yaoi',
-    yuri: 'Yuri',
-    'shoujo-ai': 'Shoujo-ai',
-    'shounen-ai': 'Shounen-ai',
-}
+  "3d": "3D",
+  "sci-fi": "Sci Fi",
+  bl: "BL",
+  gl: "GL",
+  yaoi: "Yaoi",
+  yuri: "Yuri",
+  "shoujo-ai": "Shoujo-ai",
+  "shounen-ai": "Shounen-ai",
+};
 
 function mdFilterLabel(slug) {
-    if (MD_FILTER_LABEL_OVERRIDES[slug]) return MD_FILTER_LABEL_OVERRIDES[slug]
-    return slug
-        .split('-')
-        .map(w => (w ? w.charAt(0).toUpperCase() + w.slice(1) : ''))
-        .join(' ')
+  if (MD_FILTER_LABEL_OVERRIDES[slug]) return MD_FILTER_LABEL_OVERRIDES[slug];
+  return slug
+    .split("-")
+    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : ""))
+    .join(" ");
 }
 
 const MD_FILTER_OPTIONS = [...MD_FILTER_SLUG_LIST]
-    .sort((a, b) => mdFilterLabel(a).localeCompare(mdFilterLabel(b)))
-    .map(slug => ({ slug, label: mdFilterLabel(slug) }))
+  .sort((a, b) => mdFilterLabel(a).localeCompare(mdFilterLabel(b)))
+  .map((slug) => ({ slug, label: mdFilterLabel(slug) }));
 
-function buildMangaDistrictListQuery(section, genreType, genreFilter, browseId) {
-    const q = new URLSearchParams()
-    q.set('section', section || 'uncensored')
-    if (genreType) q.set('genre', genreType)
-    if (genreFilter) q.set('filterGenre', genreFilter)
-    if (browseId && browseId !== 'latest-updates') q.set('orderBy', browseId)
-    return q.toString()
+function buildMangaDistrictListQuery(
+  section,
+  genreType,
+  genreFilter,
+  browseId,
+) {
+  const q = new URLSearchParams();
+  q.set("section", section || "uncensored");
+  if (genreType) q.set("genre", genreType);
+  if (genreFilter) q.set("filterGenre", genreFilter);
+  if (browseId && browseId !== "latest-updates") q.set("orderBy", browseId);
+  return q.toString();
 }
 
 /** Roliascan personal list — aligned with `client/src/pages/MangaPage.jsx` READING_STATUSES. */
 const MANGADEX_READING_STATUSES = [
-    { value: 'reading', label: 'Reading' },
-    { value: 'on_hold', label: 'On Hold' },
-    { value: 'plan_to_read', label: 'Plan to Read' },
-    { value: 'dropped', label: 'Dropped' },
-    { value: 'completed', label: 'Completed' },
-    { value: 're_reading', label: 'Re-reading' },
-]
+  { value: "reading", label: "Reading" },
+  { value: "on_hold", label: "On Hold" },
+  { value: "plan_to_read", label: "Plan to Read" },
+  { value: "dropped", label: "Dropped" },
+  { value: "completed", label: "Completed" },
+  { value: "re_reading", label: "Re-reading" },
+];
 
 /** Status pills under the Library tab (single row, horizontal scroll on narrow viewports). */
 const MANGADEX_LIBRARY_STATUS_TABS = [
-    { value: 'reading', label: 'Reading' },
-    { value: 'on_hold', label: 'On Hold' },
-    { value: 'completed', label: 'Completed' },
-    { value: 'dropped', label: 'Dropped' },
-    { value: 'plan_to_read', label: 'Plan to Read' },
-    { value: 're_reading', label: 'Re-reading' },
-]
+  { value: "reading", label: "Reading" },
+  { value: "on_hold", label: "On Hold" },
+  { value: "completed", label: "Completed" },
+  { value: "dropped", label: "Dropped" },
+  { value: "plan_to_read", label: "Plan to Read" },
+  { value: "re_reading", label: "Re-reading" },
+];
 
 function dexBrowseLastPage(total) {
-    if (total <= 0) return 1
-    const fromTotal = Math.max(1, Math.ceil(total / DEX_PAGE_SIZE))
-    const maxByOffset = Math.floor(DEX_MAX_OFFSET / DEX_PAGE_SIZE) + 1
-    return Math.min(fromTotal, maxByOffset)
+  if (total <= 0) return 1;
+  const fromTotal = Math.max(1, Math.ceil(total / DEX_PAGE_SIZE));
+  const maxByOffset = Math.floor(DEX_MAX_OFFSET / DEX_PAGE_SIZE) + 1;
+  return Math.min(fromTotal, maxByOffset);
 }
 
 /** Roliascan API `contentRating` — order preserved for stable query strings. */
-const MD_CONTENT_RATING_ORDER = ['safe', 'suggestive', 'erotica', 'pornographic']
+const MD_CONTENT_RATING_ORDER = [
+  "safe",
+  "suggestive",
+  "erotica",
+  "pornographic",
+];
 
 const MD_CONTENT_RATING_OPTIONS = [
-    { id: 'safe', label: 'Safe', description: 'All-ages content.' },
-    { id: 'suggestive', label: 'Suggestive', description: 'Ecchi/mildly explicit content.' },
-    { id: 'erotica', label: 'Erotica', description: 'Highly explicit.', nsfwOnly: true },
-    { id: 'pornographic', label: 'Pornographic', description: 'Explicit content.', nsfwOnly: true },
-]
+  { id: "safe", label: "Safe", description: "All-ages content." },
+  {
+    id: "suggestive",
+    label: "Suggestive",
+    description: "Ecchi/mildly explicit content.",
+  },
+  {
+    id: "erotica",
+    label: "Erotica",
+    description: "Highly explicit.",
+    nsfwOnly: true,
+  },
+  {
+    id: "pornographic",
+    label: "Pornographic",
+    description: "Explicit content.",
+    nsfwOnly: true,
+  },
+];
 
-const DEFAULT_DEX_CONTENT_RATINGS = ['safe', 'suggestive']
+const DEFAULT_DEX_CONTENT_RATINGS = ["safe", "suggestive"];
 
 function sortDexContentRatings(ids) {
-    return MD_CONTENT_RATING_ORDER.filter((id) => ids.includes(id))
+  return MD_CONTENT_RATING_ORDER.filter((id) => ids.includes(id));
 }
 
 /** Query string for server `parseRoliascanListQuery` (client MangaPage.jsx parity). */
 function buildDexListQuery(opts) {
-    const {
-        limit,
-        offset = 0,
-        contentRatings = DEFAULT_DEX_CONTENT_RATINGS,
-        nsfwEnabled,
-        dexTranslatedLang,
-        englishOnly = false,
-        includedTags = [],
-        excludedTags = [],
-        statusFilter = [],
-        demographicFilter = [],
-        includedTagsMode,
-        excludedTagsMode,
-        originalLangFilter = [],
-        searchYear,
-        orderBy,
-        orderDir = 'desc',
-        shuffle = false,
-    } = opts
-    const q = new URLSearchParams()
-    q.set('limit', String(limit))
-    if (offset > 0) q.set('offset', String(offset))
+  const {
+    limit,
+    offset = 0,
+    contentRatings = DEFAULT_DEX_CONTENT_RATINGS,
+    nsfwEnabled,
+    dexTranslatedLang,
+    englishOnly = false,
+    includedTags = [],
+    excludedTags = [],
+    statusFilter = [],
+    demographicFilter = [],
+    includedTagsMode,
+    excludedTagsMode,
+    originalLangFilter = [],
+    searchYear,
+    orderBy,
+    orderDir = "desc",
+    shuffle = false,
+  } = opts;
+  const q = new URLSearchParams();
+  q.set("limit", String(limit));
+  if (offset > 0) q.set("offset", String(offset));
 
-    const allowedIds = nsfwEnabled ? MD_CONTENT_RATING_ORDER : ['safe', 'suggestive']
-    let picked = sortDexContentRatings(
-        (Array.isArray(contentRatings) ? contentRatings : []).filter((r) => allowedIds.includes(r))
-    )
-    if (!picked.length) picked = [...DEFAULT_DEX_CONTENT_RATINGS]
-    for (const cr of picked) {
-        q.append('contentRating[]', cr)
-    }
-    if (englishOnly) {
-        q.set('englishOnly', '1')
-        q.append('translatedLanguage[]', 'en')
-    } else if (dexTranslatedLang === 'all') {
-        q.set('anyLanguage', '1')
-    } else {
-        q.append('translatedLanguage[]', dexTranslatedLang)
-    }
-    for (const id of includedTags) q.append('includedTags[]', id)
-    for (const id of excludedTags) q.append('excludedTags[]', id)
-    for (const s of statusFilter) q.append('status[]', s)
-    for (const d of demographicFilter) q.append('demographic[]', d)
-    if (includedTags.length && includedTagsMode) q.set('includedTagsMode', includedTagsMode)
-    if (excludedTags.length && excludedTagsMode) q.set('excludedTagsMode', excludedTagsMode)
-    for (const ol of originalLangFilter) q.append('originalLanguage[]', ol)
-    if (searchYear != null && String(searchYear).trim() !== '') q.set('year', String(searchYear).trim())
-    if (shuffle) q.set('shuffle', '1')
-    if (orderBy != null && String(orderBy).trim() !== '') {
-        q.set('orderBy', String(orderBy).trim())
-        q.set('orderDir', orderDir === 'asc' ? 'asc' : 'desc')
-    }
-    return q
+  const allowedIds = nsfwEnabled
+    ? MD_CONTENT_RATING_ORDER
+    : ["safe", "suggestive"];
+  let picked = sortDexContentRatings(
+    (Array.isArray(contentRatings) ? contentRatings : []).filter((r) =>
+      allowedIds.includes(r),
+    ),
+  );
+  if (!picked.length) picked = [...DEFAULT_DEX_CONTENT_RATINGS];
+  for (const cr of picked) {
+    q.append("contentRating[]", cr);
+  }
+  if (englishOnly) {
+    q.set("englishOnly", "1");
+    q.append("translatedLanguage[]", "en");
+  } else if (dexTranslatedLang === "all") {
+    q.set("anyLanguage", "1");
+  } else {
+    q.append("translatedLanguage[]", dexTranslatedLang);
+  }
+  for (const id of includedTags) q.append("includedTags[]", id);
+  for (const id of excludedTags) q.append("excludedTags[]", id);
+  for (const s of statusFilter) q.append("status[]", s);
+  for (const d of demographicFilter) q.append("demographic[]", d);
+  if (includedTags.length && includedTagsMode)
+    q.set("includedTagsMode", includedTagsMode);
+  if (excludedTags.length && excludedTagsMode)
+    q.set("excludedTagsMode", excludedTagsMode);
+  for (const ol of originalLangFilter) q.append("originalLanguage[]", ol);
+  if (searchYear != null && String(searchYear).trim() !== "")
+    q.set("year", String(searchYear).trim());
+  if (shuffle) q.set("shuffle", "1");
+  if (orderBy != null && String(orderBy).trim() !== "") {
+    q.set("orderBy", String(orderBy).trim());
+    q.set("orderDir", orderDir === "asc" ? "asc" : "desc");
+  }
+  return q;
 }
 
 function DexContentRatingSection({ selectedIds, nsfwEnabled, onToggle }) {
-    const visible = MD_CONTENT_RATING_OPTIONS.filter(o => !o.nsfwOnly || nsfwEnabled)
-    return (
-        <section className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/80 bg-gradient-to-br from-[var(--color-surface)]/90 to-[var(--mx-color-faf8ff)]/80 p-3.5 sm:p-4">
-            <div className="mb-3">
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--mx-color-5b5670)]">Content rating</h3>
-                <p className="mt-1 text-[10px] leading-relaxed text-[var(--mx-color-86868b)]">
-                    Roliascan catalog filter (see{' '}
-                    <a
-                        href="https://roliascan.com/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-medium text-[var(--mx-color-6d28d9)] underline decoration-[var(--mx-color-c4b5fd)] underline-offset-2 hover:text-[var(--mx-color-5b21b6)]"
-                    >
-                        API docs
-                    </a>
-                    ). Keep at least one option on.
-                </p>
-            </div>
-            <ul className="grid gap-2 sm:grid-cols-2">
-                {visible.map(opt => {
-                    const on = selectedIds.includes(opt.id)
-                    return (
-                        <li key={opt.id}>
-                            <label
-                                className={`flex cursor-pointer gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
-                                    on
-                                        ? 'border-[var(--mx-color-c6ff00)]/70 bg-[var(--mx-color-c6ff00)]/12 ring-1 ring-[var(--mx-color-c6ff00)]/35'
-                                        : 'border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)]/80 hover:border-[var(--mx-color-d2d2d7)]'
-                                }`}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={on}
-                                    onChange={() => onToggle(opt.id)}
-                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] focus:ring-[var(--mx-color-c6ff00)]"
-                                />
-                                <span className="min-w-0">
-                                    <span className="block text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">{opt.label}</span>
-                                    <span className="mt-0.5 block text-[10px] leading-snug text-[var(--mx-color-86868b)]">{opt.description}</span>
-                                </span>
-                            </label>
-                        </li>
-                    )
-                })}
-            </ul>
-        </section>
-    )
+  const visible = MD_CONTENT_RATING_OPTIONS.filter(
+    (o) => !o.nsfwOnly || nsfwEnabled,
+  );
+  return (
+    <section className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/80 bg-gradient-to-br from-[var(--color-surface)]/90 to-[var(--mx-color-faf8ff)]/80 p-3.5 sm:p-4">
+      <div className="mb-3">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--mx-color-5b5670)]">
+          Content rating
+        </h3>
+        <p className="mt-1 text-[10px] leading-relaxed text-[var(--mx-color-86868b)]">
+          Roliascan catalog filter (see{" "}
+          <a
+            href="https://roliascan.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[var(--mx-color-6d28d9)] underline decoration-[var(--mx-color-c4b5fd)] underline-offset-2 hover:text-[var(--mx-color-5b21b6)]"
+          >
+            API docs
+          </a>
+          ). Keep at least one option on.
+        </p>
+      </div>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {visible.map((opt) => {
+          const on = selectedIds.includes(opt.id);
+          return (
+            <li key={opt.id}>
+              <label
+                className={`flex cursor-pointer gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
+                  on
+                    ? "border-[var(--mx-color-c6ff00)]/70 bg-[var(--mx-color-c6ff00)]/12 ring-1 ring-[var(--mx-color-c6ff00)]/35"
+                    : "border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)]/80 hover:border-[var(--mx-color-d2d2d7)]"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={() => onToggle(opt.id)}
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] focus:ring-[var(--mx-color-c6ff00)]"
+                />
+                <span className="min-w-0">
+                  <span className="block text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">
+                    {opt.label}
+                  </span>
+                  <span className="mt-0.5 block text-[10px] leading-snug text-[var(--mx-color-86868b)]">
+                    {opt.description}
+                  </span>
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 function DexTagChip({ tag, selected, excluded, onToggle }) {
-    const cls = excluded
-        ? 'bg-red-50 text-red-700 ring-1 ring-red-200'
-        : selected
-          ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-          : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)] hover:text-[var(--mx-color-1d1d1f)]'
-    return (
-        <button
-            type="button"
-            onClick={() => onToggle(tag.id)}
-            onContextMenu={e => {
-                e.preventDefault()
-                onToggle(tag.id, true)
-            }}
-            className={`flex min-w-0 max-w-[min(100%,13rem)] items-center gap-0.5 rounded-full px-2.5 py-0.5 text-left text-[10px] font-medium transition-colors ${cls}`}
-            title={`${tag.name} — tap include · right-click exclude`}
-        >
-            <span className="shrink-0">{excluded ? '−' : selected ? '✓' : ''}</span>
-            <span className="min-w-0 truncate">{tag.name}</span>
-        </button>
-    )
+  const cls = excluded
+    ? "bg-red-50 text-red-700 ring-1 ring-red-200"
+    : selected
+      ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)] hover:text-[var(--mx-color-1d1d1f)]";
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(tag.id)}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onToggle(tag.id, true);
+      }}
+      className={`flex min-w-0 max-w-[min(100%,13rem)] items-center gap-0.5 rounded-full px-2.5 py-0.5 text-left text-[10px] font-medium transition-colors ${cls}`}
+      title={`${tag.name} — tap include · right-click exclude`}
+    >
+      <span className="shrink-0">{excluded ? "−" : selected ? "✓" : ""}</span>
+      <span className="min-w-0 truncate">{tag.name}</span>
+    </button>
+  );
 }
 
 function DexGenreFilter({
-    tags,
-    includedTags,
-    excludedTags,
-    onToggleInclude,
-    onToggleExclude,
-    statusFilter,
-    onStatusChange,
-    demographicFilter,
-    onDemographicChange,
-    includedTagsMode,
-    excludedTagsMode,
-    onIncludedTagsMode,
-    onExcludedTagsMode,
-    embedded = false,
+  tags,
+  includedTags,
+  excludedTags,
+  onToggleInclude,
+  onToggleExclude,
+  statusFilter,
+  onStatusChange,
+  demographicFilter,
+  onDemographicChange,
+  includedTagsMode,
+  excludedTagsMode,
+  onIncludedTagsMode,
+  onExcludedTagsMode,
+  embedded = false,
 }) {
-    const [expanded, setExpanded] = useState(false)
-    const [tagSearch, setTagSearch] = useState('')
+  const [expanded, setExpanded] = useState(false);
+  const [tagSearch, setTagSearch] = useState("");
 
-    const grouped = useMemo(() => {
-        const groups = {}
-        for (const t of tags) {
-            const g = t.group || 'other'
-            if (!groups[g]) groups[g] = []
-            groups[g].push(t)
-        }
-        for (const g of Object.keys(groups)) {
-            groups[g].sort((a, b) => a.name.localeCompare(b.name))
-        }
-        return groups
-    }, [tags])
+  const grouped = useMemo(() => {
+    const groups = {};
+    for (const t of tags) {
+      const g = t.group || "other";
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(t);
+    }
+    for (const g of Object.keys(groups)) {
+      groups[g].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return groups;
+  }, [tags]);
 
-    const filteredGrouped = useMemo(() => {
-        if (!tagSearch.trim()) return grouped
-        const q = tagSearch.toLowerCase()
-        const result = {}
-        for (const [group, tagList] of Object.entries(grouped)) {
-            const filtered = tagList.filter(t => t.name.toLowerCase().includes(q))
-            if (filtered.length) result[group] = filtered
-        }
-        return result
-    }, [grouped, tagSearch])
+  const filteredGrouped = useMemo(() => {
+    if (!tagSearch.trim()) return grouped;
+    const q = tagSearch.toLowerCase();
+    const result = {};
+    for (const [group, tagList] of Object.entries(grouped)) {
+      const filtered = tagList.filter((t) => t.name.toLowerCase().includes(q));
+      if (filtered.length) result[group] = filtered;
+    }
+    return result;
+  }, [grouped, tagSearch]);
 
-    const activeCount = includedTags.length + excludedTags.length + (statusFilter?.length || 0) + (demographicFilter?.length || 0)
+  const activeCount =
+    includedTags.length +
+    excludedTags.length +
+    (statusFilter?.length || 0) +
+    (demographicFilter?.length || 0);
 
-    const body = (
-        <div className={`${embedded ? '' : 'border-t border-[var(--mx-color-f0f0f0)]'} min-w-0 max-w-full`}>
-            <div className={`${embedded ? 'px-0 py-0' : 'px-4 py-4'} min-w-0 max-w-full space-y-4`}>
-                <div className="flex flex-wrap gap-4">
-                    <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Status</p>
-                        <div className="flex flex-wrap gap-1">
-                            {STATUS_FILTERS.map(s => (
-                                <button
-                                    key={s}
-                                    type="button"
-                                    onClick={() => onStatusChange(s)}
-                                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-                                        statusFilter?.includes(s)
-                                            ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                            : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                    }`}
-                                >
-                                    {s}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Demographic</p>
-                        <div className="flex flex-wrap gap-1">
-                            {DEMOGRAPHIC_FILTERS.map(d => (
-                                <button
-                                    key={d}
-                                    type="button"
-                                    onClick={() => onDemographicChange(d)}
-                                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-                                        demographicFilter?.includes(d)
-                                            ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                            : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                    }`}
-                                >
-                                    {d}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-                <div className="flex flex-wrap gap-3 border-t border-[var(--mx-color-f0f0f0)] pt-3">
-                    <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                        Include tags
-                        <select
-                            value={includedTagsMode}
-                            onChange={e => onIncludedTagsMode(e.target.value)}
-                            className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1.5 text-[11px] text-[var(--mx-color-1d1d1f)]"
-                        >
-                            <option value="AND">All (AND)</option>
-                            <option value="OR">Any (OR)</option>
-                        </select>
-                    </label>
-                    <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                        Exclude tags
-                        <select
-                            value={excludedTagsMode}
-                            onChange={e => onExcludedTagsMode(e.target.value)}
-                            className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1.5 text-[11px] text-[var(--mx-color-1d1d1f)]"
-                        >
-                            <option value="OR">Any (OR)</option>
-                            <option value="AND">All (AND)</option>
-                        </select>
-                    </label>
-                </div>
-                <div className="space-y-2">
-                    <input
-                        type="text"
-                        value={tagSearch}
-                        onChange={e => setTagSearch(e.target.value)}
-                        placeholder="Filter tag list…"
-                        className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] placeholder:text-[var(--mx-color-86868b)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                    />
-                    <p className="text-[10px] text-[var(--mx-color-86868b)]">Tap = include · right-click = exclude</p>
-                </div>
-                {TAG_GROUP_ORDER.filter(g => filteredGrouped[g]).map(group => (
-                    <div key={group} className="space-y-1.5">
-                        <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">{group}</h4>
-                        <div className="flex min-w-0 max-w-full flex-wrap gap-1">
-                            {filteredGrouped[group].map(tag => (
-                                <DexTagChip
-                                    key={tag.id}
-                                    tag={tag}
-                                    selected={includedTags.includes(tag.id)}
-                                    excluded={excludedTags.includes(tag.id)}
-                                    onToggle={(id, isExclude) => {
-                                        if (isExclude) onToggleExclude(id)
-                                        else onToggleInclude(id)
-                                    }}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                ))}
+  const body = (
+    <div
+      className={`${embedded ? "" : "border-t border-[var(--mx-color-f0f0f0)]"} min-w-0 max-w-full`}
+    >
+      <div
+        className={`${embedded ? "px-0 py-0" : "px-4 py-4"} min-w-0 max-w-full space-y-4`}
+      >
+        <div className="flex flex-wrap gap-4">
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+              Status
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {STATUS_FILTERS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => onStatusChange(s)}
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
+                    statusFilter?.includes(s)
+                      ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+              Demographic
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {DEMOGRAPHIC_FILTERS.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => onDemographicChange(d)}
+                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
+                    demographicFilter?.includes(d)
+                      ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-    )
+        <div className="flex flex-wrap gap-3 border-t border-[var(--mx-color-f0f0f0)] pt-3">
+          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+            Include tags
+            <select
+              value={includedTagsMode}
+              onChange={(e) => onIncludedTagsMode(e.target.value)}
+              className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1.5 text-[11px] text-[var(--mx-color-1d1d1f)]"
+            >
+              <option value="AND">All (AND)</option>
+              <option value="OR">Any (OR)</option>
+            </select>
+          </label>
+          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+            Exclude tags
+            <select
+              value={excludedTagsMode}
+              onChange={(e) => onExcludedTagsMode(e.target.value)}
+              className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1.5 text-[11px] text-[var(--mx-color-1d1d1f)]"
+            >
+              <option value="OR">Any (OR)</option>
+              <option value="AND">All (AND)</option>
+            </select>
+          </label>
+        </div>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={tagSearch}
+            onChange={(e) => setTagSearch(e.target.value)}
+            placeholder="Filter tag list…"
+            className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] placeholder:text-[var(--mx-color-86868b)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+          />
+          <p className="text-[10px] text-[var(--mx-color-86868b)]">
+            Tap = include · right-click = exclude
+          </p>
+        </div>
+        {TAG_GROUP_ORDER.filter((g) => filteredGrouped[g]).map((group) => (
+          <div key={group} className="space-y-1.5">
+            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+              {group}
+            </h4>
+            <div className="flex min-w-0 max-w-full flex-wrap gap-1">
+              {filteredGrouped[group].map((tag) => (
+                <DexTagChip
+                  key={tag.id}
+                  tag={tag}
+                  selected={includedTags.includes(tag.id)}
+                  excluded={excludedTags.includes(tag.id)}
+                  onToggle={(id, isExclude) => {
+                    if (isExclude) onToggleExclude(id);
+                    else onToggleInclude(id);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 
-    return (
-        <div
-            className={`min-w-0 w-full max-w-full overflow-hidden ${embedded ? '' : 'rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm'}`}
-        >
-            {embedded ? (
-                body
-            ) : (
-                <>
-                    <button
-                        type="button"
-                        onClick={() => setExpanded(p => !p)}
-                        className="flex w-full min-w-0 items-center justify-between gap-2 px-4 py-3 text-left text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-fafafa)] transition-colors"
-                    >
-                        <span className="inline-flex min-w-0 flex-1 items-center gap-2">
-                            <span className="min-w-0 truncate">Filters &amp; genres</span>
-                            {activeCount > 0 && (
-                                <span className="shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]/30 px-2 py-0.5 text-[10px] font-bold text-[var(--mx-color-1d1d1f)]">{activeCount}</span>
-                            )}
-                        </span>
-                        <span className="shrink-0 text-[var(--mx-color-86868b)] text-[11px]">{expanded ? 'Hide' : 'Show'}</span>
-                    </button>
-                    <AnimatePresence initial={false}>
-                        {expanded && (
-                            <MotionDiv
-                                key="dex-genre-filter-body"
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={mangaFilterExpandTransition}
-                                className="w-full min-w-0 max-w-full overflow-hidden border-t border-[var(--mx-color-f0f0f0)]"
-                            >
-                                {body}
-                            </MotionDiv>
-                        )}
-                    </AnimatePresence>
-                </>
+  return (
+    <div
+      className={`min-w-0 w-full max-w-full overflow-hidden ${embedded ? "" : "rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm"}`}
+    >
+      {embedded ? (
+        body
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={() => setExpanded((p) => !p)}
+            className="flex w-full min-w-0 items-center justify-between gap-2 px-4 py-3 text-left text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-fafafa)] transition-colors"
+          >
+            <span className="inline-flex min-w-0 flex-1 items-center gap-2">
+              <span className="min-w-0 truncate">Filters &amp; genres</span>
+              {activeCount > 0 && (
+                <span className="shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]/30 px-2 py-0.5 text-[10px] font-bold text-[var(--mx-color-1d1d1f)]">
+                  {activeCount}
+                </span>
+              )}
+            </span>
+            <span className="shrink-0 text-[var(--mx-color-86868b)] text-[11px]">
+              {expanded ? "Hide" : "Show"}
+            </span>
+          </button>
+          <AnimatePresence initial={false}>
+            {expanded && (
+              <MotionDiv
+                key="dex-genre-filter-body"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={mangaFilterExpandTransition}
+                className="w-full min-w-0 max-w-full overflow-hidden border-t border-[var(--mx-color-f0f0f0)]"
+              >
+                {body}
+              </MotionDiv>
             )}
-        </div>
-    )
+          </AnimatePresence>
+        </>
+      )}
+    </div>
+  );
 }
 
 const MangaCard = memo(function MangaCard({ manga, onClick }) {
-    const cardSrc = manga.source || 'roliascan'
-    const coverDisplayUrl = resolveMangaCoverDisplayUrl(manga.coverUrl, cardSrc)
-    const rating = manga.ratings?.average ?? manga.ratingAverage
-    const ratingNum = rating != null ? Number(rating) : null
-    const showRating = ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0
-    const overlayBadges = (
-        <>
-            {manga.status && (
-                <span className="absolute left-2 top-2 z-[2] rounded-lg bg-[var(--color-surface)]/90 px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--mx-color-1d1d1f)]">{manga.status}</span>
-            )}
-            {manga.contentRating && manga.contentRating !== 'safe' && (
-                <span className="absolute right-2 top-2 z-[2] rounded-lg bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-amber-700">{manga.contentRating}</span>
-            )}
-            {manga.source && manga.source !== 'roliascan' && (
-                <span className="pointer-events-none absolute bottom-12 left-2 z-[2] rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase text-white backdrop-blur-sm">
-                    {manga.source === 'mangadistrict' ? 'District' : manga.source}
-                </span>
-            )}
-        </>
-    )
-    return (
-        <button type="button" onClick={() => onClick?.(manga)} className="group w-full text-left">
-            <div className="overflow-hidden rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm transition-all hover:shadow-md">
-                <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
-                    {manga.id != null ? (
-                        <MotionDiv
-                            layoutId={mangaCoverLayoutId(manga.source || 'roliascan', manga.id)}
-                            transition={lifeSyncSharedLayoutTransitionProps}
-                            className="absolute inset-0"
-                        >
-                            {coverDisplayUrl ? (
-                                <LifesyncEpisodeThumbnail
-                                    src={coverDisplayUrl}
-                                    className="absolute inset-0 h-full w-full"
-                                    imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                                    imgProps={mangaImageProps(coverDisplayUrl)}
-                                >
-                                    {overlayBadges}
-                                </LifesyncEpisodeThumbnail>
-                            ) : (
-                                <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
-                                    {overlayBadges}
-                                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
-                                </div>
-                            )}
-                        </MotionDiv>
-                    ) : coverDisplayUrl ? (
-                        <LifesyncEpisodeThumbnail
-                            src={coverDisplayUrl}
-                            className="absolute inset-0 h-full w-full"
-                            imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                            imgProps={mangaImageProps(coverDisplayUrl)}
-                        >
-                            {overlayBadges}
-                        </LifesyncEpisodeThumbnail>
-                    ) : (
-                        <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
-                                    {overlayBadges}
-                                    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
-                        </div>
-                    )}
-                    <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-transparent" aria-hidden />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
-                        <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">{manga.title}</p>
-                        {manga.author ? (
-                            <p className="mt-0.5 line-clamp-1 text-[11px] text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)]">{manga.author}</p>
-                        ) : null}
-                        <div className="mt-1.5 flex flex-wrap gap-1">
-                            {manga.year && <span className="rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">{manga.year}</span>}
-                            {showRating && (
-                                <span className="flex items-center gap-0.5 rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                                    <svg className="h-2.5 w-2.5 fill-amber-300 text-amber-300" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                    {ratingNum.toFixed(1)}
-                                </span>
-                            )}
-                            {manga.tags?.slice(0, 2).map((tag, i) => {
-                                const label = mangaTagLabel(tag)
-                                if (!label) return null
-                                return (
-                                    <span key={mangaTagKey(tag, i, `${manga.id}-`)} className="rounded bg-[var(--mx-color-c6ff00)]/25 px-1.5 py-0.5 text-[10px] font-medium text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--color-border-strong)]/30">
-                                        {label}
-                                    </span>
-                                )
-                            })}
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center justify-center gap-1.5 border-t border-[var(--mx-color-f0f0f0)] bg-[var(--mx-color-fafafa)] py-2.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">
-                    <svg className="h-3.5 w-3.5 text-[var(--mx-color-86868b)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
-                    </svg>
-                    View details
-                </div>
-            </div>
-        </button>
-    )
-})
-
-function MangaDetail({ manga, onClose, source, onStartRead, roliascanConnected, browseTranslatedLang = 'en', isLifeSyncConnected = false }) {
-    const [detail, setDetail] = useState(null)
-    const [metaBusy, setMetaBusy] = useState(false)
-    const [chapters, setChapters] = useState(null)
-    const [chapBusy, setChapBusy] = useState(false)
-    const [currentChapterId, setCurrentChapterId] = useState('')
-    const [descExpanded, setDescExpanded] = useState(false)
-    const [dexStats, setDexStats] = useState(null)
-    const [isDexFollowing, setIsDexFollowing] = useState(null)
-    const [dexFollowBusy, setDexFollowBusy] = useState(false)
-    const [dexReadingStatus, setDexReadingStatus] = useState(null)
-    const [dexReadingStatusBusy, setDexReadingStatusBusy] = useState(false)
-    const [chapterLang, setChapterLang] = useState(() => (browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang))
-    /** `asc` = chapter 1 at top; `desc` = latest chapter at top */
-    const [chapterOrder, setChapterOrder] = useState('asc')
-    const chapterListRef = useRef(null)
-    const currentChapterButtonRef = useRef(null)
-    const didAutoScrollCurrentChapterRef = useRef(false)
-
-    useEffect(() => {
-        setChapterLang(browseTranslatedLang === 'all' ? 'all' : browseTranslatedLang)
-    }, [manga?.id, browseTranslatedLang])
-
-    useEffect(() => {
-        setChapterOrder('asc')
-    }, [manga?.id])
-
-    useEffect(() => {
-        didAutoScrollCurrentChapterRef.current = false
-        setCurrentChapterId('')
-    }, [manga?.id, manga?.source])
-
-    useEffect(() => {
-        if (!manga?.id || !isLifeSyncConnected) return
-        let cancelled = false
-        const sourceHint = String(manga.source || source || '').trim().toLowerCase()
-        ;(async () => {
-            try {
-                const params = new URLSearchParams({
-                    view: 'standard',
-                    sortBy: 'updatedAt',
-                    order: 'desc',
-                    page: '1',
-                    limit: '100',
-                })
-                if (sourceHint) params.set('source', sourceHint)
-                const data = await lifesyncFetch(`/api/v1/progress?${params.toString()}`)
-                if (cancelled) return
-                const rows = Array.isArray(data) ? data : (Array.isArray(data?.entries) ? data.entries : [])
-                const match = rows.find((row) => {
-                    if (String(row?.mangaId || '').trim() !== String(manga.id)) return false
-                    if (!sourceHint) return true
-                    return String(row?.source || '').trim().toLowerCase() === sourceHint
-                })
-                const chapterId = String(match?.lastChapterId || '').trim()
-                if (chapterId) setCurrentChapterId(chapterId)
-            } catch {
-                // ignore: current chapter highlight falls back to local detail payload
-            }
-        })()
-        return () => {
-            cancelled = true
-        }
-    }, [isLifeSyncConnected, manga?.id, manga?.source, source])
-
-    // Roliascan: full detail arrives via parent enrichment (`/roliascan/info`) merged into
-    // the `manga` prop after mount, so sync on every `manga` change — not just id changes.
-    useEffect(() => {
-        if (!manga?.id) return
-        if ((manga.source || source) !== 'roliascan') return
-        const hasChapterPayload = Array.isArray(manga.chapters)
-        setChapters(hasChapterPayload ? { data: [...manga.chapters] } : null)
-        setDetail({ ...manga })
-        setMetaBusy(false)
-        setDexStats(null)
-        setIsDexFollowing(null)
-        setDexReadingStatus(null)
-        setChapBusy(!hasChapterPayload)
-    }, [manga, source])
-
-    useEffect(() => {
-        if (!manga?.id) return undefined
-        const src = manga.source || source
-
-        if (src === 'roliascan') return undefined
-
-        if (src === 'mangadistrict') {
-            setDetail(null)
-            setChapters(null)
-            setMetaBusy(true)
-            setChapBusy(true)
-            setDexStats(null)
-            setIsDexFollowing(null)
-            setDexReadingStatus(null)
-
-            let cancelled = false
-            const id = String(manga.id)
-
-            // Fetch metadata from DB (fast)
-            lifesyncFetch(`/api/v1/manga/mangadistrict/meta/${encodeURIComponent(id)}?view=full`)
-                .then(data => {
-                    if (cancelled) return
-                    setDetail(prev => ({ ...prev, ...data, id: data.id || id, source: 'mangadistrict' }))
-                })
-                .catch(() => { /* preview data already shown via manga prop */ })
-                .finally(() => { if (!cancelled) setMetaBusy(false) })
-
-            // Fetch chapters live from scraper (slow)
-            lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(id)}?view=full`)
-                .then(data => {
-                    if (cancelled) return
-                    const list = Array.isArray(data.chapters) ? data.chapters : []
-                    setChapters({ data: list })
-                })
-                .catch(() => { if (!cancelled) setChapters({ data: [] }) })
-                .finally(() => { if (!cancelled) setChapBusy(false) })
-
-            return () => { cancelled = true }
-        }
-
-        setDetail(null)
-        setChapters({ data: [] })
-        setMetaBusy(false)
-        setDexStats(null)
-        setIsDexFollowing(null)
-        setDexReadingStatus(null)
-        setChapBusy(false)
-        return undefined
-    }, [manga?.id, manga.source, source, roliascanConnected, chapterLang])
-
-    const chaptersInSeriesOrder = useMemo(() => {
-        const list = chapters?.data ? [...chapters.data] : []
-        list.sort(compareChapters)
-        return list
-    }, [chapters])
-
-    const displayChapters = useMemo(() => {
-        if (chapterOrder === 'desc') return [...chaptersInSeriesOrder].reverse()
-        return chaptersInSeriesOrder
-    }, [chaptersInSeriesOrder, chapterOrder])
-
-    const highlightedChapterId = useMemo(() => {
-        const fromProgress = String(currentChapterId || '').trim()
-        if (fromProgress) return fromProgress
-        const fromManga = String(manga?.lastChapterId || detail?.lastChapterId || '').trim()
-        if (fromManga) return fromManga
-        return ''
-    }, [currentChapterId, detail?.lastChapterId, manga?.lastChapterId])
-
-    const chapterSeriesIndex = useCallback(
-        ch => {
-            const i = chaptersInSeriesOrder.findIndex(c => String(c?.id) === String(ch?.id))
-            return i >= 0 ? i + 1 : 0
-        },
-        [chaptersInSeriesOrder],
-    )
-
-    const chapterLangOptions = useMemo(() => {
-        if (!manga) return DEX_TRANSLATION_LANG_OPTIONS
-        const dm = detail || manga
-        return buildDexChapterLangSelectOptions(dm.availableTranslatedLanguages || manga.availableTranslatedLanguages)
-    }, [detail, manga])
-
-    useEffect(() => {
-        if (didAutoScrollCurrentChapterRef.current) return
-        if (chapBusy || !highlightedChapterId || displayChapters.length === 0) return
-        const targetChapterExists = displayChapters.some((ch) => String(ch?.id || '') === highlightedChapterId)
-        if (!targetChapterExists) return
-        const listEl = chapterListRef.current
-        const chapterEl = currentChapterButtonRef.current
-        if (!listEl || !chapterEl) return
-        didAutoScrollCurrentChapterRef.current = true
-        requestAnimationFrame(() => {
-            const top = chapterEl.offsetTop - (listEl.clientHeight / 2) + (chapterEl.clientHeight / 2)
-            listEl.scrollTo({ top: Math.max(0, top), behavior: 'smooth' })
-        })
-    }, [chapBusy, displayChapters, highlightedChapterId])
-
-    // D-pad chapter navigation — must be before early returns (rules of hooks)
-    const [focusedChIndex, setFocusedChIndex] = useState(-1)
-    const mangaDetailControllerEnabled = useControllerSupportEnabled()
-
-    const detailChHandlers = useMemo(() => ({
-        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () =>
-            setFocusedChIndex(prev => Math.max(0, prev <= 0 ? displayChapters.length - 1 : prev - 1)),
-        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () =>
-            setFocusedChIndex(prev => (prev + 1) % Math.max(1, displayChapters.length)),
-        [XBOX_GAMEPAD_BUTTONS.A]: () => {
-            const ch = displayChapters[focusedChIndex]
-            const d = detail || manga
-            const src = manga?.source || source
-            const mm = d ? { ...d, id: d.id || manga?.id, source: src } : null
-            if (focusedChIndex >= 0 && ch && mm) onStartRead(mm, ch)
-        },
-        [XBOX_GAMEPAD_BUTTONS.B]: () => { onClose?.() },
-    }), [detail, displayChapters, focusedChIndex, manga, onClose, onStartRead, source])
-
-    useLifeSyncGamepadInput({
-        enabled: mangaDetailControllerEnabled && Boolean(manga),
-        handlers: detailChHandlers,
-        repeatableButtons: [XBOX_GAMEPAD_BUTTONS.DPAD_UP, XBOX_GAMEPAD_BUTTONS.DPAD_DOWN],
-    })
-
-    useEffect(() => {
-        if (focusedChIndex < 0) return
-        document.querySelector('[data-focused-ep="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-    }, [focusedChIndex])
-
-    if (!manga) return null
-
-    const coverLayoutId = mangaCoverLayoutId(manga.source || source, manga.id)
-
-    const src = manga.source || source
-    // For mangadistrict: merge detail (DB metadata) over manga (card preview).
-    // detail.coverUrl always wins — it's the fresh scraper URL from DB.
-    const d = src === 'mangadistrict' && detail
-        ? { ...manga, ...detail, id: detail.id || manga.id }
-        : detail || manga
-    const mergedManga = { ...d, id: d.id || manga.id, source: src }
-    const tagList = d.tags?.length ? d.tags : manga.tags
-    // coverUrl: prefer detail (DB/scraper), fall back to card preview only if no detail yet
-    const coverImg = resolveMangaCoverDisplayUrl(
-        detail?.coverUrl || (metaBusy ? manga.coverUrl : (d.coverUrl || manga.coverUrl)),
-        src,
-    )
-    const heroBannerUrl =
-        resolveMangaCoverDisplayUrl(d.backgroundImageUrl || manga.backgroundImageUrl, src) || null
-    const heroBackdropUrl = heroBannerUrl || coverImg
-    const blurDetailHero =
-        src !== 'mangadistrict' && !heroBannerUrl && Boolean(coverImg)
-    const rating = d.ratings?.average ?? dexStats?.rating?.average ?? d.ratingAverage
-    const ratingNum = rating != null ? Number(rating) : null
-    const showRating = ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0
-    const cleanDesc = d.description ? String(d.description).replace(/<[^>]*>/g, '') : ''
-    const roliascanTitleUrl =
-        src === 'roliascan' && mergedManga.id
-            ? (mergedManga.url
-                ? String(mergedManga.url)
-                : mergedManga.slug
-                    ? `https://roliascan.com/manga/${encodeURIComponent(String(mergedManga.slug))}/`
-                    : `https://roliascan.com/browse/?title=${encodeURIComponent(String(mergedManga.title || ''))}`)
-            : null
-    const isDarkTheme =
-        typeof document !== 'undefined' &&
-        document.documentElement?.dataset?.maxienTheme === 'dark'
-
-    const heroFadeClass = blurDetailHero
-        ? 'absolute inset-0 lifesync-detail-hero-fade-soft'
-        : 'absolute inset-0 lifesync-detail-hero-fade-strong'
-
-    return createPortal(
-        <MotionDiv
-            className="fixed inset-0 z-[9998] flex h-dvh max-h-dvh w-full max-w-[100vw] min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
-            onClick={onClose}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={lifeSyncDetailOverlayFadeTransition}
-        >
+  const cardSrc = manga.source || "roliascan";
+  const coverDisplayUrl = resolveMangaCoverDisplayUrl(manga.coverUrl, cardSrc);
+  const rating = manga.ratings?.average ?? manga.ratingAverage;
+  const ratingNum = rating != null ? Number(rating) : null;
+  const showRating =
+    ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0;
+  const overlayBadges = (
+    <>
+      {manga.status && (
+        <span className="absolute left-2 top-2 z-[2] rounded-lg bg-[var(--color-surface)]/90 px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--mx-color-1d1d1f)]">
+          {manga.status}
+        </span>
+      )}
+      {manga.contentRating && manga.contentRating !== "safe" && (
+        <span className="absolute right-2 top-2 z-[2] rounded-lg bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-amber-700">
+          {manga.contentRating}
+        </span>
+      )}
+      {manga.source && manga.source !== "roliascan" && (
+        <span className="pointer-events-none absolute bottom-12 left-2 z-[2] rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase text-white backdrop-blur-sm">
+          {manga.source === "mangadistrict" ? "District" : manga.source}
+        </span>
+      )}
+    </>
+  );
+  return (
+    <MotionDiv
+      whileHover={{ y: -6, scale: 1.02, transition: { type: "spring", stiffness: 420, damping: 26 } }}
+      whileTap={{ scale: 0.98 }}
+      className="group w-full text-left"
+    >
+      <button
+        type="button"
+        onClick={() => onClick?.(manga)}
+        className="w-full text-left"
+      >
+        <div className={mediaPosterFrameClass}>
+          <div className="relative aspect-[2/3] w-full overflow-hidden">
+          {manga.id != null ? (
             <MotionDiv
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={lifeSyncDetailBackdropFadeTransition}
-            />
-
-            {/* Panel — match anime / hentai detail sheet motion */}
-            <MotionDiv
-                layout="size"
-                layoutRoot
-                className="lifesync-manga-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-[var(--color-surface)] shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
-                onClick={e => e.stopPropagation()}
-                initial={lifeSyncDetailSheetEnterInitial}
-                animate={lifeSyncDetailSheetEnterAnimate}
-                exit={lifeSyncDetailSheetExitVariant}
-                transition={lifeSyncDetailSheetMainTransition}
+              layoutId={mangaCoverLayoutId(
+                manga.source || "roliascan",
+                manga.id,
+              )}
+              transition={lifeSyncSharedLayoutTransitionProps}
+              className="absolute inset-0"
             >
-                {/* Hero section with blurred background + cover art */}
-                <div className="relative shrink-0">
-                    {heroBackdropUrl && (
-                        <>
-                            <div className="absolute inset-0 overflow-hidden">
-                                <img
-                                    src={heroBackdropUrl}
-                                    alt=""
-                                    className={
-                                        blurDetailHero
-                                            ? 'h-full w-full scale-110 object-cover opacity-60 blur-2xl'
-                                            : 'h-full min-h-[11rem] w-full object-cover object-center sm:min-h-[13rem]'
-                                    }
-                                    {...mangaImageProps(heroBackdropUrl)}
-                                />
-                            </div>
-                            <div
-                                className={heroFadeClass}
-                            />
-                        </>
-                    )}
-                    {!heroBackdropUrl && <div className="absolute inset-0 lifesync-detail-hero-fallback" />}
-
-                    {/* Close button */}
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="absolute z-10 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white transition-all"
-                        style={{
-                            top: '0.75rem',
-                            right: '0.75rem',
-                        }}
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-
-                    {/* Cover + title row */}
-                    <div className="relative flex gap-4 sm:gap-5 px-5 sm:px-6 pt-5 pb-4">
-                        <div className="w-28 shrink-0 sm:w-32">
-                            <MotionDiv
-                                layoutId={coverLayoutId}
-                                transition={lifeSyncSharedLayoutTransitionProps}
-                                className="w-full overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)] shadow-lg ring-1 ring-black/10"
-                                style={{ aspectRatio: '2/3' }}
-                            >
-                                {coverImg ? (
-                                    <img src={coverImg} alt="" className="h-full w-full object-cover" {...mangaImageProps(coverImg)} />
-                                ) : (
-                                    <div className="flex h-full min-h-[7.5rem] w-full items-center justify-center">
-                                        <svg className="h-10 w-10 text-[var(--mx-color-86868b)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" /></svg>
-                                    </div>
-                                )}
-                            </MotionDiv>
-                        </div>
-                        <div className="min-w-0 flex-1 flex flex-col justify-end pb-1">
-                            <h2 className="text-[18px] sm:text-[22px] font-bold text-[var(--mx-color-1d1d1f)] leading-tight line-clamp-3">
-                                {d.title || manga.title}
-                            </h2>
-                            {metaBusy && src === 'mangadistrict' ? (
-                                <div className="mt-1.5 h-3 w-32 rounded bg-white/30 animate-pulse" />
-                            ) : d.author ? (
-                                <p className="mt-1.5 text-[12px] text-[var(--mx-color-86868b)] flex items-center gap-1.5">
-                                    <svg className="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                    {d.author}
-                                </p>
-                            ) : null}
-                            <div className="flex flex-wrap items-center gap-2 mt-2">
-                                {metaBusy && src === 'mangadistrict' ? (
-                                    <>
-                                        <span className="h-5 w-16 rounded-full bg-[var(--mx-color-c6ff00)]/20 animate-pulse" />
-                                        <span className="h-5 w-12 rounded-full bg-[var(--mx-color-f5f5f7)] animate-pulse" />
-                                    </>
-                                ) : (
-                                    <>
-                                        {d.status && (
-                                            <span className="inline-flex items-center gap-1 bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-1d1d1f)] text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
-                                                <span className={`w-1.5 h-1.5 rounded-full ${d.status === 'completed' || d.status === 'cancelled' ? 'bg-[var(--mx-color-86868b)]' : 'bg-[var(--mx-color-c6ff00)]'}`} />
-                                                {d.status}
-                                            </span>
-                                        )}
-                                        {d.year && <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">{d.year}</span>}
-                                        {showRating && (
-                                            <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
-                                                <svg className="w-2.5 h-2.5 fill-amber-500" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
-                                                {ratingNum.toFixed(1)}
-                                            </span>
-                                        )}
-                                        {d.contentRating && d.contentRating !== 'safe' && (
-                                            <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase">{d.contentRating}</span>
-                                        )}
-                                    </>
-                                )}
-                                {chaptersInSeriesOrder.length > 0 && (
-                                    <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
-                                        {chaptersInSeriesOrder.length} ch.
-                                    </span>
-                                )}
-                                {dexStats?.follows != null && dexStats.follows > 0 && (
-                                    <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
-                                        {dexStats.follows.toLocaleString()} follows
-                                    </span>
-                                )}
-                            </div>
-                            {false && roliascanConnected && (
-                                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-                                    <div className="flex flex-wrap gap-2 shrink-0">
-                                        {isDexFollowing == null ? (
-                                            <span className="text-[10px] text-[var(--mx-color-86868b)]">Checking follow state…</span>
-                                        ) : isDexFollowing ? (
-                                            <button
-                                                type="button"
-                                                disabled={dexFollowBusy}
-                                                onClick={async () => {
-                                                    setDexFollowBusy(true)
-                                                    try {
-                                                        setIsDexFollowing(false)
-                                                    } catch { /* ignore */ }
-                                                    finally {
-                                                        setDexFollowBusy(false)
-                                                    }
-                                                }}
-                                                className="text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-600 px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] hover:border-red-100 hover:bg-red-50 transition-colors disabled:opacity-50"
-                                            >
-                                                {dexFollowBusy ? '…' : 'Unfollow on Roliascan'}
-                                            </button>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                disabled={dexFollowBusy}
-                                                onClick={async () => {
-                                                    setDexFollowBusy(true)
-                                                    try {
-                                                        setIsDexFollowing(true)
-                                                    } catch { /* ignore */ }
-                                                    finally {
-                                                        setDexFollowBusy(false)
-                                                    }
-                                                }}
-                                                className="text-[11px] font-semibold text-white bg-[var(--mx-color-ff6740)] hover:bg-[var(--mx-color-e55a36)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                                            >
-                                                {dexFollowBusy ? '…' : 'Follow on Roliascan'}
-                                            </button>
-                                        )}
-                                    </div>
-                                    <label className="flex min-w-0 flex-col gap-0.5 sm:max-w-[14rem]">
-                                        <select
-                                            value={dexReadingStatus || ''}
-                                            disabled={dexReadingStatusBusy}
-                                            onChange={async e => {
-                                                const val = e.target.value || null
-                                                setDexReadingStatusBusy(true)
-                                                try {
-                                                    setDexReadingStatus(val)
-                                                } catch { /* ignore */ }
-                                                finally {
-                                                    setDexReadingStatusBusy(false)
-                                                }
-                                            }}
-                                            className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none disabled:opacity-50"
-                                        >
-                                            <option value="">No status</option>
-                                            {MANGADEX_READING_STATUSES.map(s => (
-                                                <option key={s.value} value={s.value}>
-                                                    {s.label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+              {coverDisplayUrl ? (
+                <LifesyncEpisodeThumbnail
+                  src={coverDisplayUrl}
+                  className="absolute inset-0 h-full w-full"
+                  imgClassName="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                  imgProps={mangaImageProps(coverDisplayUrl)}
+                >
+                  {overlayBadges}
+                </LifesyncEpisodeThumbnail>
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
+                  {overlayBadges}
+                  <svg
+                    className="w-10 h-10"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="1.5"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                    />
+                  </svg>
                 </div>
-
-                {/* Scrollable body */}
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                    <MotionDiv
-                        key={String(manga.id)}
-                        className="px-5 sm:px-6 py-4 space-y-4"
-                        initial={{ opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={lifeSyncDetailBodyRevealTransition}
-                    >
-                        {/* Tags */}
-                        {metaBusy && src === 'mangadistrict' ? (
-                            <div className="flex flex-wrap gap-1.5">
-                                {[60, 80, 50, 70, 55].map((w, i) => (
-                                    <span key={i} className="h-6 rounded-lg bg-[var(--mx-color-f5f5f7)] animate-pulse" style={{ width: w }} />
-                                ))}
-                            </div>
-                        ) : tagList?.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5">
-                                {tagList.map((t, i) => {
-                                    const label = mangaTagLabel(t)
-                                    if (!label) return null
-                                    return (
-                                        <span key={mangaTagKey(t, i, `${mergedManga.id}-`)} className="bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] text-[var(--mx-color-1d1d1f)] text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors cursor-default">{label}</span>
-                                    )
-                                })}
-                            </div>
-                        ) : null}
-
-                        {/* Description */}
-                        {metaBusy && src === 'mangadistrict' ? (
-                            <div className="space-y-2">
-                                <div className="h-3 w-full rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
-                                <div className="h-3 w-5/6 rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
-                                <div className="h-3 w-4/6 rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
-                            </div>
-                        ) : cleanDesc ? (
-                            <div>
-                                <p className={`text-[13px] leading-relaxed ${descExpanded ? '' : 'line-clamp-3'}`}>
-                                    {cleanDesc}
-                                </p>
-                                {cleanDesc.length > 200 && (
-                                    <button type="button" onClick={() => setDescExpanded(v => !v)} className="mt-1 text-[11px] font-semibold text-[var(--mx-color-c6ff00)] hover:underline">
-                                        {descExpanded ? 'Show less' : 'Read more'}
-                                    </button>
-                                )}
-                            </div>
-                        ) : null}
-
-                        {/* Chapters */}
-                        <div>
-                            <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                    <h3 className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)]">Chapters</h3>
-                                    {false && (
-                                        <select
-                                            value={chapterLang}
-                                            onChange={e => setChapterLang(e.target.value)}
-                                            className="max-w-[200px] rounded-lg px-2 py-1 text-[11px] font-medium text-[var(--mx-color-1d1d1f)]"
-                                        >
-                                            {chapterLangOptions.map(o => (
-                                                <option key={o.value} value={o.value}>{o.label}</option>
-                                            ))}
-                                        </select>
-                                    )}
-                                    <div
-                                        className="flex rounded-lg p-0.5"
-                                        role="group"
-                                        aria-label="Chapter list order"
-                                    >
-                                        <button
-                                            type="button"
-                                            onClick={() => setChapterOrder('asc')}
-                                            className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
-                                                chapterOrder === 'asc'
-                                                    ? 'bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] shadow-sm'
-                                                    : 'text-[var(--mx-color-86868b)]'
-                                            }`}
-                                        >
-                                            First → last
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setChapterOrder('desc')}
-                                            className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
-                                                chapterOrder === 'desc'
-                                                    ? 'bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] shadow-sm'
-                                                    : 'text-[var(--mx-color-86868b)] '
-                                            }`}
-                                        >
-                                            Last → first
-                                        </button>
-                                    </div>
-                                    {false && mergedManga.id && (
-                                        <a
-                                            href={`https://roliascan.com/title/${mergedManga.id}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
-                                        >
-                                            Open on Roliascan
-                                        </a>
-                                    )}
-                                    {src === 'roliascan' && roliascanTitleUrl && (
-                                        <a
-                                            href={roliascanTitleUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
-                                        >
-                                            Open on Roliascan
-                                        </a>
-                                    )}
-                                </div>
-                                {chaptersInSeriesOrder.length > 0 && (
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                onStartRead(
-                                                    mergedManga,
-                                                    chaptersInSeriesOrder[chaptersInSeriesOrder.length - 1],
-                                                )
-                                            }
-                                            className="flex items-center gap-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm transition-all hover:bg-[var(--mx-color-f5f5f7)]"
-                                        >
-                                            Latest chapter
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => onStartRead(mergedManga, chaptersInSeriesOrder[0])}
-                                            className="flex items-center gap-1.5 rounded-lg bg-[var(--mx-color-c6ff00)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
-                                        >
-                                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" /></svg>
-                                            Start from first
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                            {chapBusy ? (
-                                <LifesyncMangaChapterListSkeleton rows={8} dark={isDarkTheme} />
-                            ) : chaptersInSeriesOrder.length === 0 ? (
-                                <div className="rounded-xl bg-[var(--mx-color-f5f5f7)] px-4 py-6 text-center">
-                                    <p className="text-[12px] text-[var(--mx-color-86868b)]">
-                                        {src === 'mangadistrict' || src === 'roliascan'
-                                            ? 'No chapters in listing.'
-                                            : 'No chapters for this language filter.'}
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="overflow-hidden rounded-xl">
-                                    <ul ref={chapterListRef} className="max-h-80 overflow-y-auto">
-                                        {displayChapters.map((ch, chIdx) => {
-                                            const isCurrentChapter = highlightedChapterId && String(ch?.id || '') === highlightedChapterId
-                                            const isFocusedCh = focusedChIndex === chIdx
-                                            return (
-                                            <li key={ch.id}>
-                                                <button
-                                                    ref={isCurrentChapter ? currentChapterButtonRef : null}
-                                                    type="button"
-                                                    data-focused-ep={isFocusedCh ? 'true' : undefined}
-                                                    onClick={() => onStartRead(mergedManga, ch)}
-                                                    aria-current={isCurrentChapter ? 'true' : undefined}
-                                                    className={`group flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left transition-colors ${
-                                                        isFocusedCh
-                                                            ? 'bg-[var(--mx-color-c6ff00)]/25 ring-2 ring-[var(--mx-color-c6ff00)]/70'
-                                                            : isCurrentChapter
-                                                                ? 'bg-[var(--mx-color-c6ff00)]/18 ring-1 ring-[var(--mx-color-c6ff00)]/45'
-                                                                : 'hover:bg-[var(--mx-color-f5f5f7)]'
-                                                    }`}
-                                                >
-                                                    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold transition-colors ${
-                                                        isCurrentChapter
-                                                            ? 'bg-[var(--mx-color-c6ff00)]/32 text-[var(--mx-color-1d1d1f)]'
-                                                            : 'text-[var(--mx-color-86868b)] group-hover:bg-[var(--mx-color-c6ff00)]/20 group-hover:text-[var(--mx-color-1d1d1f)]'
-                                                    }`}>
-                                                        {chapterSeriesIndex(ch) || '—'}
-                                                    </span>
-                                                    <span className="flex-1 min-w-0">
-                                                        <span className="flex items-center gap-2 min-w-0">
-                                                            <span className="block text-[12px] font-medium text-[var(--mx-color-1d1d1f)] truncate">{formatChapterLabel(ch)}</span>
-                                                            {isCurrentChapter && (
-                                                                <span className="shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]/28 px-1.5 py-0.5 text-[9px] font-semibold text-[var(--mx-color-1a1628)]">
-                                                                    Current
-                                                                </span>
-                                                            )}
-                                                            {false && chapterLang === 'all' && ch.translatedLanguage && (
-                                                                <span className="shrink-0 text-[9px] font-semibold uppercase text-[var(--mx-color-86868b)] bg-[var(--mx-color-ebebed)] px-1.5 py-0.5 rounded">{ch.translatedLanguage}</span>
-                                                            )}
-                                                        </span>
-                                                        {ch.scanlationGroup && <span className="block text-[10px] text-[var(--mx-color-86868b)] truncate">{ch.scanlationGroup}</span>}
-                                                    </span>
-                                                    <svg className="w-3.5 h-3.5 shrink-0 text-[var(--mx-color-d2d2d7)] group-hover:text-[var(--mx-color-c6ff00)] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-                                                </button>
-                                            </li>
-                                            )
-                                        })}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    </MotionDiv>
-                </div>
+              )}
             </MotionDiv>
-        </MotionDiv>,
-        document.body
-    )
+          ) : coverDisplayUrl ? (
+            <LifesyncEpisodeThumbnail
+              src={coverDisplayUrl}
+              className="absolute inset-0 h-full w-full"
+              imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+              imgProps={mangaImageProps(coverDisplayUrl)}
+            >
+              {overlayBadges}
+            </LifesyncEpisodeThumbnail>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
+              {overlayBadges}
+              <svg
+                className="w-10 h-10"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth="1.5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                />
+              </svg>
+            </div>
+          )}
+          <div
+            className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/10 to-transparent"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-0.5 bg-gradient-to-r from-transparent via-[var(--mx-color-c6ff00)] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            aria-hidden
+          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
+            <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+              {manga.title}
+            </p>
+            {manga.author ? (
+              <p className="mt-0.5 line-clamp-1 text-[11px] text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
+                {manga.author}
+              </p>
+            ) : null}
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {manga.year && (
+                <span className="rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
+                  {manga.year}
+                </span>
+              )}
+              {showRating && (
+                <span className="flex items-center gap-0.5 rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                  <svg
+                    className="h-2.5 w-2.5 fill-amber-300 text-amber-300"
+                    viewBox="0 0 20 20"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                  {ratingNum.toFixed(1)}
+                </span>
+              )}
+              {manga.tags?.slice(0, 2).map((tag, i) => {
+                const label = mangaTagLabel(tag);
+                if (!label) return null;
+                return (
+                  <span
+                    key={mangaTagKey(tag, i, `${manga.id}-`)}
+                    className="rounded bg-[var(--mx-color-c6ff00)]/25 px-1.5 py-0.5 text-[10px] font-medium text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--color-border-strong)]/30"
+                  >
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+          {/* Hover affordance */}
+          <div className="absolute inset-0 z-[2] flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
+            <div className="flex h-11 w-11 scale-90 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.8)] transition-transform duration-300 group-hover:scale-100">
+              <svg
+                className="h-4 w-4"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+                aria-hidden
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+      </button>
+    </MotionDiv>
+  );
+});
+
+function MangaDetail({
+  manga,
+  onClose,
+  source,
+  onStartRead,
+  roliascanConnected,
+  browseTranslatedLang = "en",
+  isLifeSyncConnected = false,
+}) {
+  const [detail, setDetail] = useState(null);
+  const [metaBusy, setMetaBusy] = useState(false);
+  const [chapters, setChapters] = useState(null);
+  const [chapBusy, setChapBusy] = useState(false);
+  const [currentChapterId, setCurrentChapterId] = useState("");
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [dexStats, setDexStats] = useState(null);
+  const [isDexFollowing, setIsDexFollowing] = useState(null);
+  const [dexFollowBusy, setDexFollowBusy] = useState(false);
+  const [dexReadingStatus, setDexReadingStatus] = useState(null);
+  const [dexReadingStatusBusy, setDexReadingStatusBusy] = useState(false);
+  const [chapterLang, setChapterLang] = useState(() =>
+    browseTranslatedLang === "all" ? "all" : browseTranslatedLang,
+  );
+  /** `asc` = chapter 1 at top; `desc` = latest chapter at top */
+  const [chapterOrder, setChapterOrder] = useState("asc");
+  const chapterListRef = useRef(null);
+  const currentChapterButtonRef = useRef(null);
+  const didAutoScrollCurrentChapterRef = useRef(false);
+
+  useEffect(() => {
+    setChapterLang(
+      browseTranslatedLang === "all" ? "all" : browseTranslatedLang,
+    );
+  }, [manga?.id, browseTranslatedLang]);
+
+  useEffect(() => {
+    setChapterOrder("asc");
+  }, [manga?.id]);
+
+  useEffect(() => {
+    didAutoScrollCurrentChapterRef.current = false;
+    setCurrentChapterId("");
+  }, [manga?.id, manga?.source]);
+
+  useEffect(() => {
+    if (!manga?.id || !isLifeSyncConnected) return;
+    let cancelled = false;
+    const sourceHint = String(manga.source || source || "")
+      .trim()
+      .toLowerCase();
+    (async () => {
+      try {
+        const params = new URLSearchParams({
+          view: "standard",
+          sortBy: "updatedAt",
+          order: "desc",
+          page: "1",
+          limit: "100",
+        });
+        if (sourceHint) params.set("source", sourceHint);
+        const data = await lifesyncFetch(
+          `/api/v1/progress?${params.toString()}`,
+        );
+        if (cancelled) return;
+        const rows = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.entries)
+            ? data.entries
+            : [];
+        const match = rows.find((row) => {
+          if (String(row?.mangaId || "").trim() !== String(manga.id))
+            return false;
+          if (!sourceHint) return true;
+          return (
+            String(row?.source || "")
+              .trim()
+              .toLowerCase() === sourceHint
+          );
+        });
+        const chapterId = String(match?.lastChapterId || "").trim();
+        if (chapterId) setCurrentChapterId(chapterId);
+      } catch {
+        // ignore: current chapter highlight falls back to local detail payload
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLifeSyncConnected, manga?.id, manga?.source, source]);
+
+  // Roliascan: full detail arrives via parent enrichment (`/roliascan/info`) merged into
+  // the `manga` prop after mount, so sync on every `manga` change — not just id changes.
+  useEffect(() => {
+    if (!manga?.id) return;
+    if ((manga.source || source) !== "roliascan") return;
+    const hasChapterPayload = Array.isArray(manga.chapters);
+    setChapters(hasChapterPayload ? { data: [...manga.chapters] } : null);
+    setDetail({ ...manga });
+    setMetaBusy(false);
+    setDexStats(null);
+    setIsDexFollowing(null);
+    setDexReadingStatus(null);
+    setChapBusy(!hasChapterPayload);
+  }, [manga, source]);
+
+  useEffect(() => {
+    if (!manga?.id) return undefined;
+    const src = manga.source || source;
+
+    if (src === "roliascan") return undefined;
+
+    if (src === "mangadistrict") {
+      setDetail(null);
+      setChapters(null);
+      setMetaBusy(true);
+      setChapBusy(true);
+      setDexStats(null);
+      setIsDexFollowing(null);
+      setDexReadingStatus(null);
+
+      let cancelled = false;
+      const id = String(manga.id);
+
+      // Fetch metadata from DB (fast)
+      lifesyncFetch(
+        `/api/v1/manga/mangadistrict/meta/${encodeURIComponent(id)}?view=full`,
+      )
+        .then((data) => {
+          if (cancelled) return;
+          setDetail((prev) => ({
+            ...prev,
+            ...data,
+            id: data.id || id,
+            source: "mangadistrict",
+          }));
+        })
+        .catch(() => {
+          /* preview data already shown via manga prop */
+        })
+        .finally(() => {
+          if (!cancelled) setMetaBusy(false);
+        });
+
+      // Fetch chapters live from scraper (slow)
+      lifesyncFetch(
+        `/api/v1/manga/mangadistrict/info/${encodeURIComponent(id)}?view=full`,
+      )
+        .then((data) => {
+          if (cancelled) return;
+          const list = Array.isArray(data.chapters) ? data.chapters : [];
+          setChapters({ data: list });
+        })
+        .catch(() => {
+          if (!cancelled) setChapters({ data: [] });
+        })
+        .finally(() => {
+          if (!cancelled) setChapBusy(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setDetail(null);
+    setChapters({ data: [] });
+    setMetaBusy(false);
+    setDexStats(null);
+    setIsDexFollowing(null);
+    setDexReadingStatus(null);
+    setChapBusy(false);
+    return undefined;
+  }, [manga?.id, manga.source, source, roliascanConnected, chapterLang]);
+
+  const chaptersInSeriesOrder = useMemo(() => {
+    const list = chapters?.data ? [...chapters.data] : [];
+    list.sort(compareChapters);
+    return list;
+  }, [chapters]);
+
+  const displayChapters = useMemo(() => {
+    if (chapterOrder === "desc") return [...chaptersInSeriesOrder].reverse();
+    return chaptersInSeriesOrder;
+  }, [chaptersInSeriesOrder, chapterOrder]);
+
+  const highlightedChapterId = useMemo(() => {
+    const fromProgress = String(currentChapterId || "").trim();
+    if (fromProgress) return fromProgress;
+    const fromManga = String(
+      manga?.lastChapterId || detail?.lastChapterId || "",
+    ).trim();
+    if (fromManga) return fromManga;
+    return "";
+  }, [currentChapterId, detail?.lastChapterId, manga?.lastChapterId]);
+
+  const chapterSeriesIndex = useCallback(
+    (ch) => {
+      const i = chaptersInSeriesOrder.findIndex(
+        (c) => String(c?.id) === String(ch?.id),
+      );
+      return i >= 0 ? i + 1 : 0;
+    },
+    [chaptersInSeriesOrder],
+  );
+
+  const chapterLangOptions = useMemo(() => {
+    if (!manga) return DEX_TRANSLATION_LANG_OPTIONS;
+    const dm = detail || manga;
+    return buildDexChapterLangSelectOptions(
+      dm.availableTranslatedLanguages || manga.availableTranslatedLanguages,
+    );
+  }, [detail, manga]);
+
+  useEffect(() => {
+    if (didAutoScrollCurrentChapterRef.current) return;
+    if (chapBusy || !highlightedChapterId || displayChapters.length === 0)
+      return;
+    const targetChapterExists = displayChapters.some(
+      (ch) => String(ch?.id || "") === highlightedChapterId,
+    );
+    if (!targetChapterExists) return;
+    const listEl = chapterListRef.current;
+    const chapterEl = currentChapterButtonRef.current;
+    if (!listEl || !chapterEl) return;
+    didAutoScrollCurrentChapterRef.current = true;
+    requestAnimationFrame(() => {
+      const top =
+        chapterEl.offsetTop -
+        listEl.clientHeight / 2 +
+        chapterEl.clientHeight / 2;
+      listEl.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+    });
+  }, [chapBusy, displayChapters, highlightedChapterId]);
+
+  // D-pad chapter navigation — must be before early returns (rules of hooks)
+  const [focusedChIndex, setFocusedChIndex] = useState(-1);
+  const mangaDetailControllerEnabled = useControllerSupportEnabled();
+
+  const detailChHandlers = useMemo(
+    () => ({
+      [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () =>
+        setFocusedChIndex((prev) =>
+          Math.max(0, prev <= 0 ? displayChapters.length - 1 : prev - 1),
+        ),
+      [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () =>
+        setFocusedChIndex(
+          (prev) => (prev + 1) % Math.max(1, displayChapters.length),
+        ),
+      [XBOX_GAMEPAD_BUTTONS.A]: () => {
+        const ch = displayChapters[focusedChIndex];
+        const d = detail || manga;
+        const src = manga?.source || source;
+        const mm = d ? { ...d, id: d.id || manga?.id, source: src } : null;
+        if (focusedChIndex >= 0 && ch && mm) onStartRead(mm, ch);
+      },
+      [XBOX_GAMEPAD_BUTTONS.B]: () => {
+        onClose?.();
+      },
+    }),
+    [
+      detail,
+      displayChapters,
+      focusedChIndex,
+      manga,
+      onClose,
+      onStartRead,
+      source,
+    ],
+  );
+
+  useLifeSyncGamepadInput({
+    enabled: mangaDetailControllerEnabled && Boolean(manga),
+    handlers: detailChHandlers,
+    repeatableButtons: [
+      XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+      XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+    ],
+  });
+
+  useEffect(() => {
+    if (focusedChIndex < 0) return;
+    document
+      .querySelector('[data-focused-ep="true"]')
+      ?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [focusedChIndex]);
+
+  if (!manga) return null;
+
+  const coverLayoutId = mangaCoverLayoutId(manga.source || source, manga.id);
+
+  const src = manga.source || source;
+  // For mangadistrict: merge detail (DB metadata) over manga (card preview).
+  // detail.coverUrl always wins — it's the fresh scraper URL from DB.
+  const d =
+    src === "mangadistrict" && detail
+      ? { ...manga, ...detail, id: detail.id || manga.id }
+      : detail || manga;
+  const mergedManga = { ...d, id: d.id || manga.id, source: src };
+  const tagList = d.tags?.length ? d.tags : manga.tags;
+  // coverUrl: prefer detail (DB/scraper), fall back to card preview only if no detail yet
+  const coverImg = resolveMangaCoverDisplayUrl(
+    detail?.coverUrl ||
+      (metaBusy ? manga.coverUrl : d.coverUrl || manga.coverUrl),
+    src,
+  );
+  const heroBannerUrl =
+    resolveMangaCoverDisplayUrl(
+      d.backgroundImageUrl || manga.backgroundImageUrl,
+      src,
+    ) || null;
+  const heroBackdropUrl = heroBannerUrl || coverImg;
+  const blurDetailHero =
+    src !== "mangadistrict" && !heroBannerUrl && Boolean(coverImg);
+  const rating =
+    d.ratings?.average ?? dexStats?.rating?.average ?? d.ratingAverage;
+  const ratingNum = rating != null ? Number(rating) : null;
+  const showRating =
+    ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0;
+  const cleanDesc = d.description
+    ? String(d.description).replace(/<[^>]*>/g, "")
+    : "";
+  const roliascanTitleUrl =
+    src === "roliascan" && mergedManga.id
+      ? mergedManga.url
+        ? String(mergedManga.url)
+        : mergedManga.slug
+          ? `https://roliascan.com/manga/${encodeURIComponent(String(mergedManga.slug))}/`
+          : `https://roliascan.com/browse/?title=${encodeURIComponent(String(mergedManga.title || ""))}`
+      : null;
+  const isDarkTheme =
+    typeof document !== "undefined" &&
+    document.documentElement?.dataset?.maxienTheme === "dark";
+
+  const heroFadeClass = blurDetailHero
+    ? "absolute inset-0 lifesync-detail-hero-fade-soft"
+    : "absolute inset-0 lifesync-detail-hero-fade-strong";
+
+  return createPortal(
+    <MotionDiv
+      className="fixed inset-0 z-[9998] flex h-dvh max-h-dvh w-full max-w-[100vw] min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={lifeSyncDetailOverlayFadeTransition}
+    >
+      <MotionDiv
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={lifeSyncDetailBackdropFadeTransition}
+      />
+
+      {/* Panel — match anime / hentai detail sheet motion */}
+      <MotionDiv
+        layout="size"
+        layoutRoot
+        className="lifesync-manga-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-[var(--color-surface)] shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+        initial={lifeSyncDetailSheetEnterInitial}
+        animate={lifeSyncDetailSheetEnterAnimate}
+        exit={lifeSyncDetailSheetExitVariant}
+        transition={lifeSyncDetailSheetMainTransition}
+      >
+        {/* Hero section with blurred background + cover art */}
+        <div className="relative shrink-0">
+          {heroBackdropUrl && (
+            <>
+              <div className="absolute inset-0 overflow-hidden">
+                <img
+                  src={heroBackdropUrl}
+                  alt=""
+                  className={
+                    blurDetailHero
+                      ? "h-full w-full scale-110 object-cover opacity-60 blur-2xl"
+                      : "h-full min-h-[11rem] w-full object-cover object-center sm:min-h-[13rem]"
+                  }
+                  {...mangaImageProps(heroBackdropUrl)}
+                />
+              </div>
+              <div className={heroFadeClass} />
+            </>
+          )}
+          {!heroBackdropUrl && (
+            <div className="absolute inset-0 lifesync-detail-hero-fallback" />
+          )}
+
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={onClose}
+            className="absolute z-10 w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white transition-all"
+            style={{
+              top: "0.75rem",
+              right: "0.75rem",
+            }}
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+
+          {/* Cover + title row */}
+          <div className="relative flex gap-4 sm:gap-5 px-5 sm:px-6 pt-5 pb-4">
+            <div className="w-28 shrink-0 sm:w-32">
+              <MotionDiv
+                layoutId={coverLayoutId}
+                transition={lifeSyncSharedLayoutTransitionProps}
+                className="w-full overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)] shadow-lg ring-1 ring-black/10"
+                style={{ aspectRatio: "2/3" }}
+              >
+                {coverImg ? (
+                  <img
+                    src={coverImg}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    {...mangaImageProps(coverImg)}
+                  />
+                ) : (
+                  <div className="flex h-full min-h-[7.5rem] w-full items-center justify-center">
+                    <svg
+                      className="h-10 w-10 text-[var(--mx-color-86868b)]"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </MotionDiv>
+            </div>
+            <div className="min-w-0 flex-1 flex flex-col justify-end pb-1">
+              <h2 className="text-[18px] sm:text-[22px] font-bold text-[var(--mx-color-1d1d1f)] leading-tight line-clamp-3">
+                {d.title || manga.title}
+              </h2>
+              {metaBusy && src === "mangadistrict" ? (
+                <div className="mt-1.5 h-3 w-32 rounded bg-white/30 animate-pulse" />
+              ) : d.author ? (
+                <p className="mt-1.5 text-[12px] text-[var(--mx-color-86868b)] flex items-center gap-1.5">
+                  <svg
+                    className="w-3 h-3 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                    />
+                  </svg>
+                  {d.author}
+                </p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {metaBusy && src === "mangadistrict" ? (
+                  <>
+                    <span className="h-5 w-16 rounded-full bg-[var(--mx-color-c6ff00)]/20 animate-pulse" />
+                    <span className="h-5 w-12 rounded-full bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                  </>
+                ) : (
+                  <>
+                    {d.status && (
+                      <span className="inline-flex items-center gap-1 bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-1d1d1f)] text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${d.status === "completed" || d.status === "cancelled" ? "bg-[var(--mx-color-86868b)]" : "bg-[var(--mx-color-c6ff00)]"}`}
+                        />
+                        {d.status}
+                      </span>
+                    )}
+                    {d.year && (
+                      <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
+                        {d.year}
+                      </span>
+                    )}
+                    {showRating && (
+                      <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                        <svg
+                          className="w-2.5 h-2.5 fill-amber-500"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        {ratingNum.toFixed(1)}
+                      </span>
+                    )}
+                    {d.contentRating && d.contentRating !== "safe" && (
+                      <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase">
+                        {d.contentRating}
+                      </span>
+                    )}
+                  </>
+                )}
+                {chaptersInSeriesOrder.length > 0 && (
+                  <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
+                    {chaptersInSeriesOrder.length} ch.
+                  </span>
+                )}
+                {dexStats?.follows != null && dexStats.follows > 0 && (
+                  <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
+                    {dexStats.follows.toLocaleString()} follows
+                  </span>
+                )}
+              </div>
+              {false && roliascanConnected && (
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    {isDexFollowing == null ? (
+                      <span className="text-[10px] text-[var(--mx-color-86868b)]">
+                        Checking follow state…
+                      </span>
+                    ) : isDexFollowing ? (
+                      <button
+                        type="button"
+                        disabled={dexFollowBusy}
+                        onClick={async () => {
+                          setDexFollowBusy(true);
+                          try {
+                            setIsDexFollowing(false);
+                          } catch {
+                            /* ignore */
+                          } finally {
+                            setDexFollowBusy(false);
+                          }
+                        }}
+                        className="text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-600 px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] hover:border-red-100 hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        {dexFollowBusy ? "…" : "Unfollow on Roliascan"}
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={dexFollowBusy}
+                        onClick={async () => {
+                          setDexFollowBusy(true);
+                          try {
+                            setIsDexFollowing(true);
+                          } catch {
+                            /* ignore */
+                          } finally {
+                            setDexFollowBusy(false);
+                          }
+                        }}
+                        className="text-[11px] font-semibold text-white bg-[var(--mx-color-ff6740)] hover:bg-[var(--mx-color-e55a36)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {dexFollowBusy ? "…" : "Follow on Roliascan"}
+                      </button>
+                    )}
+                  </div>
+                  <label className="flex min-w-0 flex-col gap-0.5 sm:max-w-[14rem]">
+                    <select
+                      value={dexReadingStatus || ""}
+                      disabled={dexReadingStatusBusy}
+                      onChange={async (e) => {
+                        const val = e.target.value || null;
+                        setDexReadingStatusBusy(true);
+                        try {
+                          setDexReadingStatus(val);
+                        } catch {
+                          /* ignore */
+                        } finally {
+                          setDexReadingStatusBusy(false);
+                        }
+                      }}
+                      className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none disabled:opacity-50"
+                    >
+                      <option value="">No status</option>
+                      {MANGADEX_READING_STATUSES.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <MotionDiv
+            key={String(manga.id)}
+            className="px-5 sm:px-6 py-4 space-y-4"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={lifeSyncDetailBodyRevealTransition}
+          >
+            {/* Tags */}
+            {metaBusy && src === "mangadistrict" ? (
+              <div className="flex flex-wrap gap-1.5">
+                {[60, 80, 50, 70, 55].map((w, i) => (
+                  <span
+                    key={i}
+                    className="h-6 rounded-lg bg-[var(--mx-color-f5f5f7)] animate-pulse"
+                    style={{ width: w }}
+                  />
+                ))}
+              </div>
+            ) : tagList?.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {tagList.map((t, i) => {
+                  const label = mangaTagLabel(t);
+                  if (!label) return null;
+                  return (
+                    <span
+                      key={mangaTagKey(t, i, `${mergedManga.id}-`)}
+                      className="bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] text-[var(--mx-color-1d1d1f)] text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors cursor-default"
+                    >
+                      {label}
+                    </span>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {/* Description */}
+            {metaBusy && src === "mangadistrict" ? (
+              <div className="space-y-2">
+                <div className="h-3 w-full rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                <div className="h-3 w-5/6 rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                <div className="h-3 w-4/6 rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+              </div>
+            ) : cleanDesc ? (
+              <div>
+                <p
+                  className={`text-[13px] leading-relaxed ${descExpanded ? "" : "line-clamp-3"}`}
+                >
+                  {cleanDesc}
+                </p>
+                {cleanDesc.length > 200 && (
+                  <button
+                    type="button"
+                    onClick={() => setDescExpanded((v) => !v)}
+                    className="mt-1 text-[11px] font-semibold text-[var(--mx-color-c6ff00)] hover:underline"
+                  >
+                    {descExpanded ? "Show less" : "Read more"}
+                  </button>
+                )}
+              </div>
+            ) : null}
+
+            {/* Chapters */}
+            <div>
+              <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h3 className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)]">
+                    Chapters
+                  </h3>
+                  {false && (
+                    <select
+                      value={chapterLang}
+                      onChange={(e) => setChapterLang(e.target.value)}
+                      className="max-w-[200px] rounded-lg px-2 py-1 text-[11px] font-medium text-[var(--mx-color-1d1d1f)]"
+                    >
+                      {chapterLangOptions.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  <div
+                    className="flex rounded-lg p-0.5"
+                    role="group"
+                    aria-label="Chapter list order"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setChapterOrder("asc")}
+                      className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+                        chapterOrder === "asc"
+                          ? "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] shadow-sm"
+                          : "text-[var(--mx-color-86868b)]"
+                      }`}
+                    >
+                      First → last
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setChapterOrder("desc")}
+                      className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
+                        chapterOrder === "desc"
+                          ? "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] shadow-sm"
+                          : "text-[var(--mx-color-86868b)] "
+                      }`}
+                    >
+                      Last → first
+                    </button>
+                  </div>
+                  {false && mergedManga.id && (
+                    <a
+                      href={`https://roliascan.com/title/${mergedManga.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
+                    >
+                      Open on Roliascan
+                    </a>
+                  )}
+                  {src === "roliascan" && roliascanTitleUrl && (
+                    <a
+                      href={roliascanTitleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
+                    >
+                      Open on Roliascan
+                    </a>
+                  )}
+                </div>
+                {chaptersInSeriesOrder.length > 0 && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onStartRead(
+                          mergedManga,
+                          chaptersInSeriesOrder[
+                            chaptersInSeriesOrder.length - 1
+                          ],
+                        )
+                      }
+                      className="flex items-center gap-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm transition-all hover:bg-[var(--mx-color-f5f5f7)]"
+                    >
+                      Latest chapter
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onStartRead(mergedManga, chaptersInSeriesOrder[0])
+                      }
+                      className="flex items-center gap-1.5 rounded-lg bg-[var(--mx-color-c6ff00)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
+                    >
+                      <svg
+                        className="h-3 w-3"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                      </svg>
+                      Start from first
+                    </button>
+                  </div>
+                )}
+              </div>
+              {chapBusy ? (
+                <LifesyncMangaChapterListSkeleton rows={8} dark={isDarkTheme} />
+              ) : chaptersInSeriesOrder.length === 0 ? (
+                <div className="rounded-xl bg-[var(--mx-color-f5f5f7)] px-4 py-6 text-center">
+                  <p className="text-[12px] text-[var(--mx-color-86868b)]">
+                    {src === "mangadistrict" || src === "roliascan"
+                      ? "No chapters in listing."
+                      : "No chapters for this language filter."}
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-hidden rounded-xl">
+                  <ul ref={chapterListRef} className="max-h-80 overflow-y-auto">
+                    {displayChapters.map((ch, chIdx) => {
+                      const isCurrentChapter =
+                        highlightedChapterId &&
+                        String(ch?.id || "") === highlightedChapterId;
+                      const isFocusedCh = focusedChIndex === chIdx;
+                      return (
+                        <li key={ch.id}>
+                          <button
+                            ref={
+                              isCurrentChapter ? currentChapterButtonRef : null
+                            }
+                            type="button"
+                            data-focused-ep={isFocusedCh ? "true" : undefined}
+                            onClick={() => onStartRead(mergedManga, ch)}
+                            aria-current={isCurrentChapter ? "true" : undefined}
+                            className={`group flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left transition-colors ${
+                              isFocusedCh
+                                ? "bg-[var(--mx-color-c6ff00)]/25 ring-2 ring-[var(--mx-color-c6ff00)]/70"
+                                : isCurrentChapter
+                                  ? "bg-[var(--mx-color-c6ff00)]/18 ring-1 ring-[var(--mx-color-c6ff00)]/45"
+                                  : "hover:bg-[var(--mx-color-f5f5f7)]"
+                            }`}
+                          >
+                            <span
+                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold transition-colors ${
+                                isCurrentChapter
+                                  ? "bg-[var(--mx-color-c6ff00)]/32 text-[var(--mx-color-1d1d1f)]"
+                                  : "text-[var(--mx-color-86868b)] group-hover:bg-[var(--mx-color-c6ff00)]/20 group-hover:text-[var(--mx-color-1d1d1f)]"
+                              }`}
+                            >
+                              {chapterSeriesIndex(ch) || "—"}
+                            </span>
+                            <span className="flex-1 min-w-0">
+                              <span className="flex items-center gap-2 min-w-0">
+                                <span className="block text-[12px] font-medium text-[var(--mx-color-1d1d1f)] truncate">
+                                  {formatChapterLabel(ch)}
+                                </span>
+                                {isCurrentChapter && (
+                                  <span className="shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]/28 px-1.5 py-0.5 text-[9px] font-semibold text-[var(--mx-color-1a1628)]">
+                                    Current
+                                  </span>
+                                )}
+                                {false &&
+                                  chapterLang === "all" &&
+                                  ch.translatedLanguage && (
+                                    <span className="shrink-0 text-[9px] font-semibold uppercase text-[var(--mx-color-86868b)] bg-[var(--mx-color-ebebed)] px-1.5 py-0.5 rounded">
+                                      {ch.translatedLanguage}
+                                    </span>
+                                  )}
+                              </span>
+                              {ch.scanlationGroup && (
+                                <span className="block text-[10px] text-[var(--mx-color-86868b)] truncate">
+                                  {ch.scanlationGroup}
+                                </span>
+                              )}
+                            </span>
+                            <svg
+                              className="w-3.5 h-3.5 shrink-0 text-[var(--mx-color-d2d2d7)] group-hover:text-[var(--mx-color-c6ff00)] transition-colors"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              strokeWidth="2"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M9 5l7 7-7 7"
+                              />
+                            </svg>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          </MotionDiv>
+        </div>
+      </MotionDiv>
+    </MotionDiv>,
+    document.body,
+  );
 }
 
 const DEX_TABS = [
-    { id: 'popular', label: 'Popular' },
-    { id: 'recent', label: 'Recent' },
-]
-const DEX_TAB_IDS = new Set(['popular', 'recent', 'library', 'following', 'search'])
+  { id: "popular", label: "Popular" },
+  { id: "recent", label: "Recent" },
+];
+const DEX_TAB_IDS = new Set([
+  "popular",
+  "recent",
+  "library",
+  "following",
+  "search",
+]);
 
 const ROLIASCAN_TABS = [
-    { id: 'manga', label: 'Manga', type: 'manga' },
-    { id: 'manhwa', label: 'Manhwa', type: 'manhwa' },
-    { id: 'manhua', label: 'Manhua', type: 'manhua' },
-    { id: 'oneshot', label: 'Novel', type: 'other' },
-]
+  { id: "manga", label: "Manga", type: "manga" },
+  { id: "manhwa", label: "Manhwa", type: "manhwa" },
+  { id: "manhua", label: "Manhua", type: "manhua" },
+  { id: "oneshot", label: "Novel", type: "other" },
+];
 
 const ROLIASCAN_FOLDER_TABS = [
-    { id: 'hot', label: 'Hot' },
-    { id: 'new', label: 'New' },
-    { id: 'recent', label: 'Most Recent' },
-    { id: 'popular', label: 'Popular' },
-]
+  { id: "hot", label: "Hot" },
+  { id: "new", label: "New" },
+  { id: "recent", label: "Most Recent" },
+  { id: "popular", label: "Popular" },
+];
 
 const ROLIASCAN_ORDER_OPTIONS = [
-    { id: '', label: 'Folder default' },
-    { id: 'chapter_updated_at', label: 'Latest update' },
-    { id: 'created_at', label: 'Newly added' },
-    { id: 'views_7d', label: 'Views (7d)' },
-    { id: 'views_30d', label: 'Views (30d)' },
-    { id: 'views_90d', label: 'Views (90d)' },
-    { id: 'views_total', label: 'Views (all time)' },
-    { id: 'follows_total', label: 'Follows' },
-    { id: 'title', label: 'Title' },
-]
+  { id: "", label: "Folder default" },
+  { id: "chapter_updated_at", label: "Latest update" },
+  { id: "created_at", label: "Newly added" },
+  { id: "views_7d", label: "Views (7d)" },
+  { id: "views_30d", label: "Views (30d)" },
+  { id: "views_90d", label: "Views (90d)" },
+  { id: "views_total", label: "Views (all time)" },
+  { id: "follows_total", label: "Follows" },
+  { id: "title", label: "Title" },
+];
 
-const ROLIASCAN_TAB_IDS = new Set(ROLIASCAN_TABS.map((tab) => tab.id))
-const ROLIASCAN_SOURCE_TYPE_BY_TAB = Object.fromEntries(ROLIASCAN_TABS.map((tab) => [tab.id, tab.type]))
+const ROLIASCAN_TAB_IDS = new Set(ROLIASCAN_TABS.map((tab) => tab.id));
+const ROLIASCAN_SOURCE_TYPE_BY_TAB = Object.fromEntries(
+  ROLIASCAN_TABS.map((tab) => [tab.id, tab.type]),
+);
 const ROLIASCAN_FOLDER_DEFAULT_ORDER = {
-    hot: { key: 'views_7d', dir: 'desc' },
-    new: { key: 'created_at', dir: 'desc' },
-    recent: { key: 'chapter_updated_at', dir: 'desc' },
-    popular: { key: 'follows_total', dir: 'desc' },
-}
+  hot: { key: "views_7d", dir: "desc" },
+  new: { key: "created_at", dir: "desc" },
+  recent: { key: "chapter_updated_at", dir: "desc" },
+  popular: { key: "follows_total", dir: "desc" },
+};
 
 function defaultTabForSource(src) {
-    if (src === 'roliascan') return 'manga'
-    return 'latest'
+  if (src === "roliascan") return "manga";
+  return "latest";
 }
 
 function normalizeTabForSource(src, rawTab) {
-    const tab = String(rawTab || '').trim()
-    if (src === 'roliascan') return ROLIASCAN_TAB_IDS.has(tab) ? tab : defaultTabForSource(src)
-    return tab || defaultTabForSource(src)
+  const tab = String(rawTab || "").trim();
+  if (src === "roliascan")
+    return ROLIASCAN_TAB_IDS.has(tab) ? tab : defaultTabForSource(src);
+  return tab || defaultTabForSource(src);
 }
 
 function parseCommaList(value) {
-    return String(value || '')
-        .split(',')
-        .map((row) => row.trim())
-        .filter(Boolean)
+  return String(value || "")
+    .split(",")
+    .map((row) => row.trim())
+    .filter(Boolean);
 }
 
 function roliascanTermToken(term) {
-    const byId = String(term?.id || term?.termId || '').trim()
-    if (byId) return byId
-    const bySlug = String(term?.slug || '').trim()
-    if (bySlug) return bySlug
-    return String(term?.title || '').trim()
+  const byId = String(term?.id || term?.termId || "").trim();
+  if (byId) return byId;
+  const bySlug = String(term?.slug || "").trim();
+  if (bySlug) return bySlug;
+  return String(term?.title || "").trim();
 }
 
 export default function LifeSyncManga() {
-    const location = useLocation()
-    const navigate = useNavigate()
-    const resumeKeyDone = useRef(null)
+  const location = useLocation();
+  const navigate = useNavigate();
+  const resumeKeyDone = useRef(null);
 
-    const basePath = '/dashboard/lifesync/anime/manga'
-    const route = useMemo(() => {
-        const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : ''
-        const parts = rel.split('/').filter(Boolean)
-        const allowedSources = new Set(['mangadistrict', 'roliascan'])
-        const src = allowedSources.has(parts[0]) ? parts[0] : 'roliascan'
+  const basePath = "/dashboard/lifesync/anime/manga";
+  const route = useMemo(() => {
+    const rel = location.pathname.startsWith(basePath)
+      ? location.pathname.slice(basePath.length)
+      : "";
+    const parts = rel.split("/").filter(Boolean);
+    const allowedSources = new Set(["mangadistrict", "roliascan"]);
+    const src = allowedSources.has(parts[0]) ? parts[0] : "roliascan";
 
-        const tab = normalizeTabForSource(src, parts[1] || defaultTabForSource(src))
+    const tab = normalizeTabForSource(
+      src,
+      parts[1] || defaultTabForSource(src),
+    );
 
-        let page = 1
-        const pageIdx = parts.indexOf('page')
-        if (pageIdx >= 0 && parts[pageIdx + 1]) page = clampPage(parts[pageIdx + 1])
+    let page = 1;
+    const pageIdx = parts.indexOf("page");
+    if (pageIdx >= 0 && parts[pageIdx + 1])
+      page = clampPage(parts[pageIdx + 1]);
 
-        // Detail route is `.../page/:n/manga/:id`. Do not treat the Roliascan `manga` tab as a detail marker.
-        let detailMangaId = null
-        if (pageIdx >= 0) {
-            const detailMarkerIdx = pageIdx + 2
-            if (parts[detailMarkerIdx] === 'manga' && parts[detailMarkerIdx + 1]) {
-                detailMangaId = parts[detailMarkerIdx + 1]
-            }
+    // Detail route is `.../page/:n/manga/:id`. Do not treat the Roliascan `manga` tab as a detail marker.
+    let detailMangaId = null;
+    if (pageIdx >= 0) {
+      const detailMarkerIdx = pageIdx + 2;
+      if (parts[detailMarkerIdx] === "manga" && parts[detailMarkerIdx + 1]) {
+        detailMangaId = parts[detailMarkerIdx + 1];
+      }
+    } else {
+      // Fallback only when `manga` appears beyond `/:source/:tab`.
+      const fallbackDetailIdx = parts.lastIndexOf("manga");
+      if (fallbackDetailIdx >= 2 && parts[fallbackDetailIdx + 1]) {
+        detailMangaId = parts[fallbackDetailIdx + 1];
+      }
+    }
+    return { src, tab, page, detailMangaId };
+  }, [location.pathname]);
+  const {
+    isLifeSyncConnected,
+    lifeSyncLoading,
+    lifeSyncUser,
+    lifeSyncUpdatePreferences,
+  } = useLifeSync();
+  const prefs = lifeSyncUser?.preferences;
+  const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled);
+  const hManhwaEnabled = isLifeSyncHManhwaVisible(prefs);
+  /** Synced from LifeSync viewing preferences (default on when unset). */
+  const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false;
+
+  const [source, setSource] = useState("roliascan");
+  const [tab, setTab] = useState("manga");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [selectedManga, setSelectedManga] = useState(null);
+  const [focusedCardIndex, setFocusedCardIndex] = useState(-1);
+  useFocusedCardScroll(focusedCardIndex);
+  useHideCursorOnDpad();
+  useEffect(() => {
+    const onMove = () => setFocusedCardIndex(-1);
+    window.addEventListener("mousemove", onMove, { passive: true });
+    return () => window.removeEventListener("mousemove", onMove);
+  }, []);
+  const searchInputRef = useRef(null);
+  const controllerSupportEnabled = useControllerSupportEnabled();
+
+  const listPath = useMemo(() => {
+    const src = route.src || "roliascan";
+    const t = route.tab || defaultTabForSource(src);
+    const p = clampPage(route.page);
+    return `${basePath}/${src}/${t}/page/${p}${location.search || ""}`;
+  }, [basePath, location.search, route.page, route.src, route.tab]);
+
+  const goToList = useCallback(
+    (opts = {}) => {
+      navigate(listPath, {
+        replace: Boolean(opts.replace),
+        state: null,
+      });
+    },
+    [navigate, listPath],
+  );
+
+  const goToTab = useCallback(
+    (t) => {
+      const next = String(t || "").trim() || defaultTabForSource(route.src);
+      navigate(
+        `${basePath}/${route.src}/${next}/page/1${location.search || ""}`,
+      );
+    },
+    [basePath, location.search, navigate, route.src],
+  );
+
+  const goToPage = useCallback(
+    (p) => {
+      navigate(
+        `${basePath}/${route.src}/${route.tab}/page/${clampPage(p)}${location.search || ""}`,
+      );
+    },
+    [basePath, location.search, navigate, route.src, route.tab],
+  );
+
+  const goToMangaDetail = useCallback(
+    (mangaOrId, srcOverride) => {
+      const src = srcOverride || route.src;
+      const id =
+        mangaOrId && typeof mangaOrId === "object" ? mangaOrId.id : mangaOrId;
+      if (id == null) return;
+      const preview = mangaDetailPreviewFromCard(
+        mangaOrId && typeof mangaOrId === "object" ? mangaOrId : null,
+        src,
+      );
+      navigate(
+        `${basePath}/${src}/${route.tab}/page/${clampPage(route.page)}/manga/${encodeURIComponent(String(id))}${location.search || ""}`,
+        preview ? { state: { mangaDetailPreview: preview } } : {},
+      );
+    },
+    [basePath, location.search, navigate, route.page, route.src, route.tab],
+  );
+
+  // Roliascan state (needs to exist before `goToRead`)
+  const [dexTranslatedLang, setDexTranslatedLang] = useState("en");
+
+  const goToRead = useCallback(
+    (mangaId, chapterId, srcOverride, options = {}) => {
+      const src = srcOverride || route.src;
+      const params = new URLSearchParams(location.search || "");
+      params.set("source", src);
+      params.set("lang", mangaEnglishReleasesOnly ? "en" : dexTranslatedLang);
+      const readerSearch = params.toString() ? `?${params.toString()}` : "";
+      navigate(
+        `${basePath}/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(chapterId))}${readerSearch}`,
+        {
+          state: {
+            from: `${basePath}/${src}/${route.tab}/page/${clampPage(route.page)}${location.search || ""}`,
+            source: src,
+            browseTranslatedLang: mangaEnglishReleasesOnly
+              ? "en"
+              : dexTranslatedLang,
+            ...(options?.resumeChapterId
+              ? { resumeChapterId: String(options.resumeChapterId) }
+              : {}),
+            ...(options?.resumePercent != null
+              ? { resumePercent: Number(options.resumePercent) || 0 }
+              : {}),
+          },
+        },
+      );
+    },
+    [
+      basePath,
+      dexTranslatedLang,
+      location.search,
+      mangaEnglishReleasesOnly,
+      navigate,
+      route.page,
+      route.src,
+      route.tab,
+    ],
+  );
+
+  // Roliascan state
+  const [dexAuthStatus, setDexAuthStatus] = useState(null);
+  const [popular, setPopular] = useState([]);
+  const [recent, setRecent] = useState([]);
+  const [dexFollows, setDexFollows] = useState([]);
+  const [dexFollowsTotal, setDexFollowsTotal] = useState(0);
+  const [dexFollowsBusy, setDexFollowsBusy] = useState(false);
+  const [dexLibraryList, setDexLibraryList] = useState([]);
+  const [dexLibraryBusy, setDexLibraryBusy] = useState(false);
+  const [libraryListStatus, setLibraryListStatus] = useState("reading");
+  const [dexContentRatings, setDexContentRatings] = useState(() => [
+    ...DEFAULT_DEX_CONTENT_RATINGS,
+  ]);
+  const [searchQ, setSearchQ] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [popularLoading, setPopularLoading] = useState(false);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [committedSearchQuery, setCommittedSearchQuery] = useState("");
+  const [dexTags, setDexTags] = useState([]);
+  const [dexFiltersOpen, setDexFiltersOpen] = useState(false);
+  const [dexTagsPanelOpen, setDexTagsPanelOpen] = useState(false);
+  const [includedTags, setIncludedTags] = useState([]);
+  const [excludedTags, setExcludedTags] = useState([]);
+  const [includedTagsMode, setIncludedTagsMode] = useState("AND");
+  const [excludedTagsMode, setExcludedTagsMode] = useState("OR");
+  const [statusFilter, setStatusFilter] = useState([]);
+  const [demographicFilter, setDemographicFilter] = useState([]);
+  const [originalLangFilter, setOriginalLangFilter] = useState([]);
+  const [dexYear, setDexYear] = useState("");
+  const [dexBrowseSort, setDexBrowseSort] = useState("random");
+  const [dexSearchOrderBy, setDexSearchOrderBy] = useState("relevance");
+  const [dexSearchOrderDir, setDexSearchOrderDir] = useState("desc");
+  const [dexPopularPage, setDexPopularPage] = useState(1);
+  const [dexRecentPage, setDexRecentPage] = useState(1);
+  const [dexSearchPage, setDexSearchPage] = useState(1);
+  const [popularTotal, setPopularTotal] = useState(0);
+  const [recentTotal, setRecentTotal] = useState(0);
+  const [searchTotal, setSearchTotal] = useState(0);
+
+  const dexFilterSig = useMemo(
+    () =>
+      JSON.stringify({
+        dexTranslatedLang,
+        eo: mangaEnglishReleasesOnly,
+        it: [...includedTags].sort(),
+        et: [...excludedTags].sort(),
+        st: [...statusFilter].sort(),
+        dm: [...demographicFilter].sort(),
+        ol: [...originalLangFilter].sort(),
+        im: includedTagsMode,
+        em: excludedTagsMode,
+        y: String(dexYear || ""),
+        dbs: dexBrowseSort,
+        sob: dexSearchOrderBy,
+        sod: dexSearchOrderDir,
+        cr: sortDexContentRatings(dexContentRatings).join(","),
+      }),
+    [
+      dexTranslatedLang,
+      mangaEnglishReleasesOnly,
+      includedTags,
+      excludedTags,
+      statusFilter,
+      demographicFilter,
+      originalLangFilter,
+      includedTagsMode,
+      excludedTagsMode,
+      dexYear,
+      dexBrowseSort,
+      dexSearchOrderBy,
+      dexSearchOrderDir,
+      dexContentRatings,
+    ],
+  );
+
+  const [dexListSigBound, setDexListSigBound] = useState(dexFilterSig);
+  useEffect(() => {
+    if (dexFilterSig === dexListSigBound) return;
+    setDexListSigBound(dexFilterSig);
+    setDexPopularPage(1);
+    setDexRecentPage(1);
+    setDexSearchPage(1);
+  }, [dexFilterSig, dexListSigBound]);
+
+  // Manga District state
+  const [mdLatest, setMdLatest] = useState(null);
+  const [mdPage, setMdPage] = useState(1);
+  const [mdSection, setMdSection] = useState("uncensored");
+  const [mdFilter, setMdFilter] = useState("");
+  const [mdSearchResults, setMdSearchResults] = useState([]);
+  const [mdSearchBusy, setMdSearchBusy] = useState(false);
+  const [mdFiltersOpen, setMdFiltersOpen] = useState(false);
+  const [mdTypeSlug, setMdTypeSlug] = useState("");
+  const [mdFilterGenre, setMdFilterGenre] = useState("");
+  const [mdBrowse, setMdBrowse] = useState("latest-updates");
+
+  // Roliascan state
+  const [roliascanStatus, setRoliascanStatus] = useState(null);
+  const [roliascanTerms, setRoliascanTerms] = useState({});
+  const [roliascanRows, setRoliascanRows] = useState([]);
+  const [roliascanLoading, setRoliascanLoading] = useState(false);
+  const [roliascanFiltersOpen, setRoliascanFiltersOpen] = useState(false);
+  const [roliascanPage, setRoliascanPage] = useState(1);
+  const [roliascanLastPage, setRoliascanLastPage] = useState(1);
+  const [roliascanTotal, setRoliascanTotal] = useState(0);
+  const [roliascanFolder, setRoliascanFolder] = useState("hot");
+  const [roliascanOrderKey, setRoliascanOrderKey] = useState("");
+  const [roliascanOrderDir, setRoliascanOrderDir] = useState("desc");
+  const [roliascanSearchQ, setRoliascanSearchQ] = useState("");
+  const [roliascanCommittedSearch, setRoliascanCommittedSearch] = useState("");
+  const [roliascanIncludeGenres, setRoliascanIncludeGenres] = useState([]);
+  const [roliascanExcludeGenres, setRoliascanExcludeGenres] = useState([]);
+  const [roliascanIncludeTags, setRoliascanIncludeTags] = useState([]);
+  const [roliascanExcludeTags, setRoliascanExcludeTags] = useState([]);
+  const [roliascanIncludeDemographics, setRoliascanIncludeDemographics] =
+    useState([]);
+  const [roliascanExcludeDemographics, setRoliascanExcludeDemographics] =
+    useState([]);
+  const [roliascanStatuses, setRoliascanStatuses] = useState([]);
+  const [roliascanAuthorsInput, setRoliascanAuthorsInput] = useState("");
+  const [roliascanArtistsInput, setRoliascanArtistsInput] = useState("");
+  const [roliascanMinchap, setRoliascanMinchap] = useState("");
+  const [roliascanYearFrom, setRoliascanYearFrom] = useState("");
+  const [roliascanYearTo, setRoliascanYearTo] = useState("");
+
+  const roliascanFilterSig = useMemo(
+    () =>
+      JSON.stringify({
+        q: roliascanCommittedSearch.trim().toLowerCase(),
+        folder: roliascanFolder,
+        orderKey: roliascanOrderKey,
+        orderDir: roliascanOrderDir,
+        ig: [...roliascanIncludeGenres].sort(),
+        eg: [...roliascanExcludeGenres].sort(),
+        id: [...roliascanIncludeDemographics].sort(),
+        ed: [...roliascanExcludeDemographics].sort(),
+        st: [...roliascanStatuses].sort(),
+        au: parseCommaList(roliascanAuthorsInput.toLowerCase()).sort(),
+        ar: parseCommaList(roliascanArtistsInput.toLowerCase()).sort(),
+        mc: String(roliascanMinchap || ""),
+        yf: String(roliascanYearFrom || ""),
+        yt: String(roliascanYearTo || ""),
+        tg: [...roliascanIncludeTags].sort(),
+        te: [...roliascanExcludeTags].sort(),
+      }),
+    [
+      roliascanArtistsInput,
+      roliascanAuthorsInput,
+      roliascanCommittedSearch,
+      roliascanExcludeDemographics,
+      roliascanExcludeGenres,
+      roliascanFolder,
+      roliascanIncludeDemographics,
+      roliascanIncludeGenres,
+      roliascanMinchap,
+      roliascanOrderDir,
+      roliascanOrderKey,
+      roliascanStatuses,
+      roliascanYearFrom,
+      roliascanYearTo,
+    ],
+  );
+  const [roliascanListSigBound, setRoliascanListSigBound] =
+    useState(roliascanFilterSig);
+
+  useEffect(() => {
+    if (roliascanFilterSig === roliascanListSigBound) return;
+    setRoliascanListSigBound(roliascanFilterSig);
+    setRoliascanPage(1);
+  }, [
+    basePath,
+    roliascanFilterSig,
+    roliascanListSigBound,
+    location.search,
+    navigate,
+    route.page,
+    route.tab,
+    source,
+  ]);
+
+  /** Invalidates in-flight Manga District list fetches when filters/order/page change or source leaves. */
+  const mdLatestFetchGenRef = useRef(0);
+  /** Invalidates debounced Manga District search when query or source changes. */
+  const mdSearchFetchGenRef = useRef(0);
+  /** Invalidates in-flight Roliascan browser fetches when source/filter/page changes. */
+  const roliascanFetchGenRef = useRef(0);
+  /** Invalidates in-flight manga detail enrichment when route/source changes or another open supersedes. */
+  const mangaDetailEnrichGenRef = useRef(0);
+
+  useEffect(() => {
+    if (source !== "mangadistrict") {
+      mdLatestFetchGenRef.current += 1;
+      mdSearchFetchGenRef.current += 1;
+    }
+    if (source !== "roliascan") {
+      roliascanFetchGenRef.current += 1;
+    }
+  }, [source]);
+
+  useEffect(() => {
+    if (
+      location.pathname === basePath ||
+      location.pathname === `${basePath}/`
+    ) {
+      navigate(`${basePath}/roliascan/manga/page/1${location.search || ""}`, {
+        replace: true,
+      });
+      return;
+    }
+    const rel = location.pathname.startsWith(basePath)
+      ? location.pathname.slice(basePath.length)
+      : "";
+    const first = rel.split("/").filter(Boolean)[0];
+    if (first === "mangahere") {
+      navigate(`${basePath}/roliascan/manga/page/1${location.search || ""}`, {
+        replace: true,
+      });
+    }
+  }, [basePath, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    if (!location.pathname.startsWith(basePath)) return;
+    if (location.pathname === basePath || location.pathname === `${basePath}/`)
+      return;
+    if (location.pathname.includes("/read/")) return;
+
+    const canonicalBase = `${basePath}/${route.src}/${route.tab}/page/${clampPage(route.page)}`;
+    const canonicalPath = route.detailMangaId
+      ? `${canonicalBase}/manga/${route.detailMangaId}`
+      : canonicalBase;
+    if (location.pathname === canonicalPath) return;
+    navigate(`${canonicalPath}${location.search || ""}`, { replace: true });
+  }, [
+    basePath,
+    location.pathname,
+    location.search,
+    navigate,
+    route.detailMangaId,
+    route.page,
+    route.src,
+    route.tab,
+  ]);
+
+  useEffect(() => {
+    if (source !== route.src) setSource(route.src);
+    const nextTab = normalizeTabForSource(route.src, route.tab);
+    if (tab !== nextTab) setTab(nextTab);
+
+    if (false && nextTab === "popular" && dexPopularPage !== route.page)
+      setDexPopularPage(route.page);
+    if (false && nextTab === "recent" && dexRecentPage !== route.page)
+      setDexRecentPage(route.page);
+    if (false && nextTab === "search" && dexSearchPage !== route.page)
+      setDexSearchPage(route.page);
+    if (route.src === "mangadistrict" && mdPage !== route.page)
+      setMdPage(route.page);
+    if (route.src === "roliascan" && roliascanPage !== route.page)
+      setRoliascanPage(route.page);
+  }, [
+    roliascanPage,
+    dexPopularPage,
+    dexRecentPage,
+    dexSearchPage,
+    mdPage,
+    route.page,
+    route.src,
+    route.tab,
+    source,
+    tab,
+  ]);
+
+  useEffect(() => {
+    if (source !== "mangadistrict") return;
+    if (!MD_ORDER_BY_IDS.has(mdBrowse)) setMdBrowse("latest-updates");
+  }, [source, mdBrowse]);
+
+  useEffect(() => {
+    if (true || route.tab !== "search") return;
+    const q = new URLSearchParams(location.search || "").get("q") || "";
+    const next = q.trim();
+    if (next && next !== committedSearchQuery) {
+      setCommittedSearchQuery(next);
+      setSearchQ(next);
+    }
+  }, [committedSearchQuery, location.search, route.src, route.tab]);
+
+  const mdFilterBarCount =
+    (mdSection !== "uncensored" ? 1 : 0) +
+    (mdTypeSlug ? 1 : 0) +
+    (mdFilterGenre ? 1 : 0) +
+    (mdBrowse !== "latest-updates" ? 1 : 0);
+
+  const resumeFromEntry = useCallback(
+    async (entry) => {
+      setError("");
+      try {
+        const lastChapterId = String(entry?.lastChapterId || "").trim();
+        const latestChapterId = String(
+          entry?.remoteLatestChapterId || "",
+        ).trim();
+        // Keep user position stable: continue from the last saved chapter first.
+        const preferredChapterId = lastChapterId || latestChapterId;
+        const preferredResumePercent = Number(entry?.lastReadPercent || 0);
+
+        if (!hManhwaEnabled && entry.source === "mangadistrict") {
+          setError(
+            "Enable NSFW content and the H manhwa plugin in LifeSync preferences to open this title.",
+          );
+          return;
+        }
+        if (entry.source === "mangadistrict") {
+          const data = await lifesyncFetch(
+            `/api/v1/manga/mangadistrict/info/${encodeURIComponent(entry.mangaId)}?view=full`,
+          );
+          const list = [...(data.chapters || [])];
+          list.sort(compareChapters);
+          let ch = list.find((c) => String(c?.id) === preferredChapterId);
+          if (!ch && preferredChapterId !== lastChapterId) {
+            ch = list.find((c) => String(c?.id) === lastChapterId);
+          }
+          if (!ch && list.length) ch = list[list.length - 1];
+          if (!ch) {
+            setError("No chapters available to resume.");
+            return;
+          }
+          setSelectedManga(null);
+          setSource("mangadistrict");
+          goToRead(entry.mangaId, ch.id, "mangadistrict", {
+            resumeChapterId: String(ch.id),
+            resumePercent: preferredResumePercent,
+          });
+          return;
+        }
+        if (entry.source === "roliascan") {
+          const data = await lifesyncFetch(
+            `/api/v1/manga/roliascan/info/${encodeURIComponent(entry.mangaId)}?view=full`,
+          );
+          const list = [...(data.chapters || [])];
+          list.sort(compareChapters);
+          let ch = list.find((c) => String(c?.id) === preferredChapterId);
+          if (!ch && preferredChapterId !== lastChapterId) {
+            ch = list.find((c) => String(c?.id) === lastChapterId);
+          }
+          if (!ch && list.length) ch = list[list.length - 1];
+          if (!ch) {
+            setError("No chapters available to resume.");
+            return;
+          }
+          setSelectedManga(null);
+          setSource("roliascan");
+          goToRead(entry.mangaId, ch.id, "roliascan", {
+            resumeChapterId: String(ch.id),
+            resumePercent: preferredResumePercent,
+          });
+          return;
+        }
+      } catch (e) {
+        setError(e.message || "Could not resume reading");
+      }
+    },
+    [goToRead, hManhwaEnabled, nsfwEnabled],
+  );
+
+  useEffect(() => {
+    const entry = location.state?.resumeEntry;
+    if (!entry?.mangaId || !entry?.source) return;
+    const k = `${entry.source}:${entry.mangaId}`;
+    if (resumeKeyDone.current === k) return;
+    resumeKeyDone.current = k;
+    void resumeFromEntry(entry).finally(() => {
+      navigate(`${location.pathname}${location.search || ""}`, {
+        replace: true,
+        state: {},
+      });
+      resumeKeyDone.current = null;
+    });
+  }, [
+    location.state,
+    location.pathname,
+    location.search,
+    navigate,
+    resumeFromEntry,
+  ]);
+
+  useEffect(() => {
+    setDexAuthStatus({ oauthConfigured: false, connected: false });
+  }, []);
+
+  useEffect(() => {
+    setRoliascanStatus(null);
+    setRoliascanTerms({});
+  }, []);
+
+  useEffect(() => {
+    if (!isLifeSyncConnected || lifeSyncLoading || source !== "roliascan")
+      return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const [statusData, termsData] = await Promise.all([
+          lifesyncFetch("/api/v1/manga/roliascan/status?view=standard"),
+          lifesyncFetch("/api/v1/manga/roliascan/terms?view=full"),
+        ]);
+        if (cancelled) return;
+        setRoliascanStatus(statusData || null);
+        const termsPayload =
+          termsData?.terms && typeof termsData.terms === "object"
+            ? termsData.terms
+            : {};
+        setRoliascanTerms({
+          ...termsPayload,
+          status: Array.isArray(termsData?.statuses) ? termsData.statuses : [],
+          years: Array.isArray(termsData?.years) ? termsData.years : [],
+          types: Array.isArray(termsData?.types) ? termsData.types : [],
+          sorts: Array.isArray(termsData?.sorts) ? termsData.sorts : [],
+        });
+      } catch {
+        if (cancelled) return;
+        setRoliascanStatus(null);
+        setRoliascanTerms({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLifeSyncConnected, lifeSyncLoading, source]);
+
+  useEffect(() => {
+    if (true || (tab !== "following" && tab !== "library")) return;
+    if (dexAuthStatus && !dexAuthStatus.connected) setTab("popular");
+  }, [source, tab, dexAuthStatus]);
+
+  /** Keep URL and NSFW policy aligned. Only `setSource` caused a fight with route sync on hard refresh (URL still MD → sync set MD again → repeat). */
+  useEffect(() => {
+    if (lifeSyncLoading || !isLifeSyncConnected) return;
+    if (hManhwaEnabled) return;
+    if (route.src !== "mangadistrict") return;
+    navigate(`${basePath}/roliascan/manga/page/1${location.search || ""}`, {
+      replace: true,
+    });
+  }, [
+    basePath,
+    hManhwaEnabled,
+    isLifeSyncConnected,
+    lifeSyncLoading,
+    location.search,
+    navigate,
+    route.src,
+  ]);
+
+  useEffect(() => {
+    if (hManhwaEnabled) return;
+    const nsfwSrc = (m) => m?.source === "mangadistrict";
+    if (selectedManga && nsfwSrc(selectedManga)) setSelectedManga(null);
+  }, [hManhwaEnabled, selectedManga]);
+
+  useEffect(() => {
+    if (nsfwEnabled) return;
+    setDexContentRatings((prev) => {
+      const next = prev.filter((r) => r !== "erotica" && r !== "pornographic");
+      return next.length
+        ? sortDexContentRatings(next)
+        : [...DEFAULT_DEX_CONTENT_RATINGS];
+    });
+  }, [nsfwEnabled]);
+
+  const browseShuffle = dexBrowseSort === "random";
+  const browseOrderBy = browseShuffle ? "" : dexBrowseSort;
+
+  // Roliascan loaders (`shuffle=1` for random browse; otherwise stable order + pagination)
+  const loadPopular = useCallback(async () => {
+    setPopularLoading(true);
+    try {
+      const offset = browseShuffle ? 0 : (dexPopularPage - 1) * DEX_PAGE_SIZE;
+      const q = buildDexListQuery({
+        limit: DEX_PAGE_SIZE,
+        offset,
+        contentRatings: dexContentRatings,
+        nsfwEnabled,
+        dexTranslatedLang,
+        englishOnly: mangaEnglishReleasesOnly,
+        includedTags,
+        excludedTags,
+        statusFilter,
+        demographicFilter,
+        includedTagsMode,
+        excludedTagsMode,
+        originalLangFilter,
+        searchYear: dexYear,
+        orderBy: browseOrderBy,
+        orderDir: "desc",
+        shuffle: browseShuffle,
+      });
+      const d = await lifesyncFetch(
+        `/api/v1/manga/roliascan/browser?${q}&view=standard`,
+      );
+      setPopular(d?.data || []);
+      setPopularTotal(
+        typeof d?.total === "number" ? d.total : (d?.data || []).length,
+      );
+    } catch {
+      /* ignore */
+    } finally {
+      setPopularLoading(false);
+    }
+  }, [
+    dexPopularPage,
+    dexTranslatedLang,
+    mangaEnglishReleasesOnly,
+    includedTags,
+    excludedTags,
+    statusFilter,
+    demographicFilter,
+    includedTagsMode,
+    excludedTagsMode,
+    originalLangFilter,
+    dexYear,
+    browseOrderBy,
+    browseShuffle,
+    dexContentRatings,
+    nsfwEnabled,
+  ]);
+
+  const loadRecent = useCallback(async () => {
+    setRecentLoading(true);
+    try {
+      const offset = browseShuffle ? 0 : (dexRecentPage - 1) * DEX_PAGE_SIZE;
+      const q = buildDexListQuery({
+        limit: DEX_PAGE_SIZE,
+        offset,
+        contentRatings: dexContentRatings,
+        nsfwEnabled,
+        dexTranslatedLang,
+        englishOnly: mangaEnglishReleasesOnly,
+        includedTags,
+        excludedTags,
+        statusFilter,
+        demographicFilter,
+        includedTagsMode,
+        excludedTagsMode,
+        originalLangFilter,
+        searchYear: dexYear,
+        orderBy: browseOrderBy,
+        orderDir: "desc",
+        shuffle: browseShuffle,
+      });
+      const d = await lifesyncFetch(
+        `/api/v1/manga/roliascan/browser?${q}&view=standard`,
+      );
+      setRecent(d?.data || []);
+      setRecentTotal(
+        typeof d?.total === "number" ? d.total : (d?.data || []).length,
+      );
+    } catch {
+      /* ignore */
+    } finally {
+      setRecentLoading(false);
+    }
+  }, [
+    dexRecentPage,
+    dexTranslatedLang,
+    mangaEnglishReleasesOnly,
+    includedTags,
+    excludedTags,
+    statusFilter,
+    demographicFilter,
+    includedTagsMode,
+    excludedTagsMode,
+    originalLangFilter,
+    dexYear,
+    browseOrderBy,
+    browseShuffle,
+    dexContentRatings,
+    nsfwEnabled,
+  ]);
+
+  const loadFollows = useCallback(async (offset = 0) => {
+    setDexFollowsBusy(true);
+    if (offset === 0) setError("");
+    try {
+      if (offset === 0) {
+        setDexFollows([]);
+        setDexFollowsTotal(0);
+      }
+    } catch (e) {
+      if (offset === 0) {
+        setDexFollows([]);
+        setDexFollowsTotal(0);
+      }
+      setError(e.message || "Could not load follows");
+    } finally {
+      setDexFollowsBusy(false);
+    }
+  }, []);
+
+  const loadDexLibrary = useCallback(async (status) => {
+    setDexLibraryBusy(true);
+    setError("");
+    try {
+      void status;
+      setDexLibraryList([]);
+    } catch (e) {
+      setDexLibraryList([]);
+      setError(e.message || "Could not load library");
+    } finally {
+      setDexLibraryBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLifeSyncConnected || true || tab === "library") return;
+    void loadPopular();
+  }, [isLifeSyncConnected, source, tab, loadPopular]);
+
+  useEffect(() => {
+    if (!isLifeSyncConnected || true || tab === "library") return;
+    void loadRecent();
+  }, [isLifeSyncConnected, source, tab, loadRecent]);
+
+  useEffect(() => {
+    setDexTags([]);
+  }, [isLifeSyncConnected]);
+
+  useEffect(() => {
+    if (
+      !isLifeSyncConnected ||
+      true ||
+      tab !== "search" ||
+      !committedSearchQuery.trim()
+    )
+      return;
+    let cancelled = false;
+    (async () => {
+      setSearching(true);
+      try {
+        const offset = (dexSearchPage - 1) * DEX_PAGE_SIZE;
+        const q = buildDexListQuery({
+          limit: DEX_PAGE_SIZE,
+          offset,
+          contentRatings: dexContentRatings,
+          nsfwEnabled,
+          dexTranslatedLang,
+          englishOnly: mangaEnglishReleasesOnly,
+          includedTags,
+          excludedTags,
+          statusFilter,
+          demographicFilter,
+          includedTagsMode,
+          excludedTagsMode,
+          originalLangFilter,
+          searchYear: dexYear,
+          orderBy: dexSearchOrderBy,
+          orderDir: dexSearchOrderDir,
+        });
+        q.set("q", committedSearchQuery.trim());
+        const d = await lifesyncFetch(
+          `/api/v1/manga/roliascan/browser?${q}&view=standard`,
+        );
+        if (!cancelled) {
+          setSearchResults(d?.data || []);
+          setSearchTotal(
+            typeof d?.total === "number" ? d.total : (d?.data || []).length,
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setSearchResults([]);
+          setSearchTotal(0);
+        }
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isLifeSyncConnected,
+    source,
+    tab,
+    committedSearchQuery,
+    dexSearchPage,
+    dexTranslatedLang,
+    mangaEnglishReleasesOnly,
+    includedTags,
+    excludedTags,
+    statusFilter,
+    demographicFilter,
+    includedTagsMode,
+    excludedTagsMode,
+    originalLangFilter,
+    dexYear,
+    dexSearchOrderBy,
+    dexSearchOrderDir,
+    dexContentRatings,
+    nsfwEnabled,
+  ]);
+
+  useEffect(() => {
+    if (!isLifeSyncConnected || true || tab !== "following") return;
+    if (!dexAuthStatus?.connected) return;
+    void loadFollows(0);
+  }, [isLifeSyncConnected, source, tab, dexAuthStatus?.connected, loadFollows]);
+
+  useEffect(() => {
+    if (!isLifeSyncConnected || true || tab !== "library") return;
+    if (!dexAuthStatus?.connected) return;
+    setDexLibraryList([]);
+    void loadDexLibrary(libraryListStatus);
+  }, [
+    isLifeSyncConnected,
+    source,
+    tab,
+    dexAuthStatus?.connected,
+    libraryListStatus,
+    loadDexLibrary,
+  ]);
+
+  // Manga District latest — single effect + generation guard so order-by / section / page changes never apply stale responses
+  useEffect(() => {
+    if (!isLifeSyncConnected || lifeSyncLoading) return;
+    if (!hManhwaEnabled || source !== "mangadistrict") return;
+    if (mdFilter.trim()) {
+      mdLatestFetchGenRef.current += 1;
+      return;
+    }
+    const gen = ++mdLatestFetchGenRef.current;
+    setBusy(true);
+    setError("");
+    setMdLatest(null);
+    const page = clampPage(mdPage);
+    const qs = buildMangaDistrictListQuery(
+      mdSection,
+      mdTypeSlug,
+      mdFilterGenre,
+      mdBrowse,
+    );
+    (async () => {
+      try {
+        const d = await lifesyncFetch(
+          `/api/v1/manga/mangadistrict/latest/${page}?${qs}&view=standard`,
+        );
+        if (mdLatestFetchGenRef.current !== gen) return;
+        setMdLatest(d);
+        setMdPage(page);
+      } catch (e) {
+        if (mdLatestFetchGenRef.current !== gen) return;
+        setError(e.message || "Failed to load Manga District");
+      } finally {
+        if (mdLatestFetchGenRef.current === gen) setBusy(false);
+      }
+    })();
+  }, [
+    isLifeSyncConnected,
+    hManhwaEnabled,
+    lifeSyncLoading,
+    source,
+    mdFilter,
+    mdPage,
+    mdSection,
+    mdTypeSlug,
+    mdFilterGenre,
+    mdBrowse,
+  ]);
+
+  useEffect(() => {
+    if (!isLifeSyncConnected || lifeSyncLoading) return;
+    if (!hManhwaEnabled || source !== "mangadistrict") return;
+    const q = mdFilter.trim();
+    if (!q) {
+      mdSearchFetchGenRef.current += 1;
+      setMdSearchResults([]);
+      setMdSearchBusy(false);
+      return;
+    }
+    const gen = ++mdSearchFetchGenRef.current;
+    const t = setTimeout(async () => {
+      if (mdSearchFetchGenRef.current !== gen) return;
+      setMdSearchBusy(true);
+      try {
+        const d = await lifesyncFetch(
+          `/api/v1/manga/mangadistrict/search?q=${encodeURIComponent(q)}&view=standard`,
+        );
+        if (mdSearchFetchGenRef.current !== gen) return;
+        setMdSearchResults(d?.data || d || []);
+      } catch {
+        if (mdSearchFetchGenRef.current !== gen) return;
+        setMdSearchResults([]);
+      } finally {
+        if (mdSearchFetchGenRef.current === gen) setMdSearchBusy(false);
+      }
+    }, 400);
+    return () => {
+      clearTimeout(t);
+    };
+  }, [isLifeSyncConnected, hManhwaEnabled, lifeSyncLoading, source, mdFilter]);
+
+  useEffect(() => {
+    if (!isLifeSyncConnected || lifeSyncLoading || source !== "roliascan")
+      return;
+    const tabType = ROLIASCAN_SOURCE_TYPE_BY_TAB[route.tab] || "manga";
+    const gen = ++roliascanFetchGenRef.current;
+    const page = clampPage(roliascanPage);
+    setRoliascanLoading(true);
+    setError("");
+    (async () => {
+      const qs = new URLSearchParams();
+      qs.set("page", String(page));
+      qs.set("limit", "24");
+      qs.set("folder", roliascanFolder);
+      qs.append("types[]", tabType);
+      const keyword = roliascanCommittedSearch.trim();
+      if (keyword) qs.set("keyword", keyword);
+      const folderDefaultOrder =
+        ROLIASCAN_FOLDER_DEFAULT_ORDER[roliascanFolder] ||
+        ROLIASCAN_FOLDER_DEFAULT_ORDER.hot;
+      const orderKey = roliascanOrderKey || folderDefaultOrder.key;
+      const orderDir = roliascanOrderKey
+        ? roliascanOrderDir === "asc"
+          ? "asc"
+          : "desc"
+        : folderDefaultOrder.dir;
+      if (orderKey) {
+        qs.set(`order[${orderKey}]`, orderDir);
+      }
+      roliascanIncludeGenres.forEach((row) =>
+        qs.append("genres[]", String(row)),
+      );
+      roliascanExcludeGenres.forEach((row) =>
+        qs.append("exclude_genres[]", String(row)),
+      );
+      roliascanExcludeTags.forEach((row) =>
+        qs.append("exclude_genres[]", String(row)),
+      );
+      roliascanIncludeDemographics.forEach((row) =>
+        qs.append("demographics[]", String(row)),
+      );
+      roliascanExcludeDemographics.forEach((row) =>
+        qs.append("exclude_genders[]", String(row)),
+      );
+      roliascanStatuses.forEach((row) => qs.append("statuses[]", String(row)));
+      roliascanIncludeTags.forEach((row) => qs.append("genres[]", String(row)));
+      parseCommaList(roliascanAuthorsInput).forEach((row) =>
+        qs.append("authors[]", row),
+      );
+      parseCommaList(roliascanArtistsInput).forEach((row) =>
+        qs.append("artists[]", row),
+      );
+      if (String(roliascanMinchap || "").trim())
+        qs.set("minchap", String(roliascanMinchap).trim());
+      if (String(roliascanYearFrom || "").trim())
+        qs.set("year_from", String(roliascanYearFrom).trim());
+      if (String(roliascanYearTo || "").trim())
+        qs.set("year_to", String(roliascanYearTo).trim());
+
+      try {
+        const d = await lifesyncFetch(
+          `/api/v1/manga/roliascan/browser?${qs.toString()}&view=standard`,
+        );
+        if (roliascanFetchGenRef.current !== gen) return;
+        const rowsRaw = Array.isArray(d?.data) ? d.data : [];
+        const rows = rowsRaw
+          .map((row) => ({
+            ...row,
+            id: row?.id || row?.slug || row?.hid,
+            source: "roliascan",
+          }))
+          .filter((row) => row?.id);
+        const pageInfo = d?.pageInfo || {};
+        const total =
+          typeof d?.total === "number"
+            ? d.total
+            : typeof pageInfo?.total === "number"
+              ? pageInfo.total
+              : (page - 1) * 24 + rows.length;
+        const last = Math.max(
+          1,
+          Number(
+            d?.lastPage ||
+              d?.pagination?.last_page ||
+              pageInfo?.totalPages ||
+              (rows.length >= 24 ? page + 1 : page),
+          ) || 1,
+        );
+        setRoliascanRows(rows);
+        setRoliascanTotal(total);
+        setRoliascanLastPage(last);
+        setRoliascanPage(page);
+      } catch (e) {
+        if (roliascanFetchGenRef.current !== gen) return;
+        setRoliascanRows([]);
+        setRoliascanTotal(0);
+        setRoliascanLastPage(1);
+        setError(e?.message || "Failed to load manga");
+      } finally {
+        if (roliascanFetchGenRef.current === gen) setRoliascanLoading(false);
+      }
+    })();
+  }, [
+    roliascanArtistsInput,
+    roliascanAuthorsInput,
+    roliascanCommittedSearch,
+    roliascanExcludeDemographics,
+    roliascanExcludeGenres,
+    roliascanFolder,
+    roliascanIncludeDemographics,
+    roliascanIncludeGenres,
+    roliascanMinchap,
+    roliascanOrderDir,
+    roliascanOrderKey,
+    roliascanPage,
+    roliascanStatuses,
+    roliascanYearFrom,
+    roliascanYearTo,
+    isLifeSyncConnected,
+    lifeSyncLoading,
+    route.tab,
+    source,
+  ]);
+
+  function handleDexSearch(e) {
+    e.preventDefault();
+    if (!searchQ.trim()) return;
+    const q = searchQ.trim();
+    setCommittedSearchQuery(q);
+    setDexSearchPage(1);
+    const qs = new URLSearchParams(location.search || "");
+    qs.set("q", q);
+    navigate(`${basePath}/${route.src}/search/page/1?${qs.toString()}`);
+  }
+
+  function handleRoliascanSearch(e) {
+    e.preventDefault();
+    const keyword = roliascanSearchQ.trim();
+    if (keyword) {
+      setRoliascanIncludeGenres([]);
+      setRoliascanExcludeGenres([]);
+      setRoliascanIncludeDemographics([]);
+      setRoliascanExcludeDemographics([]);
+      setRoliascanStatuses([]);
+      setRoliascanAuthorsInput("");
+      setRoliascanArtistsInput("");
+      setRoliascanMinchap("");
+      setRoliascanYearFrom("");
+      setRoliascanYearTo("");
+    }
+    setRoliascanCommittedSearch(keyword);
+    setRoliascanPage(1);
+    if (route.src !== "roliascan") return;
+    navigate(
+      `${basePath}/roliascan/${route.tab || "manga"}/page/1${location.search || ""}`,
+    );
+  }
+
+  const openMangaFromCard = useCallback(
+    (manga) => {
+      if (!manga?.id) return;
+      const src = manga.source || source;
+      goToMangaDetail(manga, src);
+    },
+    [goToMangaDetail, source],
+  );
+
+  const enrichSelectedManga = useCallback(
+    async ({ id, source: srcParam }) => {
+      const src = srcParam || source;
+      if (!id) return;
+      // mangadistrict: MangaDetail self-fetches meta + chapters; nothing to do here
+      if (src === "mangadistrict") return;
+      const gen = ++mangaDetailEnrichGenRef.current;
+      setError("");
+      try {
+        const data = await lifesyncFetch(
+          `/api/v1/manga/roliascan/info/${encodeURIComponent(id)}?view=full`,
+        );
+        if (mangaDetailEnrichGenRef.current !== gen) return;
+        setSelectedManga((prev) => ({
+          ...prev,
+          ...data,
+          id: data.id || id,
+          source: "roliascan",
+          coverUrl: data.coverUrl || prev?.coverUrl,
+        }));
+      } catch (e) {
+        if (mangaDetailEnrichGenRef.current !== gen) return;
+        setError(e.message || "Could not open manga");
+      }
+    },
+    [source],
+  );
+
+  const routeDetailKey = useRef(null);
+
+  useEffect(() => {
+    if (route.detailMangaId) {
+      const k = `${route.src}:${route.detailMangaId}`;
+      if (routeDetailKey.current !== k) {
+        routeDetailKey.current = k;
+        const preview = location.state?.mangaDetailPreview;
+        const previewOk =
+          preview &&
+          String(preview.id) === String(route.detailMangaId) &&
+          String(preview.source || "") === String(route.src);
+        if (previewOk) {
+          setSelectedManga({
+            id: preview.id,
+            source: preview.source || route.src,
+            title: preview.title,
+            coverUrl: preview.coverUrl,
+            tags: preview.tags,
+            status: preview.status,
+            year: preview.year,
+            author: preview.author,
+            contentRating: preview.contentRating,
+            backgroundImageUrl: preview.backgroundImageUrl,
+            ratingAverage: preview.ratingAverage,
+            ratings: preview.ratings,
+          });
         } else {
-            // Fallback only when `manga` appears beyond `/:source/:tab`.
-            const fallbackDetailIdx = parts.lastIndexOf('manga')
-            if (fallbackDetailIdx >= 2 && parts[fallbackDetailIdx + 1]) {
-                detailMangaId = parts[fallbackDetailIdx + 1]
-            }
+          setSelectedManga({ id: route.detailMangaId, source: route.src });
         }
-        return { src, tab, page, detailMangaId }
-    }, [location.pathname])
-    const { isLifeSyncConnected, lifeSyncLoading, lifeSyncUser, lifeSyncUpdatePreferences } = useLifeSync()
-    const prefs = lifeSyncUser?.preferences
-    const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
-    const hManhwaEnabled = isLifeSyncHManhwaVisible(prefs)
-    /** Synced from LifeSync viewing preferences (default on when unset). */
-    const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false
-
-    const [source, setSource] = useState('roliascan')
-    const [tab, setTab] = useState('manga')
-    const [error, setError] = useState('')
-    const [busy, setBusy] = useState(false)
-    const [selectedManga, setSelectedManga] = useState(null)
-    const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
-    useFocusedCardScroll(focusedCardIndex)
-    useHideCursorOnDpad()
-    useEffect(() => {
-        const onMove = () => setFocusedCardIndex(-1)
-        window.addEventListener('mousemove', onMove, { passive: true })
-        return () => window.removeEventListener('mousemove', onMove)
-    }, [])
-    const searchInputRef = useRef(null)
-    const controllerSupportEnabled = useControllerSupportEnabled()
-
-    const listPath = useMemo(() => {
-        const src = route.src || 'roliascan'
-        const t = route.tab || defaultTabForSource(src)
-        const p = clampPage(route.page)
-        return `${basePath}/${src}/${t}/page/${p}${location.search || ''}`
-    }, [basePath, location.search, route.page, route.src, route.tab])
-
-    const goToList = useCallback(
-        (opts = {}) => {
-            navigate(listPath, {
-                replace: Boolean(opts.replace),
-                state: null,
-            })
-        },
-        [navigate, listPath]
-    )
-
-    const goToTab = useCallback(
-        t => {
-            const next = String(t || '').trim() || defaultTabForSource(route.src)
-            navigate(`${basePath}/${route.src}/${next}/page/1${location.search || ''}`)
-        },
-        [basePath, location.search, navigate, route.src]
-    )
-
-    const goToPage = useCallback(
-        p => {
-            navigate(`${basePath}/${route.src}/${route.tab}/page/${clampPage(p)}${location.search || ''}`)
-        },
-        [basePath, location.search, navigate, route.src, route.tab]
-    )
-
-    const goToMangaDetail = useCallback(
-        (mangaOrId, srcOverride) => {
-            const src = srcOverride || route.src
-            const id =
-                mangaOrId && typeof mangaOrId === 'object' ? mangaOrId.id : mangaOrId
-            if (id == null) return
-            const preview = mangaDetailPreviewFromCard(
-                mangaOrId && typeof mangaOrId === 'object' ? mangaOrId : null,
-                src,
-            )
-            navigate(
-                `${basePath}/${src}/${route.tab}/page/${clampPage(route.page)}/manga/${encodeURIComponent(String(id))}${location.search || ''}`,
-                preview ? { state: { mangaDetailPreview: preview } } : {},
-            )
-        },
-        [basePath, location.search, navigate, route.page, route.src, route.tab]
-    )
-
-    // Roliascan state (needs to exist before `goToRead`)
-    const [dexTranslatedLang, setDexTranslatedLang] = useState('en')
-
-    const goToRead = useCallback(
-        (mangaId, chapterId, srcOverride, options = {}) => {
-            const src = srcOverride || route.src
-            const params = new URLSearchParams(location.search || '')
-            params.set('source', src)
-            params.set('lang', mangaEnglishReleasesOnly ? 'en' : dexTranslatedLang)
-            const readerSearch = params.toString() ? `?${params.toString()}` : ''
-            navigate(
-                `${basePath}/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(chapterId))}${readerSearch}`,
-                {
-                    state: {
-                        from: `${basePath}/${src}/${route.tab}/page/${clampPage(route.page)}${location.search || ''}`,
-                        source: src,
-                        browseTranslatedLang: mangaEnglishReleasesOnly ? 'en' : dexTranslatedLang,
-                        ...(options?.resumeChapterId ? { resumeChapterId: String(options.resumeChapterId) } : {}),
-                        ...(options?.resumePercent != null ? { resumePercent: Number(options.resumePercent) || 0 } : {}),
-                    },
-                },
-            )
-        },
-        [basePath, dexTranslatedLang, location.search, mangaEnglishReleasesOnly, navigate, route.page, route.src, route.tab]
-    )
-
-    // Roliascan state
-    const [dexAuthStatus, setDexAuthStatus] = useState(null)
-    const [popular, setPopular] = useState([])
-    const [recent, setRecent] = useState([])
-    const [dexFollows, setDexFollows] = useState([])
-    const [dexFollowsTotal, setDexFollowsTotal] = useState(0)
-    const [dexFollowsBusy, setDexFollowsBusy] = useState(false)
-    const [dexLibraryList, setDexLibraryList] = useState([])
-    const [dexLibraryBusy, setDexLibraryBusy] = useState(false)
-    const [libraryListStatus, setLibraryListStatus] = useState('reading')
-    const [dexContentRatings, setDexContentRatings] = useState(() => [...DEFAULT_DEX_CONTENT_RATINGS])
-    const [searchQ, setSearchQ] = useState('')
-    const [searchResults, setSearchResults] = useState([])
-    const [searching, setSearching] = useState(false)
-    const [popularLoading, setPopularLoading] = useState(false)
-    const [recentLoading, setRecentLoading] = useState(false)
-    const [committedSearchQuery, setCommittedSearchQuery] = useState('')
-    const [dexTags, setDexTags] = useState([])
-    const [dexFiltersOpen, setDexFiltersOpen] = useState(false)
-    const [dexTagsPanelOpen, setDexTagsPanelOpen] = useState(false)
-    const [includedTags, setIncludedTags] = useState([])
-    const [excludedTags, setExcludedTags] = useState([])
-    const [includedTagsMode, setIncludedTagsMode] = useState('AND')
-    const [excludedTagsMode, setExcludedTagsMode] = useState('OR')
-    const [statusFilter, setStatusFilter] = useState([])
-    const [demographicFilter, setDemographicFilter] = useState([])
-    const [originalLangFilter, setOriginalLangFilter] = useState([])
-    const [dexYear, setDexYear] = useState('')
-    const [dexBrowseSort, setDexBrowseSort] = useState('random')
-    const [dexSearchOrderBy, setDexSearchOrderBy] = useState('relevance')
-    const [dexSearchOrderDir, setDexSearchOrderDir] = useState('desc')
-    const [dexPopularPage, setDexPopularPage] = useState(1)
-    const [dexRecentPage, setDexRecentPage] = useState(1)
-    const [dexSearchPage, setDexSearchPage] = useState(1)
-    const [popularTotal, setPopularTotal] = useState(0)
-    const [recentTotal, setRecentTotal] = useState(0)
-    const [searchTotal, setSearchTotal] = useState(0)
-
-    const dexFilterSig = useMemo(
-        () =>
-            JSON.stringify({
-                dexTranslatedLang,
-                eo: mangaEnglishReleasesOnly,
-                it: [...includedTags].sort(),
-                et: [...excludedTags].sort(),
-                st: [...statusFilter].sort(),
-                dm: [...demographicFilter].sort(),
-                ol: [...originalLangFilter].sort(),
-                im: includedTagsMode,
-                em: excludedTagsMode,
-                y: String(dexYear || ''),
-                dbs: dexBrowseSort,
-                sob: dexSearchOrderBy,
-                sod: dexSearchOrderDir,
-                cr: sortDexContentRatings(dexContentRatings).join(','),
-            }),
-        [
-            dexTranslatedLang,
-            mangaEnglishReleasesOnly,
-            includedTags,
-            excludedTags,
-            statusFilter,
-            demographicFilter,
-            originalLangFilter,
-            includedTagsMode,
-            excludedTagsMode,
-            dexYear,
-            dexBrowseSort,
-            dexSearchOrderBy,
-            dexSearchOrderDir,
-            dexContentRatings,
-        ]
-    )
-
-    const [dexListSigBound, setDexListSigBound] = useState(dexFilterSig)
-    useEffect(() => {
-        if (dexFilterSig === dexListSigBound) return
-        setDexListSigBound(dexFilterSig)
-        setDexPopularPage(1)
-        setDexRecentPage(1)
-        setDexSearchPage(1)
-    }, [dexFilterSig, dexListSigBound])
-
-    // Manga District state
-    const [mdLatest, setMdLatest] = useState(null)
-    const [mdPage, setMdPage] = useState(1)
-    const [mdSection, setMdSection] = useState('uncensored')
-    const [mdFilter, setMdFilter] = useState('')
-    const [mdSearchResults, setMdSearchResults] = useState([])
-    const [mdSearchBusy, setMdSearchBusy] = useState(false)
-    const [mdFiltersOpen, setMdFiltersOpen] = useState(false)
-    const [mdTypeSlug, setMdTypeSlug] = useState('')
-    const [mdFilterGenre, setMdFilterGenre] = useState('')
-    const [mdBrowse, setMdBrowse] = useState('latest-updates')
-
-    // Roliascan state
-    const [roliascanStatus, setRoliascanStatus] = useState(null)
-    const [roliascanTerms, setRoliascanTerms] = useState({})
-    const [roliascanRows, setRoliascanRows] = useState([])
-    const [roliascanLoading, setRoliascanLoading] = useState(false)
-    const [roliascanFiltersOpen, setRoliascanFiltersOpen] = useState(false)
-    const [roliascanPage, setRoliascanPage] = useState(1)
-    const [roliascanLastPage, setRoliascanLastPage] = useState(1)
-    const [roliascanTotal, setRoliascanTotal] = useState(0)
-    const [roliascanFolder, setRoliascanFolder] = useState('hot')
-    const [roliascanOrderKey, setRoliascanOrderKey] = useState('')
-    const [roliascanOrderDir, setRoliascanOrderDir] = useState('desc')
-    const [roliascanSearchQ, setRoliascanSearchQ] = useState('')
-    const [roliascanCommittedSearch, setRoliascanCommittedSearch] = useState('')
-    const [roliascanIncludeGenres, setRoliascanIncludeGenres] = useState([])
-    const [roliascanExcludeGenres, setRoliascanExcludeGenres] = useState([])
-    const [roliascanIncludeTags, setRoliascanIncludeTags] = useState([])
-    const [roliascanExcludeTags, setRoliascanExcludeTags] = useState([])
-    const [roliascanIncludeDemographics, setRoliascanIncludeDemographics] = useState([])
-    const [roliascanExcludeDemographics, setRoliascanExcludeDemographics] = useState([])
-    const [roliascanStatuses, setRoliascanStatuses] = useState([])
-    const [roliascanAuthorsInput, setRoliascanAuthorsInput] = useState('')
-    const [roliascanArtistsInput, setRoliascanArtistsInput] = useState('')
-    const [roliascanMinchap, setRoliascanMinchap] = useState('')
-    const [roliascanYearFrom, setRoliascanYearFrom] = useState('')
-    const [roliascanYearTo, setRoliascanYearTo] = useState('')
-
-    const roliascanFilterSig = useMemo(
-        () =>
-            JSON.stringify({
-                q: roliascanCommittedSearch.trim().toLowerCase(),
-                folder: roliascanFolder,
-                orderKey: roliascanOrderKey,
-                orderDir: roliascanOrderDir,
-                ig: [...roliascanIncludeGenres].sort(),
-                eg: [...roliascanExcludeGenres].sort(),
-                id: [...roliascanIncludeDemographics].sort(),
-                ed: [...roliascanExcludeDemographics].sort(),
-                st: [...roliascanStatuses].sort(),
-                au: parseCommaList(roliascanAuthorsInput.toLowerCase()).sort(),
-                ar: parseCommaList(roliascanArtistsInput.toLowerCase()).sort(),
-                mc: String(roliascanMinchap || ''),
-                yf: String(roliascanYearFrom || ''),
-                yt: String(roliascanYearTo || ''),
-                tg: [...roliascanIncludeTags].sort(),
-                te: [...roliascanExcludeTags].sort(),
-            }),
-        [
-            roliascanArtistsInput,
-            roliascanAuthorsInput,
-            roliascanCommittedSearch,
-            roliascanExcludeDemographics,
-            roliascanExcludeGenres,
-            roliascanFolder,
-            roliascanIncludeDemographics,
-            roliascanIncludeGenres,
-            roliascanMinchap,
-            roliascanOrderDir,
-            roliascanOrderKey,
-            roliascanStatuses,
-            roliascanYearFrom,
-            roliascanYearTo,
-        ],
-    )
-    const [roliascanListSigBound, setRoliascanListSigBound] = useState(roliascanFilterSig)
-
-    useEffect(() => {
-        if (roliascanFilterSig === roliascanListSigBound) return
-        setRoliascanListSigBound(roliascanFilterSig)
-        setRoliascanPage(1)
-    }, [basePath, roliascanFilterSig, roliascanListSigBound, location.search, navigate, route.page, route.tab, source])
-
-    /** Invalidates in-flight Manga District list fetches when filters/order/page change or source leaves. */
-    const mdLatestFetchGenRef = useRef(0)
-    /** Invalidates debounced Manga District search when query or source changes. */
-    const mdSearchFetchGenRef = useRef(0)
-    /** Invalidates in-flight Roliascan browser fetches when source/filter/page changes. */
-    const roliascanFetchGenRef = useRef(0)
-    /** Invalidates in-flight manga detail enrichment when route/source changes or another open supersedes. */
-    const mangaDetailEnrichGenRef = useRef(0)
-
-    useEffect(() => {
-        if (source !== 'mangadistrict') {
-            mdLatestFetchGenRef.current += 1
-            mdSearchFetchGenRef.current += 1
-        }
-        if (source !== 'roliascan') {
-            roliascanFetchGenRef.current += 1
-        }
-    }, [source])
-
-    useEffect(() => {
-        if (location.pathname === basePath || location.pathname === `${basePath}/`) {
-            navigate(`${basePath}/roliascan/manga/page/1${location.search || ''}`, { replace: true })
-            return
-        }
-        const rel = location.pathname.startsWith(basePath) ? location.pathname.slice(basePath.length) : ''
-        const first = rel.split('/').filter(Boolean)[0]
-        if (first === 'mangahere') {
-            navigate(`${basePath}/roliascan/manga/page/1${location.search || ''}`, { replace: true })
-        }
-    }, [basePath, location.pathname, location.search, navigate])
-
-    useEffect(() => {
-        if (!location.pathname.startsWith(basePath)) return
-        if (location.pathname === basePath || location.pathname === `${basePath}/`) return
-        if (location.pathname.includes('/read/')) return
-
-        const canonicalBase = `${basePath}/${route.src}/${route.tab}/page/${clampPage(route.page)}`
-        const canonicalPath = route.detailMangaId
-            ? `${canonicalBase}/manga/${route.detailMangaId}`
-            : canonicalBase
-        if (location.pathname === canonicalPath) return
-        navigate(`${canonicalPath}${location.search || ''}`, { replace: true })
-    }, [
-        basePath,
-        location.pathname,
-        location.search,
-        navigate,
-        route.detailMangaId,
-        route.page,
-        route.src,
-        route.tab,
-    ])
-
-    useEffect(() => {
-        if (source !== route.src) setSource(route.src)
-        const nextTab = normalizeTabForSource(route.src, route.tab)
-        if (tab !== nextTab) setTab(nextTab)
-
-        if (false && nextTab === 'popular' && dexPopularPage !== route.page) setDexPopularPage(route.page)
-        if (false && nextTab === 'recent' && dexRecentPage !== route.page) setDexRecentPage(route.page)
-        if (false && nextTab === 'search' && dexSearchPage !== route.page) setDexSearchPage(route.page)
-        if (route.src === 'mangadistrict' && mdPage !== route.page) setMdPage(route.page)
-        if (route.src === 'roliascan' && roliascanPage !== route.page) setRoliascanPage(route.page)
-    }, [
-        roliascanPage,
-        dexPopularPage,
-        dexRecentPage,
-        dexSearchPage,
-        mdPage,
-        route.page,
-        route.src,
-        route.tab,
-        source,
-        tab,
-    ])
-
-    useEffect(() => {
-        if (source !== 'mangadistrict') return
-        if (!MD_ORDER_BY_IDS.has(mdBrowse)) setMdBrowse('latest-updates')
-    }, [source, mdBrowse])
-
-    useEffect(() => {
-        if (true || route.tab !== 'search') return
-        const q = new URLSearchParams(location.search || '').get('q') || ''
-        const next = q.trim()
-        if (next && next !== committedSearchQuery) {
-            setCommittedSearchQuery(next)
-            setSearchQ(next)
-        }
-    }, [committedSearchQuery, location.search, route.src, route.tab])
-
-    const mdFilterBarCount =
-        (mdSection !== 'uncensored' ? 1 : 0) +
-        (mdTypeSlug ? 1 : 0) +
-        (mdFilterGenre ? 1 : 0) +
-        (mdBrowse !== 'latest-updates' ? 1 : 0)
-
-    const resumeFromEntry = useCallback(async entry => {
-        setError('')
-        try {
-            const lastChapterId = String(entry?.lastChapterId || '').trim()
-            const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
-            // Keep user position stable: continue from the last saved chapter first.
-            const preferredChapterId = lastChapterId || latestChapterId
-            const preferredResumePercent = Number(entry?.lastReadPercent || 0)
-
-            if (
-                !hManhwaEnabled &&
-                entry.source === 'mangadistrict'
-            ) {
-                setError('Enable NSFW content and the H manhwa plugin in LifeSync preferences to open this title.')
-                return
-            }
-            if (entry.source === 'mangadistrict') {
-                const data = await lifesyncFetch(`/api/v1/manga/mangadistrict/info/${encodeURIComponent(entry.mangaId)}?view=full`)
-                const list = [...(data.chapters || [])]
-                list.sort(compareChapters)
-                let ch = list.find(c => String(c?.id) === preferredChapterId)
-                if (!ch && preferredChapterId !== lastChapterId) {
-                    ch = list.find(c => String(c?.id) === lastChapterId)
-                }
-                if (!ch && list.length) ch = list[list.length - 1]
-                if (!ch) {
-                    setError('No chapters available to resume.')
-                    return
-                }
-                setSelectedManga(null)
-                setSource('mangadistrict')
-                goToRead(entry.mangaId, ch.id, 'mangadistrict', {
-                    resumeChapterId: String(ch.id),
-                    resumePercent: preferredResumePercent,
-                })
-                return
-            }
-            if (entry.source === 'roliascan') {
-                const data = await lifesyncFetch(`/api/v1/manga/roliascan/info/${encodeURIComponent(entry.mangaId)}?view=full`)
-                const list = [...(data.chapters || [])]
-                list.sort(compareChapters)
-                let ch = list.find(c => String(c?.id) === preferredChapterId)
-                if (!ch && preferredChapterId !== lastChapterId) {
-                    ch = list.find(c => String(c?.id) === lastChapterId)
-                }
-                if (!ch && list.length) ch = list[list.length - 1]
-                if (!ch) {
-                    setError('No chapters available to resume.')
-                    return
-                }
-                setSelectedManga(null)
-                setSource('roliascan')
-                goToRead(entry.mangaId, ch.id, 'roliascan', {
-                    resumeChapterId: String(ch.id),
-                    resumePercent: preferredResumePercent,
-                })
-                return
-            }
-        } catch (e) {
-            setError(e.message || 'Could not resume reading')
-        }
-    }, [goToRead, hManhwaEnabled, nsfwEnabled])
-
-    useEffect(() => {
-        const entry = location.state?.resumeEntry
-        if (!entry?.mangaId || !entry?.source) return
-        const k = `${entry.source}:${entry.mangaId}`
-        if (resumeKeyDone.current === k) return
-        resumeKeyDone.current = k
-        void resumeFromEntry(entry).finally(() => {
-            navigate(`${location.pathname}${location.search || ''}`, { replace: true, state: {} })
-            resumeKeyDone.current = null
-        })
-    }, [location.state, location.pathname, location.search, navigate, resumeFromEntry])
-
-    useEffect(() => {
-        setDexAuthStatus({ oauthConfigured: false, connected: false })
-    }, [])
-
-    useEffect(() => {
-        setRoliascanStatus(null)
-        setRoliascanTerms({})
-    }, [])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || lifeSyncLoading || source !== 'roliascan') return
-        let cancelled = false
-        ;(async () => {
-            try {
-                const [statusData, termsData] = await Promise.all([
-                    lifesyncFetch('/api/v1/manga/roliascan/status?view=standard'),
-                    lifesyncFetch('/api/v1/manga/roliascan/terms?view=full'),
-                ])
-                if (cancelled) return
-                setRoliascanStatus(statusData || null)
-                const termsPayload =
-                    termsData?.terms && typeof termsData.terms === 'object'
-                        ? termsData.terms
-                        : {}
-                setRoliascanTerms({
-                    ...termsPayload,
-                    status: Array.isArray(termsData?.statuses) ? termsData.statuses : [],
-                    years: Array.isArray(termsData?.years) ? termsData.years : [],
-                    types: Array.isArray(termsData?.types) ? termsData.types : [],
-                    sorts: Array.isArray(termsData?.sorts) ? termsData.sorts : [],
-                })
-            } catch {
-                if (cancelled) return
-                setRoliascanStatus(null)
-                setRoliascanTerms({})
-            }
-        })()
-        return () => {
-            cancelled = true
-        }
-    }, [isLifeSyncConnected, lifeSyncLoading, source])
-
-    useEffect(() => {
-        if (true || (tab !== 'following' && tab !== 'library')) return
-        if (dexAuthStatus && !dexAuthStatus.connected) setTab('popular')
-    }, [source, tab, dexAuthStatus])
-
-    /** Keep URL and NSFW policy aligned. Only `setSource` caused a fight with route sync on hard refresh (URL still MD → sync set MD again → repeat). */
-    useEffect(() => {
-        if (lifeSyncLoading || !isLifeSyncConnected) return
-        if (hManhwaEnabled) return
-        if (route.src !== 'mangadistrict') return
-        navigate(`${basePath}/roliascan/manga/page/1${location.search || ''}`, { replace: true })
-    }, [
-        basePath,
-        hManhwaEnabled,
-        isLifeSyncConnected,
-        lifeSyncLoading,
-        location.search,
-        navigate,
-        route.src,
-    ])
-
-    useEffect(() => {
-        if (hManhwaEnabled) return
-        const nsfwSrc = m => m?.source === 'mangadistrict'
-        if (selectedManga && nsfwSrc(selectedManga)) setSelectedManga(null)
-    }, [hManhwaEnabled, selectedManga])
-
-    useEffect(() => {
-        if (nsfwEnabled) return
-        setDexContentRatings(prev => {
-            const next = prev.filter(r => r !== 'erotica' && r !== 'pornographic')
-            return next.length ? sortDexContentRatings(next) : [...DEFAULT_DEX_CONTENT_RATINGS]
-        })
-    }, [nsfwEnabled])
-
-    const browseShuffle = dexBrowseSort === 'random'
-    const browseOrderBy = browseShuffle ? '' : dexBrowseSort
-
-    // Roliascan loaders (`shuffle=1` for random browse; otherwise stable order + pagination)
-    const loadPopular = useCallback(async () => {
-        setPopularLoading(true)
-        try {
-            const offset = browseShuffle ? 0 : (dexPopularPage - 1) * DEX_PAGE_SIZE
-            const q = buildDexListQuery({
-                limit: DEX_PAGE_SIZE,
-                offset,
-                contentRatings: dexContentRatings,
-                nsfwEnabled,
-                dexTranslatedLang,
-                englishOnly: mangaEnglishReleasesOnly,
-                includedTags,
-                excludedTags,
-                statusFilter,
-                demographicFilter,
-                includedTagsMode,
-                excludedTagsMode,
-                originalLangFilter,
-                searchYear: dexYear,
-                orderBy: browseOrderBy,
-                orderDir: 'desc',
-                shuffle: browseShuffle,
-            })
-            const d = await lifesyncFetch(`/api/v1/manga/roliascan/browser?${q}&view=standard`)
-            setPopular(d?.data || [])
-            setPopularTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
-        } catch { /* ignore */ }
-        finally {
-            setPopularLoading(false)
-        }
-    }, [
-        dexPopularPage,
-        dexTranslatedLang,
-        mangaEnglishReleasesOnly,
-        includedTags,
-        excludedTags,
-        statusFilter,
-        demographicFilter,
-        includedTagsMode,
-        excludedTagsMode,
-        originalLangFilter,
-        dexYear,
-        browseOrderBy,
-        browseShuffle,
-        dexContentRatings,
-        nsfwEnabled,
-    ])
-
-    const loadRecent = useCallback(async () => {
-        setRecentLoading(true)
-        try {
-            const offset = browseShuffle ? 0 : (dexRecentPage - 1) * DEX_PAGE_SIZE
-            const q = buildDexListQuery({
-                limit: DEX_PAGE_SIZE,
-                offset,
-                contentRatings: dexContentRatings,
-                nsfwEnabled,
-                dexTranslatedLang,
-                englishOnly: mangaEnglishReleasesOnly,
-                includedTags,
-                excludedTags,
-                statusFilter,
-                demographicFilter,
-                includedTagsMode,
-                excludedTagsMode,
-                originalLangFilter,
-                searchYear: dexYear,
-                orderBy: browseOrderBy,
-                orderDir: 'desc',
-                shuffle: browseShuffle,
-            })
-            const d = await lifesyncFetch(`/api/v1/manga/roliascan/browser?${q}&view=standard`)
-            setRecent(d?.data || [])
-            setRecentTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
-        } catch { /* ignore */ }
-        finally {
-            setRecentLoading(false)
-        }
-    }, [
-        dexRecentPage,
-        dexTranslatedLang,
-        mangaEnglishReleasesOnly,
-        includedTags,
-        excludedTags,
-        statusFilter,
-        demographicFilter,
-        includedTagsMode,
-        excludedTagsMode,
-        originalLangFilter,
-        dexYear,
-        browseOrderBy,
-        browseShuffle,
-        dexContentRatings,
-        nsfwEnabled,
-    ])
-
-    const loadFollows = useCallback(async (offset = 0) => {
-        setDexFollowsBusy(true)
-        if (offset === 0) setError('')
-        try {
-            if (offset === 0) {
-                setDexFollows([])
-                setDexFollowsTotal(0)
-            }
-        } catch (e) {
-            if (offset === 0) {
-                setDexFollows([])
-                setDexFollowsTotal(0)
-            }
-            setError(e.message || 'Could not load follows')
-        } finally {
-            setDexFollowsBusy(false)
-        }
-    }, [])
-
-    const loadDexLibrary = useCallback(async status => {
-        setDexLibraryBusy(true)
-        setError('')
-        try {
-            void status
-            setDexLibraryList([])
-        } catch (e) {
-            setDexLibraryList([])
-            setError(e.message || 'Could not load library')
-        } finally {
-            setDexLibraryBusy(false)
-        }
-    }, [])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || true || tab === 'library') return
-        void loadPopular()
-    }, [isLifeSyncConnected, source, tab, loadPopular])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || true || tab === 'library') return
-        void loadRecent()
-    }, [isLifeSyncConnected, source, tab, loadRecent])
-
-    useEffect(() => {
-        setDexTags([])
-    }, [isLifeSyncConnected])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || true || tab !== 'search' || !committedSearchQuery.trim()) return
-        let cancelled = false
-        ;(async () => {
-            setSearching(true)
-            try {
-                const offset = (dexSearchPage - 1) * DEX_PAGE_SIZE
-                const q = buildDexListQuery({
-                    limit: DEX_PAGE_SIZE,
-                    offset,
-                    contentRatings: dexContentRatings,
-                    nsfwEnabled,
-                    dexTranslatedLang,
-                    englishOnly: mangaEnglishReleasesOnly,
-                    includedTags,
-                    excludedTags,
-                    statusFilter,
-                    demographicFilter,
-                    includedTagsMode,
-                    excludedTagsMode,
-                    originalLangFilter,
-                    searchYear: dexYear,
-                    orderBy: dexSearchOrderBy,
-                    orderDir: dexSearchOrderDir,
-                })
-                q.set('q', committedSearchQuery.trim())
-                const d = await lifesyncFetch(`/api/v1/manga/roliascan/browser?${q}&view=standard`)
-                if (!cancelled) {
-                    setSearchResults(d?.data || [])
-                    setSearchTotal(typeof d?.total === 'number' ? d.total : (d?.data || []).length)
-                }
-            } catch {
-                if (!cancelled) {
-                    setSearchResults([])
-                    setSearchTotal(0)
-                }
-            } finally {
-                if (!cancelled) setSearching(false)
-            }
-        })()
-        return () => { cancelled = true }
-    }, [
-        isLifeSyncConnected,
-        source,
-        tab,
-        committedSearchQuery,
-        dexSearchPage,
-        dexTranslatedLang,
-        mangaEnglishReleasesOnly,
-        includedTags,
-        excludedTags,
-        statusFilter,
-        demographicFilter,
-        includedTagsMode,
-        excludedTagsMode,
-        originalLangFilter,
-        dexYear,
-        dexSearchOrderBy,
-        dexSearchOrderDir,
-        dexContentRatings,
-        nsfwEnabled,
-    ])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || true || tab !== 'following') return
-        if (!dexAuthStatus?.connected) return
-        void loadFollows(0)
-    }, [isLifeSyncConnected, source, tab, dexAuthStatus?.connected, loadFollows])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || true || tab !== 'library') return
-        if (!dexAuthStatus?.connected) return
-        setDexLibraryList([])
-        void loadDexLibrary(libraryListStatus)
-    }, [isLifeSyncConnected, source, tab, dexAuthStatus?.connected, libraryListStatus, loadDexLibrary])
-
-    // Manga District latest — single effect + generation guard so order-by / section / page changes never apply stale responses
-    useEffect(() => {
-        if (!isLifeSyncConnected || lifeSyncLoading) return
-        if (!hManhwaEnabled || source !== 'mangadistrict') return
-        if (mdFilter.trim()) {
-            mdLatestFetchGenRef.current += 1
-            return
-        }
-        const gen = ++mdLatestFetchGenRef.current
-        setBusy(true)
-        setError('')
-        setMdLatest(null)
-        const page = clampPage(mdPage)
-        const qs = buildMangaDistrictListQuery(mdSection, mdTypeSlug, mdFilterGenre, mdBrowse)
-        ;(async () => {
-            try {
-                const d = await lifesyncFetch(`/api/v1/manga/mangadistrict/latest/${page}?${qs}&view=standard`)
-                if (mdLatestFetchGenRef.current !== gen) return
-                setMdLatest(d)
-                setMdPage(page)
-            } catch (e) {
-                if (mdLatestFetchGenRef.current !== gen) return
-                setError(e.message || 'Failed to load Manga District')
-            } finally {
-                if (mdLatestFetchGenRef.current === gen) setBusy(false)
-            }
-        })()
-    }, [
-        isLifeSyncConnected,
-        hManhwaEnabled,
-        lifeSyncLoading,
-        source,
-        mdFilter,
-        mdPage,
-        mdSection,
-        mdTypeSlug,
-        mdFilterGenre,
-        mdBrowse,
-    ])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || lifeSyncLoading) return
-        if (!hManhwaEnabled || source !== 'mangadistrict') return
-        const q = mdFilter.trim()
-        if (!q) {
-            mdSearchFetchGenRef.current += 1
-            setMdSearchResults([])
-            setMdSearchBusy(false)
-            return
-        }
-        const gen = ++mdSearchFetchGenRef.current
-        const t = setTimeout(async () => {
-            if (mdSearchFetchGenRef.current !== gen) return
-            setMdSearchBusy(true)
-            try {
-                const d = await lifesyncFetch(`/api/v1/manga/mangadistrict/search?q=${encodeURIComponent(q)}&view=standard`)
-                if (mdSearchFetchGenRef.current !== gen) return
-                setMdSearchResults(d?.data || d || [])
-            } catch {
-                if (mdSearchFetchGenRef.current !== gen) return
-                setMdSearchResults([])
-            } finally {
-                if (mdSearchFetchGenRef.current === gen) setMdSearchBusy(false)
-            }
-        }, 400)
-        return () => {
-            clearTimeout(t)
-        }
-    }, [isLifeSyncConnected, hManhwaEnabled, lifeSyncLoading, source, mdFilter])
-
-    useEffect(() => {
-        if (!isLifeSyncConnected || lifeSyncLoading || source !== 'roliascan') return
-        const tabType = ROLIASCAN_SOURCE_TYPE_BY_TAB[route.tab] || 'manga'
-        const gen = ++roliascanFetchGenRef.current
-        const page = clampPage(roliascanPage)
-        setRoliascanLoading(true)
-        setError('')
-        ;(async () => {
-            const qs = new URLSearchParams()
-            qs.set('page', String(page))
-            qs.set('limit', '24')
-            qs.set('folder', roliascanFolder)
-            qs.append('types[]', tabType)
-            const keyword = roliascanCommittedSearch.trim()
-            if (keyword) qs.set('keyword', keyword)
-            const folderDefaultOrder = ROLIASCAN_FOLDER_DEFAULT_ORDER[roliascanFolder] || ROLIASCAN_FOLDER_DEFAULT_ORDER.hot
-            const orderKey = roliascanOrderKey || folderDefaultOrder.key
-            const orderDir = roliascanOrderKey ? (roliascanOrderDir === 'asc' ? 'asc' : 'desc') : folderDefaultOrder.dir
-            if (orderKey) {
-                qs.set(`order[${orderKey}]`, orderDir)
-            }
-            roliascanIncludeGenres.forEach((row) => qs.append('genres[]', String(row)))
-            roliascanExcludeGenres.forEach((row) => qs.append('exclude_genres[]', String(row)))
-            roliascanExcludeTags.forEach((row) => qs.append('exclude_genres[]', String(row)))
-            roliascanIncludeDemographics.forEach((row) => qs.append('demographics[]', String(row)))
-            roliascanExcludeDemographics.forEach((row) => qs.append('exclude_genders[]', String(row)))
-            roliascanStatuses.forEach((row) => qs.append('statuses[]', String(row)))
-            roliascanIncludeTags.forEach((row) => qs.append('genres[]', String(row)))
-            parseCommaList(roliascanAuthorsInput).forEach((row) => qs.append('authors[]', row))
-            parseCommaList(roliascanArtistsInput).forEach((row) => qs.append('artists[]', row))
-            if (String(roliascanMinchap || '').trim()) qs.set('minchap', String(roliascanMinchap).trim())
-            if (String(roliascanYearFrom || '').trim()) qs.set('year_from', String(roliascanYearFrom).trim())
-            if (String(roliascanYearTo || '').trim()) qs.set('year_to', String(roliascanYearTo).trim())
-
-            try {
-                const d = await lifesyncFetch(`/api/v1/manga/roliascan/browser?${qs.toString()}&view=standard`)
-                if (roliascanFetchGenRef.current !== gen) return
-                const rowsRaw = Array.isArray(d?.data) ? d.data : []
-                const rows = rowsRaw
-                    .map((row) => ({
-                        ...row,
-                        id: row?.id || row?.slug || row?.hid,
-                        source: 'roliascan',
-                    }))
-                    .filter((row) => row?.id)
-                const pageInfo = d?.pageInfo || {}
-                const total =
-                    typeof d?.total === 'number'
-                        ? d.total
-                        : typeof pageInfo?.total === 'number'
-                            ? pageInfo.total
-                            : ((page - 1) * 24) + rows.length
-                const last = Math.max(
-                    1,
-                    Number(d?.lastPage || d?.pagination?.last_page || pageInfo?.totalPages || (rows.length >= 24 ? page + 1 : page)) || 1,
-                )
-                setRoliascanRows(rows)
-                setRoliascanTotal(total)
-                setRoliascanLastPage(last)
-                setRoliascanPage(page)
-            } catch (e) {
-                if (roliascanFetchGenRef.current !== gen) return
-                setRoliascanRows([])
-                setRoliascanTotal(0)
-                setRoliascanLastPage(1)
-                setError(e?.message || 'Failed to load manga')
-            } finally {
-                if (roliascanFetchGenRef.current === gen) setRoliascanLoading(false)
-            }
-        })()
-    }, [
-        roliascanArtistsInput,
-        roliascanAuthorsInput,
-        roliascanCommittedSearch,
-        roliascanExcludeDemographics,
-        roliascanExcludeGenres,
-        roliascanFolder,
-        roliascanIncludeDemographics,
-        roliascanIncludeGenres,
-        roliascanMinchap,
-        roliascanOrderDir,
-        roliascanOrderKey,
-        roliascanPage,
-        roliascanStatuses,
-        roliascanYearFrom,
-        roliascanYearTo,
-        isLifeSyncConnected,
-        lifeSyncLoading,
-        route.tab,
-        source,
-    ])
-
-    function handleDexSearch(e) {
-        e.preventDefault()
-        if (!searchQ.trim()) return
-        const q = searchQ.trim()
-        setCommittedSearchQuery(q)
-        setDexSearchPage(1)
-        const qs = new URLSearchParams(location.search || '')
-        qs.set('q', q)
-        navigate(`${basePath}/${route.src}/search/page/1?${qs.toString()}`)
+        void enrichSelectedManga({
+          id: route.detailMangaId,
+          source: route.src,
+        });
+      }
+    } else {
+      routeDetailKey.current = null;
+      mangaDetailEnrichGenRef.current += 1;
+      setSelectedManga(null);
     }
+  }, [
+    enrichSelectedManga,
+    location.state?.mangaDetailPreview,
+    route.detailMangaId,
+    route.src,
+  ]);
 
-    function handleRoliascanSearch(e) {
-        e.preventDefault()
-        const keyword = roliascanSearchQ.trim()
-        if (keyword) {
-            setRoliascanIncludeGenres([])
-            setRoliascanExcludeGenres([])
-            setRoliascanIncludeDemographics([])
-            setRoliascanExcludeDemographics([])
-            setRoliascanStatuses([])
-            setRoliascanAuthorsInput('')
-            setRoliascanArtistsInput('')
-            setRoliascanMinchap('')
-            setRoliascanYearFrom('')
-            setRoliascanYearTo('')
-        }
-        setRoliascanCommittedSearch(keyword)
-        setRoliascanPage(1)
-        if (route.src !== 'roliascan') return
-        navigate(`${basePath}/roliascan/${route.tab || 'manga'}/page/1${location.search || ''}`)
+  function handleStartRead(mergedManga, chapter) {
+    if (!mergedManga?.id || !chapter?.id) return;
+    const src = mergedManga.source || source;
+    goToRead(mergedManga.id, chapter.id, src);
+  }
+
+  const mdLastPage = Math.max(
+    1,
+    parseInt(String(mdLatest?.lastPage ?? "1"), 10) || 1,
+  );
+  const mdCurPage = Math.min(
+    mdLastPage,
+    Math.max(1, parseInt(String(mdLatest?.currentPage ?? mdPage), 10) || 1),
+  );
+  const dexPopularLast = dexBrowseLastPage(popularTotal);
+  const dexRecentLast = dexBrowseLastPage(recentTotal);
+  const dexSearchLast = dexBrowseLastPage(searchTotal);
+
+  const toggleDexIncludeTag = useCallback((id) => {
+    setExcludedTags((prev) => prev.filter((x) => x !== id));
+    setIncludedTags((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }, []);
+
+  const toggleDexExcludeTag = useCallback((id) => {
+    setIncludedTags((prev) => prev.filter((x) => x !== id));
+    setExcludedTags((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }, []);
+
+  const toggleDexStatus = useCallback((s) => {
+    setStatusFilter((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    );
+  }, []);
+
+  const toggleDexDemographic = useCallback((d) => {
+    setDemographicFilter((prev) =>
+      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d],
+    );
+  }, []);
+
+  const toggleOriginalLang = useCallback((code) => {
+    setOriginalLangFilter((prev) =>
+      prev.includes(code) ? prev.filter((x) => x !== code) : [...prev, code],
+    );
+  }, []);
+
+  const toggleRoliascanGenre = useCallback((value, mode = "include") => {
+    const token = String(value || "").trim();
+    if (!token) return;
+    if (mode === "exclude") {
+      setRoliascanIncludeGenres((prev) => prev.filter((row) => row !== token));
+      setRoliascanExcludeGenres((prev) =>
+        prev.includes(token)
+          ? prev.filter((row) => row !== token)
+          : [...prev, token],
+      );
+      return;
     }
+    setRoliascanExcludeGenres((prev) => prev.filter((row) => row !== token));
+    setRoliascanIncludeGenres((prev) =>
+      prev.includes(token)
+        ? prev.filter((row) => row !== token)
+        : [...prev, token],
+    );
+  }, []);
 
-    const openMangaFromCard = useCallback(
-        manga => {
-            if (!manga?.id) return
-            const src = manga.source || source
-            goToMangaDetail(manga, src)
-        },
-        [goToMangaDetail, source]
-    )
+  const toggleRoliascanDemographic = useCallback((value, mode = "include") => {
+    const token = String(value || "").trim();
+    if (!token) return;
+    if (mode === "exclude") {
+      setRoliascanIncludeDemographics((prev) =>
+        prev.filter((row) => row !== token),
+      );
+      setRoliascanExcludeDemographics((prev) =>
+        prev.includes(token)
+          ? prev.filter((row) => row !== token)
+          : [...prev, token],
+      );
+      return;
+    }
+    setRoliascanExcludeDemographics((prev) =>
+      prev.filter((row) => row !== token),
+    );
+    setRoliascanIncludeDemographics((prev) =>
+      prev.includes(token)
+        ? prev.filter((row) => row !== token)
+        : [...prev, token],
+    );
+  }, []);
 
-    const enrichSelectedManga = useCallback(
-        async ({ id, source: srcParam }) => {
-            const src = srcParam || source
-            if (!id) return
-            // mangadistrict: MangaDetail self-fetches meta + chapters; nothing to do here
-            if (src === 'mangadistrict') return
-            const gen = ++mangaDetailEnrichGenRef.current
-            setError('')
-            try {
-                const data = await lifesyncFetch(`/api/v1/manga/roliascan/info/${encodeURIComponent(id)}?view=full`)
-                if (mangaDetailEnrichGenRef.current !== gen) return
-                setSelectedManga(prev => ({
-                    ...prev,
-                    ...data,
-                    id: data.id || id,
-                    source: 'roliascan',
-                    coverUrl: data.coverUrl || prev?.coverUrl,
-                }))
-            } catch (e) {
-                if (mangaDetailEnrichGenRef.current !== gen) return
-                setError(e.message || 'Could not open manga')
-            }
-        },
-        [source]
-    )
+  const cycleRoliascanGenre = useCallback(
+    (value) => {
+      const token = String(value || "").trim();
+      if (!token) return;
+      const included = roliascanIncludeGenres.includes(token);
+      const excluded = roliascanExcludeGenres.includes(token);
+      if (!included && !excluded) {
+        toggleRoliascanGenre(token, "include");
+        return;
+      }
+      if (included) {
+        toggleRoliascanGenre(token, "exclude");
+        return;
+      }
+      setRoliascanExcludeGenres((prev) => prev.filter((row) => row !== token));
+    },
+    [roliascanExcludeGenres, roliascanIncludeGenres, toggleRoliascanGenre],
+  );
 
-    const routeDetailKey = useRef(null)
+  const cycleRoliascanDemographic = useCallback(
+    (value) => {
+      const token = String(value || "").trim();
+      if (!token) return;
+      const included = roliascanIncludeDemographics.includes(token);
+      const excluded = roliascanExcludeDemographics.includes(token);
+      if (!included && !excluded) {
+        toggleRoliascanDemographic(token, "include");
+        return;
+      }
+      if (included) {
+        toggleRoliascanDemographic(token, "exclude");
+        return;
+      }
+      setRoliascanExcludeDemographics((prev) =>
+        prev.filter((row) => row !== token),
+      );
+    },
+    [
+      roliascanExcludeDemographics,
+      roliascanIncludeDemographics,
+      toggleRoliascanDemographic,
+    ],
+  );
 
-    useEffect(() => {
-        if (route.detailMangaId) {
-            const k = `${route.src}:${route.detailMangaId}`
-            if (routeDetailKey.current !== k) {
-                routeDetailKey.current = k
-                const preview = location.state?.mangaDetailPreview
-                const previewOk =
-                    preview &&
-                    String(preview.id) === String(route.detailMangaId) &&
-                    String(preview.source || '') === String(route.src)
-                if (previewOk) {
-                    setSelectedManga({
-                        id: preview.id,
-                        source: preview.source || route.src,
-                        title: preview.title,
-                        coverUrl: preview.coverUrl,
-                        tags: preview.tags,
-                        status: preview.status,
-                        year: preview.year,
-                        author: preview.author,
-                        contentRating: preview.contentRating,
-                        backgroundImageUrl: preview.backgroundImageUrl,
-                        ratingAverage: preview.ratingAverage,
-                        ratings: preview.ratings,
-                    })
-                } else {
-                    setSelectedManga({ id: route.detailMangaId, source: route.src })
-                }
-                void enrichSelectedManga({ id: route.detailMangaId, source: route.src })
-            }
+  const toggleRoliascanTag = useCallback((value, mode = "include") => {
+    const token = String(value || "").trim();
+    if (!token) return;
+    if (mode === "exclude") {
+      setRoliascanIncludeTags((prev) => prev.filter((row) => row !== token));
+      setRoliascanExcludeTags((prev) =>
+        prev.includes(token)
+          ? prev.filter((row) => row !== token)
+          : [...prev, token],
+      );
+      return;
+    }
+    setRoliascanExcludeTags((prev) => prev.filter((row) => row !== token));
+    setRoliascanIncludeTags((prev) =>
+      prev.includes(token)
+        ? prev.filter((row) => row !== token)
+        : [...prev, token],
+    );
+  }, []);
+
+  const cycleRoliascanTag = useCallback(
+    (value) => {
+      const token = String(value || "").trim();
+      if (!token) return;
+      const included = roliascanIncludeTags.includes(token);
+      const excluded = roliascanExcludeTags.includes(token);
+      if (!included && !excluded) {
+        toggleRoliascanTag(token, "include");
+        return;
+      }
+      if (included) {
+        toggleRoliascanTag(token, "exclude");
+        return;
+      }
+      setRoliascanExcludeTags((prev) => prev.filter((row) => row !== token));
+    },
+    [roliascanExcludeTags, roliascanIncludeTags, toggleRoliascanTag],
+  );
+
+  const toggleRoliascanStatus = useCallback((value) => {
+    const token = String(value || "").trim();
+    if (!token) return;
+    setRoliascanStatuses((prev) =>
+      prev.includes(token)
+        ? prev.filter((row) => row !== token)
+        : [...prev, token],
+    );
+  }, []);
+
+  const toggleDexContentRating = useCallback((id) => {
+    setDexContentRatings((prev) => {
+      const set = new Set(prev);
+      if (set.has(id)) {
+        if (set.size <= 1) return prev;
+        set.delete(id);
+      } else {
+        set.add(id);
+      }
+      return sortDexContentRatings([...set]);
+    });
+  }, []);
+
+  const resetDexFilters = useCallback(() => {
+    setDexContentRatings([...DEFAULT_DEX_CONTENT_RATINGS]);
+    setIncludedTags([]);
+    setExcludedTags([]);
+    setIncludedTagsMode("AND");
+    setExcludedTagsMode("OR");
+    setStatusFilter([]);
+    setDemographicFilter([]);
+    setOriginalLangFilter([]);
+    setDexYear("");
+    setDexBrowseSort("random");
+    setDexSearchOrderBy("relevance");
+    setDexSearchOrderDir("desc");
+    setDexTagsPanelOpen(false);
+  }, []);
+
+  const resetRoliascanFilters = useCallback(() => {
+    setRoliascanIncludeGenres([]);
+    setRoliascanExcludeGenres([]);
+    setRoliascanIncludeDemographics([]);
+    setRoliascanExcludeDemographics([]);
+    setRoliascanStatuses([]);
+    setRoliascanAuthorsInput("");
+    setRoliascanArtistsInput("");
+    setRoliascanMinchap("");
+    setRoliascanYearFrom("");
+    setRoliascanYearTo("");
+    setRoliascanOrderKey("");
+    setRoliascanOrderDir("desc");
+    setRoliascanFolder("hot");
+    setRoliascanCommittedSearch("");
+    setRoliascanSearchQ("");
+  }, []);
+
+  const dexFilterBarCount = useMemo(() => {
+    let n =
+      includedTags.length +
+      excludedTags.length +
+      statusFilter.length +
+      demographicFilter.length +
+      originalLangFilter.length;
+    if (String(dexYear || "").trim()) n += 1;
+    if (!mangaEnglishReleasesOnly) n += 1;
+    const defaultSig = sortDexContentRatings(DEFAULT_DEX_CONTENT_RATINGS).join(
+      ",",
+    );
+    if (sortDexContentRatings(dexContentRatings).join(",") !== defaultSig)
+      n += 1;
+    return n;
+  }, [
+    includedTags,
+    excludedTags,
+    statusFilter,
+    demographicFilter,
+    originalLangFilter,
+    dexYear,
+    mangaEnglishReleasesOnly,
+    dexContentRatings,
+  ]);
+
+  const roliascanFilterBarCount = useMemo(() => {
+    let n =
+      roliascanIncludeGenres.length +
+      roliascanExcludeGenres.length +
+      roliascanIncludeDemographics.length +
+      roliascanExcludeDemographics.length +
+      roliascanStatuses.length;
+    if (parseCommaList(roliascanAuthorsInput).length > 0) n += 1;
+    if (parseCommaList(roliascanArtistsInput).length > 0) n += 1;
+    if (String(roliascanMinchap || "").trim()) n += 1;
+    if (String(roliascanYearFrom || "").trim()) n += 1;
+    if (String(roliascanYearTo || "").trim()) n += 1;
+    if (roliascanOrderKey || roliascanOrderDir !== "desc") n += 1;
+    if (roliascanFolder !== "hot") n += 1;
+    if (roliascanCommittedSearch.trim()) n += 1;
+    return n;
+  }, [
+    roliascanArtistsInput,
+    roliascanAuthorsInput,
+    roliascanCommittedSearch,
+    roliascanExcludeDemographics,
+    roliascanExcludeGenres,
+    roliascanFolder,
+    roliascanIncludeDemographics,
+    roliascanIncludeGenres,
+    roliascanMinchap,
+    roliascanOrderDir,
+    roliascanOrderKey,
+    roliascanStatuses,
+    roliascanYearFrom,
+    roliascanYearTo,
+  ]);
+
+  const roliascanGenreTerms = Array.isArray(roliascanTerms?.genre)
+    ? roliascanTerms.genre
+    : [];
+  const roliascanDemographicTerms = Array.isArray(roliascanTerms?.demographic)
+    ? roliascanTerms.demographic
+    : [];
+  const roliascanStatusTerms = Array.isArray(roliascanTerms?.status)
+    ? roliascanTerms.status
+    : [];
+  const roliascanYears = Array.isArray(roliascanTerms?.years)
+    ? roliascanTerms.years
+    : [];
+  const roliascanFormatTerms = Array.isArray(roliascanTerms?.format)
+    ? roliascanTerms.format
+    : [];
+
+  const currentItems = useMemo(() => {
+    if (false) {
+      if (tab === "following") return dexFollows;
+      if (tab === "library") return dexLibraryList;
+      if (tab === "popular") return popular;
+      if (tab === "recent") return recent;
+      if (tab === "search") return searchResults;
+    }
+    if (source === "mangadistrict") {
+      if (mdFilter.trim()) return mdSearchResults;
+      return mdLatest?.data || [];
+    }
+    if (source === "roliascan") {
+      return roliascanRows;
+    }
+    return [];
+  }, [
+    source,
+    tab,
+    popular,
+    recent,
+    searchResults,
+    dexFollows,
+    dexLibraryList,
+    roliascanRows,
+    mdLatest,
+    mdFilter,
+    mdSearchResults,
+    roliascanRows,
+  ]);
+
+  const mangaGridLoading = useMemo(() => {
+    if (currentItems.length > 0) return false;
+    if (busy) return true;
+    if (false) {
+      if (tab === "following" && dexFollowsBusy) return true;
+      if (tab === "library" && dexLibraryBusy) return true;
+      if (tab === "search" && committedSearchQuery.trim() && searching)
+        return true;
+      if (tab === "popular" && popularLoading) return true;
+      if (tab === "recent" && recentLoading) return true;
+    }
+    if (source === "mangadistrict" && mdFilter.trim() && mdSearchBusy)
+      return true;
+    if (source === "roliascan" && roliascanLoading) return true;
+    return false;
+  }, [
+    currentItems.length,
+    busy,
+    source,
+    tab,
+    dexFollowsBusy,
+    dexLibraryBusy,
+    committedSearchQuery,
+    searching,
+    popularLoading,
+    recentLoading,
+    roliascanLoading,
+    mdFilter,
+    mdSearchBusy,
+  ]);
+
+  const dexTabs = useMemo(() => {
+    const t = [...DEX_TABS, { id: "library", label: "Library" }];
+    if (dexAuthStatus?.connected)
+      t.push({ id: "following", label: "Following" });
+    if (committedSearchQuery.trim())
+      t.push({ id: "search", label: "Search Results" });
+    return t;
+  }, [dexAuthStatus?.connected, committedSearchQuery]);
+
+  const tabs = false
+    ? dexTabs
+    : source === "roliascan"
+      ? ROLIASCAN_TABS.map((t) => ({ id: t.id, label: t.label }))
+      : [];
+
+  const useMangaBrowseCardStagger =
+    currentItems.length > 0 &&
+    currentItems.length <= lifeSyncBrowseGridStaggerMaxItems;
+
+  const mangaCanPrevPage =
+    source === "mangadistrict" ? mdCurPage > 1 : roliascanPage > 1;
+  const mangaCanNextPage =
+    source === "mangadistrict"
+      ? mdCurPage < mdLastPage
+      : roliascanPage < roliascanLastPage;
+
+  const mangaGamepadHandlers = useMemo(
+    () => ({
+      [XBOX_GAMEPAD_BUTTONS.LB]: () => {
+        if (!mangaCanPrevPage || busy) return;
+        const cur = source === "mangadistrict" ? mdCurPage : roliascanPage;
+        goToPage(cur - 1);
+        setFocusedCardIndex(0);
+      },
+      [XBOX_GAMEPAD_BUTTONS.RB]: () => {
+        if (!mangaCanNextPage || busy) return;
+        const cur = source === "mangadistrict" ? mdCurPage : roliascanPage;
+        goToPage(cur + 1);
+        setFocusedCardIndex(0);
+      },
+      [XBOX_GAMEPAD_BUTTONS.X]: () => {
+        if (searchInputRef.current) {
+          searchInputRef.current.focus();
+        }
+      },
+      [XBOX_GAMEPAD_BUTTONS.DPAD_LEFT]: () => {
+        setFocusedCardIndex((prev) =>
+          Math.max(0, prev <= 0 ? currentItems.length - 1 : prev - 1),
+        );
+      },
+      [XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT]: () => {
+        setFocusedCardIndex(
+          (prev) => (prev + 1) % Math.max(1, currentItems.length),
+        );
+      },
+      [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
+        setFocusedCardIndex((prev) => Math.max(0, prev - 6));
+      },
+      [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
+        setFocusedCardIndex((prev) =>
+          Math.min(currentItems.length - 1, prev + 6),
+        );
+      },
+      [XBOX_GAMEPAD_BUTTONS.A]: () => {
+        const item = currentItems[focusedCardIndex];
+        if (item) openMangaFromCard(item);
+      },
+      [XBOX_GAMEPAD_BUTTONS.B]: () => {
+        if (focusedCardIndex >= 0) {
+          setFocusedCardIndex(-1);
+        } else if (selectedManga) {
+          goToList({ replace: true });
         } else {
-            routeDetailKey.current = null
-            mangaDetailEnrichGenRef.current += 1
-            setSelectedManga(null)
+          navigate(-1);
         }
-    }, [enrichSelectedManga, location.state?.mangaDetailPreview, route.detailMangaId, route.src])
+      },
+    }),
+    [
+      busy,
+      currentItems,
+      focusedCardIndex,
+      goToPage,
+      mangaCanNextPage,
+      mangaCanPrevPage,
+      mdCurPage,
+      navigate,
+      openMangaFromCard,
+      roliascanPage,
+      selectedManga,
+      source,
+    ],
+  );
 
-    function handleStartRead(mergedManga, chapter) {
-        if (!mergedManga?.id || !chapter?.id) return
-        const src = mergedManga.source || source
-        goToRead(mergedManga.id, chapter.id, src)
-    }
+  useLifeSyncGamepadInput({
+    enabled: controllerSupportEnabled && !selectedManga,
+    handlers: mangaGamepadHandlers,
+    repeatableButtons: [
+      XBOX_GAMEPAD_BUTTONS.DPAD_LEFT,
+      XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT,
+      XBOX_GAMEPAD_BUTTONS.DPAD_UP,
+      XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
+    ],
+  });
 
-    const mdLastPage = Math.max(1, parseInt(String(mdLatest?.lastPage ?? '1'), 10) || 1)
-    const mdCurPage = Math.min(mdLastPage, Math.max(1, parseInt(String(mdLatest?.currentPage ?? mdPage), 10) || 1))
-    const dexPopularLast = dexBrowseLastPage(popularTotal)
-    const dexRecentLast = dexBrowseLastPage(recentTotal)
-    const dexSearchLast = dexBrowseLastPage(searchTotal)
-
-    const toggleDexIncludeTag = useCallback(id => {
-        setExcludedTags(prev => prev.filter(x => x !== id))
-        setIncludedTags(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
-    }, [])
-
-    const toggleDexExcludeTag = useCallback(id => {
-        setIncludedTags(prev => prev.filter(x => x !== id))
-        setExcludedTags(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]))
-    }, [])
-
-    const toggleDexStatus = useCallback(s => {
-        setStatusFilter(prev => (prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]))
-    }, [])
-
-    const toggleDexDemographic = useCallback(d => {
-        setDemographicFilter(prev => (prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]))
-    }, [])
-
-    const toggleOriginalLang = useCallback(code => {
-        setOriginalLangFilter(prev => (prev.includes(code) ? prev.filter(x => x !== code) : [...prev, code]))
-    }, [])
-
-    const toggleRoliascanGenre = useCallback((value, mode = 'include') => {
-        const token = String(value || '').trim()
-        if (!token) return
-        if (mode === 'exclude') {
-            setRoliascanIncludeGenres((prev) => prev.filter((row) => row !== token))
-            setRoliascanExcludeGenres((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
-            return
-        }
-        setRoliascanExcludeGenres((prev) => prev.filter((row) => row !== token))
-        setRoliascanIncludeGenres((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
-    }, [])
-
-    const toggleRoliascanDemographic = useCallback((value, mode = 'include') => {
-        const token = String(value || '').trim()
-        if (!token) return
-        if (mode === 'exclude') {
-            setRoliascanIncludeDemographics((prev) => prev.filter((row) => row !== token))
-            setRoliascanExcludeDemographics((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
-            return
-        }
-        setRoliascanExcludeDemographics((prev) => prev.filter((row) => row !== token))
-        setRoliascanIncludeDemographics((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
-    }, [])
-
-    const cycleRoliascanGenre = useCallback((value) => {
-        const token = String(value || '').trim()
-        if (!token) return
-        const included = roliascanIncludeGenres.includes(token)
-        const excluded = roliascanExcludeGenres.includes(token)
-        if (!included && !excluded) {
-            toggleRoliascanGenre(token, 'include')
-            return
-        }
-        if (included) {
-            toggleRoliascanGenre(token, 'exclude')
-            return
-        }
-        setRoliascanExcludeGenres((prev) => prev.filter((row) => row !== token))
-    }, [roliascanExcludeGenres, roliascanIncludeGenres, toggleRoliascanGenre])
-
-    const cycleRoliascanDemographic = useCallback((value) => {
-        const token = String(value || '').trim()
-        if (!token) return
-        const included = roliascanIncludeDemographics.includes(token)
-        const excluded = roliascanExcludeDemographics.includes(token)
-        if (!included && !excluded) {
-            toggleRoliascanDemographic(token, 'include')
-            return
-        }
-        if (included) {
-            toggleRoliascanDemographic(token, 'exclude')
-            return
-        }
-        setRoliascanExcludeDemographics((prev) => prev.filter((row) => row !== token))
-    }, [roliascanExcludeDemographics, roliascanIncludeDemographics, toggleRoliascanDemographic])
-
-    const toggleRoliascanTag = useCallback((value, mode = 'include') => {
-        const token = String(value || '').trim()
-        if (!token) return
-        if (mode === 'exclude') {
-            setRoliascanIncludeTags((prev) => prev.filter((row) => row !== token))
-            setRoliascanExcludeTags((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
-            return
-        }
-        setRoliascanExcludeTags((prev) => prev.filter((row) => row !== token))
-        setRoliascanIncludeTags((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
-    }, [])
-
-    const cycleRoliascanTag = useCallback((value) => {
-        const token = String(value || '').trim()
-        if (!token) return
-        const included = roliascanIncludeTags.includes(token)
-        const excluded = roliascanExcludeTags.includes(token)
-        if (!included && !excluded) {
-            toggleRoliascanTag(token, 'include')
-            return
-        }
-        if (included) {
-            toggleRoliascanTag(token, 'exclude')
-            return
-        }
-        setRoliascanExcludeTags((prev) => prev.filter((row) => row !== token))
-    }, [roliascanExcludeTags, roliascanIncludeTags, toggleRoliascanTag])
-
-    const toggleRoliascanStatus = useCallback((value) => {
-        const token = String(value || '').trim()
-        if (!token) return
-        setRoliascanStatuses((prev) => (prev.includes(token) ? prev.filter((row) => row !== token) : [...prev, token]))
-    }, [])
-
-    const toggleDexContentRating = useCallback(id => {
-        setDexContentRatings(prev => {
-            const set = new Set(prev)
-            if (set.has(id)) {
-                if (set.size <= 1) return prev
-                set.delete(id)
-            } else {
-                set.add(id)
-            }
-            return sortDexContentRatings([...set])
-        })
-    }, [])
-
-    const resetDexFilters = useCallback(() => {
-        setDexContentRatings([...DEFAULT_DEX_CONTENT_RATINGS])
-        setIncludedTags([])
-        setExcludedTags([])
-        setIncludedTagsMode('AND')
-        setExcludedTagsMode('OR')
-        setStatusFilter([])
-        setDemographicFilter([])
-        setOriginalLangFilter([])
-        setDexYear('')
-        setDexBrowseSort('random')
-        setDexSearchOrderBy('relevance')
-        setDexSearchOrderDir('desc')
-        setDexTagsPanelOpen(false)
-    }, [])
-
-    const resetRoliascanFilters = useCallback(() => {
-        setRoliascanIncludeGenres([])
-        setRoliascanExcludeGenres([])
-        setRoliascanIncludeDemographics([])
-        setRoliascanExcludeDemographics([])
-        setRoliascanStatuses([])
-        setRoliascanAuthorsInput('')
-        setRoliascanArtistsInput('')
-        setRoliascanMinchap('')
-        setRoliascanYearFrom('')
-        setRoliascanYearTo('')
-        setRoliascanOrderKey('')
-        setRoliascanOrderDir('desc')
-        setRoliascanFolder('hot')
-        setRoliascanCommittedSearch('')
-        setRoliascanSearchQ('')
-    }, [])
-
-    const dexFilterBarCount = useMemo(() => {
-        let n =
-            includedTags.length +
-            excludedTags.length +
-            statusFilter.length +
-            demographicFilter.length +
-            originalLangFilter.length
-        if (String(dexYear || '').trim()) n += 1
-        if (!mangaEnglishReleasesOnly) n += 1
-        const defaultSig = sortDexContentRatings(DEFAULT_DEX_CONTENT_RATINGS).join(',')
-        if (sortDexContentRatings(dexContentRatings).join(',') !== defaultSig) n += 1
-        return n
-    }, [
-        includedTags,
-        excludedTags,
-        statusFilter,
-        demographicFilter,
-        originalLangFilter,
-        dexYear,
-            mangaEnglishReleasesOnly,
-            dexContentRatings,
-    ])
-
-    const roliascanFilterBarCount = useMemo(() => {
-        let n =
-            roliascanIncludeGenres.length +
-            roliascanExcludeGenres.length +
-            roliascanIncludeDemographics.length +
-            roliascanExcludeDemographics.length +
-            roliascanStatuses.length
-        if (parseCommaList(roliascanAuthorsInput).length > 0) n += 1
-        if (parseCommaList(roliascanArtistsInput).length > 0) n += 1
-        if (String(roliascanMinchap || '').trim()) n += 1
-        if (String(roliascanYearFrom || '').trim()) n += 1
-        if (String(roliascanYearTo || '').trim()) n += 1
-        if (roliascanOrderKey || roliascanOrderDir !== 'desc') n += 1
-        if (roliascanFolder !== 'hot') n += 1
-        if (roliascanCommittedSearch.trim()) n += 1
-        return n
-    }, [
-        roliascanArtistsInput,
-        roliascanAuthorsInput,
-        roliascanCommittedSearch,
-        roliascanExcludeDemographics,
-        roliascanExcludeGenres,
-        roliascanFolder,
-        roliascanIncludeDemographics,
-        roliascanIncludeGenres,
-        roliascanMinchap,
-        roliascanOrderDir,
-        roliascanOrderKey,
-        roliascanStatuses,
-        roliascanYearFrom,
-        roliascanYearTo,
-    ])
-
-    const roliascanGenreTerms = Array.isArray(roliascanTerms?.genre) ? roliascanTerms.genre : []
-    const roliascanDemographicTerms = Array.isArray(roliascanTerms?.demographic) ? roliascanTerms.demographic : []
-    const roliascanStatusTerms = Array.isArray(roliascanTerms?.status) ? roliascanTerms.status : []
-    const roliascanYears = Array.isArray(roliascanTerms?.years) ? roliascanTerms.years : []
-    const roliascanFormatTerms = Array.isArray(roliascanTerms?.format) ? roliascanTerms.format : []
-
-
-    const currentItems = useMemo(() => {
-        if (false) {
-            if (tab === 'following') return dexFollows
-            if (tab === 'library') return dexLibraryList
-            if (tab === 'popular') return popular
-            if (tab === 'recent') return recent
-            if (tab === 'search') return searchResults
-        }
-        if (source === 'mangadistrict') {
-            if (mdFilter.trim()) return mdSearchResults
-            return mdLatest?.data || []
-        }
-        if (source === 'roliascan') {
-            return roliascanRows
-        }
-        return []
-    }, [
-        source,
-        tab,
-        popular,
-        recent,
-        searchResults,
-        dexFollows,
-        dexLibraryList,
-        roliascanRows,
-        mdLatest,
-        mdFilter,
-        mdSearchResults,
-        roliascanRows,
-    ])
-
-    const mangaGridLoading = useMemo(() => {
-        if (currentItems.length > 0) return false
-        if (busy) return true
-        if (false) {
-            if (tab === 'following' && dexFollowsBusy) return true
-            if (tab === 'library' && dexLibraryBusy) return true
-            if (tab === 'search' && committedSearchQuery.trim() && searching) return true
-            if (tab === 'popular' && popularLoading) return true
-            if (tab === 'recent' && recentLoading) return true
-        }
-        if (source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy) return true
-        if (source === 'roliascan' && roliascanLoading) return true
-        return false
-    }, [
-        currentItems.length,
-        busy,
-        source,
-        tab,
-        dexFollowsBusy,
-        dexLibraryBusy,
-        committedSearchQuery,
-        searching,
-        popularLoading,
-        recentLoading,
-        roliascanLoading,
-        mdFilter,
-        mdSearchBusy,
-    ])
-
-    const dexTabs = useMemo(() => {
-        const t = [...DEX_TABS, { id: 'library', label: 'Library' }]
-        if (dexAuthStatus?.connected) t.push({ id: 'following', label: 'Following' })
-        if (committedSearchQuery.trim()) t.push({ id: 'search', label: 'Search Results' })
-        return t
-    }, [dexAuthStatus?.connected, committedSearchQuery])
-
-    const tabs = false
-        ? dexTabs
-        : source === 'roliascan'
-            ? ROLIASCAN_TABS.map(t => ({ id: t.id, label: t.label }))
-        : []
-
-    const useMangaBrowseCardStagger =
-        currentItems.length > 0 &&
-        currentItems.length <= lifeSyncBrowseGridStaggerMaxItems
-
-    const mangaCanPrevPage = source === 'mangadistrict' ? mdCurPage > 1 : roliascanPage > 1
-    const mangaCanNextPage = source === 'mangadistrict' ? mdCurPage < mdLastPage : roliascanPage < roliascanLastPage
-
-    const mangaGamepadHandlers = useMemo(() => ({
-        [XBOX_GAMEPAD_BUTTONS.LB]: () => {
-            if (!mangaCanPrevPage || busy) return
-            const cur = source === 'mangadistrict' ? mdCurPage : roliascanPage
-            goToPage(cur - 1)
-            setFocusedCardIndex(0)
-        },
-        [XBOX_GAMEPAD_BUTTONS.RB]: () => {
-            if (!mangaCanNextPage || busy) return
-            const cur = source === 'mangadistrict' ? mdCurPage : roliascanPage
-            goToPage(cur + 1)
-            setFocusedCardIndex(0)
-        },
-        [XBOX_GAMEPAD_BUTTONS.X]: () => {
-            if (searchInputRef.current) {
-                searchInputRef.current.focus()
-            }
-        },
-        [XBOX_GAMEPAD_BUTTONS.DPAD_LEFT]: () => {
-            setFocusedCardIndex(prev => Math.max(0, prev <= 0 ? currentItems.length - 1 : prev - 1))
-        },
-        [XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT]: () => {
-            setFocusedCardIndex(prev => (prev + 1) % Math.max(1, currentItems.length))
-        },
-        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
-            setFocusedCardIndex(prev => Math.max(0, prev - 6))
-        },
-        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
-            setFocusedCardIndex(prev => Math.min(currentItems.length - 1, prev + 6))
-        },
-        [XBOX_GAMEPAD_BUTTONS.A]: () => {
-            const item = currentItems[focusedCardIndex]
-            if (item) openMangaFromCard(item)
-        },
-        [XBOX_GAMEPAD_BUTTONS.B]: () => {
-            if (focusedCardIndex >= 0) {
-                setFocusedCardIndex(-1)
-            } else if (selectedManga) {
-                goToList({ replace: true })
-            } else {
-                navigate(-1)
-            }
-        },
-    }), [busy, currentItems, focusedCardIndex, goToPage, mangaCanNextPage, mangaCanPrevPage, mdCurPage, navigate, openMangaFromCard, roliascanPage, selectedManga, source])
-
-    useLifeSyncGamepadInput({
-        enabled: controllerSupportEnabled && !selectedManga,
-        handlers: mangaGamepadHandlers,
-        repeatableButtons: [
-            XBOX_GAMEPAD_BUTTONS.DPAD_LEFT,
-            XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT,
-            XBOX_GAMEPAD_BUTTONS.DPAD_UP,
-            XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
-        ],
-    })
-
-    if (!isLifeSyncConnected) {
-        return (
-            <div className="max-w-4xl mx-auto">
-                <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Manga</h1>
-                <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-                    Discover titles, read in the built-in chapter reader, and keep progress synced in your account.
-                </p>
-                <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
-                    <p className="text-[15px] font-bold text-[var(--mx-color-1a1628)] mb-2">LifeSync Not Connected</p>
-                    <p className="text-[13px] text-[var(--mx-color-5b5670)] mb-4">Connect LifeSync in your profile to access manga.</p>
-                    <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
-                        Go to Integrations
-                    </Link>
-                </div>
-            </div>
-        )
-    }
-
+  if (!isLifeSyncConnected) {
     return (
-        <LayoutGroup id="lifesync-manga">
-        <MotionDiv
-            className="min-w-0 w-full max-w-full space-y-6 sm:space-y-8"
-            style={{ transformOrigin: '50% 0%' }}
-            initial="initial"
-            animate="animate"
-            variants={lifeSyncDollyPageVariants}
-            transition={lifeSyncDollyPageTransition}
+      <MediaConnectPrompt
+        accent="manga"
+        title="Manga hub locked"
+        body="Discover titles, read in the built-in chapter reader, and keep progress synced — connect LifeSync in your profile to get started."
+      />
+    );
+  }
+
+  return (
+    <LayoutGroup id="lifesync-manga">
+      <MotionDiv
+        className="min-w-0 w-full max-w-full space-y-6 sm:space-y-8"
+        style={{ transformOrigin: "50% 0%" }}
+        initial="initial"
+        animate="animate"
+        variants={lifeSyncDollyPageVariants}
+        transition={lifeSyncDollyPageTransition}
+      >
+        <AnimatePresence mode="sync">
+          {selectedManga ? (
+            <MangaDetail
+              key={`${selectedManga.source || source}-${selectedManga.id}`}
+              manga={selectedManga}
+              source={source}
+              isLifeSyncConnected={isLifeSyncConnected}
+              onClose={() => goToList({ replace: true })}
+              onStartRead={handleStartRead}
+              roliascanConnected={Boolean(dexAuthStatus?.connected)}
+              browseTranslatedLang={
+                mangaEnglishReleasesOnly ? "en" : dexTranslatedLang
+              }
+            />
+          ) : null}
+        </AnimatePresence>
+
+        <div
+          className="flex min-w-0 w-full max-w-full flex-col gap-5 sm:gap-6"
+          style={{ pointerEvents: selectedManga ? "none" : undefined }}
         >
-            <AnimatePresence mode="sync">
-                {selectedManga ? (
-                    <MangaDetail
-                        key={`${selectedManga.source || source}-${selectedManga.id}`}
-                        manga={selectedManga}
-                        source={source}
-                        isLifeSyncConnected={isLifeSyncConnected}
-                        onClose={() => goToList({ replace: true })}
-                        onStartRead={handleStartRead}
-                        roliascanConnected={Boolean(dexAuthStatus?.connected)}
-                        browseTranslatedLang={mangaEnglishReleasesOnly ? 'en' : dexTranslatedLang}
-                    />
-                ) : null}
-            </AnimatePresence>
-
-            <div
-                className="flex min-w-0 w-full max-w-full flex-col gap-5 sm:gap-6"
-                style={{ pointerEvents: selectedManga ? 'none' : undefined }}
-            >
-            <div className="flex items-start justify-between gap-3 sm:gap-4">
-                <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync / Anime</p>
-                    <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Manga</h1>
-                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-                        Browse manga, manhwa and manhua, find chapters here and starts here.
-                    </p>
-                </div>
-                <div className="flex shrink-0 items-start gap-2">
-                    <ControllerHintBar
-                        cols={2}
-                        hints={[
-                            { btns: ['LB'], label: 'Prev page' },
-                            { btns: ['RB'], label: 'Next page' },
-                            { btns: ['X'], label: 'Search' },
-                            { btns: ['←→'], label: 'Navigate cards' },
-                            { btns: ['A'], label: 'Open manga' },
-                        ]}
-                    />
-                    <Link
-                        to="/dashboard/profile?tab=integrations"
-                        className="shrink-0 self-start whitespace-nowrap rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2 text-center text-[12px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 sm:pt-0.5"
-                    >
-                        Link / Disconnect
-                    </Link>
-                </div>
-            </div>
-
-            {error && <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{error}</div>}
-
-            {/* Search & filters toolbar (shared layout across sources) */}
-            {false && (
-                <div className="min-w-0 w-full max-w-full space-y-3">
-                    <form onSubmit={handleDexSearch} className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row">
-                        <input
-                            ref={searchInputRef}
-                            type="search"
-                            value={searchQ}
-                            onChange={e => setSearchQ(e.target.value)}
-                            placeholder="Search Roliascan…"
-                            className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setDexFiltersOpen(v => !v)}
-                            aria-expanded={dexFiltersOpen}
-                            className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
-                        >
-                            Filters
-                            {dexFilterBarCount > 0 && (
-                                <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">{dexFilterBarCount}</span>
-                            )}
-                            <svg className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${dexFiltersOpen ? '-rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                        {dexFilterBarCount > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => resetDexFilters()}
-                                className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
-                            >
-                                Reset
-                            </button>
-                        )}
-                        <button
-                            type="submit"
-                            disabled={searching}
-                            className="w-full sm:w-auto shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
-                        >
-                            {searching ? 'Searching...' : 'Search'}
-                        </button>
-                    </form>
-                    {dexFilterBarCount > 0 && !dexFiltersOpen && (
-                        <div className="flex flex-wrap items-center gap-2">
-                            {sortDexContentRatings(dexContentRatings).map((id) => (
-                                <button
-                                    key={`cr-${id}`}
-                                    type="button"
-                                    onClick={() => toggleDexContentRating(id)}
-                                    className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition "
-                                    title="Toggle content rating filter"
-                                >
-                                    {id}
-                                    <span className="text-[var(--mx-color-86868b)]">×</span>
-                                </button>
-                            ))}
-                            {String(dexYear || '').trim() ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setDexYear('')}
-                                    className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition"
-                                >
-                                    Year: {String(dexYear).trim()} <span className="text-[var(--mx-color-86868b)]">×</span>
-                                </button>
-                            ) : null}
-                            {!mangaEnglishReleasesOnly ? (
-                                <button
-                                    type="button"
-                                    onClick={() => void lifeSyncUpdatePreferences({ mangaEnglishReleasesOnly: true }).then(() => setDexTranslatedLang('en'))}
-                                    className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition "
-                                >
-                                    Any translation <span className="text-[var(--mx-color-86868b)]">×</span>
-                                </button>
-                            ) : null}
-                            {(includedTags.length || excludedTags.length || statusFilter.length || demographicFilter.length || originalLangFilter.length) ? (
-                                <button
-                                    type="button"
-                                    onClick={() => setDexFiltersOpen(true)}
-                                    className="inline-flex items-center gap-2 rounded-full bg-[var(--mx-color-c6ff00)]/25 px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/35 transition hover:bg-[var(--mx-color-c6ff00)]/30"
-                                >
-                                    More filters…
-                                </button>
-                            ) : null}
-                        </div>
-                    )}
-                    <AnimatePresence initial={false}>
-                        {dexFiltersOpen && (
-                            <MotionDiv
-                                key="manga-dex-toolbar-filters"
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={mangaFilterExpandTransition}
-                                className="w-full min-w-0 max-w-full overflow-hidden"
-                            >
-                                <div className="min-w-0 max-w-full border-t border-[var(--mx-color-f0f0f0)] pt-4">
-                                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                                        <div>
-                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Roliascan filters</p>
-                                            <p className="text-[12px] text-[var(--mx-color-5b5670)]">Tune discovery without leaving the page.</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {dexFilterBarCount > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => resetDexFilters()}
-                                                    className="inline-flex items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-86868b)] transition-colors hover:text-[var(--mx-color-1d1d1f)]"
-                                                >
-                                                    Reset
-                                                </button>
-                                            )}
-                                            <button
-                                                type="button"
-                                                onClick={() => setDexFiltersOpen(false)}
-                                                className="inline-flex items-center justify-center rounded-xl bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
-                                            >
-                                                Close
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
-                                        <div className="md:col-span-2">
-                                            <DexContentRatingSection
-                                                selectedIds={dexContentRatings}
-                                                nsfwEnabled={nsfwEnabled}
-                                                onToggle={toggleDexContentRating}
-                                            />
-                                        </div>
-
-                                        <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Releases &amp; translation</p>
-                                            <div className="flex flex-wrap gap-x-5 gap-y-2 items-center text-[11px] text-[var(--mx-color-86868b)]">
-                                                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={mangaEnglishReleasesOnly}
-                                                        onChange={e => {
-                                                            const on = e.target.checked
-                                                            void lifeSyncUpdatePreferences({ mangaEnglishReleasesOnly: on }).then(() => {
-                                                                if (on) setDexTranslatedLang('en')
-                                                            })
-                                                        }}
-                                                        className="rounded border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] focus:ring-[var(--mx-color-c6ff00)]"
-                                                    />
-                                                    English releases only
-                                                </label>
-                                            </div>
-
-                                            <div className="mt-3 flex flex-wrap gap-3 items-end">
-                                                <label
-                                                    className={`text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[160px] ${mangaEnglishReleasesOnly ? 'opacity-70' : ''}`}
-                                                    title={mangaEnglishReleasesOnly ? 'Turn off in filters or under Profile → Integrations → Viewing preferences to pick another translation language.' : undefined}
-                                                >
-                                                    Translation language
-                                                    <select
-                                                        value={dexTranslatedLang}
-                                                        onChange={e => setDexTranslatedLang(e.target.value)}
-                                                        disabled={mangaEnglishReleasesOnly}
-                                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none disabled:cursor-not-allowed"
-                                                    >
-                                                        {DEX_TRANSLATION_LANG_OPTIONS.map(o => (
-                                                            <option key={o.value} value={o.value}>{o.label}</option>
-                                                        ))}
-                                                    </select>
-                                                </label>
-                                                <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 w-28">
-                                                    Year
-                                                    <input
-                                                        type="text"
-                                                        inputMode="numeric"
-                                                        value={dexYear}
-                                                        onChange={e => setDexYear(e.target.value.replace(/[^\d]/g, ''))}
-                                                        placeholder="Any"
-                                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] placeholder:text-[var(--mx-color-86868b)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                                                    />
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Original language</p>
-                                            <div className="mt-2 flex flex-wrap gap-1">
-                                                {ORIGINAL_LANG_OPTIONS.map(o => (
-                                                    <button
-                                                        key={o.value}
-                                                        type="button"
-                                                        onClick={() => toggleOriginalLang(o.value)}
-                                                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                            originalLangFilter.includes(o.value)
-                                                                ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                                : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                                        }`}
-                                                    >
-                                                        {o.label}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        <div className="md:col-span-2">
-                                            <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setDexTagsPanelOpen(v => !v)}
-                                                    className="flex w-full items-center justify-between gap-2 text-left"
-                                                >
-                                                    <span className="min-w-0">
-                                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Tags &amp; genres</p>
-                                                        <p className="text-[12px] text-[var(--mx-color-5b5670)]">
-                                                            {includedTags.length || excludedTags.length || statusFilter.length || demographicFilter.length
-                                                                ? `${includedTags.length + excludedTags.length + statusFilter.length + demographicFilter.length} active`
-                                                                : 'Optional'}
-                                                        </p>
-                                                    </span>
-                                                    <span className="inline-flex shrink-0 items-center gap-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">
-                                                        {dexTagsPanelOpen ? 'Hide' : 'Edit'}
-                                                        <svg
-                                                            className={`h-4 w-4 text-[var(--mx-color-86868b)] transition-transform ${dexTagsPanelOpen ? '-rotate-180' : ''}`}
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            viewBox="0 0 24 24"
-                                                            strokeWidth="2"
-                                                            aria-hidden
-                                                        >
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                                        </svg>
-                                                    </span>
-                                                </button>
-
-                                                <AnimatePresence initial={false}>
-                                                    {dexTagsPanelOpen && (
-                                                        <MotionDiv
-                                                            key="dex-tags-panel"
-                                                            initial={{ height: 0, opacity: 0 }}
-                                                            animate={{ height: 'auto', opacity: 1 }}
-                                                            exit={{ height: 0, opacity: 0 }}
-                                                            transition={mangaFilterExpandTransition}
-                                                            className="min-w-0 max-w-full overflow-hidden"
-                                                        >
-                                                            <div className="mt-3">
-                                                                <DexGenreFilter
-                                                                    embedded
-                                                                    tags={dexTags}
-                                                                    includedTags={includedTags}
-                                                                    excludedTags={excludedTags}
-                                                                    onToggleInclude={toggleDexIncludeTag}
-                                                                    onToggleExclude={toggleDexExcludeTag}
-                                                                    statusFilter={statusFilter}
-                                                                    onStatusChange={toggleDexStatus}
-                                                                    demographicFilter={demographicFilter}
-                                                                    onDemographicChange={toggleDexDemographic}
-                                                                    includedTagsMode={includedTagsMode}
-                                                                    excludedTagsMode={excludedTagsMode}
-                                                                    onIncludedTagsMode={setIncludedTagsMode}
-                                                                    onExcludedTagsMode={setExcludedTagsMode}
-                                                                />
-                                                            </div>
-                                                        </MotionDiv>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </MotionDiv>
-                        )}
-                    </AnimatePresence>
-                    {dexAuthStatus && !dexAuthStatus.oauthConfigured && (
-                        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-                            Signing in with Roliascan isn’t set up for this site yet. You can still browse and search public catalogs.
-                        </p>
-                    )}
-                </div>
-            )}
-
-            {source === 'roliascan' && (
-                <div className="min-w-0 w-full max-w-full space-y-3">
-                    <form onSubmit={handleRoliascanSearch} className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row">
-                        <input
-                            ref={searchInputRef}
-                            type="search"
-                            value={roliascanSearchQ}
-                            onChange={(e) => setRoliascanSearchQ(e.target.value)}
-                            placeholder="Search Roliascan…"
-                            className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setRoliascanFiltersOpen((v) => !v)}
-                            aria-expanded={roliascanFiltersOpen}
-                            className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
-                        >
-                            Filters
-                            {roliascanFilterBarCount > 0 && (
-                                <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">{roliascanFilterBarCount}</span>
-                            )}
-                            <svg className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${roliascanFiltersOpen ? '-rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                        {roliascanFilterBarCount > 0 && (
-                            <button
-                                type="button"
-                                onClick={resetRoliascanFilters}
-                                className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
-                            >
-                                Reset
-                            </button>
-                        )}
-                        <button
-                            type="submit"
-                            className="w-full sm:w-auto shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
-                        >
-                            Search
-                        </button>
-                    </form>
-
-                    <AnimatePresence initial={false}>
-                        {roliascanFiltersOpen && (
-                            <MotionDiv
-                                key="roliascan-toolbar-filters"
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={mangaFilterExpandTransition}
-                                className="w-full min-w-0 max-w-full overflow-hidden border-t border-[var(--mx-color-f0f0f0)] pt-4"
-                            >
-                                <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
-                                    <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Sorting</p>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                                Order
-                                                <select
-                                                    value={roliascanOrderKey}
-                                                    onChange={(e) => setRoliascanOrderKey(e.target.value)}
-                                                    className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                                                >
-                                                    {ROLIASCAN_ORDER_OPTIONS.map((option) => (
-                                                        <option key={option.id} value={option.id}>{option.label}</option>
-                                                    ))}
-                                                </select>
-                                            </label>
-                                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                                Direction
-                                                <select
-                                                    value={roliascanOrderDir}
-                                                    onChange={(e) => setRoliascanOrderDir(e.target.value)}
-                                                    className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                                                >
-                                                    <option value="desc">Descending</option>
-                                                    <option value="asc">Ascending</option>
-                                                </select>
-                                            </label>
-                                        </div>
-                                        <div className="mt-3 grid grid-cols-3 gap-2">
-                                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                                Min chapter
-                                                <input
-                                                    type="number"
-                                                    value={roliascanMinchap}
-                                                    onChange={(e) => setRoliascanMinchap(e.target.value)}
-                                                    className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
-                                                />
-                                            </label>
-                                            {roliascanYears.length > 0 ? (
-                                                <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                                    Year
-                                                    <select
-                                                        value={roliascanYearFrom || ''}
-                                                        onChange={(e) => {
-                                                            const v = e.target.value
-                                                            setRoliascanYearFrom(v)
-                                                            setRoliascanYearTo(v)
-                                                        }}
-                                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
-                                                    >
-                                                        <option value="">Any year</option>
-                                                        {roliascanYears.map((y) => (
-                                                            <option key={String(y)} value={String(y)}>{String(y)}</option>
-                                                        ))}
-                                                    </select>
-                                                </label>
-                                            ) : (
-                                                <>
-                                                    <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                                        Year from
-                                                        <input
-                                                            type="number"
-                                                            value={roliascanYearFrom}
-                                                            onChange={(e) => setRoliascanYearFrom(e.target.value)}
-                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
-                                                        />
-                                                    </label>
-                                                    <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                                        Year to
-                                                        <input
-                                                            type="number"
-                                                            value={roliascanYearTo}
-                                                            onChange={(e) => setRoliascanYearTo(e.target.value)}
-                                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
-                                                        />
-                                                    </label>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Authors & Artists</p>
-                                        <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                            Authors (comma separated)
-                                            <input
-                                                type="text"
-                                                value={roliascanAuthorsInput}
-                                                onChange={(e) => setRoliascanAuthorsInput(e.target.value)}
-                                                placeholder="eiichiro oda, ..."
-                                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
-                                            />
-                                        </label>
-                                        <label className="mt-2 text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
-                                            Artists (comma separated)
-                                            <input
-                                                type="text"
-                                                value={roliascanArtistsInput}
-                                                onChange={(e) => setRoliascanArtistsInput(e.target.value)}
-                                                placeholder="artist slug, ..."
-                                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
-                                            />
-                                        </label>
-                                    </div>
-
-                                    <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Genres</p>
-                                        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                                            {roliascanGenreTerms.slice(0, 240).map((term) => {
-                                                const key = roliascanTermToken(term)
-                                                const title = String(term.title || term.slug || key)
-                                                if (!key || !title) return null
-                                                const included = roliascanIncludeGenres.includes(key)
-                                                const excluded = roliascanExcludeGenres.includes(key)
-                                                return (
-                                                    <button
-                                                        key={`cg-${key}`}
-                                                        type="button"
-                                                        onClick={() => cycleRoliascanGenre(key)}
-                                                        onContextMenu={(event) => {
-                                                            event.preventDefault()
-                                                            toggleRoliascanGenre(key, 'exclude')
-                                                        }}
-                                                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                            included
-                                                                ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                                : excluded
-                                                                    ? 'bg-rose-100 text-rose-700 ring-1 ring-rose-200'
-                                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                                        }`}
-                                                    >
-                                                        {title}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Tap cycles include → exclude → clear. Right-click toggles exclude.</p>
-                                    </div>
-
-                                    <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Tags</p>
-                                        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                                            {roliascanFormatTerms.slice(0, 240).map((term) => {
-                                                const key = roliascanTermToken(term)
-                                                const title = String(term.title || term.slug || key)
-                                                if (!key || !title) return null
-                                                const included = roliascanIncludeTags.includes(key)
-                                                const excluded = roliascanExcludeTags.includes(key)
-                                                return (
-                                                    <button
-                                                        key={`ct-${key}`}
-                                                        type="button"
-                                                        onClick={() => cycleRoliascanTag(key)}
-                                                        onContextMenu={(event) => {
-                                                            event.preventDefault()
-                                                            toggleRoliascanTag(key, 'exclude')
-                                                        }}
-                                                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                            included
-                                                                ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                                : excluded
-                                                                    ? 'bg-rose-100 text-rose-700 ring-1 ring-rose-200'
-                                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                                        }`}
-                                                    >
-                                                        {title}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Tap cycles include → exclude → clear. Right-click toggles exclude.</p>
-                                    </div>
-
-                                    <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Demographics & Status</p>
-                                        <div className="flex flex-wrap gap-1">
-                                            {roliascanDemographicTerms.slice(0, 120).map((term) => {
-                                                const key = roliascanTermToken(term)
-                                                const title = String(term.title || term.slug || key)
-                                                if (!key || !title) return null
-                                                const included = roliascanIncludeDemographics.includes(key)
-                                                const excluded = roliascanExcludeDemographics.includes(key)
-                                                return (
-                                                    <button
-                                                        key={`cd-${key}`}
-                                                        type="button"
-                                                        onClick={() => cycleRoliascanDemographic(key)}
-                                                        onContextMenu={(event) => {
-                                                            event.preventDefault()
-                                                            toggleRoliascanDemographic(key, 'exclude')
-                                                        }}
-                                                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                            included
-                                                                ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                                : excluded
-                                                                    ? 'bg-rose-100 text-rose-700 ring-1 ring-rose-200'
-                                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                                        }`}
-                                                    >
-                                                        {title}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Tap cycles include → exclude → clear. Right-click toggles exclude.</p>
-                                        <div className="flex flex-wrap gap-1">
-                                            {roliascanStatusTerms.map((status) => {
-                                                const key = String(status.id || status.slug || status.title || '').trim()
-                                                const title = String(status.title || status.slug || key)
-                                                if (!key || !title) return null
-                                                return (
-                                                    <button
-                                                        key={`cs-${key}`}
-                                                        type="button"
-                                                        onClick={() => toggleRoliascanStatus(key)}
-                                                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                            roliascanStatuses.includes(key)
-                                                                ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                                : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                                        }`}
-                                                    >
-                                                        {title}
-                                                    </button>
-                                                )
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            </MotionDiv>
-                        )}
-                    </AnimatePresence>
-                </div>
-            )}
-
-            {source === 'mangadistrict' && (
-                <div className="min-w-0 w-full max-w-full space-y-3">
-                    <form
-                        className="flex min-w-0 w-full max-w-full flex-wrap items-stretch gap-2"
-                        onSubmit={e => {
-                            e.preventDefault()
-                        }}
-                    >
-                        <input
-                            ref={searchInputRef}
-                            type="search"
-                            value={mdFilter}
-                            onChange={e => setMdFilter(e.target.value)}
-                            placeholder="Search Manga District…"
-                            className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setMdFiltersOpen(v => !v)}
-                            aria-expanded={mdFiltersOpen}
-                            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
-                        >
-                            Filters
-                            {mdFilterBarCount > 0 && (
-                                <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">{mdFilterBarCount}</span>
-                            )}
-                            <svg className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${mdFiltersOpen ? '-rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={mdSearchBusy && Boolean(mdFilter.trim())}
-                            className="shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
-                        >
-                            {mdSearchBusy && mdFilter.trim() ? 'Searching...' : 'Search'}
-                        </button>
-                    </form>
-                    {!mdFilter.trim() && (
-                        <div className="min-w-0 w-full max-w-full space-y-1.5">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Order by</p>
-                            <LifeSyncSectionNav
-                                size="dense"
-                                ariaLabel="Manga District order"
-                                layoutId="lifesync-manga-md-order-by"
-                                items={MD_ORDER_BY_OPTIONS.map(o => ({ id: o.id, label: o.label }))}
-                                activeId={mdBrowse}
-                                onSelect={id => {
-                                    setMdBrowse(id)
-                                    goToPage(1)
-                                }}
-                            />
-                        </div>
-                    )}
-                    <AnimatePresence initial={false}>
-                        {mdFiltersOpen && (
-                            <MotionDiv
-                                key="manga-md-toolbar-filters"
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: 'auto', opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={mangaFilterExpandTransition}
-                                className="w-full min-w-0 max-w-full overflow-hidden"
-                            >
-                                <div className="min-w-0 max-w-full space-y-4 border-t border-[var(--mx-color-f0f0f0)] pt-3">
-                            <div className="space-y-1.5">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Section</p>
-                                <div className="flex flex-wrap gap-1">
-                                    {['latest', 'censored', 'uncensored'].map(s => (
-                                        <button
-                                            key={s}
-                                            type="button"
-                                            onClick={() => setMdSection(s)}
-                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-                                                mdSection === s
-                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                            }`}
-                                        >
-                                            {s === 'latest' ? 'All Latest' : s}
-                                        </button>
-                                    ))}
-                                </div>
-                                <p className="text-[11px] text-[var(--mx-color-86868b)]">Section applies when no type is selected (latest releases feed). Censored still filters out uncensored rows from listings.</p>
-                            </div>
-                            <div className="space-y-1.5">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Type of manga</p>
-                                <div className="flex flex-wrap gap-1">
-                                    {MD_TYPE_OPTIONS.map(({ slug, label }) => (
-                                        <button
-                                            key={slug}
-                                            type="button"
-                                            onClick={() => setMdTypeSlug(prev => (prev === slug ? '' : slug))}
-                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                mdTypeSlug === slug
-                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                            }`}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Order by</p>
-                                <div className="flex flex-wrap gap-1">
-                                    {MD_ORDER_BY_OPTIONS.map(({ id, label }) => (
-                                        <button
-                                            key={id}
-                                            type="button"
-                                            onClick={() => {
-                                                setMdBrowse(id)
-                                                goToPage(1)
-                                            }}
-                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                mdBrowse === id
-                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                            }`}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Filters</p>
-                                <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                                    {MD_FILTER_OPTIONS.map(({ slug, label }) => (
-                                        <button
-                                            key={slug}
-                                            type="button"
-                                            onClick={() => setMdFilterGenre(prev => (prev === slug ? '' : slug))}
-                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                mdFilterGenre === slug
-                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
-                                            }`}
-                                        >
-                                            {label}
-                                        </button>
-                                    ))}
-                                </div>
-                                <p className="text-[11px] text-[var(--mx-color-86868b)]">{"With a type selected, the tag narrows via the site's genre filter. With no type, the tag becomes the main browse path."}</p>
-                            </div>
-                                </div>
-                            </MotionDiv>
-                        )}
-                    </AnimatePresence>
-                </div>
-            )}
-
-            {/* Content tabs (Roliascan + Roliascan type tabs) */}
-            {tabs.length > 0 && (
-                <LifeSyncSectionNav
-                    ariaLabel={source === 'roliascan' ? 'Roliascan type tabs' : 'Roliascan lists'}
-                    layoutId="lifesync-manga-dex-tab"
-                    items={tabs.map(t => ({ id: t.id, label: t.label }))}
-                    activeId={tab}
-                    onSelect={(id) => goToTab(id)}
+          <MediaPageHeader
+            accent={source === "mangadistrict" ? "hmanhwa" : "manga"}
+            kicker="LifeSync · Reading"
+            title={source === "mangadistrict" ? "H Manhwa" : "Manga"}
+            subtitle="Browse manga, manhwa, and manhua — open chapters straight into the reader."
+            icon={
+              <svg
+                className="h-5.5 w-5.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth="2"
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
                 />
-            )}
-
-            {source === 'roliascan' && (
-                <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">Browse order</p>
-                    <LifeSyncSectionNav
-                        size="dense"
-                        ariaLabel="Roliascan browse order"
-                        layoutId="lifesync-manga-roliascan-folder"
-                        items={ROLIASCAN_FOLDER_TABS.map((row) => ({ id: row.id, label: row.label }))}
-                        activeId={roliascanFolder}
-                        onSelect={(id) => {
-                            setRoliascanFolder(id)
-                            setRoliascanOrderKey('')
-                            setRoliascanOrderDir('desc')
-                            setRoliascanPage(1)
-                            if (route.src === 'roliascan') {
-                                navigate(`${basePath}/roliascan/${route.tab || 'manga'}/page/1${location.search || ''}`)
-                            }
-                        }}
-                    />
-                </div>
-            )}
-
-            {false && tab === 'library' && (
-                <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">Library</p>
-                    <LifeSyncSectionNav
-                        size="dense"
-                        ariaLabel="Library status"
-                        layoutId="lifesync-manga-library-status"
-                        items={MANGADEX_LIBRARY_STATUS_TABS.map(st => ({ id: st.value, label: st.label }))}
-                        activeId={libraryListStatus}
-                        onSelect={(id) => setLibraryListStatus(id)}
-                    />
-                    {!dexAuthStatus?.connected && (
-                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                            Link Roliascan under Profile → Integrations to see titles from your Roliascan reading lists.
-                        </p>
-                    )}
-                </div>
-            )}
-
-            {false && (tab === 'popular' || tab === 'recent') && (
-                <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">Browse</p>
-                    <LifeSyncSectionNav
-                        size="dense"
-                        ariaLabel="Browse sort"
-                        layoutId="lifesync-manga-browse-sort"
-                        items={BROWSE_SORT_TABS.map(st => ({ id: st.id, label: st.label }))}
-                        activeId={dexBrowseSort}
-                        onSelect={(id) => setDexBrowseSort(id)}
-                    />
-                    {dexBrowseSort === 'random' && (
-                        <p className="text-[11px] text-[var(--mx-color-86868b)]">Random uses a fresh slice each load — use Refresh or pick another sort to page through the full catalog.</p>
-                    )}
-                </div>
-            )}
-
-            {false && tab === 'search' && committedSearchQuery.trim() && (
-                <div className="flex flex-wrap items-end gap-3">
-                    <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[160px]">
-                        Search sort
-                        <select
-                            value={dexSearchOrderBy}
-                            onChange={e => setDexSearchOrderBy(e.target.value)}
-                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                        >
-                            {SEARCH_SORT_OPTIONS.map(o => (
-                                <option key={o.value} value={o.value}>{o.label}</option>
-                            ))}
-                        </select>
-                    </label>
-                    <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[120px]">
-                        Direction
-                        <select
-                            value={dexSearchOrderDir}
-                            onChange={e => setDexSearchOrderDir(e.target.value)}
-                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                        >
-                            <option value="desc">Descending</option>
-                            <option value="asc">Ascending</option>
-                        </select>
-                    </label>
-                </div>
-            )}
-
-            {/* Pagination for MangaDistrict latest */}
-            {source === 'mangadistrict' && !mdFilter.trim() && mdLatest && (
-                <div className="flex items-center justify-between gap-3">
-                    <p className="text-[11px] text-[var(--mx-color-86868b)]">Page {mdCurPage} of {mdLastPage}</p>
-                    <div className="flex gap-2">
-                        <button type="button" disabled={busy || mdCurPage <= 1} onClick={() => goToPage(mdCurPage - 1)} className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40">Previous</button>
-                        <button type="button" disabled={busy || mdCurPage >= mdLastPage} onClick={() => goToPage(mdCurPage + 1)} className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40">Next</button>
-                    </div>
-                </div>
-            )}
-
-            {source === 'roliascan' && (
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                        Page {roliascanPage} of {roliascanLastPage}
-                        {roliascanTotal > 0 && <span className="ml-1">({roliascanTotal.toLocaleString()} titles)</span>}
-                    </p>
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            disabled={roliascanLoading || roliascanPage <= 1}
-                            onClick={() => goToPage(roliascanPage - 1)}
-                            className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                        >
-                            Previous
-                        </button>
-                        <button
-                            type="button"
-                            disabled={roliascanLoading || roliascanPage >= roliascanLastPage}
-                            onClick={() => goToPage(roliascanPage + 1)}
-                            className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                        >
-                            Next
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {false && tab === 'popular' && dexBrowseSort !== 'random' && (
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                        Page {dexPopularPage} of {dexPopularLast}
-                        {popularTotal > 0 && <span className="ml-1">({popularTotal.toLocaleString()} titles)</span>}
-                    </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <button type="button" disabled={dexPopularPage <= 1} onClick={() => goToPage(dexPopularPage - 1)} className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40">Previous</button>
-                        <div className="flex items-center gap-1.5">
-                            {(() => {
-                                const cur = dexPopularPage
-                                const last = dexPopularLast
-                                const pages = []
-                                const start = Math.max(1, cur - 2)
-                                const end = Math.min(last, cur + 2)
-                                if (start > 1) pages.push(1, '…')
-                                for (let p = start; p <= end; p += 1) pages.push(p)
-                                if (end < last) pages.push('…', last)
-                                return pages.map((p, idx) =>
-                                    typeof p === 'number' ? (
-                                        <button
-                                            key={p}
-                                            type="button"
-                                            onClick={() => goToPage(p)}
-                                            className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
-                                                p === cur
-                                                    ? 'border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm'
-                                                    : 'bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]'
-                                            }`}
-                                            aria-current={p === cur ? 'page' : undefined}
-                                        >
-                                            {p}
-                                        </button>
-                                    ) : (
-                                        <span key={`dots-pop-${idx}`} className="px-1 text-[11px] text-[var(--mx-color-86868b)]">
-                                            …
-                                        </span>
-                                    )
-                                )
-                            })()}
-                        </div>
-                        <button type="button" disabled={dexPopularPage >= dexPopularLast} onClick={() => goToPage(dexPopularPage + 1)} className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40">Next</button>
-                    </div>
-                </div>
-            )}
-
-            {false && tab === 'popular' && dexBrowseSort === 'random' && popularTotal > 0 && (
-                <p className="text-[11px] text-[var(--mx-color-86868b)]">{popularTotal.toLocaleString()} titles match your filters (showing {DEX_PAGE_SIZE} at random).</p>
-            )}
-
-            {false && tab === 'recent' && dexBrowseSort !== 'random' && (
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                        Page {dexRecentPage} of {dexRecentLast}
-                        {recentTotal > 0 && <span className="ml-1">({recentTotal.toLocaleString()} titles)</span>}
-                    </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <button type="button" disabled={dexRecentPage <= 1} onClick={() => goToPage(dexRecentPage - 1)} className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40">Previous</button>
-                        <div className="flex items-center gap-1.5">
-                            {(() => {
-                                const cur = dexRecentPage
-                                const last = dexRecentLast
-                                const pages = []
-                                const start = Math.max(1, cur - 2)
-                                const end = Math.min(last, cur + 2)
-                                if (start > 1) pages.push(1, '…')
-                                for (let p = start; p <= end; p += 1) pages.push(p)
-                                if (end < last) pages.push('…', last)
-                                return pages.map((p, idx) =>
-                                    typeof p === 'number' ? (
-                                        <button
-                                            key={p}
-                                            type="button"
-                                            onClick={() => goToPage(p)}
-                                            className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
-                                                p === cur
-                                                    ? 'border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm'
-                                                    : 'bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]'
-                                            }`}
-                                            aria-current={p === cur ? 'page' : undefined}
-                                        >
-                                            {p}
-                                        </button>
-                                    ) : (
-                                        <span key={`dots-rec-${idx}`} className="px-1 text-[11px] text-[var(--mx-color-86868b)]">
-                                            …
-                                        </span>
-                                    )
-                                )
-                            })()}
-                        </div>
-                        <button type="button" disabled={dexRecentPage >= dexRecentLast} onClick={() => goToPage(dexRecentPage + 1)} className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40">Next</button>
-                    </div>
-                </div>
-            )}
-
-            {false && tab === 'recent' && dexBrowseSort === 'random' && recentTotal > 0 && (
-                <p className="text-[11px] text-[var(--mx-color-86868b)]">{recentTotal.toLocaleString()} titles match your filters (showing {DEX_PAGE_SIZE} at random).</p>
-            )}
-
-            {false && tab === 'search' && committedSearchQuery.trim() && (
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                    <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                        Page {dexSearchPage} of {dexSearchLast}
-                        {searchTotal > 0 && <span className="ml-1">({searchTotal.toLocaleString()} titles)</span>}
-                    </p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <button type="button" disabled={searching || dexSearchPage <= 1} onClick={() => goToPage(dexSearchPage - 1)} className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40">Previous</button>
-                        <div className="flex items-center gap-1.5">
-                            {(() => {
-                                const cur = dexSearchPage
-                                const last = dexSearchLast
-                                const pages = []
-                                const start = Math.max(1, cur - 2)
-                                const end = Math.min(last, cur + 2)
-                                if (start > 1) pages.push(1, '…')
-                                for (let p = start; p <= end; p += 1) pages.push(p)
-                                if (end < last) pages.push('…', last)
-                                return pages.map((p, idx) =>
-                                    typeof p === 'number' ? (
-                                        <button
-                                            key={p}
-                                            type="button"
-                                            onClick={() => goToPage(p)}
-                                            className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
-                                                p === cur
-                                                    ? 'border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm'
-                                                    : 'bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]'
-                                            }`}
-                                            aria-current={p === cur ? 'page' : undefined}
-                                        >
-                                            {p}
-                                        </button>
-                                    ) : (
-                                        <span key={`dots-s-${idx}`} className="px-1 text-[11px] text-[var(--mx-color-86868b)]">
-                                            …
-                                        </span>
-                                    )
-                                )
-                            })()}
-                        </div>
-                        <button type="button" disabled={searching || dexSearchPage >= dexSearchLast} onClick={() => goToPage(dexSearchPage + 1)} className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40">Next</button>
-                    </div>
-                </div>
-            )}
-
-            {/* Content grid — only this block animates on source/tab change */}
-            <AnimatePresence mode="wait">
-                <MotionDiv
-                    key={false ? `${source}-${tab}` : source}
-                    className="min-w-0 max-w-full space-y-4"
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    variants={lifeSyncSectionPresenceVariants}
-                    transition={lifeSyncSectionPresenceTransition}
+              </svg>
+            }
+            actions={
+              <>
+                <ControllerHintBar
+                  cols={2}
+                  hints={[
+                    { btns: ["LB"], label: "Prev page" },
+                    { btns: ["RB"], label: "Next page" },
+                    { btns: ["X"], label: "Search" },
+                    { btns: ["←→"], label: "Navigate cards" },
+                    { btns: ["A"], label: "Open manga" },
+                  ]}
+                />
+                <Link
+                  to="/dashboard/profile?tab=integrations"
+                  className="shrink-0 self-start whitespace-nowrap rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2 text-center text-[12px] font-bold text-[var(--mx-color-1a1628)] shadow-sm transition-all hover:-translate-y-px hover:border-[var(--mx-color-c6ff00)]/60 sm:pt-2"
                 >
-            {mangaGridLoading ? (
-                <LifesyncMangaBrowseGridSkeleton />
-            ) : currentItems.length > 0 ? (
-                useMangaBrowseCardStagger ? (
-                    <MotionDiv
-                        className="grid grid-cols-2 gap-4 items-stretch sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
-                        variants={lifeSyncStaggerContainerDense}
-                        initial="hidden"
-                        animate="show"
-                    >
-                        {currentItems.map((manga, i) => (
-                            <MotionDiv
-                                key={`${manga.source || source}-${manga.id || i}`}
-                                data-focused-card={focusedCardIndex === i ? 'true' : undefined}
-                                className={`min-h-0${focusedCardIndex === i ? ' rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}`}
-                                variants={lifeSyncStaggerItemFade}
-                            >
-                                <MangaCard manga={{ ...manga, source: manga.source || source }} onClick={openMangaFromCard} />
-                            </MotionDiv>
-                        ))}
-                    </MotionDiv>
-                ) : (
-                    <MotionDiv
-                        className="grid grid-cols-2 gap-4 items-stretch sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={lifeSyncPageTransition}
-                    >
-                        {currentItems.map((manga, i) => (
-                            <div key={`${manga.source || source}-${manga.id || i}`} data-focused-card={focusedCardIndex === i ? 'true' : undefined} className={`min-h-0${focusedCardIndex === i ? ' rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}`}>
-                                <MangaCard manga={{ ...manga, source: manga.source || source }} onClick={openMangaFromCard} />
-                            </div>
-                        ))}
-                    </MotionDiv>
-                )
-            ) : !busy &&
-              !(false && tab === 'following' && dexFollowsBusy) &&
-              !(false && tab === 'library' && dexLibraryBusy) ? (
-                <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm px-6 py-10 text-center">
-                    <p className="text-[13px] text-[var(--mx-color-86868b)]">
-                        {source === 'mangadistrict' && mdFilter.trim() && mdSearchBusy ? 'Searching...'
-                            : source === 'mangadistrict' && mdFilter.trim() && !mdSearchBusy && mdSearchResults.length === 0
-                              ? 'No titles matched your search.'
-                            : source === 'roliascan' && roliascanCommittedSearch.trim()
-                                ? 'No Roliascan titles matched your search.'
-                                : source === 'roliascan'
-                                    ? 'No Roliascan titles matched this tab and filter set.'
-                            : false && tab === 'search' && committedSearchQuery.trim() && searching ? 'Searching…'
-                            : false && tab === 'search' && committedSearchQuery.trim() && !searching ? 'No titles matched your search.'
-                            : false && tab === 'library' && dexAuthStatus?.connected
-                              ? 'Nothing in this list on Roliascan yet. Set a status from a title detail panel or read a chapter to sync.'
-                              : false && tab === 'library'
-                                ? 'Link Roliascan under Profile → Integrations to browse your Roliascan reading lists.'
-                                : false && tab === 'following' && dexAuthStatus?.connected
-                              ? 'No titles in your Roliascan follows, or they are past the first page. Use Refresh or follow series from a detail panel.'
-                              : false && tab === 'following'
-                                ? 'Link Roliascan under Profile → Integrations to see titles you follow on Roliascan.'
-                                : 'No manga to display.'}
-                    </p>
-                </div>
-            ) : null}
+                  Link / Disconnect
+                </Link>
+              </>
+            }
+          />
 
-            {false && tab === 'following' && dexFollows.length > 0 && dexFollows.length < dexFollowsTotal && (
-                <div className="flex justify-center pt-2">
-                    <button
-                        type="button"
-                        disabled={dexFollowsBusy}
-                        onClick={() => void loadFollows(dexFollows.length)}
-                        className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-4 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50"
-                    >
-                        {dexFollowsBusy ? 'Loading…' : 'Load more follows'}
-                    </button>
-                </div>
-            )}
-                </MotionDiv>
-            </AnimatePresence>
+          {error && (
+            <div className="rounded-2xl border border-red-200/60 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">
+              {error}
             </div>
-        </MotionDiv>
-        </LayoutGroup>
-    )
+          )}
+
+          {/* Search & filters toolbar (shared layout across sources) */}
+          {false && (
+            <div className="min-w-0 w-full max-w-full space-y-3">
+              <form
+                onSubmit={handleDexSearch}
+                className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row"
+              >
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={searchQ}
+                  onChange={(e) => setSearchQ(e.target.value)}
+                  placeholder="Search Roliascan…"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setDexFiltersOpen((v) => !v)}
+                  aria-expanded={dexFiltersOpen}
+                  className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                >
+                  Filters
+                  {dexFilterBarCount > 0 && (
+                    <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                      {dexFilterBarCount}
+                    </span>
+                  )}
+                  <svg
+                    className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${dexFiltersOpen ? "-rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                {dexFilterBarCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => resetDexFilters()}
+                    className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={searching}
+                  className="w-full sm:w-auto shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
+                >
+                  {searching ? "Searching..." : "Search"}
+                </button>
+              </form>
+              {dexFilterBarCount > 0 && !dexFiltersOpen && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {sortDexContentRatings(dexContentRatings).map((id) => (
+                    <button
+                      key={`cr-${id}`}
+                      type="button"
+                      onClick={() => toggleDexContentRating(id)}
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition "
+                      title="Toggle content rating filter"
+                    >
+                      {id}
+                      <span className="text-[var(--mx-color-86868b)]">×</span>
+                    </button>
+                  ))}
+                  {String(dexYear || "").trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => setDexYear("")}
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition"
+                    >
+                      Year: {String(dexYear).trim()}{" "}
+                      <span className="text-[var(--mx-color-86868b)]">×</span>
+                    </button>
+                  ) : null}
+                  {!mangaEnglishReleasesOnly ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void lifeSyncUpdatePreferences({
+                          mangaEnglishReleasesOnly: true,
+                        }).then(() => setDexTranslatedLang("en"))
+                      }
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition "
+                    >
+                      Any translation{" "}
+                      <span className="text-[var(--mx-color-86868b)]">×</span>
+                    </button>
+                  ) : null}
+                  {includedTags.length ||
+                  excludedTags.length ||
+                  statusFilter.length ||
+                  demographicFilter.length ||
+                  originalLangFilter.length ? (
+                    <button
+                      type="button"
+                      onClick={() => setDexFiltersOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-full bg-[var(--mx-color-c6ff00)]/25 px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/35 transition hover:bg-[var(--mx-color-c6ff00)]/30"
+                    >
+                      More filters…
+                    </button>
+                  ) : null}
+                </div>
+              )}
+              <AnimatePresence initial={false}>
+                {dexFiltersOpen && (
+                  <MotionDiv
+                    key="manga-dex-toolbar-filters"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={mangaFilterExpandTransition}
+                    className="w-full min-w-0 max-w-full overflow-hidden"
+                  >
+                    <div className="min-w-0 max-w-full border-t border-[var(--mx-color-f0f0f0)] pt-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                            Roliascan filters
+                          </p>
+                          <p className="text-[12px] text-[var(--mx-color-5b5670)]">
+                            Tune discovery without leaving the page.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {dexFilterBarCount > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => resetDexFilters()}
+                              className="inline-flex items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-86868b)] transition-colors hover:text-[var(--mx-color-1d1d1f)]"
+                            >
+                              Reset
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setDexFiltersOpen(false)}
+                            className="inline-flex items-center justify-center rounded-xl bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                          >
+                            Close
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+                        <div className="md:col-span-2">
+                          <DexContentRatingSection
+                            selectedIds={dexContentRatings}
+                            nsfwEnabled={nsfwEnabled}
+                            onToggle={toggleDexContentRating}
+                          />
+                        </div>
+
+                        <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
+                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                            Releases &amp; translation
+                          </p>
+                          <div className="flex flex-wrap gap-x-5 gap-y-2 items-center text-[11px] text-[var(--mx-color-86868b)]">
+                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={mangaEnglishReleasesOnly}
+                                onChange={(e) => {
+                                  const on = e.target.checked;
+                                  void lifeSyncUpdatePreferences({
+                                    mangaEnglishReleasesOnly: on,
+                                  }).then(() => {
+                                    if (on) setDexTranslatedLang("en");
+                                  });
+                                }}
+                                className="rounded border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] focus:ring-[var(--mx-color-c6ff00)]"
+                              />
+                              English releases only
+                            </label>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap gap-3 items-end">
+                            <label
+                              className={`text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[160px] ${mangaEnglishReleasesOnly ? "opacity-70" : ""}`}
+                              title={
+                                mangaEnglishReleasesOnly
+                                  ? "Turn off in filters or under Profile → Integrations → Viewing preferences to pick another translation language."
+                                  : undefined
+                              }
+                            >
+                              Translation language
+                              <select
+                                value={dexTranslatedLang}
+                                onChange={(e) =>
+                                  setDexTranslatedLang(e.target.value)
+                                }
+                                disabled={mangaEnglishReleasesOnly}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none disabled:cursor-not-allowed"
+                              >
+                                {DEX_TRANSLATION_LANG_OPTIONS.map((o) => (
+                                  <option key={o.value} value={o.value}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 w-28">
+                              Year
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={dexYear}
+                                onChange={(e) =>
+                                  setDexYear(
+                                    e.target.value.replace(/[^\d]/g, ""),
+                                  )
+                                }
+                                placeholder="Any"
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] placeholder:text-[var(--mx-color-86868b)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                            Original language
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {ORIGINAL_LANG_OPTIONS.map((o) => (
+                              <button
+                                key={o.value}
+                                type="button"
+                                onClick={() => toggleOriginalLang(o.value)}
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                  originalLangFilter.includes(o.value)
+                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                }`}
+                              >
+                                {o.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
+                            <button
+                              type="button"
+                              onClick={() => setDexTagsPanelOpen((v) => !v)}
+                              className="flex w-full items-center justify-between gap-2 text-left"
+                            >
+                              <span className="min-w-0">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                                  Tags &amp; genres
+                                </p>
+                                <p className="text-[12px] text-[var(--mx-color-5b5670)]">
+                                  {includedTags.length ||
+                                  excludedTags.length ||
+                                  statusFilter.length ||
+                                  demographicFilter.length
+                                    ? `${includedTags.length + excludedTags.length + statusFilter.length + demographicFilter.length} active`
+                                    : "Optional"}
+                                </p>
+                              </span>
+                              <span className="inline-flex shrink-0 items-center gap-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">
+                                {dexTagsPanelOpen ? "Hide" : "Edit"}
+                                <svg
+                                  className={`h-4 w-4 text-[var(--mx-color-86868b)] transition-transform ${dexTagsPanelOpen ? "-rotate-180" : ""}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth="2"
+                                  aria-hidden
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
+                              </span>
+                            </button>
+
+                            <AnimatePresence initial={false}>
+                              {dexTagsPanelOpen && (
+                                <MotionDiv
+                                  key="dex-tags-panel"
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1 }}
+                                  exit={{ height: 0, opacity: 0 }}
+                                  transition={mangaFilterExpandTransition}
+                                  className="min-w-0 max-w-full overflow-hidden"
+                                >
+                                  <div className="mt-3">
+                                    <DexGenreFilter
+                                      embedded
+                                      tags={dexTags}
+                                      includedTags={includedTags}
+                                      excludedTags={excludedTags}
+                                      onToggleInclude={toggleDexIncludeTag}
+                                      onToggleExclude={toggleDexExcludeTag}
+                                      statusFilter={statusFilter}
+                                      onStatusChange={toggleDexStatus}
+                                      demographicFilter={demographicFilter}
+                                      onDemographicChange={toggleDexDemographic}
+                                      includedTagsMode={includedTagsMode}
+                                      excludedTagsMode={excludedTagsMode}
+                                      onIncludedTagsMode={setIncludedTagsMode}
+                                      onExcludedTagsMode={setExcludedTagsMode}
+                                    />
+                                  </div>
+                                </MotionDiv>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </MotionDiv>
+                )}
+              </AnimatePresence>
+              {dexAuthStatus && !dexAuthStatus.oauthConfigured && (
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
+                  Signing in with Roliascan isn’t set up for this site yet. You
+                  can still browse and search public catalogs.
+                </p>
+              )}
+            </div>
+          )}
+
+          {source === "roliascan" && (
+            <div className="min-w-0 w-full max-w-full space-y-3">
+              <form
+                onSubmit={handleRoliascanSearch}
+                className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row"
+              >
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={roliascanSearchQ}
+                  onChange={(e) => setRoliascanSearchQ(e.target.value)}
+                  placeholder="Search Roliascan…"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setRoliascanFiltersOpen((v) => !v)}
+                  aria-expanded={roliascanFiltersOpen}
+                  className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                >
+                  Filters
+                  {roliascanFilterBarCount > 0 && (
+                    <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                      {roliascanFilterBarCount}
+                    </span>
+                  )}
+                  <svg
+                    className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${roliascanFiltersOpen ? "-rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                {roliascanFilterBarCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={resetRoliascanFilters}
+                    className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  className="w-full sm:w-auto shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
+                >
+                  Search
+                </button>
+              </form>
+
+              <AnimatePresence initial={false}>
+                {roliascanFiltersOpen && (
+                  <MotionDiv
+                    key="roliascan-toolbar-filters"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={mangaFilterExpandTransition}
+                    className="w-full min-w-0 max-w-full overflow-hidden border-t border-[var(--mx-color-f0f0f0)] pt-4"
+                  >
+                    <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Sorting
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                            Order
+                            <select
+                              value={roliascanOrderKey}
+                              onChange={(e) =>
+                                setRoliascanOrderKey(e.target.value)
+                              }
+                              className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+                            >
+                              {ROLIASCAN_ORDER_OPTIONS.map((option) => (
+                                <option key={option.id} value={option.id}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                            Direction
+                            <select
+                              value={roliascanOrderDir}
+                              onChange={(e) =>
+                                setRoliascanOrderDir(e.target.value)
+                              }
+                              className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+                            >
+                              <option value="desc">Descending</option>
+                              <option value="asc">Ascending</option>
+                            </select>
+                          </label>
+                        </div>
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                            Min chapter
+                            <input
+                              type="number"
+                              value={roliascanMinchap}
+                              onChange={(e) =>
+                                setRoliascanMinchap(e.target.value)
+                              }
+                              className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                            />
+                          </label>
+                          {roliascanYears.length > 0 ? (
+                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                              Year
+                              <select
+                                value={roliascanYearFrom || ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setRoliascanYearFrom(v);
+                                  setRoliascanYearTo(v);
+                                }}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                              >
+                                <option value="">Any year</option>
+                                {roliascanYears.map((y) => (
+                                  <option key={String(y)} value={String(y)}>
+                                    {String(y)}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          ) : (
+                            <>
+                              <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                                Year from
+                                <input
+                                  type="number"
+                                  value={roliascanYearFrom}
+                                  onChange={(e) =>
+                                    setRoliascanYearFrom(e.target.value)
+                                  }
+                                  className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                                />
+                              </label>
+                              <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                                Year to
+                                <input
+                                  type="number"
+                                  value={roliascanYearTo}
+                                  onChange={(e) =>
+                                    setRoliascanYearTo(e.target.value)
+                                  }
+                                  className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                                />
+                              </label>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Authors & Artists
+                        </p>
+                        <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                          Authors (comma separated)
+                          <input
+                            type="text"
+                            value={roliascanAuthorsInput}
+                            onChange={(e) =>
+                              setRoliascanAuthorsInput(e.target.value)
+                            }
+                            placeholder="eiichiro oda, ..."
+                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                          />
+                        </label>
+                        <label className="mt-2 text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                          Artists (comma separated)
+                          <input
+                            type="text"
+                            value={roliascanArtistsInput}
+                            onChange={(e) =>
+                              setRoliascanArtistsInput(e.target.value)
+                            }
+                            placeholder="artist slug, ..."
+                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                          />
+                        </label>
+                      </div>
+
+                      <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Genres
+                        </p>
+                        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                          {roliascanGenreTerms.slice(0, 240).map((term) => {
+                            const key = roliascanTermToken(term);
+                            const title = String(
+                              term.title || term.slug || key,
+                            );
+                            if (!key || !title) return null;
+                            const included =
+                              roliascanIncludeGenres.includes(key);
+                            const excluded =
+                              roliascanExcludeGenres.includes(key);
+                            return (
+                              <button
+                                key={`cg-${key}`}
+                                type="button"
+                                onClick={() => cycleRoliascanGenre(key)}
+                                onContextMenu={(event) => {
+                                  event.preventDefault();
+                                  toggleRoliascanGenre(key, "exclude");
+                                }}
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                  included
+                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                    : excluded
+                                      ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                                      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                }`}
+                              >
+                                {title}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                          Tap cycles include → exclude → clear. Right-click
+                          toggles exclude.
+                        </p>
+                      </div>
+
+                      <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Tags
+                        </p>
+                        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                          {roliascanFormatTerms.slice(0, 240).map((term) => {
+                            const key = roliascanTermToken(term);
+                            const title = String(
+                              term.title || term.slug || key,
+                            );
+                            if (!key || !title) return null;
+                            const included = roliascanIncludeTags.includes(key);
+                            const excluded = roliascanExcludeTags.includes(key);
+                            return (
+                              <button
+                                key={`ct-${key}`}
+                                type="button"
+                                onClick={() => cycleRoliascanTag(key)}
+                                onContextMenu={(event) => {
+                                  event.preventDefault();
+                                  toggleRoliascanTag(key, "exclude");
+                                }}
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                  included
+                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                    : excluded
+                                      ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                                      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                }`}
+                              >
+                                {title}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                          Tap cycles include → exclude → clear. Right-click
+                          toggles exclude.
+                        </p>
+                      </div>
+
+                      <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Demographics & Status
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {roliascanDemographicTerms
+                            .slice(0, 120)
+                            .map((term) => {
+                              const key = roliascanTermToken(term);
+                              const title = String(
+                                term.title || term.slug || key,
+                              );
+                              if (!key || !title) return null;
+                              const included =
+                                roliascanIncludeDemographics.includes(key);
+                              const excluded =
+                                roliascanExcludeDemographics.includes(key);
+                              return (
+                                <button
+                                  key={`cd-${key}`}
+                                  type="button"
+                                  onClick={() => cycleRoliascanDemographic(key)}
+                                  onContextMenu={(event) => {
+                                    event.preventDefault();
+                                    toggleRoliascanDemographic(key, "exclude");
+                                  }}
+                                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                    included
+                                      ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                      : excluded
+                                        ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                                        : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                  }`}
+                                >
+                                  {title}
+                                </button>
+                              );
+                            })}
+                        </div>
+                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                          Tap cycles include → exclude → clear. Right-click
+                          toggles exclude.
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {roliascanStatusTerms.map((status) => {
+                            const key = String(
+                              status.id || status.slug || status.title || "",
+                            ).trim();
+                            const title = String(
+                              status.title || status.slug || key,
+                            );
+                            if (!key || !title) return null;
+                            return (
+                              <button
+                                key={`cs-${key}`}
+                                type="button"
+                                onClick={() => toggleRoliascanStatus(key)}
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                  roliascanStatuses.includes(key)
+                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                }`}
+                              >
+                                {title}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </MotionDiv>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {source === "mangadistrict" && (
+            <div className="min-w-0 w-full max-w-full space-y-3">
+              <form
+                className="flex min-w-0 w-full max-w-full flex-wrap items-stretch gap-2"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                }}
+              >
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={mdFilter}
+                  onChange={(e) => setMdFilter(e.target.value)}
+                  placeholder="Search Manga District…"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMdFiltersOpen((v) => !v)}
+                  aria-expanded={mdFiltersOpen}
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                >
+                  Filters
+                  {mdFilterBarCount > 0 && (
+                    <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                      {mdFilterBarCount}
+                    </span>
+                  )}
+                  <svg
+                    className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${mdFiltersOpen ? "-rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                <button
+                  type="submit"
+                  disabled={mdSearchBusy && Boolean(mdFilter.trim())}
+                  className="shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
+                >
+                  {mdSearchBusy && mdFilter.trim() ? "Searching..." : "Search"}
+                </button>
+              </form>
+              {!mdFilter.trim() && (
+                <div className="min-w-0 w-full max-w-full space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                    Order by
+                  </p>
+                  <LifeSyncSectionNav
+                    size="dense"
+                    ariaLabel="Manga District order"
+                    layoutId="lifesync-manga-md-order-by"
+                    items={MD_ORDER_BY_OPTIONS.map((o) => ({
+                      id: o.id,
+                      label: o.label,
+                    }))}
+                    activeId={mdBrowse}
+                    onSelect={(id) => {
+                      setMdBrowse(id);
+                      goToPage(1);
+                    }}
+                  />
+                </div>
+              )}
+              <AnimatePresence initial={false}>
+                {mdFiltersOpen && (
+                  <MotionDiv
+                    key="manga-md-toolbar-filters"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={mangaFilterExpandTransition}
+                    className="w-full min-w-0 max-w-full overflow-hidden"
+                  >
+                    <div className="min-w-0 max-w-full space-y-4 border-t border-[var(--mx-color-f0f0f0)] pt-3">
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Section
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {["latest", "censored", "uncensored"].map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => setMdSection(s)}
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
+                                mdSection === s
+                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                              }`}
+                            >
+                              {s === "latest" ? "All Latest" : s}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                          Section applies when no type is selected (latest
+                          releases feed). Censored still filters out uncensored
+                          rows from listings.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Type of manga
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {MD_TYPE_OPTIONS.map(({ slug, label }) => (
+                            <button
+                              key={slug}
+                              type="button"
+                              onClick={() =>
+                                setMdTypeSlug((prev) =>
+                                  prev === slug ? "" : slug,
+                                )
+                              }
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                mdTypeSlug === slug
+                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Order by
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {MD_ORDER_BY_OPTIONS.map(({ id, label }) => (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => {
+                                setMdBrowse(id);
+                                goToPage(1);
+                              }}
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                mdBrowse === id
+                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Filters
+                        </p>
+                        <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                          {MD_FILTER_OPTIONS.map(({ slug, label }) => (
+                            <button
+                              key={slug}
+                              type="button"
+                              onClick={() =>
+                                setMdFilterGenre((prev) =>
+                                  prev === slug ? "" : slug,
+                                )
+                              }
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                mdFilterGenre === slug
+                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                          {
+                            "With a type selected, the tag narrows via the site's genre filter. With no type, the tag becomes the main browse path."
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </MotionDiv>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Content tabs (Roliascan + Roliascan type tabs) */}
+          {tabs.length > 0 && (
+            <LifeSyncSectionNav
+              ariaLabel={
+                source === "roliascan"
+                  ? "Roliascan type tabs"
+                  : "Roliascan lists"
+              }
+              layoutId="lifesync-manga-dex-tab"
+              items={tabs.map((t) => ({ id: t.id, label: t.label }))}
+              activeId={tab}
+              onSelect={(id) => goToTab(id)}
+            />
+          )}
+
+          {source === "roliascan" && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">
+                Browse order
+              </p>
+              <LifeSyncSectionNav
+                size="dense"
+                ariaLabel="Roliascan browse order"
+                layoutId="lifesync-manga-roliascan-folder"
+                items={ROLIASCAN_FOLDER_TABS.map((row) => ({
+                  id: row.id,
+                  label: row.label,
+                }))}
+                activeId={roliascanFolder}
+                onSelect={(id) => {
+                  setRoliascanFolder(id);
+                  setRoliascanOrderKey("");
+                  setRoliascanOrderDir("desc");
+                  setRoliascanPage(1);
+                  if (route.src === "roliascan") {
+                    navigate(
+                      `${basePath}/roliascan/${route.tab || "manga"}/page/1${location.search || ""}`,
+                    );
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {false && tab === "library" && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">
+                Library
+              </p>
+              <LifeSyncSectionNav
+                size="dense"
+                ariaLabel="Library status"
+                layoutId="lifesync-manga-library-status"
+                items={MANGADEX_LIBRARY_STATUS_TABS.map((st) => ({
+                  id: st.value,
+                  label: st.label,
+                }))}
+                activeId={libraryListStatus}
+                onSelect={(id) => setLibraryListStatus(id)}
+              />
+              {!dexAuthStatus?.connected && (
+                <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                  Link Roliascan under Profile → Integrations to see titles from
+                  your Roliascan reading lists.
+                </p>
+              )}
+            </div>
+          )}
+
+          {false && (tab === "popular" || tab === "recent") && (
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">
+                Browse
+              </p>
+              <LifeSyncSectionNav
+                size="dense"
+                ariaLabel="Browse sort"
+                layoutId="lifesync-manga-browse-sort"
+                items={BROWSE_SORT_TABS.map((st) => ({
+                  id: st.id,
+                  label: st.label,
+                }))}
+                activeId={dexBrowseSort}
+                onSelect={(id) => setDexBrowseSort(id)}
+              />
+              {dexBrowseSort === "random" && (
+                <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                  Random uses a fresh slice each load — use Refresh or pick
+                  another sort to page through the full catalog.
+                </p>
+              )}
+            </div>
+          )}
+
+          {false && tab === "search" && committedSearchQuery.trim() && (
+            <div className="flex flex-wrap items-end gap-3">
+              <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[160px]">
+                Search sort
+                <select
+                  value={dexSearchOrderBy}
+                  onChange={(e) => setDexSearchOrderBy(e.target.value)}
+                  className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+                >
+                  {SEARCH_SORT_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[120px]">
+                Direction
+                <select
+                  value={dexSearchOrderDir}
+                  onChange={(e) => setDexSearchOrderDir(e.target.value)}
+                  className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </label>
+            </div>
+          )}
+
+          {/* Pagination for MangaDistrict latest */}
+          {source === "mangadistrict" && !mdFilter.trim() && mdLatest && (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                Page {mdCurPage} of {mdLastPage}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy || mdCurPage <= 1}
+                  onClick={() => goToPage(mdCurPage - 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || mdCurPage >= mdLastPage}
+                  onClick={() => goToPage(mdCurPage + 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {source === "roliascan" && (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                Page {roliascanPage} of {roliascanLastPage}
+                {roliascanTotal > 0 && (
+                  <span className="ml-1">
+                    ({roliascanTotal.toLocaleString()} titles)
+                  </span>
+                )}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={roliascanLoading || roliascanPage <= 1}
+                  onClick={() => goToPage(roliascanPage - 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={
+                    roliascanLoading || roliascanPage >= roliascanLastPage
+                  }
+                  onClick={() => goToPage(roliascanPage + 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {false && tab === "popular" && dexBrowseSort !== "random" && (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                Page {dexPopularPage} of {dexPopularLast}
+                {popularTotal > 0 && (
+                  <span className="ml-1">
+                    ({popularTotal.toLocaleString()} titles)
+                  </span>
+                )}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={dexPopularPage <= 1}
+                  onClick={() => goToPage(dexPopularPage - 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-1.5">
+                  {(() => {
+                    const cur = dexPopularPage;
+                    const last = dexPopularLast;
+                    const pages = [];
+                    const start = Math.max(1, cur - 2);
+                    const end = Math.min(last, cur + 2);
+                    if (start > 1) pages.push(1, "…");
+                    for (let p = start; p <= end; p += 1) pages.push(p);
+                    if (end < last) pages.push("…", last);
+                    return pages.map((p, idx) =>
+                      typeof p === "number" ? (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => goToPage(p)}
+                          className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
+                            p === cur
+                              ? "border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm"
+                              : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]"
+                          }`}
+                          aria-current={p === cur ? "page" : undefined}
+                        >
+                          {p}
+                        </button>
+                      ) : (
+                        <span
+                          key={`dots-pop-${idx}`}
+                          className="px-1 text-[11px] text-[var(--mx-color-86868b)]"
+                        >
+                          …
+                        </span>
+                      ),
+                    );
+                  })()}
+                </div>
+                <button
+                  type="button"
+                  disabled={dexPopularPage >= dexPopularLast}
+                  onClick={() => goToPage(dexPopularPage + 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {false &&
+            tab === "popular" &&
+            dexBrowseSort === "random" &&
+            popularTotal > 0 && (
+              <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                {popularTotal.toLocaleString()} titles match your filters
+                (showing {DEX_PAGE_SIZE} at random).
+              </p>
+            )}
+
+          {false && tab === "recent" && dexBrowseSort !== "random" && (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                Page {dexRecentPage} of {dexRecentLast}
+                {recentTotal > 0 && (
+                  <span className="ml-1">
+                    ({recentTotal.toLocaleString()} titles)
+                  </span>
+                )}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={dexRecentPage <= 1}
+                  onClick={() => goToPage(dexRecentPage - 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-1.5">
+                  {(() => {
+                    const cur = dexRecentPage;
+                    const last = dexRecentLast;
+                    const pages = [];
+                    const start = Math.max(1, cur - 2);
+                    const end = Math.min(last, cur + 2);
+                    if (start > 1) pages.push(1, "…");
+                    for (let p = start; p <= end; p += 1) pages.push(p);
+                    if (end < last) pages.push("…", last);
+                    return pages.map((p, idx) =>
+                      typeof p === "number" ? (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => goToPage(p)}
+                          className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
+                            p === cur
+                              ? "border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm"
+                              : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]"
+                          }`}
+                          aria-current={p === cur ? "page" : undefined}
+                        >
+                          {p}
+                        </button>
+                      ) : (
+                        <span
+                          key={`dots-rec-${idx}`}
+                          className="px-1 text-[11px] text-[var(--mx-color-86868b)]"
+                        >
+                          …
+                        </span>
+                      ),
+                    );
+                  })()}
+                </div>
+                <button
+                  type="button"
+                  disabled={dexRecentPage >= dexRecentLast}
+                  onClick={() => goToPage(dexRecentPage + 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {false &&
+            tab === "recent" &&
+            dexBrowseSort === "random" &&
+            recentTotal > 0 && (
+              <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                {recentTotal.toLocaleString()} titles match your filters
+                (showing {DEX_PAGE_SIZE} at random).
+              </p>
+            )}
+
+          {false && tab === "search" && committedSearchQuery.trim() && (
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                Page {dexSearchPage} of {dexSearchLast}
+                {searchTotal > 0 && (
+                  <span className="ml-1">
+                    ({searchTotal.toLocaleString()} titles)
+                  </span>
+                )}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  disabled={searching || dexSearchPage <= 1}
+                  onClick={() => goToPage(dexSearchPage - 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-1.5">
+                  {(() => {
+                    const cur = dexSearchPage;
+                    const last = dexSearchLast;
+                    const pages = [];
+                    const start = Math.max(1, cur - 2);
+                    const end = Math.min(last, cur + 2);
+                    if (start > 1) pages.push(1, "…");
+                    for (let p = start; p <= end; p += 1) pages.push(p);
+                    if (end < last) pages.push("…", last);
+                    return pages.map((p, idx) =>
+                      typeof p === "number" ? (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => goToPage(p)}
+                          className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
+                            p === cur
+                              ? "border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm"
+                              : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]"
+                          }`}
+                          aria-current={p === cur ? "page" : undefined}
+                        >
+                          {p}
+                        </button>
+                      ) : (
+                        <span
+                          key={`dots-s-${idx}`}
+                          className="px-1 text-[11px] text-[var(--mx-color-86868b)]"
+                        >
+                          …
+                        </span>
+                      ),
+                    );
+                  })()}
+                </div>
+                <button
+                  type="button"
+                  disabled={searching || dexSearchPage >= dexSearchLast}
+                  onClick={() => goToPage(dexSearchPage + 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Content grid — only this block animates on source/tab change */}
+          <AnimatePresence mode="wait">
+            <MotionDiv
+              key={false ? `${source}-${tab}` : source}
+              className="min-w-0 max-w-full space-y-4"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={lifeSyncSectionPresenceVariants}
+              transition={lifeSyncSectionPresenceTransition}
+            >
+              {mangaGridLoading ? (
+                <LifesyncMangaBrowseGridSkeleton />
+              ) : currentItems.length > 0 ? (
+                useMangaBrowseCardStagger ? (
+                  <MotionDiv
+                    className="grid grid-cols-2 gap-4 items-stretch sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+                    variants={lifeSyncStaggerContainerDense}
+                    initial="hidden"
+                    animate="show"
+                  >
+                    {currentItems.map((manga, i) => (
+                      <MotionDiv
+                        key={`${manga.source || source}-${manga.id || i}`}
+                        data-focused-card={
+                          focusedCardIndex === i ? "true" : undefined
+                        }
+                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2" : ""}`}
+                        variants={lifeSyncStaggerItemFade}
+                      >
+                        <MangaCard
+                          manga={{ ...manga, source: manga.source || source }}
+                          onClick={openMangaFromCard}
+                        />
+                      </MotionDiv>
+                    ))}
+                  </MotionDiv>
+                ) : (
+                  <MotionDiv
+                    className="grid grid-cols-2 gap-4 items-stretch sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={lifeSyncPageTransition}
+                  >
+                    {currentItems.map((manga, i) => (
+                      <div
+                        key={`${manga.source || source}-${manga.id || i}`}
+                        data-focused-card={
+                          focusedCardIndex === i ? "true" : undefined
+                        }
+                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2" : ""}`}
+                      >
+                        <MangaCard
+                          manga={{ ...manga, source: manga.source || source }}
+                          onClick={openMangaFromCard}
+                        />
+                      </div>
+                    ))}
+                  </MotionDiv>
+                )
+              ) : !busy &&
+                !(false && tab === "following" && dexFollowsBusy) &&
+                !(false && tab === "library" && dexLibraryBusy) ? (
+                <MediaEmptyState
+                  accent={source === "mangadistrict" ? "hmanhwa" : "manga"}
+                  title="Nothing to show"
+                  message={
+                    source === "mangadistrict" &&
+                    mdFilter.trim() &&
+                    mdSearchBusy
+                      ? "Searching..."
+                      : source === "mangadistrict" &&
+                          mdFilter.trim() &&
+                          !mdSearchBusy &&
+                          mdSearchResults.length === 0
+                        ? "No titles matched your search."
+                        : source === "roliascan" &&
+                            roliascanCommittedSearch.trim()
+                          ? "No Roliascan titles matched your search."
+                          : source === "roliascan"
+                            ? "No Roliascan titles matched this tab and filter set."
+                            : false &&
+                                tab === "search" &&
+                                committedSearchQuery.trim() &&
+                                searching
+                              ? "Searching…"
+                              : false &&
+                                  tab === "search" &&
+                                  committedSearchQuery.trim() &&
+                                  !searching
+                                ? "No titles matched your search."
+                                : false &&
+                                    tab === "library" &&
+                                    dexAuthStatus?.connected
+                                  ? "Nothing in this list on Roliascan yet. Set a status from a title detail panel or read a chapter to sync."
+                                  : false && tab === "library"
+                                    ? "Link Roliascan under Profile → Integrations to browse your Roliascan reading lists."
+                                    : false &&
+                                        tab === "following" &&
+                                        dexAuthStatus?.connected
+                                      ? "No titles in your Roliascan follows, or they are past the first page. Use Refresh or follow series from a detail panel."
+                                      : false && tab === "following"
+                                        ? "Link Roliascan under Profile → Integrations to see titles you follow on Roliascan."
+                                        : "No manga to display."
+                  }
+                />
+              ) : null}
+
+              {false &&
+                tab === "following" &&
+                dexFollows.length > 0 &&
+                dexFollows.length < dexFollowsTotal && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      type="button"
+                      disabled={dexFollowsBusy}
+                      onClick={() => void loadFollows(dexFollows.length)}
+                      className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-4 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50"
+                    >
+                      {dexFollowsBusy ? "Loading…" : "Load more follows"}
+                    </button>
+                  </div>
+                )}
+            </MotionDiv>
+          </AnimatePresence>
+        </div>
+      </MotionDiv>
+    </LayoutGroup>
+  );
 }

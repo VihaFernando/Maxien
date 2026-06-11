@@ -226,3 +226,193 @@ export const lifeSyncEpisodeBlockPresenceTransition = {
     duration: 0.2,
     ease: lifeSyncEaseOut,
 }
+
+/** Card scale-in for grid items — subtle pop with spring feel. */
+export const lifeSyncCardEnterVariants = {
+    hidden: { opacity: 0, scale: 0.92, y: 8 },
+    show: {
+        opacity: 1,
+        scale: 1,
+        y: 0,
+        transition: { type: 'spring', stiffness: 300, damping: 28 },
+    },
+}
+
+/** Stagger container tuned for card grids (slightly longer stagger than items). */
+export const lifeSyncCardGridContainer = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.045,
+            delayChildren: 0.04,
+        },
+    },
+}
+
+/** Slide-up + fade from below — used for hero text, drawer panels, stat blocks. */
+export const lifeSyncSlideUpVariants = {
+    hidden: { opacity: 0, y: 22 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: { type: 'spring', stiffness: 280, damping: 26 },
+    },
+}
+
+/** Hero image crossfade — slower, cinematic feel. */
+export const lifeSyncHeroCrossfadeTransition = {
+    duration: 0.72,
+    ease: [0.22, 1, 0.36, 1],
+}
+
+/** Page-level spring enter — used when switching top-level routes. */
+export const lifeSyncSpringPageTransition = {
+    type: 'spring',
+    stiffness: 240,
+    damping: 28,
+}
+
+export const lifeSyncSpringPageVariants = {
+    initial: { opacity: 0, y: 14, scale: 0.995 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -8, scale: 0.998 },
+}
+
+/** Stat counter block — used in history/library stats row. */
+export const lifeSyncStatBlockContainer = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.09, delayChildren: 0.05 },
+    },
+}
+
+export const lifeSyncStatBlockItem = {
+    hidden: { opacity: 0, y: 16, scale: 0.9 },
+    show: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: { type: 'spring', stiffness: 320, damping: 24 },
+    },
+}
+
+/** Enhanced page transition with scale effect — premium feel. */
+export const lifeSyncPremiumPageTransition = {
+    type: 'spring',
+    stiffness: 260,
+    damping: 32,
+}
+
+export const lifeSyncPremiumPageVariants = {
+    initial: { opacity: 0, y: 12, scale: 0.98 },
+    animate: { opacity: 1, y: 0, scale: 1 },
+    exit: { opacity: 0, y: -12, scale: 0.98 },
+}
+
+/** Enhanced card hover with more pronounced effect. */
+export const lifeSyncEnhancedCardHover = {
+    y: -8,
+    scale: 1.03,
+    transition: { type: 'spring', stiffness: 450, damping: 24 },
+}
+
+/** Smooth fade-in for images with slight scale. */
+export const lifeSyncImageFadeInVariants = {
+    hidden: { opacity: 0, scale: 1.05 },
+    show: {
+        opacity: 1,
+        scale: 1,
+        transition: { duration: 0.5, ease: lifeSyncEaseOut },
+    },
+}
+
+/** Stagger for manga/hentai thumbnails — faster for denser grids. */
+export const lifeSyncImageGridContainer = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: {
+            staggerChildren: 0.028,
+            delayChildren: 0.02,
+        },
+    },
+}
+
+export const lifeSyncImageGridItem = {
+    hidden: { opacity: 0, scale: 0.95 },
+    show: {
+        opacity: 1,
+        scale: 1,
+        transition: { duration: 0.32, ease: lifeSyncEaseOut },
+    },
+}
+
+/** Calendar cell stagger — very fast (0.005s) since 42 cells render at once. */
+export const lifeSyncCalendarGridContainer = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.005, delayChildren: 0.01 },
+    },
+}
+
+export const lifeSyncCalendarCellItem = {
+    hidden: { opacity: 0, scale: 0.94 },
+    show: {
+        opacity: 1,
+        scale: 1,
+        transition: { type: 'spring', stiffness: 380, damping: 30 },
+    },
+}
+
+/** Schedule day tab transition — pill slides with spring. */
+export const lifeSyncTabPillSpring = {
+    type: 'spring',
+    stiffness: 420,
+    damping: 36,
+}
+
+/** Drawer / bottom sheet spring enter. */
+export const lifeSyncDrawerSpring = {
+    type: 'spring',
+    stiffness: 340,
+    damping: 32,
+}
+
+/** Shimmer keyframe helper — returns inline style for a shimmer animation. */
+export const lifeSyncShimmerStyle = {
+    background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)',
+    backgroundSize: '200% 100%',
+    animation: 'lifesync-shimmer 1.6s infinite',
+}
+
+/** Fade + scale down exit (used for removing list/grid items). */
+export const lifeSyncItemExitVariants = {
+    exit: {
+        opacity: 0,
+        scale: 0.94,
+        x: -12,
+        transition: { duration: 0.2, ease: [0.4, 0, 1, 1] },
+    },
+}
+
+/** Horizontal rail item enter (slight scale + fade). */
+export const lifeSyncRailItemVariants = {
+    hidden: { opacity: 0, scale: 0.88, x: 8 },
+    show: {
+        opacity: 1,
+        scale: 1,
+        x: 0,
+        transition: { type: 'spring', stiffness: 260, damping: 24 },
+    },
+}
+
+export const lifeSyncRailContainer = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.04, delayChildren: 0.02 },
+    },
+}

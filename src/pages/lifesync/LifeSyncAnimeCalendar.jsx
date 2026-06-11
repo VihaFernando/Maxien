@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FaChevronLeft, FaChevronRight, FaStar, FaTimes } from "react-icons/fa";
 import { useLifeSync } from "../../context/LifeSyncContext";
 import { lifesyncFetch } from "../../lib/lifesyncApi";
+import { MediaPageHeader, MediaConnectPrompt } from "../../components/lifesync/MediaPageChrome";
 import {
   AnimatePresence,
   lifeSyncDollyPageTransition,
@@ -10,6 +11,13 @@ import {
   lifeSyncModalSlideProps,
   lifeSyncStaggerContainerDense,
   lifeSyncStaggerItemFade,
+  lifeSyncCalendarGridContainer,
+  lifeSyncCalendarCellItem,
+  lifeSyncSpringPageVariants,
+  lifeSyncSpringPageTransition,
+  lifeSyncStatBlockContainer,
+  lifeSyncStatBlockItem,
+  lifeSyncDrawerSpring,
   MotionDiv,
 } from "../../lib/lifesyncMotion";
 
@@ -340,20 +348,11 @@ export default function LifeSyncAnimeCalendar() {
 
   if (!isLifeSyncConnected) {
     return (
-      <div className="mx-auto max-w-4xl">
-        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">
-          Anime Calendar
-        </h1>
-        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-          Connect LifeSync in your profile to access the anime calendar.
-        </p>
-        <Link
-          to="/dashboard/profile?tab=integrations"
-          className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
-        >
-          Go to Integrations
-        </Link>
-      </div>
+      <MediaConnectPrompt
+        accent="calendar"
+        title="Anime calendar locked"
+        body="Connect LifeSync in your profile to track weekly broadcast schedules and pin your shows."
+      />
     );
   }
 
@@ -388,9 +387,9 @@ export default function LifeSyncAnimeCalendar() {
             setDayPageSize(20);
             setShowDayOverlay(true);
           }}
-          className={`w-full rounded-xl p-1 sm:p-2 md:p-3 min-h-[56px] sm:min-h-[80px] md:min-h-[112px] border text-left transition-all ${
+          className={`w-full rounded-xl p-1 sm:p-2 md:p-3 min-h-14 sm:min-h-20 md:min-h-28 border text-left transition-all ${
             isCur
-              ? "bg-[var(--mx-color-c6ff00)]/10 border-[var(--mx-color-c6ff00)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+              ? "bg-(--mx-color-c6ff00)/10 border-(--mx-color-c6ff00) ring-1 ring-(--mx-color-c6ff00)/50"
               : inMonth
                 ? "bg-[var(--color-surface)] border-[var(--mx-color-d2d2d7)]/40 hover:border-[var(--mx-color-d2d2d7)] hover:shadow-sm"
                 : "bg-[var(--mx-color-fafafa)] border-[var(--mx-color-e5e5ea)] hover:border-[var(--mx-color-d2d2d7)] hover:shadow-sm opacity-85"
@@ -458,38 +457,36 @@ export default function LifeSyncAnimeCalendar() {
     });
 
     return (
-      <MotionDiv
-        key={monthKey(currentDate, clientTz)}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={lifeSyncDollyPageTransition}
-        className="grid grid-cols-7 gap-1 sm:gap-2"
-      >
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-          <MotionDiv
-            key={d}
-            variants={lifeSyncStaggerItemFade}
-            initial="hidden"
-            animate="show"
-            className="text-center font-semibold text-[var(--mx-color-86868b)] text-[10px] sm:text-xs md:text-sm py-2 uppercase tracking-wider"
-          >
-            <span className="hidden sm:inline">{d}</span>
-            <span className="sm:hidden">{d.charAt(0)}</span>
-          </MotionDiv>
-        ))}
-        {cells.map((node, i) => (
-          <MotionDiv
-            key={`cell-${monthKey(currentDate, clientTz)}-${i}`}
-            variants={lifeSyncStaggerItemFade}
-            initial="hidden"
-            animate="show"
-            transition={{ delay: Math.min(i * 0.002, 0.08) }}
-            className="min-w-0"
-          >
-            {node}
-          </MotionDiv>
-        ))}
-      </MotionDiv>
+      <AnimatePresence mode="wait" initial={false}>
+        <MotionDiv
+          key={monthKey(currentDate, clientTz)}
+          variants={lifeSyncCalendarGridContainer}
+          initial="hidden"
+          animate="show"
+          exit={{ opacity: 0, scale: 0.97, transition: { duration: 0.18 } }}
+          className="grid grid-cols-7 gap-1 sm:gap-2"
+        >
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+            <MotionDiv
+              key={d}
+              variants={lifeSyncCalendarCellItem}
+              className="text-center font-semibold text-(--mx-color-86868b) text-[10px] sm:text-xs md:text-sm py-2 uppercase tracking-wider"
+            >
+              <span className="hidden sm:inline">{d}</span>
+              <span className="sm:hidden">{d.charAt(0)}</span>
+            </MotionDiv>
+          ))}
+          {cells.map((node, i) => (
+            <MotionDiv
+              key={`cell-${monthKey(currentDate, clientTz)}-${i}`}
+              variants={lifeSyncCalendarCellItem}
+              className="min-w-0"
+            >
+              {node}
+            </MotionDiv>
+          ))}
+        </MotionDiv>
+      </AnimatePresence>
     );
   };
 
@@ -652,18 +649,22 @@ export default function LifeSyncAnimeCalendar() {
 
     return (
       <MotionDiv
-        className="fixed inset-0 z-50 flex items-end justify-center bg-[radial-gradient(circle_at_top,rgba(21, 20, 24,0.38),rgba(21, 20, 24,0.72))] backdrop-blur-sm sm:items-center sm:p-4"
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/55 backdrop-blur-sm sm:items-center sm:p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.22 }}
       >
         <MotionDiv
-          {...lifeSyncModalSlideProps}
-          className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[34px] border border-[var(--color-border-strong)]/50 bg-[var(--mx-color-f8fbff)] shadow-[0_30px_90px_-30px_rgba(2,6,23,0.85)] sm:rounded-[34px]"
+          initial={{ opacity: 0, y: 40, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 32, scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 320, damping: 30 }}
+          className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-t-[34px] border border-[var(--color-border-strong)]/50 bg-[var(--mx-color-f8fbff)] shadow-[0_32px_96px_-24px_rgba(2,6,23,0.75)] sm:rounded-[34px]"
         >
-          <div className="relative border-b border-[var(--mx-color-dbe4ef)] bg-[linear-gradient(120deg,rgba(230,244,255,0.9),rgba(240,253,244,0.82),rgba(248,250,252,0.94))] px-5 py-4 sm:px-7 sm:py-5">
-            <div className="pointer-events-none absolute right-4 top-3 h-20 w-20 rounded-full bg-[var(--color-surface)]/45 blur-2xl" />
+          <div className="relative border-b border-[var(--mx-color-dbe4ef)] bg-[linear-gradient(120deg,rgba(230,244,255,0.92),rgba(240,253,244,0.84),rgba(248,250,252,0.96))] px-5 py-4 sm:px-7 sm:py-5">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-violet-400/50 to-transparent" aria-hidden />
+            <div className="pointer-events-none absolute right-0 top-0 h-32 w-48 rounded-full bg-violet-300/8 blur-3xl" />
             <button
               type="button"
               onClick={() => setShowDayOverlay(false)}
@@ -1061,28 +1062,37 @@ export default function LifeSyncAnimeCalendar() {
       className="space-y-4 sm:space-y-6 max-w-7xl mx-auto"
       initial="initial"
       animate="animate"
-      variants={lifeSyncDollyPageVariants}
-      transition={lifeSyncDollyPageTransition}
+      exit="exit"
+      variants={lifeSyncSpringPageVariants}
+      transition={lifeSyncSpringPageTransition}
     >
-      <header className="space-y-1 sm:space-y-2 px-2 sm:px-1">
-        <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">
-          LifeSync / Anime
-        </p>
-        <h2 className="text-2xl sm:text-[32px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">
-          Anime Calendar
-        </h2>
-        <p className="text-[var(--mx-color-86868b)] text-sm sm:text-[17px] font-medium">
-          Weekly schedule powered by Anineko. Pin shows to prioritize them in your calendar.
-        </p>
-      </header>
+      <MediaPageHeader
+        accent="calendar"
+        kicker="LifeSync · Broadcast"
+        title="Anime Calendar"
+        subtitle="Weekly schedule powered by Anineko. Pin shows to prioritize them in your calendar."
+        icon={
+          <svg className="h-5.5 w-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+            <rect x="3" y="4" width="18" height="18" rx="3" />
+            <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+        }
+      />
 
       {error && (
-        <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">
+        <div className="rounded-2xl border border-red-200/60 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">
           {error}
         </div>
       )}
 
-      <div className="bg-[var(--color-surface)] rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 md:p-8 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm">
+      <MotionDiv
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 260, damping: 26, delay: 0.08 }}
+        className="relative overflow-hidden bg-(--color-surface) rounded-3xl sm:rounded-4xl p-4 sm:p-6 md:p-8 border border-(--mx-color-d2d2d7)/40 shadow-sm"
+      >
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-linear-to-r from-transparent via-violet-400/60 to-transparent" aria-hidden />
+        <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-96 rounded-full bg-violet-400/5 blur-3xl" aria-hidden />
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
           <div className="flex items-center justify-between w-full sm:w-auto bg-[var(--mx-color-f5f5f7)] rounded-xl p-1">
             <button
@@ -1141,7 +1151,7 @@ export default function LifeSyncAnimeCalendar() {
 
         {/* Always render the calendar immediately; schedules fill in as they load. */}
         <MonthGrid />
-      </div>
+      </MotionDiv>
 
       <AnimatePresence mode="sync">
         {showDayOverlay && <DayOverlay />}

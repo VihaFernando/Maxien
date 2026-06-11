@@ -24,6 +24,7 @@ import { TVModeProvider } from "../context/TVModeContext"
 import { useTVModeContext } from "../hooks/useTVModeContext"
 import { TVModePortal } from "./lifesync/LifeSyncTVMode"
 import { TVModeStartPrompt } from "../components/lifesync/TVModeStartPrompt"
+import { setLifeSyncInputSource } from "../lib/lifeSyncKeyboardGamepad"
 import useControllerSupportEnabled from "../hooks/useControllerSupportEnabled"
 import useLifeSyncGamepadInput from "../hooks/useLifeSyncGamepadInput"
 import { XBOX_GAMEPAD_BUTTONS } from "../lib/lifeSyncControllerInput"
@@ -60,8 +61,9 @@ function WorkplaceTabLink({ to, label, active, onClick }) {
 }
 
 /**
- * Listens for START button to enter TV mode (from outside TV mode only).
- * Inside TV mode, START is handled by LifeSyncTVModeInner with anti-spam.
+ * Listens for START button (controller) or Shift+T (keyboard) to enter TV mode
+ * (from outside TV mode only). Inside TV mode, START is handled by
+ * LifeSyncTVModeInner with anti-spam.
  */
 function TVStartButtonListener() {
     const controllerEnabled = useControllerSupportEnabled()
@@ -72,6 +74,22 @@ function TVStartButtonListener() {
             [XBOX_GAMEPAD_BUTTONS.START]: () => { void enterTV() },
         },
     })
+
+    useEffect(() => {
+        if (tvActive) return
+        const onKeyDown = (event) => {
+            if (!event.shiftKey || event.code !== 'KeyT') return
+            if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return
+            const tag = String(event.target?.tagName || '').toLowerCase()
+            if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target?.isContentEditable) return
+            event.preventDefault()
+            setLifeSyncInputSource('keyboard')
+            void enterTV()
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [tvActive, enterTV])
+
     return null
 }
 

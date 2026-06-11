@@ -20,6 +20,14 @@ import {
 } from '../../lib/lifeSyncControllerInput'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
 import { ControllerHintBar, ControllerHintOverlay } from '../../components/lifesync/ControllerHintOverlay'
+import {
+    MediaPageHeader,
+    MediaConnectPrompt,
+    MediaEmptyState,
+    mediaPosterFrameClass,
+    mediaSearchInputClass,
+    mediaPrimaryButtonClass,
+} from '../../components/lifesync/MediaPageChrome'
 import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
 import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lifeSyncDetailBodyRevealTransition, lifeSyncDetailOverlayFadeTransition, lifeSyncDetailSheetEnterAnimate, lifeSyncDetailSheetEnterInitial, lifeSyncDetailSheetExitVariant, lifeSyncDetailSheetMainTransition, lifeSyncDollyPageTransition, lifeSyncDollyPageVariants, lifeSyncSharedLayoutTransitionProps, MotionDiv } from '../../lib/lifesyncMotion'
@@ -1089,9 +1097,14 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
 
 const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
     return (
-        <button type="button" onClick={() => onOpenDetail?.(series)} className="group w-full text-left">
-            <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden hover:shadow-md transition-all">
-                <div className="relative aspect-[2/3] w-full overflow-hidden bg-[var(--mx-color-f5f5f7)]">
+        <MotionDiv
+            whileHover={{ y: -6, scale: 1.02, transition: { type: "spring", stiffness: 420, damping: 26 } }}
+            whileTap={{ scale: 0.98 }}
+            className="group w-full text-left"
+        >
+            <button type="button" onClick={() => onOpenDetail?.(series)} className="w-full text-left">
+                <div className={mediaPosterFrameClass}>
+                <div className="relative aspect-[2/3] w-full overflow-hidden">
                     <MotionDiv
                         layoutId={hentaiSeriesPosterLayoutId(series.seriesKey)}
                         transition={lifeSyncSharedLayoutTransitionProps}
@@ -1101,7 +1114,7 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                             <LifesyncEpisodeThumbnail
                                 src={series.posterUrl}
                                 className="absolute inset-0 h-full w-full"
-                                imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                                imgClassName="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
                             >
                                 {series.episodeCount != null && (
                                     <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
@@ -1142,16 +1155,17 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                             </>
                         )}
                     </MotionDiv>
-                </div>
-                <div className="flex items-center justify-center gap-1.5 border-t border-[var(--mx-color-f0f0f0)] bg-[var(--mx-color-fafafa)] py-2.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)]">
-                    <svg className="w-3.5 h-3.5 text-[var(--mx-color-86868b)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" />
-                    </svg>
-                    View episodes
+                    {/* Hover affordance */}
+                    <div className="absolute inset-0 z-[2] flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
+                        <div className="flex h-11 w-11 scale-90 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.8)] transition-transform duration-300 group-hover:scale-100">
+                            <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M8 5v14l11-7z" /></svg>
+                        </div>
+                    </div>
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-0.5 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
                 </div>
             </div>
-        </button>
+            </button>
+        </MotionDiv>
     )
 })
 
@@ -1591,49 +1605,33 @@ export default function LifeSyncHentai() {
 
     if (!isLifeSyncConnected) {
         return (
-            <div className="max-w-4xl mx-auto">
-                <h1 className="mb-1 text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Hentai</h1>
-                <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-                    Adults-only catalog and in-app streaming—connect LifeSync first, then enable NSFW in preferences if you use this hub.
-                </p>
-                <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-e8e4ef)]/70">
-                    <p className="text-[15px] font-bold text-[var(--mx-color-1a1628)] mb-2">LifeSync Not Connected</p>
-                    <p className="text-[13px] text-[var(--mx-color-5b5670)] mb-4">Connect LifeSync in your profile first.</p>
-                    <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
-                        Go to Integrations
-                    </Link>
-                </div>
-            </div>
+            <MediaConnectPrompt
+                accent="hentai"
+                title="Hentai hub locked"
+                body="Adults-only catalog and in-app streaming — connect LifeSync first, then enable NSFW in preferences if you use this hub."
+            />
         )
     }
 
     if (!nsfwEnabled || !pluginEnabled) {
         return (
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div>
-                    <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync / Anime</p>
-                    <h1 className="text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Hentai</h1>
-                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-                        This area stays hidden until you allow mature content and turn on the Hentai plugin in integrations.
-                    </p>
-                </div>
-                <div className="rounded-[22px] border border-[var(--color-border-strong)]/90 bg-[var(--color-surface)]/90 px-8 py-16 text-center shadow-sm ring-1 ring-[var(--mx-color-fce7f3)]/80">
-                    <p className="text-[15px] font-bold text-[var(--mx-color-1a1628)] mb-2">Restricted Content</p>
-                    <p className="text-[13px] text-[var(--mx-color-5b5670)] mb-4">
-                        {!nsfwEnabled
-                            ? 'NSFW content is disabled. Enable it in your LifeSync preferences.'
-                            : 'The Hentai plugin is disabled. Enable it in your profile integrations.'}
-                    </p>
-                    {!nsfwEnabled ? (
-                        <button type="button" onClick={enableNsfw} className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
+            <div className="max-w-4xl mx-auto">
+                <MediaEmptyState
+                    accent="hentai"
+                    title="Restricted content"
+                    message={!nsfwEnabled
+                        ? 'NSFW content is disabled. Enable it in your LifeSync preferences.'
+                        : 'The Hentai plugin is disabled. Enable it in your profile integrations.'}
+                    action={!nsfwEnabled ? (
+                        <button type="button" onClick={enableNsfw} className={mediaPrimaryButtonClass}>
                             Enable NSFW Content
                         </button>
                     ) : (
-                        <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-[var(--mx-color-c6ff00)] px-5 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95">
+                        <Link to="/dashboard/profile?tab=integrations" className={mediaPrimaryButtonClass}>
                             Go to Integrations
                         </Link>
                     )}
-                </div>
+                />
             </div>
         )
     }
@@ -1684,38 +1682,42 @@ export default function LifeSyncHentai() {
                 style={{ pointerEvents: selectedSeries ? 'none' : undefined }}
             >
             {/* Header */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                <div className="min-w-0">
-                    <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest">LifeSync / Anime</p>
-                    <h1 className="text-[24px] sm:text-[28px] font-bold tracking-tight text-[var(--mx-color-1a1628)]">Hentai</h1>
-                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[var(--mx-color-5b5670)]">
-                        Browse adult series, open details and episode lists, and watch in the built-in player. Use filters and sync to refresh the catalog.
-                    </p>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 self-stretch sm:self-start">
-                    <ControllerHintBar
-                        cols={2}
-                        hints={[
-                            { btns: ['LB'], label: 'Prev page' },
-                            { btns: ['RB'], label: 'Next page' },
-                            { btns: ['X'], label: 'Search' },
-                            { btns: ['Y'], label: 'Filters' },
-                            { btns: ['←→'], label: 'Navigate cards' },
-                            { btns: ['A'], label: 'Open series' },
-                        ]}
-                    />
-                    <button
-                        onClick={() => load(page, debouncedSearch, true)}
-                        disabled={busy}
-                        className="w-full sm:w-auto text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50"
-                    >
-                        {busy ? 'Syncing…' : 'Sync catalog'}
-                    </button>
-                </div>
-            </div>
+            <MediaPageHeader
+                accent="hentai"
+                kicker="LifeSync · 18+"
+                title="Hentai"
+                subtitle="Browse adult series, open details and episode lists, and watch in the built-in player."
+                icon={
+                    <svg className="h-5.5 w-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.047 8.287 8.287 0 009 9.601a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
+                    </svg>
+                }
+                actions={
+                    <>
+                        <ControllerHintBar
+                            cols={2}
+                            hints={[
+                                { btns: ['LB'], label: 'Prev page' },
+                                { btns: ['RB'], label: 'Next page' },
+                                { btns: ['X'], label: 'Search' },
+                                { btns: ['Y'], label: 'Filters' },
+                                { btns: ['←→'], label: 'Navigate cards' },
+                                { btns: ['A'], label: 'Open series' },
+                            ]}
+                        />
+                        <button
+                            onClick={() => load(page, debouncedSearch, true)}
+                            disabled={busy}
+                            className="shrink-0 self-start whitespace-nowrap rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2 text-[12px] font-bold text-[var(--mx-color-1d1d1f)] shadow-sm transition-all hover:-translate-y-px hover:border-fuchsia-400/50 disabled:opacity-50"
+                        >
+                            {busy ? 'Syncing…' : 'Sync catalog'}
+                        </button>
+                    </>
+                }
+            />
 
             {/* Error */}
-            {error && <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{error}</div>}
+            {error && <div className="rounded-2xl border border-red-200/60 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">{error}</div>}
 
             {/* Search */}
             <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
@@ -1725,7 +1727,7 @@ export default function LifeSyncHentai() {
                     value={searchQ}
                     onChange={e => { setSearchQ(e.target.value) }}
                     placeholder="Search WatchHentai titles…"
-                    className="flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                    className={`flex-1 ${mediaSearchInputClass} pl-4`}
                 />
                 <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-[auto_auto]">
                     <button
@@ -1894,9 +1896,7 @@ export default function LifeSyncHentai() {
                         })}
                     </div>
                     {!filteredFlat.length && debouncedSearch && (
-                        <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm px-6 py-10 text-center">
-                            <p className="text-[13px] text-[var(--mx-color-86868b)]">No matches for "{debouncedSearch}".</p>
-                        </div>
+                        <MediaEmptyState accent="hentai" title="No matches" message={`Nothing matched "${debouncedSearch}". Try another search.`} />
                     )}
                 </>
             ) : seriesList.length > 0 ? (
@@ -1908,23 +1908,23 @@ export default function LifeSyncHentai() {
                             </div>
                         ))}
                     </div>
-                    <div className="flex items-center justify-center gap-2 flex-wrap">
-                        <button disabled={page <= 1 || busy} onClick={() => goPage(page - 1)} className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-30">
-                            Prev
-                        </button>
-                        <span className="text-[12px] text-[var(--mx-color-86868b)] px-2">
-                            Page {page}
-                            {catalog?.hasMore === false && catalog?.totalSeries != null ? ` · ${catalog.totalSeries} total` : ''}
-                        </span>
-                        <button disabled={busy || catalog?.hasMore === false} onClick={() => goPage(page + 1)} className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-30">
-                            Next
-                        </button>
+                    <div className="flex items-center justify-center">
+                        <div className="flex items-center gap-2 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-1.5 shadow-sm">
+                            <button disabled={page <= 1 || busy} onClick={() => goPage(page - 1)} className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--mx-color-1d1d1f)] transition-all hover:bg-[var(--mx-color-f5f5f7)] disabled:opacity-30">
+                                ← Prev
+                            </button>
+                            <span className="px-2 text-[12px] font-black tabular-nums text-[var(--mx-color-86868b)]">
+                                Page {page}
+                                {catalog?.hasMore === false && catalog?.totalSeries != null ? ` · ${catalog.totalSeries} total` : ''}
+                            </span>
+                            <button disabled={busy || catalog?.hasMore === false} onClick={() => goPage(page + 1)} className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--mx-color-1d1d1f)] transition-all hover:bg-[var(--mx-color-f5f5f7)] disabled:opacity-30">
+                                Next →
+                            </button>
+                        </div>
                     </div>
                 </>
             ) : !busy ? (
-                <div className="bg-[var(--color-surface)] rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm px-6 py-10 text-center">
-                    <p className="text-[13px] text-[var(--mx-color-86868b)]">No content to display.</p>
-                </div>
+                <MediaEmptyState accent="hentai" title="No content to display" message="Sync the catalog or adjust your filters." />
             ) : null}
             </div>
         </MotionDiv>

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { gamepadButtonFromKeyboardEvent, setLifeSyncInputSource } from '../lib/lifeSyncKeyboardGamepad'
 
 function normalizeHandlers(rawHandlers) {
     const out = new Map()
@@ -80,6 +81,7 @@ export default function useLifeSyncGamepadInput({
                         const repeatable = repeatableRef.current.has(buttonIndex)
 
                         if (pressed && !wasPressed) {
+                            setLifeSyncInputSource('gamepad')
                             handler({ buttonIndex, repeat: false, value, gamepad })
                             if (repeatable) {
                                 nextRepeatAtRef.current.set(buttonIndex, now + repeatDelayMs)
@@ -102,10 +104,29 @@ export default function useLifeSyncGamepadInput({
         }
 
         rafId = window.requestAnimationFrame(tick)
+
+        // Keyboard bridge — active only while TV mode enables it (see
+        // lifeSyncKeyboardGamepad.js). Mapped keys fire the same handlers as
+        // their gamepad buttons; native key auto-repeat drives repeats so it
+        // only applies to repeatable (D-pad) buttons.
+        const onKeyDown = (event) => {
+            const buttonIndex = gamepadButtonFromKeyboardEvent(event)
+            if (buttonIndex == null) return
+            const handler = handlersRef.current.get(buttonIndex)
+            if (!handler) return
+            event.preventDefault()
+            event.stopPropagation()
+            if (event.repeat && !repeatableRef.current.has(buttonIndex)) return
+            setLifeSyncInputSource('keyboard')
+            handler({ buttonIndex, repeat: Boolean(event.repeat), value: 1, gamepad: null, keyboard: true })
+        }
+        window.addEventListener('keydown', onKeyDown)
+
         const pressedMap = pressedRef.current
         const nextRepeatMap = nextRepeatAtRef.current
         return () => {
             window.cancelAnimationFrame(rafId)
+            window.removeEventListener('keydown', onKeyDown)
             pressedMap.clear()
             nextRepeatMap.clear()
         }

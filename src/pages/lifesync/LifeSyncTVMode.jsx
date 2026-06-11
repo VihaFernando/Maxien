@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion as Motion } from 'framer-motion'
+import { FaBook, FaBookOpen, FaFilm, FaFire, FaHistory, FaHome, FaPowerOff } from 'react-icons/fa'
 import { TVModeContext } from '../../context/TVModeContextObject'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHentaiHubVisible, isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
@@ -9,6 +10,8 @@ import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled
 import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
 import { readStoredReduceAnimationsSetting } from '../../lib/lifeSyncReduceMotion'
+import { setLifeSyncKeyboardGamepadActive, tvHintLabel } from '../../lib/lifeSyncKeyboardGamepad'
+import useLifeSyncInputSource from '../../hooks/useLifeSyncInputSource'
 
 import { TVIntroAnimation } from './tv/TVIntroAnimation'
 import { TVExitConfirmPopup } from './tv/TVExitConfirmPopup'
@@ -65,51 +68,123 @@ function movePos(pos, dir, itemCount, cols) {
 
 // ─── tab bar ─────────────────────────────────────────────────────────────────
 
-function TVTabBar({ tabs, activeIndex, compact = false }) {
+const TAB_ICONS = {
+    home: FaHome,
+    anime: FaFilm,
+    manga: FaBookOpen,
+    hmanhwa: FaBook,
+    hentai: FaFire,
+    history: FaHistory,
+    exit: FaPowerOff,
+}
+
+/** Per-section accent used to tint home cards and tab glyphs. */
+const TAB_ACCENTS = {
+    anime: { text: 'text-sky-300', glow: 'rgba(56,189,248,0.20)', grad: 'from-sky-400/18 via-sky-400/4 to-transparent' },
+    manga: { text: 'text-amber-300', glow: 'rgba(251,191,36,0.20)', grad: 'from-amber-400/18 via-amber-400/4 to-transparent' },
+    hmanhwa: { text: 'text-rose-300', glow: 'rgba(251,113,133,0.20)', grad: 'from-rose-400/18 via-rose-400/4 to-transparent' },
+    hentai: { text: 'text-fuchsia-300', glow: 'rgba(232,121,249,0.20)', grad: 'from-fuchsia-400/18 via-fuchsia-400/4 to-transparent' },
+    history: { text: 'text-violet-300', glow: 'rgba(167,139,250,0.20)', grad: 'from-violet-400/18 via-violet-400/4 to-transparent' },
+}
+const DEFAULT_ACCENT = { text: 'text-(--mx-color-c6ff00)', glow: 'rgba(198,255,0,0.18)', grad: 'from-(--mx-color-c6ff00)/15 via-transparent to-transparent' }
+
+function TVKeycap({ children, accent = false }) {
     return (
-        <div className={`shrink-0 flex items-center justify-between border-b border-white/8 ${LOW_END ? 'bg-black' : 'bg-black/60 backdrop-blur-xl'} ${compact ? 'px-4 py-1.5' : 'px-6 py-3'}`}>
-            <div className="flex items-center gap-2.5 mr-8">
-                <div className={`flex items-center justify-center rounded-xl bg-(--mx-color-c6ff00) ${compact ? 'h-6 w-6' : 'h-8 w-8'}`}>
+        <span className={`flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[9px] font-black ${
+            accent ? 'bg-(--mx-color-c6ff00) text-black' : 'bg-white/8 text-white/70 ring-1 ring-white/10'
+        }`}>
+            {children}
+        </span>
+    )
+}
+
+function TVClock({ compact = false }) {
+    const [now, setNow] = useState(() => new Date())
+    useEffect(() => {
+        const tick = setInterval(() => setNow(new Date()), 30000)
+        return () => clearInterval(tick)
+    }, [])
+    return (
+        <span className={`font-black tabular-nums tracking-tight text-white/80 ${compact ? 'text-[12px]' : 'text-[15px]'}`}>
+            {now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+        </span>
+    )
+}
+
+function TVTabBar({ tabs, activeIndex, compact = false }) {
+    const inputSource = useLifeSyncInputSource()
+    return (
+        <div className={`relative z-10 flex shrink-0 items-center justify-between gap-4 border-b border-white/6 ${LOW_END ? 'bg-[#08080d]' : 'bg-[#0a0a10]/55 backdrop-blur-2xl'} ${compact ? 'px-4 py-1.5' : 'px-7 py-3'}`}>
+            {/* Brand */}
+            <div className="mr-6 flex shrink-0 items-center gap-2.5">
+                <div className={`flex items-center justify-center rounded-xl bg-(--mx-color-c6ff00) shadow-[0_0_24px_rgba(198,255,0,0.35)] ${compact ? 'h-6 w-6' : 'h-8 w-8'}`}>
                     <svg className={compact ? 'h-3 w-3' : 'h-4 w-4'} fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="black" aria-hidden>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
                     </svg>
                 </div>
-                <span className={`font-black text-white ${compact ? 'text-[12px]' : 'text-[15px]'}`}>LifeSync TV</span>
+                <span className={`font-black tracking-tight text-white ${compact ? 'text-[12px]' : 'text-[15px]'}`}>
+                    LifeSync
+                </span>
+                <span className={`rounded-md bg-white/8 px-1.5 py-0.5 font-black uppercase tracking-[0.14em] text-white/55 ring-1 ring-white/10 ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
+                    TV
+                </span>
             </div>
 
-            <div className="flex items-center gap-1 flex-1">
-                {tabs.map((tab, i) => (
-                    <div
-                        key={tab.id}
-                        className={`relative rounded-xl font-black transition-all ${compact ? 'px-3 py-1 text-[12px]' : 'px-5 py-2 text-[15px]'} ${
-                            i === activeIndex
-                                ? 'bg-(--mx-color-c6ff00) text-black'
-                                : tab.isExit
-                                    ? 'text-white/35'
-                                    : 'text-white/50'
-                        }`}
-                    >
-                        {tab.label}
-                        {tab.isExit && i !== activeIndex && <span className="ml-1 text-[11px] opacity-50">⏻</span>}
-                    </div>
-                ))}
+            {/* Tab pills with animated active indicator */}
+            <div className={`flex flex-1 items-center rounded-full p-1 ${LOW_END ? 'bg-white/4' : 'bg-white/4 ring-1 ring-white/6'}`}>
+                {tabs.map((tab, i) => {
+                    const Icon = TAB_ICONS[tab.id]
+                    const active = i === activeIndex
+                    return (
+                        <div
+                            key={tab.id}
+                            className={`relative flex items-center gap-2 rounded-full font-black transition-colors duration-200 ${compact ? 'px-3 py-1 text-[12px]' : 'px-4.5 py-1.5 text-[14px]'} ${
+                                active
+                                    ? tab.isExit ? 'text-white' : 'text-black'
+                                    : tab.isExit ? 'text-white/30' : 'text-white/45'
+                            }`}
+                        >
+                            {active && (
+                                <Motion.span
+                                    layoutId="tv-tab-active-pill"
+                                    className={`absolute inset-0 rounded-full ${
+                                        tab.isExit
+                                            ? 'bg-red-500/85 shadow-[0_0_22px_rgba(239,68,68,0.45)]'
+                                            : 'bg-(--mx-color-c6ff00) shadow-[0_0_22px_rgba(198,255,0,0.35)]'
+                                    }`}
+                                    transition={LOW_END ? { duration: 0 } : { type: 'spring', stiffness: 480, damping: 38 }}
+                                    aria-hidden
+                                />
+                            )}
+                            {Icon && <Icon className={`relative ${compact ? 'h-2.5 w-2.5' : 'h-3 w-3'} ${active ? '' : 'opacity-60'}`} aria-hidden />}
+                            <span className="relative">{tab.label}</span>
+                        </div>
+                    )
+                })}
             </div>
 
-            <div className="ml-6 flex items-center gap-3 text-[11px] text-white/30">
-                <div className="flex items-center gap-1">
-                    <span className="rounded bg-white/10 px-1.5 py-0.5 font-black text-[10px]">LB</span>
-                    <span className="rounded bg-white/10 px-1.5 py-0.5 font-black text-[10px]">RB</span>
-                    <span>tabs</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="rounded bg-white/10 px-1.5 py-0.5 font-black text-[10px]">LT</span>
-                    <span className="rounded bg-white/10 px-1.5 py-0.5 font-black text-[10px]">RT</span>
-                    <span>page</span>
-                </div>
-                <div className="flex items-center gap-1">
-                    <span className="rounded bg-(--mx-color-c6ff00)/80 px-1.5 py-0.5 font-black text-[10px] text-black">Y</span>
-                    <span>filter</span>
-                </div>
+            {/* Hints + clock */}
+            <div className="ml-6 flex shrink-0 items-center gap-4 text-[10px] font-bold text-white/35">
+                {!compact && (
+                    <>
+                        <div className="flex items-center gap-1.5">
+                            <TVKeycap>{tvHintLabel('LB', inputSource)}</TVKeycap>
+                            <TVKeycap>{tvHintLabel('RB', inputSource)}</TVKeycap>
+                            <span>tabs</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <TVKeycap>{tvHintLabel('LT', inputSource)}</TVKeycap>
+                            <TVKeycap>{tvHintLabel('RT', inputSource)}</TVKeycap>
+                            <span>page</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <TVKeycap accent>{tvHintLabel('Y', inputSource)}</TVKeycap>
+                            <span>filter</span>
+                        </div>
+                        <span className="h-4 w-px bg-white/10" aria-hidden />
+                    </>
+                )}
+                <TVClock compact={compact} />
             </div>
         </div>
     )
@@ -117,58 +192,123 @@ function TVTabBar({ tabs, activeIndex, compact = false }) {
 
 function TVSectionHeading({ title, subtitle }) {
     return (
-        <div className="mb-6 shrink-0">
-            <h2 className="text-[32px] font-black leading-none tracking-tight text-white">{title}</h2>
-            {subtitle && <p className="mt-1 text-[14px] text-white/40">{subtitle}</p>}
+        <div className="mb-6 flex shrink-0 items-end justify-between gap-6">
+            <div className="flex items-center gap-4">
+                <span className="h-10 w-1.5 rounded-full bg-linear-to-b from-(--mx-color-c6ff00) to-(--mx-color-c6ff00)/10" aria-hidden />
+                <h2 className="text-[34px] font-black leading-none tracking-tight text-white">{title}</h2>
+            </div>
+            {subtitle && (
+                <p className="rounded-full bg-white/5 px-4 py-1.5 text-[12px] font-bold text-white/45 ring-1 ring-white/8">
+                    {subtitle}
+                </p>
+            )}
         </div>
     )
 }
 
+function tvGreeting() {
+    const hour = new Date().getHours()
+    if (hour < 5) return 'Up late'
+    if (hour < 12) return 'Good morning'
+    if (hour < 18) return 'Good afternoon'
+    return 'Good evening'
+}
+
 function TVHomeSection({ tabs, focusPos, onOpenTab }) {
+    const inputSource = useLifeSyncInputSource()
     const cards = tabs.filter(tab => !tab.isHome && !tab.isExit)
+    const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     return (
         <div className="space-y-8">
-            <div className="relative overflow-hidden rounded-4xl border border-white/10 bg-white/4 p-8">
-                <div className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-(--mx-color-c6ff00)/10 blur-3xl" />
-                <p className="text-[13px] font-black uppercase tracking-[0.28em] text-(--mx-color-c6ff00)">Controller Ready</p>
-                <h1 className="mt-3 max-w-3xl text-[54px] font-black leading-[0.95] tracking-tight text-white">
-                    Pick a section and browse from the couch.
+            {/* Cinematic hero */}
+            <div className="relative overflow-hidden rounded-4xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-transparent p-9">
+                {!LOW_END && (
+                    <>
+                        <div className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-(--mx-color-c6ff00)/12 blur-3xl" aria-hidden />
+                        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-indigo-500/12 blur-3xl" aria-hidden />
+                    </>
+                )}
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-(--mx-color-c6ff00)/50 to-transparent" aria-hidden />
+
+                <div className="relative flex items-center justify-between gap-3">
+                    <p className="flex items-center gap-3 text-[13px] font-black uppercase tracking-[0.28em] text-(--mx-color-c6ff00)">
+                        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-(--mx-color-c6ff00)" aria-hidden />
+                        {tvGreeting()}
+                    </p>
+                    <p className="text-[13px] font-bold text-white/35">{dateLabel}</p>
+                </div>
+                <h1 className="mt-4 max-w-3xl text-[56px] font-black leading-[0.95] tracking-tight text-white">
+                    What are we watching
+                    <span className="bg-linear-to-r from-(--mx-color-c6ff00) to-lime-200 bg-clip-text text-transparent"> tonight?</span>
                 </h1>
-                <p className="mt-4 max-w-2xl text-[17px] font-semibold leading-relaxed text-white/45">
-                    Use D-pad to move, A to open, Y for filters, X for page jump, and B to go back.
+                <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-bold text-white/40">
+                    <span className="flex items-center gap-2"><TVKeycap>{tvHintLabel('✛', inputSource)}</TVKeycap> move</span>
+                    <span className="flex items-center gap-2"><TVKeycap accent>{tvHintLabel('A', inputSource)}</TVKeycap> open</span>
+                    <span className="flex items-center gap-2"><TVKeycap>{tvHintLabel('Y', inputSource)}</TVKeycap> filters</span>
+                    <span className="flex items-center gap-2"><TVKeycap>{tvHintLabel('X', inputSource)}</TVKeycap> page jump</span>
+                    <span className="flex items-center gap-2"><TVKeycap>{tvHintLabel('B', inputSource)}</TVKeycap> back</span>
+                </div>
+                <p className="mt-3 text-[12px] font-bold text-white/25">
+                    {inputSource === 'keyboard'
+                        ? 'Keyboard mode — controller hints switch back the moment you press a gamepad button.'
+                        : 'Keyboard works too — WASD / arrows, Enter, Backspace, Q/E, N/M, Space, and Tab.'}
                 </p>
             </div>
 
-            <div className="grid grid-cols-5 gap-5">
+            {/* Destination cards with enhanced animations */}
+            <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${Math.max(1, cards.length)}, minmax(0, 1fr))` }}>
                 {cards.map((tab, index) => {
                     const focused = focusPos.row === 0 && focusPos.col === index
+                    const accent = TAB_ACCENTS[tab.id] || DEFAULT_ACCENT
+                    const Icon = TAB_ICONS[tab.id]
                     return (
-                        <button
+                        <Motion.div
                             key={tab.id}
+                            animate={focused ? { scale: 1.05, transition: { type: 'spring', stiffness: 400, damping: 24 } } : { scale: 1 }}
+                            className="relative"
+                        >
+                        <button
                             type="button"
                             data-focused-card={focused ? 'true' : undefined}
                             onClick={() => onOpenTab(tab.id)}
-                                className={`group relative min-h-52.5 overflow-hidden rounded-3xl border p-5 text-left transition-all ${
+                            className={`group relative min-h-56 overflow-hidden rounded-[26px] border p-5 text-left transition-all duration-200 ${
                                 focused
-                                    ? 'scale-[1.04] border-(--mx-color-c6ff00) bg-(--mx-color-c6ff00) text-black shadow-[0_0_0_4px_rgba(198,255,0,0.22)]'
-                                    : 'border-white/10 bg-white/5.5 text-white hover:bg-white/8'
+                                    ? 'border-(--mx-color-c6ff00) bg-white/8 shadow-[0_0_0_4px_rgba(198,255,0,0.18),0_24px_60px_-20px_rgba(0,0,0,0.8)]'
+                                    : 'border-white/8 bg-white/4 hover:bg-white/7'
                             }`}
+                            style={focused && !LOW_END ? { boxShadow: `0 0 0 4px rgba(198,255,0,0.18), 0 0 60px ${accent.glow}, 0 24px 60px -20px rgba(0,0,0,0.8)` } : undefined}
                         >
-                            <div className={`mb-10 flex h-12 w-12 items-center justify-center rounded-2xl text-[20px] font-black ${
-                                focused ? 'bg-black/15' : 'bg-white/10 text-(--mx-color-c6ff00)'
-                            }`}>
-                                {index + 1}
-                            </div>
-                            <h3 className="text-[28px] font-black tracking-tight">{tab.label}</h3>
-                            <p className={`mt-2 text-[13px] font-semibold ${focused ? 'text-black/55' : 'text-white/35'}`}>
-                                Press A to open {tab.label}.
-                            </p>
-                            {focused && (
-                                <span className="absolute bottom-5 right-5 rounded-xl bg-black px-3 py-1.5 text-[11px] font-black text-(--mx-color-c6ff00)">
-                                    A Open
-                                </span>
+                            {/* Accent wash */}
+                            <div className={`pointer-events-none absolute inset-0 bg-linear-to-br ${accent.grad} transition-opacity duration-200 ${focused ? 'opacity-100' : 'opacity-60'}`} aria-hidden />
+                            {/* Watermark glyph */}
+                            {Icon && (
+                                <Icon
+                                    className={`pointer-events-none absolute -bottom-6 -right-5 h-28 w-28 transition-all duration-300 ${accent.text} ${
+                                        focused ? 'opacity-25 -rotate-6 scale-110' : 'opacity-10 rotate-0'
+                                    }`}
+                                    aria-hidden
+                                />
                             )}
+
+                            <div className="relative flex h-full min-h-[inherit] flex-col">
+                                <div className="flex items-center justify-between">
+                                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-white/8 ring-1 ring-white/10 ${accent.text}`}>
+                                        {Icon ? <Icon className="h-5 w-5" aria-hidden /> : <span className="text-[18px] font-black">{index + 1}</span>}
+                                    </div>
+                                    <span className={`text-[12px] font-black tabular-nums tracking-[0.2em] ${focused ? 'text-(--mx-color-c6ff00)' : 'text-white/20'}`}>
+                                        0{index + 1}
+                                    </span>
+                                </div>
+                                <div className="mt-auto">
+                                    <h3 className="text-[27px] font-black tracking-tight text-white">{tab.label}</h3>
+                                    <div className={`mt-2 h-1 rounded-full bg-(--mx-color-c6ff00) transition-all duration-300 ${focused ? 'w-12 opacity-100' : 'w-5 opacity-25'}`} aria-hidden />
+                                    <p className={`mt-3 flex items-center gap-2 text-[12px] font-bold transition-colors ${focused ? 'text-white/70' : 'text-white/30'}`}>
+                                        {focused ? <><TVKeycap accent>{tvHintLabel('A', inputSource)}</TVKeycap> Open {tab.label}</> : `Browse ${tab.label.toLowerCase()}`}
+                                    </p>
+                                </div>
+                            </div>
                         </button>
+                        </Motion.div>
                     )
                 })}
             </div>
@@ -178,6 +318,7 @@ function TVHomeSection({ tabs, focusPos, onOpenTab }) {
 
 function TVNumberPrompt({ title, value, onValueChange, onConfirm, onCancel }) {
     const controllerEnabled = useControllerSupportEnabled()
+    const inputSource = useLifeSyncInputSource()
     const inputRef = useRef(null)
 
     useEffect(() => {
@@ -194,9 +335,10 @@ function TVNumberPrompt({ title, value, onValueChange, onConfirm, onCancel }) {
     useLifeSyncGamepadInput({ enabled: controllerEnabled, handlers })
 
     return (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="w-105 rounded-3xl bg-[#111116] p-6 shadow-2xl ring-1 ring-white/10">
-                <h3 className="text-[24px] font-black text-white">{title}</h3>
+        <div className={`absolute inset-0 z-40 flex items-center justify-center bg-black/70 ${LOW_END ? '' : 'backdrop-blur-md'}`}>
+            <div className="w-105 overflow-hidden rounded-[28px] bg-linear-to-b from-[#14141c] to-[#0c0c12] p-6 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10">
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-(--mx-color-c6ff00)/60 to-transparent" aria-hidden />
+                <h3 className="text-[24px] font-black tracking-tight text-white">{title}</h3>
                 <input
                     ref={inputRef}
                     type="number"
@@ -207,13 +349,15 @@ function TVNumberPrompt({ title, value, onValueChange, onConfirm, onCancel }) {
                         if (event.key === 'Enter') onConfirm()
                         if (event.key === 'Escape') onCancel()
                     }}
-                    className="mt-5 w-full rounded-2xl border border-white/12 bg-black/35 px-5 py-4 text-center text-[32px] font-black text-white outline-none focus:border-(--mx-color-c6ff00)"
+                    className="mt-5 w-full rounded-2xl border border-white/12 bg-black/40 px-5 py-4 text-center text-[34px] font-black tabular-nums text-white outline-none transition focus:border-(--mx-color-c6ff00) focus:shadow-[0_0_0_4px_rgba(198,255,0,0.15)]"
                 />
                 <div className="mt-5 flex gap-3">
-                    <button type="button" onClick={onConfirm} className="min-h-12 flex-1 rounded-2xl bg-(--mx-color-c6ff00) text-[16px] font-black text-black">Go</button>
-                    <button type="button" onClick={onCancel} className="min-h-12 rounded-2xl bg-white/8 px-6 text-[16px] font-bold text-white/60">Cancel</button>
+                    <button type="button" onClick={onConfirm} className="min-h-12 flex-1 rounded-2xl bg-(--mx-color-c6ff00) text-[16px] font-black text-black shadow-[0_8px_24px_-8px_rgba(198,255,0,0.5)] transition hover:brightness-105">Go</button>
+                    <button type="button" onClick={onCancel} className="min-h-12 rounded-2xl bg-white/8 px-6 text-[16px] font-bold text-white/60 ring-1 ring-white/10 transition hover:bg-white/12">Cancel</button>
                 </div>
-                <p className="mt-3 text-center text-[11px] text-white/30">A confirm · B close</p>
+                <p className="mt-4 flex items-center justify-center gap-2 text-[11px] font-bold text-white/30">
+                    <TVKeycap accent>{tvHintLabel('A', inputSource)}</TVKeycap> confirm <TVKeycap>{tvHintLabel('B', inputSource)}</TVKeycap> close
+                </p>
             </div>
         </div>
     )
@@ -225,6 +369,7 @@ function LifeSyncTVModeInner({ onExit }) {
     const { lifeSyncUser } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
     const controllerEnabled = useControllerSupportEnabled()
+    const shellInputSource = useLifeSyncInputSource()
     const ctx = useContext(TVModeContext)
     const { markIntroPlayed } = ctx || {}
 
@@ -307,6 +452,14 @@ function LifeSyncTVModeInner({ onExit }) {
     useEffect(() => {
         const now = typeof performance !== 'undefined' ? performance.now() : Date.now()
         inputBlockUntilRef.current = now + 600
+    }, [])
+
+    // Keyboard-as-controller is active for the whole TV mode session, so every
+    // gamepad handler (shell, detail sheet, filters, players) also accepts
+    // WASD/arrows, Q/E (LB/RB), N/M (LT/RT), Space (X), Tab (Y), Enter (A), Backspace (B).
+    useEffect(() => {
+        setLifeSyncKeyboardGamepadActive(true)
+        return () => setLifeSyncKeyboardGamepadActive(false)
     }, [])
 
     if (mangaReaderBackBlocked && playerState?.type !== 'manga') {
@@ -486,16 +639,19 @@ function LifeSyncTVModeInner({ onExit }) {
     const pageSubtitle = activeTab?.id === 'home'
         ? 'Choose a destination'
         : activeTab?.id !== 'history' && activeTab?.id !== 'exit'
-        ? `Page ${currentPage} · LT / RT to change`
+        ? `Page ${currentPage} · ${tvHintLabel('LT/RT', shellInputSource)} to change`
         : activeTab?.id === 'history' ? 'Your watch & reading history' : null
 
     return (
-        <div className="fixed inset-0 z-9999 flex h-dvh w-full flex-col overflow-hidden bg-[#0a0a0c] text-white" style={{ cursor: 'none' }}>
-            {/* Ambient glow — omitted on low-end devices to avoid GPU compositing */}
+        <div className="fixed inset-0 z-9999 flex h-dvh w-full flex-col overflow-hidden bg-[#07070b] text-white" style={{ cursor: 'none' }}>
+            {/* Ambient scene — omitted on low-end devices to avoid GPU compositing */}
             {!LOW_END && (
                 <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-                    <div className="absolute -left-40 -top-20 h-125 w-125 rounded-full bg-(--mx-color-c6ff00)/4 blur-[200px]" />
-                    <div className="absolute right-0 bottom-0 h-100 w-100 rounded-full bg-indigo-500/4 blur-[180px]" />
+                    <div className="absolute -left-40 -top-20 h-125 w-125 rounded-full bg-(--mx-color-c6ff00)/5 blur-[200px]" />
+                    <div className="absolute right-0 bottom-0 h-100 w-100 rounded-full bg-indigo-500/6 blur-[180px]" />
+                    <div className="absolute left-1/2 top-1/3 h-80 w-160 -translate-x-1/2 rounded-full bg-sky-500/4 blur-[160px]" />
+                    {/* Vignette keeps edges cinematic and focus on the grid */}
+                    <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_50%_40%,transparent_55%,rgba(0,0,0,0.5)_100%)]" />
                 </div>
             )}
 

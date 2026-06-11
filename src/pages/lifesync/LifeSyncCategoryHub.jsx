@@ -248,18 +248,20 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
             </div>
             {/* Very subtle tint only (avoid “haze”) */}
             <div className={`pointer-events-none absolute inset-0 opacity-25 transition-opacity duration-300 ${gradient}`} />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/80 via-black/35 to-black/0 sm:h-44" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/85 via-black/40 to-black/0 transition-opacity duration-300 sm:h-44" />
+            {/* Accent hairline sweeps in on hover */}
+            <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--mx-color-c6ff00)]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
 
             {/* Content */}
             <div className="relative z-10 flex h-full min-h-[inherit] flex-col justify-end p-4 sm:p-5">
                 <div className="flex items-end justify-between gap-3">
                     <div className="min-w-0">
                         {badge ? (
-                            <span className={`mb-1 inline-flex w-fit items-center rounded-full bg-[var(--color-surface)]/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-sm ring-1 ring-[var(--color-border-strong)]/20 ${badgeClass || ''}`}>
+                            <span className={`mb-1 inline-flex w-fit items-center rounded-full bg-[var(--color-surface)]/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-sm ring-1 ring-[var(--color-border-strong)]/20 backdrop-blur-sm ${badgeClass || ''}`}>
                                 {badge}
                             </span>
                         ) : null}
-                        <h3 className="text-[18px] font-black leading-tight tracking-tight text-white sm:text-[20px] lg:text-[22px]">
+                        <h3 className="text-[18px] font-black leading-tight tracking-tight text-white transition-transform duration-300 group-hover:-translate-y-0.5 sm:text-[20px] lg:text-[22px]">
                             {title}
                         </h3>
                         <p className="mt-1 max-w-[46ch] text-[12px] leading-snug text-white/80 line-clamp-2 sm:text-[13px]">
@@ -267,9 +269,8 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
                         </p>
                     </div>
 
-                    <span className="shrink-0 inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)]/15 px-3 py-2 text-[11px] font-bold text-white shadow-sm ring-1 ring-[var(--color-border-strong)]/20 backdrop-blur transition group-hover:bg-[var(--color-surface)]/20">
-                        Open
-                        <FaArrowRight className="h-3 w-3 opacity-85" aria-hidden />
+                    <span className="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface)]/15 text-white shadow-sm ring-1 ring-[var(--color-border-strong)]/20 backdrop-blur transition-all duration-300 group-hover:bg-[var(--mx-color-c6ff00)] group-hover:text-black group-hover:shadow-[0_8px_24px_-8px_rgba(198,255,0,0.6)]">
+                        <FaArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-rotate-45" aria-hidden />
                     </span>
                 </div>
             </div>
@@ -284,7 +285,7 @@ function MobileExploreRow({ to, pool, title, subtitle, badge, badgeClass }) {
     return (
         <MotionLink
             to={to}
-            className={`flex min-h-[104px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-[var(--color-surface)] p-3 shadow-sm ring-1 ring-slate-100/80 transition hover:bg-slate-50/60 active:scale-[0.99] sm:min-h-[104px] sm:gap-4 sm:p-4 ${focusRing}`}
+            className={`group flex min-h-[104px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-[var(--color-surface)] p-3 shadow-sm ring-1 ring-slate-100/80 transition hover:bg-slate-50/60 active:scale-[0.99] sm:min-h-[104px] sm:gap-4 sm:p-4 ${focusRing}`}
             whileTap={{ scale: 0.99 }}
             whileHover={{ y: -2 }}
             transition={{ type: 'spring', stiffness: 480, damping: 32 }}
@@ -305,8 +306,8 @@ function MobileExploreRow({ to, pool, title, subtitle, badge, badgeClass }) {
                 <h3 className="text-[15px] font-black leading-tight tracking-tight text-slate-900 sm:text-[17px]">{title}</h3>
                 <p className="mt-0.5 text-[11px] leading-snug text-[var(--mx-color-64748b)] line-clamp-2 sm:mt-1 sm:text-[12px]">{subtitle}</p>
             </div>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-2xl bg-[var(--mx-color-c6ff00)]/25 text-slate-900 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/40 sm:h-12 sm:w-12">
-                <FaChevronRight className="h-4 w-4 sm:h-[18px] sm:w-[18px]" aria-hidden />
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-2xl bg-[var(--mx-color-c6ff00)]/25 text-slate-900 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/40 transition-all duration-300 group-hover:bg-[var(--mx-color-c6ff00)] group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)] sm:h-12 sm:w-12">
+                <FaChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 sm:h-[18px] sm:w-[18px]" aria-hidden />
             </div>
         </MotionLink>
     )
@@ -342,8 +343,8 @@ function AnimeExploreLaneCard({ tile, compact = false, className = '' }) {
                             {tile.badge}
                         </span>
                     ) : null}
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition group-hover:bg-slate-700">
-                        <FaArrowRight className="h-3.5 w-3.5" aria-hidden />
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all duration-300 group-hover:bg-[var(--mx-color-c6ff00)] group-hover:text-black group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)]">
+                        <FaArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-rotate-45" aria-hidden />
                     </span>
                 </div>
             </div>
@@ -372,16 +373,16 @@ function GameHubFastTravelTile({ to, icon, title, subtitle }) {
             to={to}
             className={`group relative overflow-hidden rounded-2xl px-3.5 py-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:px-4 sm:py-4 ${focusRing}`}
         >
-            <div className="pointer-events-none absolute inset-0" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--mx-color-c6ff00)]/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
             <div className="relative flex items-start gap-3">
-                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white ring-1 ring-slate-200/80">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white ring-1 ring-slate-200/80 transition-all duration-300 group-hover:bg-[var(--mx-color-c6ff00)] group-hover:text-black group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)]">
                     <IconComponent className="h-4.5 w-4.5" aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
                     <span className="block text-[13px] font-black tracking-tight text-slate-900">{title}</span>
                     <span className="mt-1 block text-[11px] leading-snug text-slate-600">{subtitle}</span>
                 </span>
-                <FaChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition group-hover:text-slate-900" aria-hidden />
+                <FaChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-slate-900" aria-hidden />
             </div>
         </Link>
     )
@@ -1475,23 +1476,43 @@ export function LifeSyncAnimeHub() {
     return (
         <div className="relative lifesync-category-borderless">
             <header className="relative mb-6 sm:mb-8">
-                <div className="overflow-hidden rounded-[28px] backdrop-blur-md p-5 text-slate-900 shadow-[0_28px_60px_-32px_rgba(21, 20, 24,0.18)] sm:p-6 lg:p-7">
-                    <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[var(--mx-color-c6ff00)]/20 blur-3xl" aria-hidden />
-                    <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-indigo-300/25 blur-3xl" aria-hidden />
+                <div className="relative overflow-hidden rounded-[28px] p-5 text-slate-900 shadow-[0_28px_60px_-32px_rgba(21, 20, 24,0.18)] backdrop-blur-md sm:p-6 lg:p-7">
+                    <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[var(--mx-color-c6ff00)]/25 blur-3xl" aria-hidden />
+                    <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-sky-300/30 blur-3xl" aria-hidden />
+                    <div className="pointer-events-none absolute left-1/2 top-0 h-32 w-72 -translate-x-1/2 rounded-full bg-violet-300/20 blur-3xl" aria-hidden />
+                    <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-[var(--mx-color-c6ff00)]/60 to-transparent" aria-hidden />
+
                     <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-slate-900 shadow-lg shadow-[var(--mx-color-c6ff00)]/25 sm:h-14 sm:w-14">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)] text-black shadow-lg shadow-[var(--mx-color-c6ff00)]/35 sm:h-14 sm:w-14">
                                 <FaFilm className="h-6 w-6 sm:h-7 sm:w-7" />
                             </div>
                             <div className="min-w-0 pt-0.5">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">LifeSync</p>
-                                <h1 className="mt-1 text-[24px] font-bold leading-tight tracking-tight sm:text-[30px] lg:text-[32px]">Anime &amp; media</h1>
+                                <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
+                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--mx-color-c6ff00)]" aria-hidden />
+                                    LifeSync · Media
+                                </p>
+                                <h1 className="mt-1 text-[26px] font-black leading-tight tracking-tight sm:text-[32px] lg:text-[36px]">Anime &amp; media</h1>
                                 <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-slate-600 sm:text-[14px]">
                                     <span className="lg:hidden">Browse, resume, and scan this week’s airings in one place.</span>
                                     <span className="hidden lg:inline">
                                         Seasonal charts, your shelf, and a seven-day broadcast strip — built for quick jumps and catch-up.
                                     </span>
                                 </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {animePluginOn && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-800 ring-1 ring-sky-200/80">Anime</span>
+                                    )}
+                                    {mangaPluginOn && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 ring-1 ring-amber-200/80">Manga</span>
+                                    )}
+                                    {hManhwaVisible && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-rose-800 ring-1 ring-rose-200/80">H Manhwa</span>
+                                    )}
+                                    {hentaiVisible && (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-fuchsia-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-fuchsia-800 ring-1 ring-fuchsia-200/80">18+</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1525,7 +1546,7 @@ export function LifeSyncAnimeHub() {
                                             ]}
                                         />
                                     )}
-                                    <span className="w-fit rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-900 ring-1 ring-[var(--mx-color-c6ff00)]/50">
+                                    <span className="w-fit rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-black ring-1 ring-[var(--mx-color-c6ff00)]/50">
                                         Live sync
                                     </span>
                                 </div>

@@ -27,6 +27,19 @@ import {
 import { animePosterLayoutId } from "../../lib/lifesyncAnimeSharedLayout";
 import { stashAnimeWatchHandoff } from "../../lib/lifesyncWatchHandoff";
 import {
+  MediaPageHeader,
+  MediaSectionTitle,
+  MediaArrowButton,
+  MediaPager,
+  MediaEmptyState,
+  MediaConnectPrompt,
+  mediaChipClass,
+  mediaChipNeutralClass,
+  mediaSearchInputClass,
+  mediaPrimaryButtonClass,
+  mediaPosterFrameClass,
+} from "../../components/lifesync/MediaPageChrome";
+import {
   AnimatePresence,
   lifeSyncDetailAnimeContentRevealTransition,
   lifeSyncDetailBackdropFadeTransition,
@@ -47,7 +60,16 @@ import {
   lifeSyncStaggerItem,
   lifeSyncStaggerEpisodeGrid,
   lifeSyncStaggerEpisodeGridItem,
+  lifeSyncCardGridContainer,
+  lifeSyncCardEnterVariants,
+  lifeSyncRailContainer,
+  lifeSyncRailItemVariants,
+  lifeSyncStatBlockContainer,
+  lifeSyncStatBlockItem,
+  lifeSyncSpringPageVariants,
+  lifeSyncSpringPageTransition,
   MotionDiv,
+  MotionSpan,
 } from "../../lib/lifesyncMotion";
 
 function animeDetailPreviewFromNode(node) {
@@ -132,58 +154,74 @@ const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
   const slug = anime.slug || anime.id;
   const pic = anime.poster || anime.image || anime.main_picture?.large || anime.main_picture?.medium;
   return (
-    <button type="button" onClick={() => slug && onSelect?.(anime)} className="group w-full text-left">
-      <div className="relative overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm transition-all hover:shadow-lg hover:-translate-y-0.5">
-        <div className="relative aspect-2/3 w-full overflow-hidden bg-(--color-surface-muted)">
-          {slug ? (
-            <MotionDiv
-              layoutId={animePosterLayoutId(slug)}
-              transition={lifeSyncSharedLayoutTransitionProps}
-              className="absolute inset-0 overflow-hidden bg-(--color-surface-muted)"
-            >
-              {pic ? (
-                <img src={pic} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75" />
-                  </svg>
-                </div>
-              )}
-            </MotionDiv>
-          ) : pic ? (
-            <img src={pic} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" loading="lazy" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75" />
-              </svg>
-            </div>
-          )}
-          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
-          {ranking != null && (
-            <span className="absolute left-2 top-2 bg-primary text-(--color-ink-strong) text-[10px] font-black px-1.5 py-0.5 rounded-md tabular-nums">
-              #{ranking}
-            </span>
-          )}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-2.5">
-            <p className="text-[12px] font-bold text-white line-clamp-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
-              {anime.title}
-            </p>
-            {(anime.type || anime.media_type) && (
-              <span className="mt-1 inline-block rounded bg-white/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase text-white/90 backdrop-blur-sm">
-                {anime.type || anime.media_type}
-              </span>
+    <MotionDiv
+      variants={lifeSyncCardEnterVariants}
+      whileHover={{ y: -4, transition: { type: "spring", stiffness: 400, damping: 28 } }}
+      className="w-full"
+    >
+      <button type="button" onClick={() => slug && onSelect?.(anime)} className="group w-full text-left">
+        <div className={mediaPosterFrameClass}>
+          <div className="relative aspect-2/3 w-full overflow-hidden">
+            {slug ? (
+              <MotionDiv
+                layoutId={animePosterLayoutId(slug)}
+                transition={lifeSyncSharedLayoutTransitionProps}
+                className="absolute inset-0 overflow-hidden bg-(--color-surface-muted)"
+              >
+                {pic ? (
+                  <img src={pic} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" loading="lazy" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75" />
+                    </svg>
+                  </div>
+                )}
+              </MotionDiv>
+            ) : pic ? (
+              <img src={pic} alt="" className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" loading="lazy" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75A1.125 1.125 0 014.5 4.5h15a1.125 1.125 0 011.125 1.125v12.75" />
+                </svg>
+              </div>
             )}
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/90 text-(--color-ink-strong) shadow-lg backdrop-blur-sm">
-              <IconPlay />
+            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/85 via-black/15 to-transparent" />
+            {ranking != null && (
+              <MotionSpan
+                initial={{ opacity: 0, scale: 0.7 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ type: "spring", stiffness: 380, damping: 22, delay: 0.05 }}
+                className="absolute left-2 top-2 rounded-lg bg-primary px-2 py-0.5 text-[10px] font-black tabular-nums text-(--color-ink-strong) shadow-[0_4px_12px_-4px_rgba(198,255,0,0.7)]"
+              >
+                #{ranking}
+              </MotionSpan>
+            )}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-2 p-2.5">
+              <p className="text-[12px] font-bold leading-snug text-white line-clamp-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">
+                {anime.title}
+              </p>
+              {(anime.type || anime.media_type) && (
+                <span className="mt-1 inline-block rounded-full bg-white/12 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/90 ring-1 ring-white/20 backdrop-blur-sm">
+                  {anime.type || anime.media_type}
+                </span>
+              )}
             </div>
+            {/* Hover play affordance */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-250 group-hover:opacity-100">
+              <div className="flex h-11 w-11 scale-75 items-center justify-center rounded-full bg-primary text-(--color-ink-strong) shadow-[0_12px_30px_-8px_rgba(198,255,0,0.9)] transition-transform duration-250 group-hover:scale-100">
+                <IconPlay />
+              </div>
+            </div>
+            {/* Shimmer sweep on hover */}
+            <div className="pointer-events-none absolute inset-0 -translate-x-full bg-linear-to-r from-transparent via-white/8 to-transparent opacity-0 transition-none group-hover:animate-[lifesync-shimmer_0.6s_ease-out_forwards] group-hover:opacity-100" aria-hidden />
+            {/* Accent edge */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-linear-to-r from-transparent via-primary to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
           </div>
         </div>
-      </div>
-    </button>
+      </button>
+    </MotionDiv>
   );
 });
 
@@ -239,7 +277,7 @@ function HeroBanner({ items, onSelect }) {
 
   const startTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => setIdx((i) => (i + 1) % Math.max(1, items.length)), 6000);
+    timerRef.current = setInterval(() => setIdx((i) => (i + 1) % Math.max(1, items.length)), 7000);
   }, [items?.length]);
 
   useEffect(() => {
@@ -255,135 +293,186 @@ function HeroBanner({ items, onSelect }) {
 
   if (!items?.length) return null;
 
-  // Build tag chips from metadata
   const heroBadges = (node) => {
     const chips = [];
     const t = node?.type || node?.media_type;
-    if (t) chips.push({ label: t, cls: "bg-white/15 text-white" });
-    if (node?.status) chips.push({ label: node.status, cls: "bg-white/15 text-white" });
-    if (node?.release) chips.push({ label: node.release, cls: "bg-white/15 text-white" });
-    if (node?.hasSub) chips.push({ label: "SUB", cls: "bg-white/15 text-white" });
-    if (node?.hasDub) chips.push({ label: "DUB", cls: "bg-white/15 text-white" });
+    if (t) chips.push(t);
+    if (node?.status) chips.push(node.status);
+    if (node?.release) chips.push(node.release);
+    if (node?.hasSub) chips.push("SUB");
+    if (node?.hasDub) chips.push("DUB");
     return chips;
   };
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-(--color-surface-muted)" style={{ minHeight: 320, aspectRatio: "21/9" }}>
-      {/* Background images */}
+    <div className="relative overflow-hidden rounded-[28px] bg-(--color-surface-muted) ring-1 ring-black/25 shadow-[0_28px_60px_-24px_rgba(0,0,0,0.55)]" style={{ minHeight: 320, aspectRatio: "21/9" }}>
+      {/* Background images with zoom-in on enter */}
       <AnimatePresence mode="sync" initial={false}>
         <MotionDiv
           key={idx}
           className="absolute inset-0 overflow-hidden"
-          initial={{ opacity: 0, scale: 1.04 }}
+          initial={{ opacity: 0, scale: 1.06 }}
           animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
+          exit={{ opacity: 0, scale: 0.97 }}
+          transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
         >
           {pic && <img src={pic} alt="" className="h-full w-full object-cover object-top" />}
-          <div className="absolute inset-0 bg-linear-to-r from-black/80 via-black/40 to-black/10" />
-          <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
+          {/* Multi-layer cinematic grade */}
+          <div className="absolute inset-0 bg-linear-to-r from-black/90 via-black/50 to-black/10" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_20%,rgba(198,255,0,0.08),transparent_55%)]" />
         </MotionDiv>
       </AnimatePresence>
 
-      {/* Content overlay */}
-      <div className="relative flex h-full flex-col justify-end p-5 sm:p-8 sm:pb-10">
+      {/* Accent top hairline */}
+      <div className="pointer-events-none absolute inset-x-10 top-0 z-1 h-px bg-linear-to-r from-transparent via-primary/70 to-transparent" aria-hidden />
+      {/* Bottom vignette lift */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-linear-to-t from-black/60 to-transparent z-1" aria-hidden />
+
+      {/* Content */}
+      <div className="relative z-2 flex h-full flex-col justify-end p-5 sm:p-8 sm:pb-10">
         <AnimatePresence mode="wait" initial={false}>
           <MotionDiv
             key={`hero-text-${idx}`}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.38 }}
-            className="max-w-lg"
+            initial={{ opacity: 0, y: 20, filter: "blur(4px)" }}
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            exit={{ opacity: 0, y: -12, filter: "blur(2px)" }}
+            transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-xl"
           >
-            {/* Featured badge */}
-            <span className="mb-2 inline-block rounded-full border border-primary/60 bg-primary/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-widest text-primary backdrop-blur-sm">
-              Featured
-            </span>
+            {/* Featured badge with live dot */}
+            <MotionDiv
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.06, duration: 0.32 }}
+            >
+              <span className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-primary/55 bg-black/50 px-3 py-1 text-[9px] font-black uppercase tracking-[0.22em] text-primary backdrop-blur-sm">
+                <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-primary" aria-hidden />
+                Featured
+              </span>
+            </MotionDiv>
 
             {/* Title */}
-            <h2 className="line-clamp-2 text-[22px] font-black leading-tight text-white drop-shadow sm:text-[30px]">
+            <h2 className="line-clamp-2 text-[22px] font-black leading-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.7)] sm:text-[32px]">
               {active?.title}
             </h2>
 
             {/* Tag chips */}
             {heroBadges(active).length > 0 && (
               <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {heroBadges(active).map((chip, i) => (
-                  <span key={i} className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold backdrop-blur-sm ${chip.cls}`}>
-                    {chip.label}
-                  </span>
+                {heroBadges(active).map((label, i) => (
+                  <MotionDiv
+                    key={label}
+                    initial={{ opacity: 0, scale: 0.85 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.08 + i * 0.04, type: "spring", stiffness: 300, damping: 24 }}
+                  >
+                    <span className="rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white ring-1 ring-white/20 backdrop-blur-sm">
+                      {label}
+                    </span>
+                  </MotionDiv>
                 ))}
               </div>
             )}
 
             {/* Synopsis */}
             {active?.synopsis && (
-              <p className="mt-2.5 line-clamp-2 text-[12px] leading-relaxed text-white/75 sm:line-clamp-3">
+              <p className="mt-2.5 line-clamp-2 text-[12px] leading-relaxed text-white/72 sm:line-clamp-3">
                 {active.synopsis}
               </p>
             )}
 
-            {/* Meta row: genres, studio, episodes, quality */}
-            <div className="mt-2.5 space-y-1">
+            {/* Meta row */}
+            <div className="mt-2 space-y-0.5">
               {active?.genres?.length > 0 && (
-                <p className="text-[11px] text-white/70">
+                <p className="text-[11px] text-white/65">
                   <span className="font-semibold text-primary">Genres:</span>{" "}
                   {active.genres.slice(0, 5).join(", ")}
                 </p>
               )}
               <div className="flex flex-wrap gap-x-4 gap-y-0.5">
                 {active?.studio && (
-                  <p className="text-[11px] text-white/70">
-                    <span className="font-semibold text-primary">Studio:</span> {active.studio}
-                  </p>
+                  <p className="text-[11px] text-white/65"><span className="font-semibold text-primary">Studio:</span> {active.studio}</p>
                 )}
                 {(active?.episodeCount || active?.num_episodes) && (
-                  <p className="text-[11px] text-white/70">
-                    <span className="font-semibold text-primary">Episodes:</span>{" "}
-                    {active.episodeCount || active.num_episodes}
-                  </p>
+                  <p className="text-[11px] text-white/65"><span className="font-semibold text-primary">Eps:</span> {active.episodeCount || active.num_episodes}</p>
                 )}
                 {active?.quality && (
-                  <p className="text-[11px] text-white/70">
-                    <span className="font-semibold text-primary">Quality:</span> {active.quality}
-                  </p>
+                  <p className="text-[11px] text-white/65"><span className="font-semibold text-primary">Quality:</span> {active.quality}</p>
                 )}
               </div>
             </div>
 
-            {/* Action buttons */}
+            {/* CTA buttons */}
             <div className="mt-4 flex flex-wrap gap-2.5">
-              <button
-                type="button"
-                onClick={() => onSelect?.(active)}
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-bold text-(--color-ink-strong) shadow-lg transition-all hover:brightness-105 active:scale-[0.97]"
+              <MotionDiv
+                whileHover={{ scale: 1.03, y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 400, damping: 24 }}
               >
-                <IconPlay />
-                Watch Now
-              </button>
-              <button
-                type="button"
-                onClick={() => onSelect?.(active)}
-                className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-5 py-2.5 text-[13px] font-bold text-white backdrop-blur-sm transition-all hover:bg-white/20 active:scale-[0.97]"
+                <button
+                  type="button"
+                  onClick={() => onSelect?.(active)}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-primary px-6 py-2.5 text-[13px] font-black text-black shadow-[0_16px_36px_-10px_rgba(198,255,0,0.8)] transition-[brightness] hover:brightness-105"
+                >
+                  <IconPlay />
+                  Watch Now
+                </button>
+              </MotionDiv>
+              <MotionDiv
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: "spring", stiffness: 400, damping: 24 }}
               >
-                View Details
-              </button>
+                <button
+                  type="button"
+                  onClick={() => onSelect?.(active)}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-white/25 bg-white/10 px-6 py-2.5 text-[13px] font-bold text-white backdrop-blur-md transition-colors hover:bg-white/18"
+                >
+                  View Details
+                </button>
+              </MotionDiv>
             </div>
           </MotionDiv>
         </AnimatePresence>
 
-        {/* Slide dots */}
-        <div className="absolute bottom-4 right-5 flex gap-1.5">
+        {/* Slide indicators */}
+        <div className="absolute bottom-5 right-6 flex items-center gap-2">
+          <span className="mr-1 text-[10px] font-black tabular-nums text-white/45">
+            {idx + 1} / {items.length}
+          </span>
           {items.map((_, i) => (
             <button
               key={i}
               type="button"
+              aria-label={`Show slide ${i + 1}`}
               onClick={() => { setIdx(i); startTimer(); }}
-              className={`h-2 rounded-full transition-all ${i === idx ? "w-6 bg-primary" : "w-2 bg-white/30 hover:bg-white/50"}`}
+              className={`h-1 rounded-full transition-all duration-400 ${i === idx ? "w-8 bg-primary shadow-[0_0_14px_rgba(198,255,0,0.8)]" : "w-3 bg-white/22 hover:bg-white/45"}`}
             />
           ))}
         </div>
+
+        {/* Left/right nav arrows (sm+) */}
+        {items.length > 1 && (
+          <>
+            <button
+              type="button"
+              onClick={() => go(-1)}
+              aria-label="Previous"
+              className="absolute left-3 top-1/2 hidden -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60 sm:flex"
+            >
+              <IconChevronLeft />
+            </button>
+            <button
+              type="button"
+              onClick={() => go(1)}
+              aria-label="Next"
+              className="absolute right-3 top-1/2 hidden -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60 sm:flex"
+            >
+              <IconChevronRight />
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -399,32 +488,42 @@ function HorizRail({ title, items, onSelect, onSeeAll }) {
   if (!items?.length) return null;
   return (
     <div>
-      <div className="mb-3 flex items-center justify-between">
-        <p className="text-[11px] font-black uppercase tracking-widest text-(--color-text-secondary)">{title}</p>
-        <div className="flex items-center gap-1.5">
-          <button type="button" onClick={() => scroll(-1)} className="flex h-6 w-6 items-center justify-center rounded-full border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
-            <IconChevronLeft />
-          </button>
-          <button type="button" onClick={() => scroll(1)} className="flex h-6 w-6 items-center justify-center rounded-full border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
-            <IconChevronRight />
-          </button>
-          {onSeeAll && (
-            <button type="button" onClick={onSeeAll} className="ml-1 text-[11px] font-semibold text-primary hover:underline">
-              See all
-            </button>
-          )}
-        </div>
-      </div>
-      <div
+      <MediaSectionTitle
+        accent="anime"
+        title={title}
+        action={
+          <div className="flex items-center gap-1.5">
+            <MediaArrowButton size="sm" direction="left" onClick={() => scroll(-1)} label={`Scroll ${title} left`} />
+            <MediaArrowButton size="sm" direction="right" onClick={() => scroll(1)} label={`Scroll ${title} right`} />
+            {onSeeAll && (
+              <button
+                type="button"
+                onClick={onSeeAll}
+                className="ml-1 rounded-full border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 text-[11px] font-bold text-(--color-text-secondary) transition-all hover:-translate-y-px hover:border-primary/50 hover:text-(--color-text-primary)"
+              >
+                See all
+              </button>
+            )}
+          </div>
+        }
+      />
+      <MotionDiv
         ref={ref}
-        className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar overscroll-x-contain snap-x snap-mandatory"
+        variants={lifeSyncRailContainer}
+        initial="hidden"
+        animate="show"
+        className="flex gap-3.5 overflow-x-auto pb-3 pt-1 hide-scrollbar overscroll-x-contain snap-x snap-mandatory"
       >
         {items.map((node, i) => (
-          <div key={node.slug || node.id || i} className="w-[130px] shrink-0 snap-start sm:w-[150px]">
+          <MotionDiv
+            key={node.slug || node.id || i}
+            variants={lifeSyncRailItemVariants}
+            className="w-32.5 shrink-0 snap-start sm:w-37.5"
+          >
             <AnimeCard node={node} onSelect={onSelect} />
-          </div>
+          </MotionDiv>
         ))}
-      </div>
+      </MotionDiv>
     </div>
   );
 }
@@ -434,28 +533,51 @@ function TrendingStrip({ items, onSelect }) {
   if (!items?.length) return null;
   return (
     <div>
-      <p className="mb-3 text-[11px] font-black uppercase tracking-widest text-(--color-text-secondary)">Trending</p>
-      <div className="flex gap-2.5 overflow-x-auto pb-2 hide-scrollbar overscroll-x-contain snap-x snap-mandatory">
+      <MediaSectionTitle accent="anime" title="Trending" hint="Top 10 right now" />
+      <MotionDiv
+        variants={lifeSyncRailContainer}
+        initial="hidden"
+        animate="show"
+        className="flex gap-6 overflow-x-auto pb-3 pl-7 pt-1 hide-scrollbar overscroll-x-contain snap-x snap-mandatory sm:gap-8 sm:pl-9"
+      >
         {items.slice(0, 10).map((node, i) => {
           const pic = node?.poster || node?.image;
           return (
-            <button
+            <MotionDiv
               key={node.slug || i}
-              type="button"
-              onClick={() => onSelect?.(node)}
-              className="group relative shrink-0 snap-start overflow-hidden rounded-2xl bg-(--color-surface-muted) transition-all hover:scale-[1.02] hover:shadow-lg"
-              style={{ width: 100, aspectRatio: "2/3" }}
+              variants={lifeSyncRailItemVariants}
+              whileHover={{ y: -5, transition: { type: "spring", stiffness: 380, damping: 26 } }}
+              className="group relative shrink-0 snap-start"
+              style={{ width: 108 }}
             >
-              {pic && <img src={pic} alt="" className="h-full w-full object-cover" loading="lazy" />}
-              <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/10 to-transparent" />
-              <span className="absolute left-2 top-2 text-[22px] font-black leading-none text-white/20 tabular-nums select-none">{i + 1}</span>
-              <div className="absolute inset-x-0 bottom-0 p-2">
-                <p className="line-clamp-2 text-[10px] font-bold leading-tight text-white drop-shadow">{node.title}</p>
-              </div>
-            </button>
+              <button
+                type="button"
+                onClick={() => onSelect?.(node)}
+                className="w-full text-left"
+              >
+                {/* Oversized rank numeral */}
+                <MotionDiv
+                  initial={{ opacity: 0, x: -6 }}
+                  animate={{ opacity: 0.55, x: 0 }}
+                  transition={{ delay: 0.06 + i * 0.03, duration: 0.3 }}
+                  className="pointer-events-none absolute -left-7 bottom-0 z-0 select-none text-[84px] font-black leading-[0.8] tabular-nums tracking-tighter text-transparent sm:-left-9 sm:text-[104px]"
+                  style={{ WebkitTextStroke: "2px var(--mx-color-c6ff00, #c6ff00)" }}
+                  aria-hidden
+                >
+                  {i + 1}
+                </MotionDiv>
+                <div className="relative z-1 overflow-hidden rounded-[16px] ring-1 ring-(--color-border-soft) shadow-sm transition-shadow duration-300 group-hover:shadow-[0_20px_44px_-14px_rgba(0,0,0,0.55)] group-hover:ring-primary/70" style={{ aspectRatio: "2/3" }}>
+                  {pic && <img src={pic} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]" loading="lazy" />}
+                  <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/10 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-2">
+                    <p className="line-clamp-2 text-[10px] font-bold leading-tight text-white drop-shadow">{node.title}</p>
+                  </div>
+                </div>
+              </button>
+            </MotionDiv>
           );
         })}
-      </div>
+      </MotionDiv>
     </div>
   );
 }
@@ -607,8 +729,8 @@ function DetailWatchSection({ animeId, animeTitle, pic, animeStreamAudio, onPlay
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Episodes</p>
-        <span className="inline-flex items-center rounded-full border border-(--color-border-soft) bg-(--color-surface) px-2 py-0.5 text-[10px] font-semibold text-(--color-text-secondary)">
+        <p className="text-[10px] font-black uppercase tracking-widest text-(--color-text-secondary)">Episodes</p>
+        <span className="inline-flex items-center rounded-full border border-sky-400/25 bg-sky-500/8 px-2 py-0.5 text-[10px] font-semibold text-sky-600 dark:text-sky-300">
           {dubAvailabilityLabel}
         </span>
       </div>
@@ -631,9 +753,12 @@ function DetailWatchSection({ animeId, animeTitle, pic, animeStreamAudio, onPlay
                   onMouseEnter={warmStreamCatalog}
                   onFocus={warmStreamCatalog}
                   onClick={() => openSeries(streamEps[resumeIndex], resumeIndex)}
-                  className="w-full rounded-[14px] border border-primary/30 bg-primary/10 px-4 py-3 text-left shadow-sm transition hover:border-primary/50 hover:bg-primary/15"
+                  className="w-full rounded-2xl border border-primary/35 bg-primary/10 px-4 py-3.5 text-left transition hover:border-primary/50 hover:bg-primary/15 shadow-[0_4px_16px_-6px_rgba(198,255,0,0.3)]"
                 >
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Continue</p>
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+                    <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    Continue
+                  </p>
                   <p className="mt-1 text-[13px] font-semibold text-(--color-text-primary)">
                     Resume Ep {resumeLastEp}{streamEps[resumeIndex]?.title ? ` · ${streamEps[resumeIndex].title}` : ""}
                   </p>
@@ -744,7 +869,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
       />
       <MotionDiv
         layout="size" layoutRoot
-        className="lifesync-anime-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-(--color-surface) shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+        className="lifesync-anime-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-(--color-surface) shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-5xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         initial={lifeSyncDetailSheetEnterInitial}
         animate={lifeSyncDetailSheetEnterAnimate}
@@ -756,9 +881,11 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
           {heroPic && (
             <>
               <div className="absolute inset-0 overflow-hidden">
-                <img src={heroPic} alt="" className="h-full w-full object-cover" />
+                <img src={heroPic} alt="" className="h-full w-full object-cover transition-transform duration-700 scale-[1.04]" />
               </div>
               <div className="absolute inset-0 lifesync-detail-hero-fade" />
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.18),transparent_60%)]" />
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-sky-400/60 to-transparent" />
             </>
           )}
           {!heroPic && <div className="absolute inset-0 lifesync-detail-hero-fallback" />}
@@ -774,7 +901,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
             <MotionDiv
               layoutId={animePosterLayoutId(animeId)}
               transition={lifeSyncSharedLayoutTransitionProps}
-              className="w-[88px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted) shadow-xl ring-1 ring-black/15 sm:w-[120px]"
+              className="w-24 shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted) shadow-xl ring-1 ring-black/15 sm:w-32"
               style={{ aspectRatio: "2/3" }}
             >
               {heroPic ? (
@@ -794,7 +921,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
               )}
             </MotionDiv>
             <div className="min-w-0 flex-1 pb-1">
-              <h2 className="wrap-anywhere line-clamp-3 text-[17px] font-bold leading-tight text-white drop-shadow sm:text-[20px]">
+              <h2 className="wrap-anywhere line-clamp-3 text-[19px] font-bold leading-tight text-white drop-shadow sm:text-[22px]">
                 {data?.title || preview?.title || (busy ? "" : "Couldn't load details")}
                 {busy && !preview?.title && <span className="inline-block h-5 w-48 animate-pulse rounded-md bg-white/20" />}
               </h2>
@@ -803,7 +930,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
               )}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {(data?.type || preview?.type) && (
-                  <span className="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-white/90 backdrop-blur-sm">{data?.type || preview?.type}</span>
+                  <span className="rounded-md bg-sky-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-300 backdrop-blur-sm">{data?.type || preview?.type}</span>
                 )}
                 {data?.status && (
                   <span className="rounded-md bg-white/15 px-2 py-0.5 text-[10px] font-semibold text-white/90 backdrop-blur-sm">{data.status}</span>
@@ -850,68 +977,74 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
               )}
               <div className="border-b border-(--color-border-soft) px-5 py-4 sm:px-6">
                 <p className="mb-3 text-[9.5px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Anime Info</p>
-                <div className="flex flex-col gap-2">
+                {(data.score || data.rating) && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {data.score && <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-3 py-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">★ {data.score}</span>}
+                    {data.rating && <span className="inline-flex items-center rounded-full bg-(--color-surface-muted) px-3 py-1 text-[11px] font-semibold text-(--color-text-secondary)">{data.rating}</span>}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2">
                   {data.japanese && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Japanese</span>
-                      <span className="text-[11px] font-medium text-(--color-text-primary) wrap-break-word min-w-0">{data.japanese}</span>
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Japanese</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">{data.japanese}</span>
                     </div>
                   )}
                   {Array.isArray(data.synonyms) && data.synonyms.length > 0 && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Synonyms</span>
-                      <span className="text-[11px] text-(--color-text-secondary) wrap-break-word min-w-0">{data.synonyms.join(", ")}</span>
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Synonyms</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">{data.synonyms.join(", ")}</span>
                     </div>
                   )}
                   {data.type && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Type</span>
-                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.type}</span>
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Type</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">{data.type}</span>
                     </div>
                   )}
                   {data.status && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Status</span>
-                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.status}</span>
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Status</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">{data.status}</span>
                     </div>
                   )}
                   {data.release && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Release</span>
-                      <span className="text-[11px] font-medium text-(--color-text-primary)">{data.release}</span>
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Release</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">{data.release}</span>
                     </div>
                   )}
                   {data.duration && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Duration</span>
-                      <span className="text-[11px] font-medium text-(--color-text-primary)">{data.duration}</span>
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Duration</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">{data.duration}</span>
                     </div>
                   )}
                   {data.quality && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Quality</span>
-                      <span className="text-[11px] font-semibold text-(--color-text-primary)">{data.quality}</span>
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Quality</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">{data.quality}</span>
                     </div>
                   )}
                   {(data.subCount != null || data.dubCount != null) && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Episodes</span>
-                      <span className="text-[11px] font-semibold text-(--color-text-primary)">
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Episodes</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">
                         {[data.subCount != null && `SUB ${data.subCount}`, data.dubCount != null && `DUB ${data.dubCount}`].filter(Boolean).join(" · ")}
                       </span>
                     </div>
                   )}
                   {data.studios && data.studios !== "?" && (
                     <div className="flex gap-3">
-                      <span className="w-20 shrink-0 text-[11px] text-(--color-text-secondary)">Studios</span>
-                      <span className="text-[11px] font-medium text-(--color-text-primary)">{data.studios}</span>
+                      <span className="w-24 shrink-0 text-[11px] text-(--color-text-secondary)">Studios</span>
+                      <span className="text-[11px] font-semibold text-(--color-text-primary) min-w-0 break-words">{data.studios}</span>
                     </div>
                   )}
                 </div>
                 {genres.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1">
                     {genres.map((g, i) => (
-                      <span key={g?.name || g || i} className="rounded-full border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-0.5 text-[10.5px] font-medium text-(--color-text-secondary)">
+                      <span key={g?.name || g || i} className="rounded-full border border-sky-400/25 bg-sky-500/8 px-3 py-1 text-[10px] font-semibold text-sky-600 dark:text-sky-300 transition hover:border-sky-400/50">
                         {g?.name || g}
                       </span>
                     ))}
@@ -931,9 +1064,9 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
               {related.length > 0 && (
                 <div className="border-t border-(--color-border-soft) px-5 pb-6 pt-4 sm:px-6">
                   <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-(--color-text-secondary)">Related</p>
-                  <div className="flex flex-col gap-1.5">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     {related.slice(0, 8).map((r, i) => (
-                      <div key={r.slug || r.title || i} className="flex items-center gap-3 rounded-xl bg-(--color-surface-muted) border border-(--color-border-soft) px-3 py-2.5">
+                      <div key={r.slug || r.title || i} className="flex items-center gap-3 rounded-2xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2.5 transition hover:border-sky-400/30 hover:bg-(--color-surface)">
                         {r.poster && <img src={r.poster} alt="" className="h-10 w-7 shrink-0 rounded-md object-cover" loading="lazy" />}
                         <div className="min-w-0 flex-1">
                           <p className="line-clamp-1 text-[12px] font-semibold text-(--color-text-primary)">{r.title}</p>
@@ -943,7 +1076,7 @@ function DetailPanel({ animeId, animeStreamAudio, onClose, onPlayStream, preview
                           <button
                             type="button"
                             onClick={() => onPlayStream?.({ animeId: r.slug, title: r.title, episodes: [] }, { episodeId: null }, 0)}
-                            className="shrink-0 rounded-lg bg-(--color-surface-muted) px-2.5 py-1.5 text-[10px] font-semibold text-(--color-text-primary) transition hover:bg-(--color-border-soft)"
+                            className="shrink-0 rounded-xl bg-sky-500/10 border border-sky-400/25 px-3 py-1.5 text-[10px] font-bold text-sky-600 dark:text-sky-300 transition hover:bg-sky-500/20"
                           >
                             View
                           </button>
@@ -1340,17 +1473,11 @@ export default function LifeSyncAnime() {
 
   if (!isLifeSyncConnected) {
     return (
-      <div className="mx-auto max-w-4xl">
-        <h1 className="mb-1 text-[28px] font-bold tracking-tight text-(--color-text-primary)">Anime</h1>
-        <p className="mb-4 max-w-xl text-[13px] leading-relaxed text-(--color-text-secondary)">Browse featured anime, ongoing series, and latest updates—connect LifeSync to get started.</p>
-        <div className="rounded-[22px] border border-(--color-border-strong) bg-(--color-surface) px-8 py-16 text-center shadow-sm">
-          <p className="mb-2 text-[15px] font-bold text-(--color-text-primary)">LifeSync Not Connected</p>
-          <p className="mb-4 text-[13px] text-(--color-text-secondary)">Connect LifeSync in your profile to access anime tracking.</p>
-          <Link to="/dashboard/profile?tab=integrations" className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-95">
-            Go to Integrations
-          </Link>
-        </div>
-      </div>
+      <MediaConnectPrompt
+        accent="anime"
+        title="Anime hub locked"
+        body="Browse featured anime, ongoing series, and latest updates — connect LifeSync in your profile to get started."
+      />
     );
   }
 
@@ -1358,9 +1485,9 @@ export default function LifeSyncAnime() {
     <MotionDiv
       className="space-y-5 sm:space-y-7"
       style={{ transformOrigin: "50% 0%" }}
-      initial="initial" animate="animate"
-      variants={lifeSyncDollyPageVariants}
-      transition={lifeSyncDollyPageTransition}
+      initial="initial" animate="animate" exit="exit"
+      variants={lifeSyncSpringPageVariants}
+      transition={lifeSyncSpringPageTransition}
     >
       <AnimatePresence mode="sync">
         {detailId && (
@@ -1382,20 +1509,27 @@ export default function LifeSyncAnime() {
         initial="hidden" animate="show"
       >
         {/* Header */}
-        <MotionDiv variants={lifeSyncStaggerItem} className="flex items-end justify-between gap-3">
-          <div>
-            <p className="text-[11px] font-semibold text-(--color-text-secondary) uppercase tracking-widest">LifeSync / Anime</p>
-            <h1 className="text-[24px] sm:text-[28px] font-black text-(--color-text-primary) tracking-tight leading-none mt-0.5">Anime</h1>
-          </div>
-          {/* Layout toggle — only shown outside home tab */}
-          <div className="flex items-center gap-2">
+        <MotionDiv variants={lifeSyncStaggerItem}>
+          <MediaPageHeader
+            accent="anime"
+            kicker="LifeSync · Streaming"
+            title="Anime"
+            subtitle="Featured picks, ongoing series, and the latest episode drops."
+            icon={
+              <svg className="h-5.5 w-5.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                <rect x="2" y="5" width="20" height="14" rx="3" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 9.5l4.5 2.5L10 14.5v-5z" />
+              </svg>
+            }
+            actions={
+              <>
             {tab !== "home" && (
-              <div className="flex items-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) p-0.5">
+              <div className="flex items-center rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1 shadow-sm">
                 <button
                   type="button"
                   onClick={() => setLayout("grid")}
                   title="Grid view"
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${layout === "grid" ? "bg-primary text-(--color-ink-strong) shadow-sm" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${layout === "grid" ? "bg-primary text-(--color-ink-strong) shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
                 >
                   <IconGrid />
                 </button>
@@ -1403,7 +1537,7 @@ export default function LifeSyncAnime() {
                   type="button"
                   onClick={() => setLayout("list")}
                   title="List view"
-                  className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${layout === "list" ? "bg-primary text-(--color-ink-strong) shadow-sm" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${layout === "list" ? "bg-primary text-(--color-ink-strong) shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
                 >
                   <IconList />
                 </button>
@@ -1422,18 +1556,20 @@ export default function LifeSyncAnime() {
                 { btns: ['A'], label: 'Open' },
               ]}
             />
-          </div>
+              </>
+            }
+          />
         </MotionDiv>
 
         {error && (
-          <div className="bg-red-50 text-red-600 text-[12px] font-medium px-4 py-3 rounded-xl border border-red-100">{error}</div>
+          <div className="rounded-2xl border border-red-200/60 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">{error}</div>
         )}
 
         {/* Search */}
         <MotionDiv variants={lifeSyncStaggerItem}>
           <form onSubmit={handleSearch} className="flex flex-col gap-2 items-stretch sm:flex-row sm:flex-wrap">
             <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)">
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-(--color-text-secondary)">
                 <IconSearch />
               </span>
               <input
@@ -1442,13 +1578,13 @@ export default function LifeSyncAnime() {
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 placeholder="Search anime…"
-                className="w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) pl-9 pr-4 py-2.5 text-[13px] text-(--color-text-primary) transition-all focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none focus:ring-2 focus:ring-primary/15"
+                className={mediaSearchInputClass}
               />
             </div>
             <button
               type="submit"
               disabled={searching}
-              className="w-full shrink-0 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-bold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-105 disabled:opacity-50 sm:w-auto"
+              className={`w-full sm:w-auto ${mediaPrimaryButtonClass}`}
             >
               {searching ? "Searching…" : "Search"}
             </button>
@@ -1467,55 +1603,63 @@ export default function LifeSyncAnime() {
         </MotionDiv>
 
         {/* Browse filters */}
-        {tab === "browse" && (
-          <div className="flex flex-col gap-2.5 -mt-2">
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
-              {BROWSE_TYPE_OPTIONS.map((opt) => (
-                <button key={opt.id} type="button" onClick={() => setBrowseType(opt.id)}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${browseType === opt.id ? "bg-(--color-text-primary) text-(--color-surface) border-(--color-text-primary)" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary) hover:border-(--color-border-strong)"}`}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-            <div className="flex gap-2 flex-wrap">
+        <AnimatePresence initial={false}>
+          {tab === "browse" && (
+            <MotionDiv
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+              className="flex flex-col gap-2.5 -mt-2 overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) p-3.5 shadow-sm"
+            >
               <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
-                {BROWSE_STATUS_OPTIONS.map((opt) => (
-                  <button key={opt.id} type="button" onClick={() => setBrowseStatus(opt.id)}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${browseStatus === opt.id ? "bg-primary text-(--color-ink-strong) border-primary" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary)"}`}>
+                {BROWSE_TYPE_OPTIONS.map((opt) => (
+                  <button key={opt.id} type="button" onClick={() => setBrowseType(opt.id)}
+                    className={mediaChipNeutralClass(browseType === opt.id)}>
                     {opt.label}
                   </button>
                 ))}
               </div>
-              <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
-                {BROWSE_LANGUAGE_OPTIONS.map((opt) => (
-                  <button key={opt.id} type="button" onClick={() => setBrowseLanguage(opt.id)}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${browseLanguage === opt.id ? "bg-(--color-text-primary) text-(--color-surface) border-(--color-text-primary)" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary)"}`}>
-                    {opt.label}
-                  </button>
-                ))}
+              <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
+                  {BROWSE_STATUS_OPTIONS.map((opt) => (
+                    <button key={opt.id} type="button" onClick={() => setBrowseStatus(opt.id)}
+                      className={mediaChipClass(browseStatus === opt.id)}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
+                  {BROWSE_LANGUAGE_OPTIONS.map((opt) => (
+                    <button key={opt.id} type="button" onClick={() => setBrowseLanguage(opt.id)}
+                      className={mediaChipNeutralClass(browseLanguage === opt.id)}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
+                  {BROWSE_SORT_OPTIONS.map((opt) => (
+                    <button key={opt.id} type="button" onClick={() => setBrowseSort(opt.id)}
+                      className={mediaChipNeutralClass(browseSort === opt.id)}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
-                {BROWSE_SORT_OPTIONS.map((opt) => (
-                  <button key={opt.id} type="button" onClick={() => setBrowseSort(opt.id)}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap transition-all border ${browseSort === opt.id ? "bg-(--color-text-secondary) text-(--color-surface) border-(--color-text-secondary)" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary)"}`}>
-                    {opt.label}
-                  </button>
-                ))}
+                {BROWSE_GENRE_OPTIONS.map((g) => {
+                  const active = browseGenres.includes(g);
+                  return (
+                    <button key={g} type="button" onClick={() => setBrowseGenres((prev) => active ? prev.filter((x) => x !== g) : [...prev, g])}
+                      className={`capitalize ${mediaChipClass(active)}`}>
+                      {g.replace(/-/g, " ")}
+                    </button>
+                  );
+                })}
               </div>
-            </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-0.5 hide-scrollbar overscroll-x-contain">
-              {BROWSE_GENRE_OPTIONS.map((g) => {
-                const active = browseGenres.includes(g);
-                return (
-                  <button key={g} type="button" onClick={() => setBrowseGenres((prev) => active ? prev.filter((x) => x !== g) : [...prev, g])}
-                    className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold whitespace-nowrap capitalize transition-all border ${active ? "bg-primary text-(--color-ink-strong) border-primary" : "bg-(--color-surface) text-(--color-text-secondary) border-(--color-border-soft) hover:text-(--color-text-primary)"}`}>
-                    {g.replace(/-/g, " ")}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+            </MotionDiv>
+          )}
+        </AnimatePresence>
 
         {/* Tab content */}
         <MotionDiv variants={lifeSyncStaggerItem}>
@@ -1551,20 +1695,21 @@ export default function LifeSyncAnime() {
                       {/* Schedule promo banner */}
                       <Link
                         to="/dashboard/lifesync/anime/anime/schedule"
-                        className="group flex items-center justify-between gap-4 overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-5 py-4 transition-all hover:border-primary/40 hover:bg-primary/5"
+                        className="group relative flex items-center justify-between gap-4 overflow-hidden rounded-[20px] border border-(--color-border-soft) bg-(--color-surface) px-5 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md"
                       >
+                        <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-(--color-text-primary) ring-1 ring-primary/30 transition-all duration-300 group-hover:bg-primary group-hover:text-(--color-ink-strong) group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)]">
                             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                               <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
                             </svg>
                           </div>
                           <div>
-                            <p className="text-[13px] font-bold text-(--color-text-primary)">Weekly Schedule</p>
+                            <p className="text-[13px] font-black tracking-tight text-(--color-text-primary)">Weekly Schedule</p>
                             <p className="text-[11px] text-(--color-text-secondary)">See what's airing each day this week</p>
                           </div>
                         </div>
-                        <svg className="h-4 w-4 shrink-0 text-(--color-text-secondary) transition-transform group-hover:translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <svg className="h-4 w-4 shrink-0 text-(--color-text-secondary) transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </Link>
@@ -1595,9 +1740,7 @@ export default function LifeSyncAnime() {
                       )}
 
                       {!homeBusy && !homeData && (
-                        <div className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-10 text-center">
-                          <p className="text-[13px] text-(--color-text-secondary)">Couldn't load home page data.</p>
-                        </div>
+                        <MediaEmptyState accent="anime" title="Couldn't load the home page" message="Check your connection and try again in a moment." />
                       )}
                     </>
                   )}
@@ -1614,8 +1757,9 @@ export default function LifeSyncAnime() {
                       {layout === "grid" ? (
                         <MotionDiv
                           key="grid"
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          transition={{ duration: 0.18 }}
+                          variants={lifeSyncCardGridContainer}
+                          initial="hidden" animate="show"
+                          exit={{ opacity: 0, transition: { duration: 0.15 } }}
                           className="grid gap-3 grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
                         >
                           {paginatedItems.map((item, i) => (
@@ -1631,9 +1775,10 @@ export default function LifeSyncAnime() {
                       ) : (
                         <MotionDiv
                           key="list"
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          transition={{ duration: 0.18 }}
-                          className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)"
+                          initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                          className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm"
                         >
                           {paginatedItems.map((item, i) => (
                             <div key={item.node?.slug || item.node?.id || i} data-focused-card={focusedCardIndex === i ? "true" : undefined} className={focusedCardIndex === i ? "ring-2 ring-primary ring-inset" : ""}>
@@ -1650,59 +1795,13 @@ export default function LifeSyncAnime() {
                     </AnimatePresence>
                   ) : (
                     !busy && (
-                      <div className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-10 text-center">
-                        <p className="text-[13px] text-(--color-text-secondary)">No anime to display.</p>
-                      </div>
+                      <MediaEmptyState accent="anime" title="No anime to display" message="Try a different tab, filter, or search query." />
                     )
                   )}
 
                   {/* Pagination */}
                   {pager && paginatedItems.length > 0 && (
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      <p className="text-[11px] text-(--color-text-secondary)">Page {pager.page}</p>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={!pager.canPrev}
-                          onClick={() => goToPage(pager.page - 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
-                        >
-                          <IconChevronLeft />
-                        </button>
-                        <div className="flex items-center gap-1">
-                          {(() => {
-                            const cur = pager.page;
-                            const pages = [];
-                            const start = Math.max(1, cur - 2);
-                            const end = cur + 2;
-                            if (start > 1) pages.push(1, "…");
-                            for (let p = start; p <= end; p += 1) pages.push(p);
-                            if (pager.canNext) pages.push("…");
-                            return pages.map((p, idx) =>
-                              typeof p === "number" ? (
-                                <button
-                                  key={p} type="button" onClick={() => goToPage(p)}
-                                  className={`min-w-8 px-2 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${p === cur ? "bg-primary text-(--color-ink-strong) border-primary" : "bg-(--color-surface) text-(--color-text-primary) border-(--color-border-soft) hover:bg-(--color-surface-muted)"}`}
-                                  aria-current={p === cur ? "page" : undefined}
-                                >
-                                  {p}
-                                </button>
-                              ) : (
-                                <span key={`dots-${idx}`} className="px-1 text-[11px] text-(--color-text-secondary)">…</span>
-                              ),
-                            );
-                          })()}
-                        </div>
-                        <button
-                          type="button"
-                          disabled={!pager.canNext}
-                          onClick={() => goToPage(pager.page + 1)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
-                        >
-                          <IconChevronRight />
-                        </button>
-                      </div>
-                    </div>
+                    <MediaPager page={pager.page} canPrev={pager.canPrev} canNext={pager.canNext} onPage={goToPage} />
                   )}
                 </>
               )}

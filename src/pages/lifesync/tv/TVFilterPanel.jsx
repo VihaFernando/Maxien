@@ -3,6 +3,8 @@ import { motion as M } from 'framer-motion'
 import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
 import useControllerSupportEnabled from '../../../hooks/useControllerSupportEnabled'
 import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
+import useLifeSyncInputSource from '../../../hooks/useLifeSyncInputSource'
+import { tvHintLabel } from '../../../lib/lifeSyncKeyboardGamepad'
 
 /**
  * Right-side slide-in filter panel opened by the Y button.
@@ -16,6 +18,7 @@ import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
  */
 export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange, onClose, title = 'Filters' }) {
     const controllerEnabled = useControllerSupportEnabled()
+    const inputSource = useLifeSyncInputSource()
     const [rowIndex, setRowIndex] = useState(0)
     const [chipIndexByRow, setChipIndexByRow] = useState({})
     const [editingSearchId, setEditingSearchId] = useState('')
@@ -143,7 +146,7 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
 
             {/* Panel */}
             <M.div
-                className="absolute inset-y-0 right-0 z-30 flex w-[320px] flex-col bg-[#111116] shadow-2xl"
+                className="absolute inset-y-0 right-0 z-30 flex w-[320px] flex-col border-l border-white/8 bg-[#0c0c12]/97 shadow-[-30px_0_80px_-20px_rgba(0,0,0,0.8)] backdrop-blur-2xl"
                 initial={{ x: 320 }}
                 animate={{ x: 0 }}
                 exit={{ x: 320 }}
@@ -151,10 +154,14 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/8 px-6 py-5">
-                    <h3 className="text-[20px] font-black text-white">{title}</h3>
-                    <div className="flex items-center gap-2 text-[11px] text-white/30">
-                        <span className="rounded bg-[var(--mx-color-c6ff00)]/20 px-1.5 py-0.5 text-[9px] font-black text-[var(--mx-color-c6ff00)]">Y</span>
+                <div className="relative flex items-center justify-between border-b border-white/8 px-6 py-5">
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-(--mx-color-c6ff00)/50 to-transparent" aria-hidden />
+                    <div className="flex items-center gap-3">
+                        <span className="h-6 w-1 rounded-full bg-(--mx-color-c6ff00)" aria-hidden />
+                        <h3 className="text-[20px] font-black tracking-tight text-white">{title}</h3>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] font-bold text-white/30">
+                        <span className="rounded-md bg-(--mx-color-c6ff00) px-1.5 py-0.5 text-[9px] font-black text-black">{tvHintLabel('Y', inputSource)}</span>
                         Close
                     </div>
                 </div>
@@ -171,7 +178,7 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
                                     onClick={() => row.onAction?.()}
                                     className={`flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-left transition-all ${
                                         isFocused
-                                            ? 'bg-[var(--mx-color-c6ff00)] text-black scale-[1.01]'
+                                            ? 'bg-(--mx-color-c6ff00) text-black scale-[1.01]'
                                             : 'bg-white/5 text-white/70'
                                     }`}
                                 >
@@ -190,10 +197,10 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
                                 <div
                                     key={row.id}
                                     className={`rounded-2xl px-4 py-3.5 transition-all ${
-                                        isFocused ? 'bg-white/10 ring-2 ring-[var(--mx-color-c6ff00)]/60' : 'bg-white/5'
+                                        isFocused ? 'bg-white/10 ring-2 ring-(--mx-color-c6ff00)/60' : 'bg-white/5'
                                     }`}
                                 >
-                                    <p className={`mb-2 text-[11px] font-bold uppercase tracking-wider ${isFocused ? 'text-[var(--mx-color-c6ff00)]' : 'text-white/40'}`}>
+                                    <p className={`mb-2 text-[11px] font-bold uppercase tracking-wider ${isFocused ? 'text-(--mx-color-c6ff00)' : 'text-white/40'}`}>
                                         {row.label}
                                     </p>
                                     <input
@@ -216,10 +223,12 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
                                             }, 150)
                                         }}
                                         onChange={(event) => onFilterChange(row.id, event.target.value)}
-                                        className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-[14px] font-semibold text-white outline-none placeholder:text-white/25 focus:border-[var(--mx-color-c6ff00)]/60"
+                                        className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-[14px] font-semibold text-white outline-none placeholder:text-white/25 focus:border-(--mx-color-c6ff00)/60"
                                     />
                                     <p className="mt-2 text-[10px] font-semibold text-white/25">
-                                        {editing ? 'Typing enabled · B closes keyboard focus' : 'Press A to type'}
+                                        {editing
+                                            ? (inputSource === 'keyboard' ? 'Typing enabled · click away to finish' : 'Typing enabled · B closes keyboard focus')
+                                            : `Press ${tvHintLabel('A', inputSource)} to type`}
                                     </p>
                                 </div>
                             )
@@ -233,10 +242,10 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
                             <div
                                 key={row.id}
                                 className={`rounded-2xl px-4 py-3.5 transition-all ${
-                                    isFocused ? 'bg-white/10 ring-2 ring-[var(--mx-color-c6ff00)]/60' : 'bg-white/5'
+                                    isFocused ? 'bg-white/10 ring-2 ring-(--mx-color-c6ff00)/60' : 'bg-white/5'
                                 }`}
                             >
-                                <p className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${isFocused ? 'text-[var(--mx-color-c6ff00)]' : 'text-white/40'}`}>
+                                <p className={`text-[11px] font-bold uppercase tracking-wider mb-2 ${isFocused ? 'text-(--mx-color-c6ff00)' : 'text-white/40'}`}>
                                     {row.label}
                                 </p>
                                 {isFocused && row.type !== 'chip-multi' && (
@@ -267,9 +276,9 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
                                                 onClick={() => row.type === 'chip-multi' ? toggleChipValue(row, o.id) : onFilterChange(row.id, o.id)}
                                                 className={`rounded-full px-3 py-1.5 text-[12px] font-black transition-all ${
                                                     selected
-                                                        ? 'bg-[var(--mx-color-c6ff00)] text-black'
+                                                        ? 'bg-(--mx-color-c6ff00) text-black'
                                                         : 'bg-white/8 text-white/55'
-                                                } ${isFocused && selected ? 'ring-2 ring-white/30' : ''} ${chipFocused ? 'scale-[1.08] ring-2 ring-[var(--mx-color-c6ff00)]/80' : ''}`}
+                                                } ${isFocused && selected ? 'ring-2 ring-white/30' : ''} ${chipFocused ? 'scale-[1.08] ring-2 ring-(--mx-color-c6ff00)/80' : ''}`}
                                             >
                                                 {o.label}
                                             </button>
@@ -283,7 +292,7 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
 
                 {/* Footer hint */}
                 <div className="border-t border-white/8 px-6 py-4">
-                    <p className="text-[11px] text-white/25 text-center">↑↓ navigate · ← → change · A select/type · B back</p>
+                    <p className="text-[11px] text-white/25 text-center">{`↑↓ navigate · ← → change · ${tvHintLabel('A', inputSource)} select/type · ${tvHintLabel('B', inputSource)} back`}</p>
                 </div>
             </M.div>
         </>

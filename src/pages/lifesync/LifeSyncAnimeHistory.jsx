@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
 import {
@@ -10,8 +10,11 @@ import {
 import { LifesyncEpisodeThumbnail } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import {
     MotionDiv,
-    lifeSyncEaseOut,
-    lifeSyncPageTransition,
+    lifeSyncSpringPageVariants,
+    lifeSyncSpringPageTransition,
+    lifeSyncStatBlockContainer,
+    lifeSyncStatBlockItem,
+    lifeSyncCardGridContainer,
 } from '../../lib/lifesyncMotion'
 
 const ANIME_BASE = '/dashboard/lifesync/anime/anime'
@@ -146,77 +149,111 @@ function DetailDrawer({ entry, onClose, onContinue, onRemove, removeBusy }) {
 
     return (
         <MotionDiv
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
         >
             <MotionDiv
-                className="relative w-full max-w-sm overflow-hidden rounded-t-3xl sm:rounded-3xl bg-(--color-surface) shadow-2xl"
+                className="relative w-full max-w-lg overflow-hidden rounded-t-3xl sm:rounded-3xl bg-(--color-surface) shadow-2xl"
                 initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 340, damping: 32 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex justify-center pt-3 pb-1 sm:hidden">
-                    <div className="h-1 w-10 rounded-full bg-(--color-border-soft)" />
-                </div>
-                <div className="flex gap-4 px-5 pt-4 pb-3">
-                    <div className="relative h-[88px] w-[60px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted)">
-                        {entry.imageUrl && (
-                            <LifesyncEpisodeThumbnail
-                                src={entry.imageUrl}
-                                className="absolute inset-0 h-full w-full"
-                                imgClassName="h-full w-full object-cover"
-                                imgProps={{ referrerPolicy: 'no-referrer' }}
-                            />
-                        )}
-                        {complete && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                                <IconCheck className="h-5 w-5 text-primary" />
+                {/* ── Hero banner ── */}
+                <div className="relative h-44 sm:h-48 overflow-hidden">
+                    {/* Blurred backdrop */}
+                    {entry.imageUrl && (
+                        <img
+                            src={entry.imageUrl}
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover opacity-35 blur-2xl scale-105 pointer-events-none select-none"
+                        />
+                    )}
+                    {/* Sky radial glow */}
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(56,189,248,0.18),transparent_70%)] pointer-events-none" />
+                    {/* Sky hairline at top */}
+                    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-sky-400/60 to-transparent pointer-events-none" />
+                    {/* Dark gradient overlay */}
+                    <div className="absolute inset-0 bg-linear-to-t from-(--color-surface) via-(--color-surface)/70 to-transparent pointer-events-none" />
+                    {/* Close button */}
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/80 hover:text-white transition backdrop-blur-sm"
+                    >
+                        <IconX className="h-4 w-4" />
+                    </button>
+                    {/* Cover + title row overlaid on hero */}
+                    <div className="absolute bottom-0 inset-x-0 flex gap-4 px-5 pb-6 pt-12 items-end">
+                        <div className="relative w-20 shrink-0 overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/20 aspect-2/3 bg-(--color-surface-muted)">
+                            {entry.imageUrl && (
+                                <LifesyncEpisodeThumbnail
+                                    src={entry.imageUrl}
+                                    className="absolute inset-0 h-full w-full"
+                                    imgClassName="h-full w-full object-cover"
+                                    imgProps={{ referrerPolicy: 'no-referrer' }}
+                                />
+                            )}
+                            {complete && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                                    <IconCheck className="h-5 w-5 text-primary" />
+                                </div>
+                            )}
+                        </div>
+                        <div className="min-w-0 flex-1 pb-1">
+                            <h2 className="line-clamp-2 text-[19px] font-black leading-snug text-white drop-shadow-lg">{title || 'Untitled'}</h2>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <span className="rounded-lg bg-sky-500/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-sky-400">
+                                    {complete ? 'Finished' : 'Watching'}
+                                </span>
                             </div>
-                        )}
-                    </div>
-                    <div className="min-w-0 flex-1 pt-0.5">
-                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-primary">
-                            {complete ? 'Finished' : 'Watching'}
-                        </p>
-                        <h2 className="mt-0.5 line-clamp-3 text-[15px] font-bold leading-snug text-(--color-text-primary)">
-                            {title || 'Untitled'}
-                        </h2>
-                        <p className="mt-1 text-[11px] text-(--color-text-secondary)">{relativeTouch(entry.updatedAt)}</p>
-                    </div>
-                    <button
-                        type="button" onClick={onClose}
-                        className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-(--color-surface-muted) text-(--color-text-secondary) hover:text-(--color-text-primary) transition"
-                    >
-                        <IconX className="h-3 w-3" />
-                    </button>
-                </div>
-                <div className="px-5 pb-4">
-                    <div className="rounded-2xl bg-(--color-surface-muted) p-3.5 space-y-2.5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-semibold text-(--color-text-secondary)">Episode progress</span>
-                            <span className="text-[11px] font-bold text-(--color-text-primary)">
-                                {current}{total != null ? ` / ${total}` : ''}{pct != null ? ` · ${pct}%` : ''}
-                            </span>
-                        </div>
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
-                            <div
-                                className="h-full rounded-full bg-primary transition-all"
-                                style={{ width: `${frac != null ? Math.round(frac * 100) : 30}%` }}
-                            />
+                            {entry.updatedAt && (
+                                <p className="mt-1.5 text-[11px] text-white/60">{relativeTouch(entry.updatedAt)}</p>
+                            )}
                         </div>
                     </div>
                 </div>
-                <div className="flex gap-2.5 px-5 pb-6">
-                    <button
-                        type="button" onClick={() => onContinue(entry)}
-                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-black transition hover:brightness-95 active:scale-[0.98]"
+
+                {/* ── Scrollable body ── */}
+                <div className="max-h-[min(70vh,480px)] overflow-y-auto">
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-3 px-5 py-5 border-b border-(--color-border-soft)">
+                        {[
+                            { label: 'Current', value: `Ep ${current}` },
+                            { label: 'Total', value: total != null ? `Ep ${total}` : '—' },
+                            { label: 'Progress', value: `${pct ?? 0}%` },
+                        ].map(({ label, value }) => (
+                            <div key={label} className="rounded-2xl bg-(--color-surface-muted) px-3 py-3 text-center">
+                                <p className="text-[20px] font-black text-(--color-text-primary)">{value}</p>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary) mt-1">{label}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="px-5 py-4 border-b border-(--color-border-soft)">
+                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
+                            <div className="h-full rounded-full bg-primary shadow-[0_0_12px_rgba(198,255,0,0.4)] transition-all" style={{ width: `${frac != null ? Math.round(frac * 100) : 0}%` }} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Action footer ── */}
+                <div className="px-5 py-4 border-t border-(--color-border-soft) space-y-2.5">
+                    <MotionDiv
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                     >
-                        <IconPlay className="h-4 w-4" /> Resume Ep {current}
-                    </button>
+                        <button
+                            type="button" onClick={() => onContinue(entry)}
+                            className="flex w-full min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-black text-black transition hover:brightness-110 shadow-[0_6px_20px_-6px_rgba(198,255,0,0.4)]"
+                        >
+                            <IconPlay className="h-4 w-4" /> Resume Ep {current}
+                        </button>
+                    </MotionDiv>
                     <button
                         type="button" onClick={() => void onRemove(entry)} disabled={removeBusy}
-                        className="min-h-12 rounded-2xl border border-(--color-border-soft) px-4 text-[13px] font-semibold text-(--color-text-secondary) transition hover:border-red-300 hover:text-red-500 disabled:opacity-40 active:scale-[0.98]"
+                        className="w-full min-h-11 rounded-2xl border border-red-300/30 bg-red-500/8 px-4 text-[13px] font-semibold text-red-600 dark:text-red-400 transition hover:border-red-400/50 hover:bg-red-500/15 disabled:opacity-40"
                     >
                         {removeBusy ? '…' : 'Remove'}
                     </button>
@@ -238,10 +275,10 @@ function FeedRow({ entry, onOpenDetail, onRemove, removeBusyKey, isLast }) {
     const busy = removeBusyKey === entryKey(entry)
 
     return (
-        <motion.div
+        <MotionDiv
             layout
             initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -16 }}
-            transition={{ type: 'tween', duration: 0.2, ease: lifeSyncEaseOut }}
+            transition={{ type: 'spring', stiffness: 280, damping: 26 }}
             className={`group relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-(--color-surface-muted) ${!isLast ? 'border-b border-(--color-border-soft)' : ''}`}
         >
             <button
@@ -309,7 +346,7 @@ function FeedRow({ entry, onOpenDetail, onRemove, removeBusyKey, isLast }) {
                     <IconPlay className="ml-px h-3.5 w-3.5" />
                 </Link>
             </div>
-        </motion.div>
+        </MotionDiv>
     )
 }
 
@@ -325,11 +362,12 @@ function GridCard({ entry, onOpenDetail, onRemove, removeBusyKey }) {
     const busy = removeBusyKey === entryKey(entry)
 
     return (
-        <motion.div
+        <MotionDiv
             layout
-            initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }}
-            transition={{ type: 'tween', duration: 0.2, ease: lifeSyncEaseOut }}
-            className="group relative flex flex-col overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm transition-shadow hover:shadow-md"
+            initial={{ opacity: 0, scale: 0.92, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.94 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 28 }}
+            whileHover={{ y: -3, transition: { type: 'spring', stiffness: 340, damping: 24 } }}
+            className="group relative flex flex-col overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm"
         >
             {/* Poster */}
             <button
@@ -401,7 +439,7 @@ function GridCard({ entry, onOpenDetail, onRemove, removeBusyKey }) {
                     <IconPlay className="ml-px h-3 w-3" />
                 </Link>
             </div>
-        </motion.div>
+        </MotionDiv>
     )
 }
 
@@ -478,7 +516,7 @@ export default function LifeSyncAnimeHistory() {
         return (
             <MotionDiv
                 className="rounded-3xl border border-dashed border-(--color-border-soft) bg-(--color-surface) px-6 py-14 text-center"
-                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncPageTransition}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 260, damping: 26 }}
             >
                 <p className="text-[17px] font-bold text-(--color-text-primary)">Anime streaming is off</p>
                 <p className="mx-auto mt-2 max-w-md text-[14px] text-(--color-text-secondary)">
@@ -492,7 +530,7 @@ export default function LifeSyncAnimeHistory() {
     }
 
     return (
-        <MotionDiv className="min-w-0 space-y-4" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncPageTransition}>
+        <MotionDiv className="min-w-0 space-y-4" variants={lifeSyncSpringPageVariants} initial="initial" animate="animate" transition={lifeSyncSpringPageTransition}>
 
             {/* ── Header ── */}
             <div className="flex items-center gap-3">
@@ -506,18 +544,27 @@ export default function LifeSyncAnimeHistory() {
             </div>
 
             {/* ── Stats ── */}
-            <div className="grid grid-cols-3 gap-2">
+            <MotionDiv
+                className="grid grid-cols-3 gap-2"
+                variants={lifeSyncStatBlockContainer}
+                initial="hidden"
+                animate="show"
+            >
                 {[
                     { label: 'Total', value: stats.total },
                     { label: 'Watching', value: stats.inProgress, accent: true },
                     { label: 'Finished', value: stats.complete },
                 ].map((s) => (
-                    <div key={s.label} className={`rounded-2xl px-3 py-3 text-center ${s.accent ? 'bg-primary/10 ring-1 ring-primary/20' : 'bg-(--color-surface) border border-(--color-border-soft)'}`}>
+                    <MotionDiv
+                        key={s.label}
+                        variants={lifeSyncStatBlockItem}
+                        className={`rounded-2xl px-3 py-3 text-center ${s.accent ? 'bg-primary/10 ring-1 ring-primary/20' : 'bg-(--color-surface) border border-(--color-border-soft)'}`}
+                    >
                         <p className={`text-[22px] font-black tabular-nums leading-none ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{loading ? '—' : s.value}</p>
                         <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary)">{s.label}</p>
-                    </div>
+                    </MotionDiv>
                 ))}
-            </div>
+            </MotionDiv>
 
             {/* ── Controls ── */}
             <div className="flex flex-wrap gap-2">
@@ -591,18 +638,29 @@ export default function LifeSyncAnimeHistory() {
                     </div>
                 )
             ) : entries.length === 0 ? (
-                <MotionDiv className="rounded-2xl border border-dashed border-(--color-border-soft) bg-(--color-surface) px-6 py-16 text-center" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={lifeSyncPageTransition}>
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--color-surface-muted)">
+                <MotionDiv
+                    className="rounded-2xl border border-dashed border-(--color-border-soft) bg-(--color-surface) px-6 py-16 text-center"
+                    initial={{ opacity: 0, scale: 0.97, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+                >
+                    <MotionDiv
+                        className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--color-surface-muted)"
+                        initial={{ scale: 0.7, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 360, damping: 22, delay: 0.1 }}
+                    >
                         <IconPlay className="h-5 w-5 text-(--color-text-secondary)" />
-                    </div>
+                    </MotionDiv>
                     <p className="text-[16px] font-bold text-(--color-text-primary)">Nothing here yet</p>
                     <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-(--color-text-secondary)">Start watching an episode — your progress saves automatically.</p>
-                    <Link to={`${ANIME_BASE}/home/page/1`} className="mt-6 inline-flex min-h-[42px] items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
+                    <Link to={`${ANIME_BASE}/home/page/1`} className="mt-6 inline-flex min-h-10.5 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
                         <IconPlay className="h-3.5 w-3.5" /> Browse anime
                     </Link>
                 </MotionDiv>
             ) : filteredSorted.length === 0 ? (
-                <MotionDiv className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-12 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={lifeSyncPageTransition}>
+                <MotionDiv className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-12 text-center"
+                    initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+                >
                     <p className="text-[14px] font-semibold text-(--color-text-primary)">No matches</p>
                     <p className="mt-1 text-[12px] text-(--color-text-secondary)">Try adjusting your filters or search.</p>
                     <button type="button" onClick={() => { setFilter('all'); setQuery('') }} className="mt-3 text-[12px] font-semibold text-primary hover:underline">Reset</button>
@@ -626,11 +684,16 @@ export default function LifeSyncAnimeHistory() {
             ) : (
                 <div>
                     <AnimatePresence initial={false}>
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                        <MotionDiv
+                            className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                            variants={lifeSyncCardGridContainer}
+                            initial="hidden"
+                            animate="show"
+                        >
                             {filteredSorted.map((entry) => (
                                 <GridCard key={entryKey(entry)} entry={entry} onOpenDetail={onOpenDetail} onRemove={onRemove} removeBusyKey={removeBusyKey} />
                             ))}
-                        </div>
+                        </MotionDiv>
                     </AnimatePresence>
                     <div className="mt-3 flex items-center justify-between px-1">
                         <p className="text-[10px] text-(--color-text-secondary)">

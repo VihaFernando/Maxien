@@ -10,6 +10,8 @@ import {
     dispatchBestEffortIframeMediaKeys,
     focusIframeForControllerInput,
 } from '../../../lib/lifeSyncControllerInput'
+import useLifeSyncInputSource from '../../../hooks/useLifeSyncInputSource'
+import { tvHintLabel } from '../../../lib/lifeSyncKeyboardGamepad'
 
 /**
  * Fullscreen anime stream player inside TV mode.
@@ -19,6 +21,7 @@ import {
 export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0, onBack }) {
     const { isLifeSyncConnected } = useLifeSync()
     const controllerEnabled = useControllerSupportEnabled()
+    const inputSource = useLifeSyncInputSource()
     const [episodeIdx, setEpisodeIdx] = useState(initialEpisodeIndex)
     const [stream, setStream] = useState(null)
     const iframeRef = useRef(null)
@@ -167,7 +170,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
             {/* Bottom bar */}
             <div className="shrink-0 flex items-center justify-between gap-4 border-t border-white/8 bg-black/90 px-8 py-3 backdrop-blur-xl">
                 <button type="button" onClick={onBack} className="flex items-center gap-1.5 rounded-xl bg-white/5 px-3 py-2 text-[13px] font-semibold text-white/60">
-                    <span className="rounded bg-red-600/80 px-1.5 py-0.5 text-[10px] font-black text-white">B</span>
+                    <span className="rounded bg-red-600/80 px-1.5 py-0.5 text-[10px] font-black text-white">{tvHintLabel('B', inputSource)}</span>
                     Back
                 </button>
 
@@ -179,9 +182,9 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                 </div>
 
                 <div className="flex items-center gap-2 text-[11px] text-white/30">
-                    <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">LB</span>
+                    <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">{tvHintLabel('LB', inputSource)}</span>
                     <span>·</span>
-                    <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">RB</span>
+                    <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">{tvHintLabel('RB', inputSource)}</span>
                     <span>episodes</span>
                 </div>
             </div>

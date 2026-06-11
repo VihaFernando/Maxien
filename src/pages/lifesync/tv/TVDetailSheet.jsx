@@ -3,6 +3,8 @@ import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
 import useControllerSupportEnabled from '../../../hooks/useControllerSupportEnabled'
 import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
 import { lifesyncFetch } from '../../../lib/lifesyncApi'
+import useLifeSyncInputSource from '../../../hooks/useLifeSyncInputSource'
+import { tvHintLabel } from '../../../lib/lifeSyncKeyboardGamepad'
 import {
     MotionDiv,
     lifeSyncDetailSheetEnterInitial,
@@ -36,6 +38,7 @@ import {
  */
 export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
     const controllerEnabled = useControllerSupportEnabled()
+    const inputSource = useLifeSyncInputSource()
     const [detail, setDetail] = useState(null)
     const [detailLoading, setDetailLoading] = useState(false)
     const [actionFocus, setActionFocus] = useState(0) // 0=Play selected 1=Cancel
@@ -369,7 +372,7 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
             />
 
             <MotionDiv
-                className="relative z-10 flex w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-[#111116]"
+                className="relative z-10 flex w-full max-w-5xl flex-col overflow-hidden rounded-[30px] bg-linear-to-b from-[#13131b] to-[#0b0b10] shadow-[0_50px_140px_-30px_rgba(0,0,0,0.95)] ring-1 ring-white/10"
                 style={{ maxHeight: '85vh' }}
                 initial={lifeSyncDetailSheetEnterInitial}
                 animate={lifeSyncDetailSheetEnterAnimate}
@@ -381,14 +384,15 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
                 <div className="relative shrink-0">
                     {imageUrl && (
                         <div className="absolute inset-0 overflow-hidden">
-                            <img src={imageUrl} alt="" className="h-full w-full scale-110 object-cover opacity-35 blur-2xl" referrerPolicy="no-referrer" />
+                            <img src={imageUrl} alt="" className="h-full w-full scale-110 object-cover opacity-40 blur-2xl saturate-[1.2]" referrerPolicy="no-referrer" />
                         </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#111116]/50 to-[#111116]" />
+                    <div className="absolute inset-0 bg-linear-to-b from-black/20 via-[#0e0e14]/60 to-[#0f0f16]" />
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-(--mx-color-c6ff00)/60 to-transparent" aria-hidden />
 
                     <div className="relative flex min-h-[260px] items-end gap-8 p-8">
                         {imageUrl && (
-                            <div className="hidden shrink-0 overflow-hidden rounded-2xl shadow-2xl sm:block" style={{ width: 160, aspectRatio: '2/3' }}>
+                            <div className="hidden shrink-0 overflow-hidden rounded-2xl shadow-[0_30px_70px_-18px_rgba(0,0,0,0.85)] ring-1 ring-white/15 sm:block" style={{ width: 160, aspectRatio: '2/3' }}>
                                 <img src={imageUrl} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
                             </div>
                         )}
@@ -396,16 +400,20 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
                             {chips.length > 0 && (
                                 <div className="mb-3 flex flex-wrap gap-2">
                                     {chips.slice(0, 6).map((chip, i) => (
-                                        <span key={i} className="rounded-lg bg-white/10 px-3 py-1 text-[13px] font-semibold text-white/80">
+                                        <span key={i} className="rounded-full bg-white/8 px-3 py-1 text-[12px] font-bold text-white/80 ring-1 ring-white/12 backdrop-blur-sm">
                                             {chip}
                                         </span>
                                     ))}
                                 </div>
                             )}
-                            <h2 className="line-clamp-2 text-[38px] font-black leading-tight tracking-tight text-white">{title}</h2>
-                            {badgeText && <p className="mt-1.5 text-[16px] font-semibold text-[var(--mx-color-c6ff00)]">{badgeText}</p>}
+                            <h2 className="line-clamp-2 text-[40px] font-black leading-[1.05] tracking-tight text-white">{title}</h2>
+                            {badgeText && (
+                                <p className="mt-2 inline-flex items-center gap-2 text-[15px] font-black text-(--mx-color-c6ff00)">                                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-(--mx-color-c6ff00)" aria-hidden />
+                                    {badgeText}
+                                </p>
+                            )}
                             {description && (
-                                <p className="mt-3 line-clamp-3 text-[14px] leading-relaxed text-white/55">{description}</p>
+                                <p className="mt-3 line-clamp-3 max-w-3xl text-[14px] leading-relaxed text-white/55">{description}</p>
                             )}
                         </div>
                     </div>
@@ -465,11 +473,11 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
                                         onClick={() => handlePlay(i)}
                                         className={`flex min-w-0 items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all ${
                                             pickerIndex === i
-                                                ? 'bg-[var(--mx-color-c6ff00)] text-black'
-                                                : 'bg-white/6 text-white/70'
+                                                ? 'bg-(--mx-color-c6ff00) text-black shadow-[0_8px_24px_-10px_rgba(198,255,0,0.55)]'
+                                                : 'bg-white/5 text-white/70 ring-1 ring-white/6'
                                         }`}
                                     >
-                                        <span className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-black ${pickerIndex === i ? 'bg-black/15' : 'bg-white/10 text-white/50'}`}>
+                                        <span className={`shrink-0 rounded-lg px-2 py-1 text-[11px] font-black tabular-nums ${pickerIndex === i ? 'bg-black/15' : 'bg-white/10 text-white/50'}`}>
                                             {row.badge}
                                         </span>
                                         <span className="min-w-0 flex-1 truncate text-[13px] font-bold">{row.label}</span>
@@ -492,8 +500,8 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
                         disabled={detailLoading || playableItems.length === 0}
                         className={`flex min-h-[64px] flex-1 items-center justify-center gap-3 rounded-2xl text-[18px] font-black transition-all disabled:opacity-50 ${
                             actionFocus === 0
-                                ? 'bg-[var(--mx-color-c6ff00)] text-black scale-[1.02] shadow-[0_0_0_4px_rgba(198,255,0,0.28)]'
-                                : 'bg-white/10 text-white'
+                                ? 'bg-(--mx-color-c6ff00) text-black scale-[1.02] shadow-[0_0_0_4px_rgba(198,255,0,0.25),0_18px_50px_-12px_rgba(198,255,0,0.45)]'
+                                : 'bg-white/10 text-white ring-1 ring-white/10'
                         }`}
                     >
                         {detailLoading ? (
@@ -511,26 +519,26 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
                         className={`flex min-h-[64px] items-center justify-center rounded-2xl px-10 text-[18px] font-bold transition-all ${
                             actionFocus === 1
                                 ? 'bg-white/15 text-white scale-[1.02] ring-2 ring-white/30'
-                                : 'bg-white/5 text-white/50'
+                                : 'bg-white/5 text-white/50 ring-1 ring-white/8'
                         }`}
                     >
                         Cancel
                     </button>
                 </div>
 
-                {/* Controller hint */}
+                {/* Input hint — follows active device (controller or keyboard) */}
                 <div className="absolute right-5 top-5 flex items-center gap-2 rounded-xl bg-black/50 px-3 py-2 text-[11px] text-white/50 backdrop-blur-sm">
-                    <span className="flex h-5 w-5 items-center justify-center rounded bg-green-600 text-[9px] font-black text-white">A</span> Confirm
-                    <span className="ml-1 flex h-5 w-5 items-center justify-center rounded bg-red-600 text-[9px] font-black text-white">B</span> Back
+                    <span className="flex h-5 min-w-5 items-center justify-center rounded bg-green-600 px-1 text-[9px] font-black text-white">{tvHintLabel('A', inputSource)}</span> Confirm
+                    <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded bg-red-600 px-1 text-[9px] font-black text-white">{tvHintLabel('B', inputSource)}</span> Back
                     {(item.type === 'manga' || item.type === 'anime') && (
                         <>
-                            <span className="ml-1 flex h-5 w-5 items-center justify-center rounded bg-[var(--mx-color-c6ff00)] text-[9px] font-black text-black">Y</span> Status
+                            <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded bg-(--mx-color-c6ff00) px-1 text-[9px] font-black text-black">{tvHintLabel('Y', inputSource)}</span> Status
                         </>
                     )}
                     {item.type === 'manga' && (
                         <>
-                            <span className="ml-1 flex h-5 w-6 items-center justify-center rounded bg-white/15 text-[9px] font-black text-white">LB</span> First
-                            <span className="ml-1 flex h-5 w-6 items-center justify-center rounded bg-white/15 text-[9px] font-black text-white">RB</span> Last
+                            <span className="ml-1 flex h-5 min-w-6 items-center justify-center rounded bg-white/15 px-1 text-[9px] font-black text-white">{tvHintLabel('LB', inputSource)}</span> First
+                            <span className="ml-1 flex h-5 min-w-6 items-center justify-center rounded bg-white/15 px-1 text-[9px] font-black text-white">{tvHintLabel('RB', inputSource)}</span> Last
                         </>
                     )}
                 </div>
@@ -541,10 +549,10 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
                     className="absolute inset-0 z-30 flex items-center justify-center bg-black/70 backdrop-blur-sm"
                     onClick={e => e.stopPropagation()}
                 >
-                    <div className="flex max-h-[60vh] w-[420px] flex-col rounded-3xl bg-[#111116] p-5 shadow-2xl">
+                    <div className="flex max-h-[60vh] w-[420px] flex-col rounded-[28px] bg-linear-to-b from-[#14141c] to-[#0c0c12] p-5 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.9)] ring-1 ring-white/10">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-[22px] font-black text-white">Set status</h3>
-                            <p className="text-[11px] text-white/35">↑↓ select · A apply · B close</p>
+                            <p className="text-[11px] text-white/35">{`↑↓ select · ${tvHintLabel('A', inputSource)} apply · ${tvHintLabel('B', inputSource)} close`}</p>
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             {statusOptions.map((option, index) => {

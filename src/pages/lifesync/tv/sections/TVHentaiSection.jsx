@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { lifesyncFetch } from '../../../../lib/lifesyncApi'
-import { TVCard, TVCardSkeleton } from '../TVCard'
+import { TVCard, TVCardSkeleton, TVPageHints } from '../TVCard'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
 
 const COLS = 5
@@ -131,11 +131,7 @@ export function TVHentaiSection({ focusPos, onItemSelect, enabled, filterOpen, o
                 </div>
             )}
 
-            <div className="mt-4 flex items-center justify-center gap-3 text-[13px] text-white/40">
-                {page > 1 && <span className="rounded bg-white/8 px-2 py-1 text-[11px] font-black">LT prev</span>}
-                <span>Page {page}</span>
-                {hasMore && <span className="rounded bg-white/8 px-2 py-1 text-[11px] font-black">RT next</span>}
-            </div>
+            <TVPageHints page={page} hasMore={hasMore} />
         </div>
     )
 }

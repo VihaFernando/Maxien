@@ -4,6 +4,8 @@ import { useLifeSync } from '../../../context/LifeSyncContext'
 import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
 import useControllerSupportEnabled from '../../../hooks/useControllerSupportEnabled'
 import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
+import useLifeSyncInputSource from '../../../hooks/useLifeSyncInputSource'
+import { tvHintLabel } from '../../../lib/lifeSyncKeyboardGamepad'
 import { readStoredReduceAnimationsSetting } from '../../../lib/lifeSyncReduceMotion'
 
 /**
@@ -42,6 +44,7 @@ function imgProps(url) {
 export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, allChapters = [], onBack, onChapterPickerToggle }) {
     const { isLifeSyncConnected } = useLifeSync()
     const controllerEnabled = useControllerSupportEnabled()
+    const inputSource = useLifeSyncInputSource()
     const [pages, setPages] = useState([])
     const [zoomPct, setZoomPct] = useState(60)
     const [chapterPickerOpen, setChapterPickerOpen] = useState(false)
@@ -383,11 +386,11 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
             <div className={`shrink-0 flex items-center justify-between gap-4 border-t border-white/8 px-8 py-3 ${LOW_END ? 'bg-black' : 'bg-black/90 backdrop-blur-xl'}`}>
                 <div className="flex items-center gap-2">
                     <button type="button" onClick={onBack} className="flex items-center gap-1.5 rounded-xl bg-white/5 px-3 py-2 text-[13px] font-semibold text-white/60">
-                        <span className="rounded bg-red-600/80 px-1.5 py-0.5 text-[10px] font-black text-white">B</span>
+                        <span className="rounded bg-red-600/80 px-1.5 py-0.5 text-[10px] font-black text-white">{tvHintLabel('B', inputSource)}</span>
                         Back
                     </button>
                     <button type="button" onClick={openChapterPicker} className="flex items-center gap-1.5 rounded-xl bg-white/5 px-3 py-2 text-[13px] font-semibold text-white/60">
-                        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-black">X</span>
+                        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[10px] font-black">{tvHintLabel('X', inputSource)}</span>
                         Chapters
                     </button>
                 </div>
@@ -400,9 +403,9 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                 <div className="flex items-center gap-2 text-[11px] text-white/30">
                     <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">↑↓</span>
                     <span>scroll</span>
-                    <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">LT/RT</span>
+                    <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">{tvHintLabel('LT/RT', inputSource)}</span>
                     <span>zoom</span>
-                    <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">LB/RB</span>
+                    <span className="rounded bg-white/8 px-1.5 py-0.5 font-black">{tvHintLabel('LB/RB', inputSource)}</span>
                     <span>chapter</span>
                 </div>
             </div>
@@ -413,7 +416,7 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                     <div className="flex max-h-[70vh] w-140 flex-col rounded-3xl bg-[#111116] p-5 shadow-2xl">
                         <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-[22px] font-black text-white">Go to chapter</h3>
-                            <p className="text-[11px] text-white/35">↑↓ select · A open · B close</p>
+                            <p className="text-[11px] text-white/35">{`↑↓ select · ${tvHintLabel('A', inputSource)} open · ${tvHintLabel('B', inputSource)} close`}</p>
                         </div>
                         <div className="min-h-0 flex-1 overflow-y-auto pr-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             {sortedChapters.map((chapter, index) => {

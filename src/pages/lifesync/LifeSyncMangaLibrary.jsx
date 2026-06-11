@@ -7,6 +7,7 @@ import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { ControllerHintBar } from '../../components/lifesync/ControllerHintOverlay'
+import { MediaPageHeader } from '../../components/lifesync/MediaPageChrome'
 import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
 import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
@@ -228,61 +229,175 @@ function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
         return () => window.removeEventListener('keydown', fn)
     }, [onClose])
 
+    const title = decodeHtmlEntities(entry.title) || 'Untitled'
+
     return (
         <MotionDiv
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
         >
             <MotionDiv
-                className="relative w-full max-w-sm overflow-hidden rounded-t-3xl sm:rounded-3xl bg-(--color-surface) shadow-2xl"
+                className="relative w-full max-w-lg overflow-hidden rounded-t-3xl sm:rounded-3xl bg-(--color-surface) shadow-2xl"
                 initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 340, damping: 32 }}
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex justify-center pt-3 pb-1 sm:hidden">
-                    <div className="h-1 w-10 rounded-full bg-(--color-border-soft)" />
-                </div>
-                {/* Cover + meta */}
-                <div className="flex gap-4 px-5 pt-4 pb-3">
-                    <div className="relative h-[88px] w-[60px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted)">
-                        {entry.coverUrl && (
-                            <LifesyncEpisodeThumbnail src={entry.coverUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover" imgProps={mangaImageProps(entry.coverUrl)} />
-                        )}
-                    </div>
-                    <div className="min-w-0 flex-1 pt-0.5">
-                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-primary">{sourceLabel(entry.source)}</p>
-                        <h2 className="mt-0.5 line-clamp-3 text-[15px] font-bold leading-snug text-(--color-text-primary)">{decodeHtmlEntities(entry.title) || 'Untitled'}</h2>
-                        <p className="mt-1 text-[10px] text-(--color-text-secondary)">{statusLabel(entry.readingStatus)}</p>
-                    </div>
-                    <button type="button" onClick={onClose} className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-(--color-surface-muted) text-(--color-text-secondary) hover:text-(--color-text-primary) transition">
-                        <IconX className="h-3 w-3" />
+                {/* ── Hero banner ── */}
+                <div className="relative h-44 sm:h-48 overflow-hidden">
+                    {/* Blurred backdrop */}
+                    {heroUrl && (
+                        <img
+                            src={heroUrl}
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover opacity-35 blur-2xl scale-105 pointer-events-none select-none"
+                        />
+                    )}
+                    {/* Amber radial glow */}
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.18),transparent_70%)] pointer-events-none" />
+                    {/* Amber hairline at top */}
+                    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-amber-400/60 to-transparent pointer-events-none" />
+                    {/* Dark gradient overlay */}
+                    <div className="absolute inset-0 bg-linear-to-t from-(--color-surface) via-(--color-surface)/70 to-transparent pointer-events-none" />
+                    {/* Close button */}
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/80 hover:text-white transition backdrop-blur-sm"
+                    >
+                        <IconX className="h-4 w-4" />
                     </button>
-                </div>
-                {/* Progress */}
-                <div className="px-5 pb-3">
-                    <div className="rounded-2xl bg-(--color-surface-muted) p-3.5 space-y-2">
-                        <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-semibold text-(--color-text-secondary)">Chapter progress</span>
-                            <span className="font-bold text-(--color-text-primary)">{snap.currentLabel} / {snap.latestLabel}</span>
+                    {/* Cover + title row overlaid on hero */}
+                    <div className="absolute bottom-0 inset-x-0 flex gap-4 px-5 pb-6 pt-12 items-end">
+                        <div className="relative w-20 shrink-0 overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/20 aspect-2/3 bg-(--color-surface-muted)">
+                            {entry.coverUrl && (
+                                <LifesyncEpisodeThumbnail
+                                    src={entry.coverUrl}
+                                    className="absolute inset-0 h-full w-full"
+                                    imgClassName="h-full w-full object-cover"
+                                    imgProps={mangaImageProps(entry.coverUrl)}
+                                />
+                            )}
                         </div>
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
-                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${snap.percent}%` }} />
-                        </div>
-                        <div className="flex justify-between text-[10px] text-(--color-text-secondary)">
-                            <span>{snap.percent}% complete</span>
-                            {releaseDate && <span>Latest: {formatDateLabel(releaseDate)}</span>}
+                        <div className="min-w-0 flex-1 pb-1">
+                            <h2 className="line-clamp-2 text-[19px] font-black leading-snug text-white drop-shadow-lg">{title}</h2>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                                {entry.source && (
+                                    <span className="rounded-lg bg-amber-500/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-400">
+                                        {sourceLabel(entry.source)}
+                                    </span>
+                                )}
+                                {entry.readingStatus && (
+                                    <span className="rounded-lg bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-white/70">
+                                        {statusLabel(entry.readingStatus)}
+                                    </span>
+                                )}
+                            </div>
+                            {entry.updatedAt && (
+                                <p className="mt-1.5 text-[11px] text-white/60">{relativeTouch(entry.updatedAt)}</p>
+                            )}
                         </div>
                     </div>
                 </div>
-                {/* Actions */}
-                <div className="flex gap-2.5 px-5 pb-6">
-                    <button type="button" onClick={() => onContinue(entry)}
-                        className="flex flex-1 min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-bold text-black transition hover:brightness-95 active:scale-[0.98]">
-                        <IconBook className="h-4 w-4" /> Continue
-                    </button>
-                    <Link to={MANGA_BASE}
-                        className="flex min-h-12 items-center justify-center rounded-2xl border border-(--color-border-soft) px-4 text-[13px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">
+
+                {/* ── Scrollable body ── */}
+                <div className="max-h-[min(70vh,480px)] overflow-y-auto">
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-3 px-5 py-5 border-b border-(--color-border-soft)">
+                        {[
+                            { label: 'Current', value: snap.currentLabel },
+                            { label: 'Latest', value: snap.latestLabel },
+                            { label: 'Progress', value: `${snap.percent}%` },
+                        ].map(({ label, value }) => (
+                            <div key={label} className="rounded-2xl bg-(--color-surface-muted) px-3 py-3 text-center">
+                                <p className="text-[20px] font-black text-(--color-text-primary)">{value}</p>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary) mt-1">{label}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="px-5 py-4 border-b border-(--color-border-soft)">
+                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
+                            <div className="h-full rounded-full bg-primary shadow-[0_0_12px_rgba(198,255,0,0.4)] transition-all" style={{ width: `${snap.percent}%` }} />
+                        </div>
+                    </div>
+
+                    {/* Details grid */}
+                    <div className="px-5 py-4 border-b border-(--color-border-soft)">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                            {entry.source && (
+                                <>
+                                    <p className="text-[11px] text-(--color-text-secondary)">Source</p>
+                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{sourceLabel(entry.source)}</p>
+                                </>
+                            )}
+                            {entry.readingStatus && (
+                                <>
+                                    <p className="text-[11px] text-(--color-text-secondary)">Status</p>
+                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{statusLabel(entry.readingStatus)}</p>
+                                </>
+                            )}
+                            {entry.lastChapterLabel && (
+                                <>
+                                    <p className="text-[11px] text-(--color-text-secondary)">Last read</p>
+                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{entry.lastChapterLabel}</p>
+                                </>
+                            )}
+                            {entry.remoteLatestChapterLabel && (
+                                <>
+                                    <p className="text-[11px] text-(--color-text-secondary)">Latest chapter</p>
+                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{entry.remoteLatestChapterLabel}</p>
+                                </>
+                            )}
+                            {releaseDate && (
+                                <>
+                                    <p className="text-[11px] text-(--color-text-secondary)">Last release</p>
+                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{formatDateLabel(releaseDate)}</p>
+                                </>
+                            )}
+                            {entry.lastReadPercent != null && (
+                                <>
+                                    <p className="text-[11px] text-(--color-text-secondary)">Read %</p>
+                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{entry.lastReadPercent}%</p>
+                                </>
+                            )}
+                            {entry.tags?.length > 0 && (
+                                <>
+                                    <p className="text-[11px] text-(--color-text-secondary)">Tags</p>
+                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{entry.tags.join(', ')}</p>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* New chapter badge */}
+                    {entry.hasNewChapter && (
+                        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/15 px-4 py-3 mx-5 my-4 flex items-center gap-2">
+                            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-amber-400" />
+                            <span className="text-[13px] font-semibold text-amber-500 dark:text-amber-400">New chapter available</span>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Action footer ── */}
+                <div className="px-5 py-4 border-t border-(--color-border-soft) space-y-2.5">
+                    <MotionDiv
+                        whileTap={{ scale: 0.97 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => onContinue(entry)}
+                            className="flex w-full min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-black text-black transition hover:brightness-110 shadow-[0_6px_20px_-6px_rgba(198,255,0,0.4)]"
+                        >
+                            <IconBook className="h-4 w-4" /> Continue reading
+                        </button>
+                    </MotionDiv>
+                    <Link
+                        to={MANGA_BASE}
+                        className="flex min-h-11 items-center justify-center rounded-2xl border border-(--color-border-soft) px-5 text-[13px] font-semibold text-(--color-text-secondary) transition hover:border-(--color-border-strong) hover:bg-(--color-surface-muted)"
+                    >
                         Browse
                     </Link>
                 </div>
@@ -711,37 +826,47 @@ export default function LifeSyncMangaLibrary() {
         <MotionDiv className="min-w-0 space-y-4" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncPageTransition}>
 
             {/* ── Header ── */}
-            <div className="flex items-center gap-3">
-                <Link to={MANGA_BASE} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-primary) transition hover:bg-(--color-surface-muted)" aria-label="Back">
-                    <IconChevronLeft />
-                </Link>
-                <h1 className="min-w-0 flex-1 text-[20px] font-black leading-none text-(--color-text-primary)">Manga Library</h1>
-                <ControllerHintBar
-                    cols={2}
-                    hints={[
-                        { btns: ['Y'], label: 'Grid / List' },
-                        { btns: ['X'], label: 'Search' },
-                        { btns: ['LB'], label: 'Prev page' },
-                        { btns: ['RB'], label: 'Next page' },
-                        { btns: ['←→'], label: 'Navigate cards' },
-                        { btns: ['A'], label: 'Open detail' },
-                    ]}
-                />
-                <Link to={MANGA_BASE} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-black transition hover:brightness-95">
-                    Browse
-                </Link>
-            </div>
+            <MediaPageHeader
+                accent="library"
+                kicker="LifeSync · Shelf"
+                title="Manga Library"
+                subtitle="Your synced reading shelf — progress, statuses, and new-chapter alerts."
+                icon={
+                    <Link to={MANGA_BASE} aria-label="Back to manga" className="flex h-full w-full items-center justify-center transition-transform hover:-translate-x-0.5">
+                        <IconChevronLeft className="h-4.5 w-4.5" />
+                    </Link>
+                }
+                actions={
+                    <>
+                        <ControllerHintBar
+                            cols={2}
+                            hints={[
+                                { btns: ['Y'], label: 'Grid / List' },
+                                { btns: ['X'], label: 'Search' },
+                                { btns: ['LB'], label: 'Prev page' },
+                                { btns: ['RB'], label: 'Next page' },
+                                { btns: ['←→'], label: 'Navigate cards' },
+                                { btns: ['A'], label: 'Open detail' },
+                            ]}
+                        />
+                        <Link to={MANGA_BASE} className="flex h-9 items-center justify-center rounded-full bg-primary px-5 text-[12px] font-black text-black shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)] transition-all hover:-translate-y-px hover:brightness-95">
+                            Browse
+                        </Link>
+                    </>
+                }
+            />
 
             {/* ── Stats ── */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-2.5">
                 {[
                     { label: 'Total', value: initialLoading ? '—' : visibleEntries.length },
                     { label: 'New chapters', value: initialLoading ? '—' : visibleSummary.withNewChapter, accent: true },
                     { label: 'Needs sync', value: initialLoading ? '—' : visibleSummary.needsSync, warn: true },
                 ].map((s) => (
-                    <div key={s.label} className={`rounded-2xl px-3 py-3 text-center ${s.accent ? 'bg-primary/10 ring-1 ring-primary/20' : s.warn ? 'bg-(--color-surface) border border-(--color-border-soft)' : 'bg-(--color-surface) border border-(--color-border-soft)'}`}>
-                        <p className={`text-[22px] font-black tabular-nums leading-none ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{s.value}</p>
-                        <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary)">{s.label}</p>
+                    <div key={s.label} className={`relative overflow-hidden rounded-2xl px-3 py-3.5 text-center shadow-sm transition-transform hover:-translate-y-0.5 ${s.accent ? 'bg-primary/10 ring-1 ring-primary/25' : 'border border-(--color-border-soft) bg-(--color-surface)'}`}>
+                        {s.accent && <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-linear-to-r from-transparent via-primary/70 to-transparent" aria-hidden />}
+                        <p className={`text-[24px] font-black tabular-nums leading-none tracking-tight ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{s.value}</p>
+                        <p className="mt-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-(--color-text-secondary)">{s.label}</p>
                     </div>
                 ))}
             </div>
