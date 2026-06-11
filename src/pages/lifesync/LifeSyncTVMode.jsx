@@ -88,6 +88,69 @@ const TAB_ACCENTS = {
 }
 const DEFAULT_ACCENT = { text: 'text-(--mx-color-c6ff00)', glow: 'rgba(198,255,0,0.18)', grad: 'from-(--mx-color-c6ff00)/15 via-transparent to-transparent' }
 
+/** Curated hero images for TV mode destination cards */
+const TV_HOME_IMAGES = {
+    anime: [
+        'https://cdn.myanimelist.net/images/anime/1286/99889.jpg',
+        'https://cdn.myanimelist.net/images/anime/1000/110531.jpg',
+        'https://cdn.myanimelist.net/images/anime/5/73199.jpg',
+        'https://cdn.myanimelist.net/images/anime/9/9453.jpg',
+        'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
+        'https://cdn.myanimelist.net/images/anime/6/73245.jpg',
+        'https://cdn.myanimelist.net/images/anime/1171/109222.jpg',
+        'https://cdn.myanimelist.net/images/anime/10/78745.jpg',
+        'https://cdn.myanimelist.net/images/anime/1015/138006.jpg',
+        'https://cdn.myanimelist.net/images/anime/1806/126216.jpg',
+        'https://cdn.myanimelist.net/images/anime/1223/96541.jpg'
+    ],
+    manga: [
+        'https://roliascan.com/content/media/manga-10996-cover-1775133523.png',
+        'https://roliascan.com/content/media/manga-10492-cover-1775133327.jpg',
+        'https://roliascan.com/content/media/manga-10482-cover-1775133325.webp',
+        'https://roliascan.com/content/media/manga-10458-cover-1775133318.webp',
+        'https://roliascan.com/content/media/manga-10664-cover-1775133397.webp',
+        'https://roliascan.com/content/media/manga-1469-cover-1775048210.webp',
+        'https://roliascan.com/content/media/manga-11300-cover-1775134486.jpg',
+        'https://roliascan.com/content/media/manga-80194-cover-1775555921.png',
+        'https://roliascan.com/content/media/manga-10558-cover-1775133344.png',
+        'https://roliascan.com/content/media/manga-146584-cover-1777856073.jpg',
+    ],
+    hmanhwa: [
+        'https://mangadistrict.com/wp-content/uploads/2026/01/Everyones-Man-Uncensored-Edit-2.png',
+        'https://cdn.mangadistrict.com/thumbnail/snapping-into-love-uncensored-2.webp',
+        'https://cdn.mangadistrict.com/thumbnail/dont-tell-anyone-at-school-uncensored-official.webp',
+        'https://mangadistrict.com/wp-content/uploads/2025/11/Troublesome-Employee-Warning-Uncensored-Edited.png',
+        'https://cdn.mangadistrict.com/thumbnail/im-the-only-man-in-this-clan-official.webp',
+        'https://cdn.mangadistrict.com/thumbnail/daddys-girl-carcass-official.webp',
+        'https://cdn.mangadistrict.com/thumbnail/the-double-life-of-a-public-official-official.webp',
+        'https://cdn.mangadistrict.com/thumbnail/only-with-consent.webp',
+        'https://cdn.mangadistrict.com/thumbnail/secret-class.webp'
+    ],
+    hentai: [
+        'https://watchhentai.net/uploads/2022/11/boy-meets-harem-the-animation/poster.jpg',
+        'https://watchhentai.net/uploads/2022/12/shinshou-genmukan/poster.jpg',
+        'https://watchhentai.net/uploads/2023/8/kono-koi-ni-kiduite/poster.jpg',
+        'https://watchhentai.net/uploads/2022/10/oppai-no-ouja-48/poster.jpg',
+        'https://watchhentai.net/uploads/2024/gomu-o-tsukete-iimashita-yo-ne/poster.jpg',
+        'https://watchhentai.net/uploads/2022/12/takarasagashi-no-natsuyasumi/poster.jpg',
+        'https://watchhentai.net/uploads/2026/meijyou/3.jpg',
+        'https://watchhentai.net/uploads/2026/anal-mania-otaku-to-ananii-daisuki-na-ojou-sama/1.jpg',
+        'https://watchhentai.net/uploads/2025/reika-wa-karei-na-boku-no-joou-the-animation/poster.jpg',
+        'https://watchhentai.net/uploads/2025/natsu-to-hako/poster.jpg'
+    ]
+}
+
+function getRandomImageForTab(tabId, seedValue) {
+    const images = TV_HOME_IMAGES[tabId] || []
+    if (!images.length) return null
+    const seed = String(seedValue || tabId)
+    let hash = 2166136261
+    for (let i = 0; i < seed.length; i++) {
+        hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619)
+    }
+    return images[Math.abs(hash >>> 0) % images.length]
+}
+
 function TVKeycap({ children, accent = false }) {
     return (
         <span className={`flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-[9px] font-black ${
@@ -273,13 +336,25 @@ function TVHomeSection({ tabs, focusPos, onOpenTab }) {
                             onClick={() => onOpenTab(tab.id)}
                             className={`group relative min-h-56 overflow-hidden rounded-[26px] border p-5 text-left transition-all duration-200 ${
                                 focused
-                                    ? 'border-(--mx-color-c6ff00) bg-white/8 shadow-[0_0_0_4px_rgba(198,255,0,0.18),0_24px_60px_-20px_rgba(0,0,0,0.8)]'
-                                    : 'border-white/8 bg-white/4 hover:bg-white/7'
+                                    ? 'border-(--mx-color-c6ff00) shadow-[0_0_0_4px_rgba(198,255,0,0.18),0_24px_60px_-20px_rgba(0,0,0,0.8)]'
+                                    : 'border-white/8 hover:border-white/12'
                             }`}
                             style={focused && !LOW_END ? { boxShadow: `0 0 0 4px rgba(198,255,0,0.18), 0 0 60px ${accent.glow}, 0 24px 60px -20px rgba(0,0,0,0.8)` } : undefined}
                         >
-                            {/* Accent wash */}
+                            {/* Background image */}
+                            {!LOW_END && (
+                                <>
+                                    <img
+                                        src={getRandomImageForTab(tab.id, index)}
+                                        alt=""
+                                        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity duration-300 group-hover:opacity-30"
+                                    />
+                                </>
+                            )}
+                            {/* Accent wash with gradient overlay */}
                             <div className={`pointer-events-none absolute inset-0 bg-linear-to-br ${accent.grad} transition-opacity duration-200 ${focused ? 'opacity-100' : 'opacity-60'}`} aria-hidden />
+                            {/* Enhanced dark overlay for text legibility */}
+                            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-black/0" aria-hidden />
                             {/* Watermark glyph */}
                             {Icon && (
                                 <Icon
