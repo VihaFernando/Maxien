@@ -58,7 +58,7 @@ export function TVMangaBrowseSection({ focusPos, onItemSelect, enabled }) {
                             title: entry.title,
                             imageUrl: entry.coverUrl,
                             badge,
-                            chips: [entry.source === 'mangadistrict' ? 'Manga District' : 'Roliascan'],
+                            chips: [entry.source === 'mangadistrict' ? 'Manga District' : entry.source === 'mangadna' ? 'MangaDNA' : 'Roliascan'],
                             navigateTo,
                         })}
                     />

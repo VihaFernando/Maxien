@@ -27,6 +27,7 @@ const SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
     { id: 'roliascan', label: 'Roliascan' },
     { id: 'mangadistrict', label: 'Manga District' },
+    { id: 'mangadna', label: 'MangaDNA' },
 ]
 const STATUS_OPTIONS = [
     { id: 'all', label: 'Any status' },
@@ -113,6 +114,7 @@ const IconAlert = ({ className = 'h-4 w-4' }) => (
 function sourceLabel(source) {
     if (source === 'mangadistrict') return 'District'
     if (source === 'roliascan') return 'Roliascan'
+    if (source === 'mangadna') return 'MangaDNA'
     return source || 'Manga'
 }
 function entryKey(entry) { return `${entry?.source || ''}:${entry?.mangaId || ''}` }

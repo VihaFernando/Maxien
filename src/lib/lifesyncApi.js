@@ -79,6 +79,9 @@ function remapToV1Path(path) {
     if (pathname.startsWith('/api/manga/mangadistrict/')) {
         return pathname.replace('/api/manga', '/api/v1/manga') + suffix
     }
+    if (pathname.startsWith('/api/manga/mangadna/')) {
+        return pathname.replace('/api/manga', '/api/v1/manga') + suffix
+    }
     if (
         pathname.startsWith('/api/manga/tags') ||
         pathname.startsWith('/api/manga/search') ||

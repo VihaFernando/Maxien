@@ -738,7 +738,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
       )}
       {manga.source && manga.source !== "roliascan" && (
         <span className="pointer-events-none absolute bottom-12 left-2 z-[2] rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase text-white backdrop-blur-sm">
-          {manga.source === "mangadistrict" ? "District" : manga.source}
+          {manga.source === "mangadistrict" ? "District" : manga.source === "mangadna" ? "DNA" : manga.source}
         </span>
       )}
     </>
@@ -1045,6 +1045,42 @@ function MangaDetail({
         })
         .finally(() => {
           if (!cancelled) setChapBusy(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (src === "mangadna") {
+      setDetail(null);
+      setChapters(null);
+      setMetaBusy(true);
+      setChapBusy(true);
+      setDexStats(null);
+      setIsDexFollowing(null);
+      setDexReadingStatus(null);
+
+      let cancelled = false;
+      const slug = String(manga.id);
+
+      lifesyncFetch(
+        `/api/v1/manga/mangadna/info/${encodeURIComponent(slug)}?view=full`,
+      )
+        .then((data) => {
+          if (cancelled) return;
+          setDetail({ ...data, id: data.id || slug, source: "mangadna" });
+          const list = Array.isArray(data.chapters) ? data.chapters : [];
+          setChapters({ data: list });
+        })
+        .catch(() => {
+          if (!cancelled) setChapters({ data: [] });
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setMetaBusy(false);
+            setChapBusy(false);
+          }
         });
 
       return () => {
@@ -1617,6 +1653,16 @@ function MangaDetail({
                       Open on Roliascan
                     </a>
                   )}
+                  {src === "mangadna" && mergedManga.id && (
+                    <a
+                      href={`https://mangadna.com/manga/${encodeURIComponent(String(mergedManga.id))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
+                    >
+                      Open on MangaDNA
+                    </a>
+                  )}
                 </div>
                 {chaptersInSeriesOrder.length > 0 && (
                   <div className="flex flex-wrap items-center gap-2">
@@ -1658,7 +1704,7 @@ function MangaDetail({
               ) : chaptersInSeriesOrder.length === 0 ? (
                 <div className="rounded-xl bg-[var(--mx-color-f5f5f7)] px-4 py-6 text-center">
                   <p className="text-[12px] text-[var(--mx-color-86868b)]">
-                    {src === "mangadistrict" || src === "roliascan"
+                    {src === "mangadistrict" || src === "roliascan" || src === "mangadna"
                       ? "No chapters in listing."
                       : "No chapters for this language filter."}
                   </p>
@@ -1800,6 +1846,16 @@ const ROLIASCAN_FOLDER_DEFAULT_ORDER = {
   popular: { key: "follows_total", dir: "desc" },
 };
 
+/** MangaDNA order-by options (matches backend MANGADNA_SORT_OPTIONS). */
+const MANGADNA_ORDER_BY_OPTIONS = [
+  { id: "latest", label: "Latest" },
+  { id: "alphabet", label: "A-Z" },
+  { id: "rating", label: "Rating" },
+  { id: "trending", label: "Trending" },
+];
+
+const MANGADNA_ORDER_BY_IDS = new Set(MANGADNA_ORDER_BY_OPTIONS.map((o) => o.id));
+
 function defaultTabForSource(src) {
   if (src === "roliascan") return "manga";
   return "latest";
@@ -1838,7 +1894,7 @@ export default function LifeSyncManga() {
       ? location.pathname.slice(basePath.length)
       : "";
     const parts = rel.split("/").filter(Boolean);
-    const allowedSources = new Set(["mangadistrict", "roliascan"]);
+    const allowedSources = new Set(["mangadistrict", "roliascan", "mangadna"]);
     const src = allowedSources.has(parts[0]) ? parts[0] : "roliascan";
 
     const tab = normalizeTabForSource(
@@ -2087,6 +2143,18 @@ export default function LifeSyncManga() {
   const [mdFilterGenre, setMdFilterGenre] = useState("");
   const [mdBrowse, setMdBrowse] = useState("latest-updates");
 
+  // MangaDNA state
+  const [dnaLatest, setDnaLatest] = useState(null);
+  const [dnaPage, setDnaPage] = useState(1);
+  const [dnaGenre, setDnaGenre] = useState("");
+  const [dnaOrderBy, setDnaOrderBy] = useState("latest");
+  const [dnaFilter, setDnaFilter] = useState("");
+  const [dnaSearchResults, setDnaSearchResults] = useState([]);
+  const [dnaSearchBusy, setDnaSearchBusy] = useState(false);
+  const [dnaFiltersOpen, setDnaFiltersOpen] = useState(false);
+  const [dnaGenres, setDnaGenres] = useState([]);
+  const [dnaTermsLoaded, setDnaTermsLoaded] = useState(false);
+
   // Roliascan state
   const [roliascanStatus, setRoliascanStatus] = useState(null);
   const [roliascanTerms, setRoliascanTerms] = useState({});
@@ -2177,6 +2245,10 @@ export default function LifeSyncManga() {
   const mdSearchFetchGenRef = useRef(0);
   /** Invalidates in-flight Roliascan browser fetches when source/filter/page changes. */
   const roliascanFetchGenRef = useRef(0);
+  /** Invalidates in-flight MangaDNA list fetches. */
+  const dnaLatestFetchGenRef = useRef(0);
+  /** Invalidates debounced MangaDNA search. */
+  const dnaSearchFetchGenRef = useRef(0);
   /** Invalidates in-flight manga detail enrichment when route/source changes or another open supersedes. */
   const mangaDetailEnrichGenRef = useRef(0);
 
@@ -2187,6 +2259,10 @@ export default function LifeSyncManga() {
     }
     if (source !== "roliascan") {
       roliascanFetchGenRef.current += 1;
+    }
+    if (source !== "mangadna") {
+      dnaLatestFetchGenRef.current += 1;
+      dnaSearchFetchGenRef.current += 1;
     }
   }, [source]);
 
@@ -2249,12 +2325,15 @@ export default function LifeSyncManga() {
       setMdPage(route.page);
     if (route.src === "roliascan" && roliascanPage !== route.page)
       setRoliascanPage(route.page);
+    if (route.src === "mangadna" && dnaPage !== route.page)
+      setDnaPage(route.page);
   }, [
     roliascanPage,
     dexPopularPage,
     dexRecentPage,
     dexSearchPage,
     mdPage,
+    dnaPage,
     route.page,
     route.src,
     route.tab,
@@ -2342,6 +2421,29 @@ export default function LifeSyncManga() {
           setSelectedManga(null);
           setSource("roliascan");
           goToRead(entry.mangaId, ch.id, "roliascan", {
+            resumeChapterId: String(ch.id),
+            resumePercent: preferredResumePercent,
+          });
+          return;
+        }
+        if (entry.source === "mangadna") {
+          const data = await lifesyncFetch(
+            `/api/v1/manga/mangadna/info/${encodeURIComponent(entry.mangaId)}?view=full`,
+          );
+          const list = [...(data.chapters || [])];
+          list.sort(compareChapters);
+          let ch = list.find((c) => String(c?.id) === preferredChapterId);
+          if (!ch && preferredChapterId !== lastChapterId) {
+            ch = list.find((c) => String(c?.id) === lastChapterId);
+          }
+          if (!ch && list.length) ch = list[list.length - 1];
+          if (!ch) {
+            setError("No chapters available to resume.");
+            return;
+          }
+          setSelectedManga(null);
+          setSource("mangadna");
+          goToRead(entry.mangaId, ch.id, "mangadna", {
             resumeChapterId: String(ch.id),
             resumePercent: preferredResumePercent,
           });
@@ -2788,6 +2890,97 @@ export default function LifeSyncManga() {
     };
   }, [isLifeSyncConnected, hManhwaEnabled, lifeSyncLoading, source, mdFilter]);
 
+  // MangaDNA terms (genres + sort options) — load once when source becomes mangadna
+  useEffect(() => {
+    if (!isLifeSyncConnected || lifeSyncLoading || source !== "mangadna") return;
+    if (dnaTermsLoaded) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await lifesyncFetch("/api/v1/manga/mangadna/terms?view=full");
+        if (cancelled) return;
+        setDnaGenres(Array.isArray(data?.genres) ? data.genres : []);
+        setDnaTermsLoaded(true);
+      } catch {
+        /* use empty genres if terms fail */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isLifeSyncConnected, lifeSyncLoading, source, dnaTermsLoaded]);
+
+  // MangaDNA latest listing
+  useEffect(() => {
+    if (!isLifeSyncConnected || lifeSyncLoading) return;
+    if (source !== "mangadna") return;
+    if (dnaFilter.trim()) {
+      dnaLatestFetchGenRef.current += 1;
+      return;
+    }
+    const gen = ++dnaLatestFetchGenRef.current;
+    setBusy(true);
+    setError("");
+    setDnaLatest(null);
+    const page = clampPage(dnaPage);
+    const qs = new URLSearchParams();
+    if (dnaGenre) qs.set("genre", dnaGenre);
+    if (dnaOrderBy && dnaOrderBy !== "latest") qs.set("orderBy", dnaOrderBy);
+    qs.set("view", "standard");
+    (async () => {
+      try {
+        const d = await lifesyncFetch(
+          `/api/v1/manga/mangadna/latest/${page}?${qs.toString()}`,
+        );
+        if (dnaLatestFetchGenRef.current !== gen) return;
+        setDnaLatest(d);
+        setDnaPage(page);
+      } catch (e) {
+        if (dnaLatestFetchGenRef.current !== gen) return;
+        setError(e.message || "Failed to load MangaDNA");
+      } finally {
+        if (dnaLatestFetchGenRef.current === gen) setBusy(false);
+      }
+    })();
+  }, [
+    isLifeSyncConnected,
+    lifeSyncLoading,
+    source,
+    dnaFilter,
+    dnaPage,
+    dnaGenre,
+    dnaOrderBy,
+  ]);
+
+  // MangaDNA search (debounced)
+  useEffect(() => {
+    if (!isLifeSyncConnected || lifeSyncLoading) return;
+    if (source !== "mangadna") return;
+    const q = dnaFilter.trim();
+    if (!q) {
+      dnaSearchFetchGenRef.current += 1;
+      setDnaSearchResults([]);
+      setDnaSearchBusy(false);
+      return;
+    }
+    const gen = ++dnaSearchFetchGenRef.current;
+    const t = setTimeout(async () => {
+      if (dnaSearchFetchGenRef.current !== gen) return;
+      setDnaSearchBusy(true);
+      try {
+        const d = await lifesyncFetch(
+          `/api/v1/manga/mangadna/search?q=${encodeURIComponent(q)}&view=standard`,
+        );
+        if (dnaSearchFetchGenRef.current !== gen) return;
+        setDnaSearchResults(d?.data || d || []);
+      } catch {
+        if (dnaSearchFetchGenRef.current !== gen) return;
+        setDnaSearchResults([]);
+      } finally {
+        if (dnaSearchFetchGenRef.current === gen) setDnaSearchBusy(false);
+      }
+    }, 400);
+    return () => { clearTimeout(t); };
+  }, [isLifeSyncConnected, lifeSyncLoading, source, dnaFilter]);
+
   useEffect(() => {
     if (!isLifeSyncConnected || lifeSyncLoading || source !== "roliascan")
       return;
@@ -2958,8 +3151,8 @@ export default function LifeSyncManga() {
     async ({ id, source: srcParam }) => {
       const src = srcParam || source;
       if (!id) return;
-      // mangadistrict: MangaDetail self-fetches meta + chapters; nothing to do here
-      if (src === "mangadistrict") return;
+      // mangadistrict + mangadna: MangaDetail self-fetches meta + chapters; nothing to do here
+      if (src === "mangadistrict" || src === "mangadna") return;
       const gen = ++mangaDetailEnrichGenRef.current;
       setError("");
       try {
@@ -3353,6 +3546,10 @@ export default function LifeSyncManga() {
     if (source === "roliascan") {
       return roliascanRows;
     }
+    if (source === "mangadna") {
+      if (dnaFilter.trim()) return dnaSearchResults;
+      return dnaLatest?.data || [];
+    }
     return [];
   }, [
     source,
@@ -3366,7 +3563,9 @@ export default function LifeSyncManga() {
     mdLatest,
     mdFilter,
     mdSearchResults,
-    roliascanRows,
+    dnaLatest,
+    dnaFilter,
+    dnaSearchResults,
   ]);
 
   const mangaGridLoading = useMemo(() => {
@@ -3383,6 +3582,7 @@ export default function LifeSyncManga() {
     if (source === "mangadistrict" && mdFilter.trim() && mdSearchBusy)
       return true;
     if (source === "roliascan" && roliascanLoading) return true;
+    if (source === "mangadna" && dnaFilter.trim() && dnaSearchBusy) return true;
     return false;
   }, [
     currentItems.length,
@@ -3398,6 +3598,8 @@ export default function LifeSyncManga() {
     roliascanLoading,
     mdFilter,
     mdSearchBusy,
+    dnaFilter,
+    dnaSearchBusy,
   ]);
 
   const dexTabs = useMemo(() => {
@@ -3419,24 +3621,39 @@ export default function LifeSyncManga() {
     currentItems.length > 0 &&
     currentItems.length <= lifeSyncBrowseGridStaggerMaxItems;
 
+  const dnaLastPage = Math.max(
+    1,
+    parseInt(String(dnaLatest?.lastPage ?? "1"), 10) || 1,
+  );
+  const dnaCurPage = Math.min(
+    dnaLastPage,
+    Math.max(1, parseInt(String(dnaLatest?.currentPage ?? dnaPage), 10) || 1),
+  );
+
   const mangaCanPrevPage =
-    source === "mangadistrict" ? mdCurPage > 1 : roliascanPage > 1;
+    source === "mangadistrict"
+      ? mdCurPage > 1
+      : source === "mangadna"
+        ? dnaCurPage > 1
+        : roliascanPage > 1;
   const mangaCanNextPage =
     source === "mangadistrict"
       ? mdCurPage < mdLastPage
-      : roliascanPage < roliascanLastPage;
+      : source === "mangadna"
+        ? dnaCurPage < dnaLastPage
+        : roliascanPage < roliascanLastPage;
 
   const mangaGamepadHandlers = useMemo(
     () => ({
       [XBOX_GAMEPAD_BUTTONS.LB]: () => {
         if (!mangaCanPrevPage || busy) return;
-        const cur = source === "mangadistrict" ? mdCurPage : roliascanPage;
+        const cur = source === "mangadistrict" ? mdCurPage : source === "mangadna" ? dnaCurPage : roliascanPage;
         goToPage(cur - 1);
         setFocusedCardIndex(0);
       },
       [XBOX_GAMEPAD_BUTTONS.RB]: () => {
         if (!mangaCanNextPage || busy) return;
-        const cur = source === "mangadistrict" ? mdCurPage : roliascanPage;
+        const cur = source === "mangadistrict" ? mdCurPage : source === "mangadna" ? dnaCurPage : roliascanPage;
         goToPage(cur + 1);
         setFocusedCardIndex(0);
       },
@@ -3587,6 +3804,32 @@ export default function LifeSyncManga() {
               </>
             }
           />
+
+          {/* Source switcher */}
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            {[
+              { id: "roliascan", label: "Roliascan" },
+              { id: "mangadna", label: "MangaDNA" },
+              ...(hManhwaEnabled ? [{ id: "mangadistrict", label: "H Manhwa" }] : []),
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `${basePath}/${id}/${defaultTabForSource(id)}/page/1${location.search || ""}`,
+                  )
+                }
+                className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                  source === id
+                    ? "bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10"
+                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)] hover:text-[var(--mx-color-1d1d1f)]"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           {error && (
             <div className="rounded-2xl border border-red-200/60 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">
@@ -4479,6 +4722,147 @@ export default function LifeSyncManga() {
             </div>
           )}
 
+          {source === "mangadna" && (
+            <div className="min-w-0 w-full max-w-full space-y-3">
+              <form
+                className="flex min-w-0 w-full max-w-full flex-wrap items-stretch gap-2"
+                onSubmit={(e) => e.preventDefault()}
+              >
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={dnaFilter}
+                  onChange={(e) => setDnaFilter(e.target.value)}
+                  placeholder="Search MangaDNA…"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setDnaFiltersOpen((v) => !v)}
+                  aria-expanded={dnaFiltersOpen}
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                >
+                  Filters
+                  {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0) > 0 && (
+                    <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                      {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0)}
+                    </span>
+                  )}
+                  <svg
+                    className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${dnaFiltersOpen ? "-rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <button
+                  type="submit"
+                  disabled={dnaSearchBusy && Boolean(dnaFilter.trim())}
+                  className="shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
+                >
+                  {dnaSearchBusy && dnaFilter.trim() ? "Searching..." : "Search"}
+                </button>
+              </form>
+              {!dnaFilter.trim() && (
+                <div className="min-w-0 w-full max-w-full space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                    Sort by
+                  </p>
+                  <LifeSyncSectionNav
+                    size="dense"
+                    ariaLabel="MangaDNA sort order"
+                    layoutId="lifesync-manga-dna-order-by"
+                    items={MANGADNA_ORDER_BY_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
+                    activeId={dnaOrderBy}
+                    onSelect={(id) => {
+                      setDnaOrderBy(id);
+                      setDnaPage(1);
+                      goToPage(1);
+                    }}
+                  />
+                </div>
+              )}
+              <AnimatePresence initial={false}>
+                {dnaFiltersOpen && (
+                  <MotionDiv
+                    key="manga-dna-toolbar-filters"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={mangaFilterExpandTransition}
+                    className="w-full min-w-0 max-w-full overflow-hidden"
+                  >
+                    <div className="min-w-0 max-w-full space-y-4 border-t border-[var(--mx-color-f0f0f0)] pt-3">
+                      <div className="space-y-1.5">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          Order by
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {MANGADNA_ORDER_BY_OPTIONS.map(({ id, label }) => (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => { setDnaOrderBy(id); setDnaPage(1); goToPage(1); }}
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                dnaOrderBy === id
+                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {dnaGenres.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                            Genre
+                          </p>
+                          <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                            <button
+                              type="button"
+                              onClick={() => { setDnaGenre(""); setDnaPage(1); goToPage(1); }}
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                !dnaGenre
+                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                              }`}
+                            >
+                              All
+                            </button>
+                            {dnaGenres.map((g) => (
+                              <button
+                                key={g.slug || g.id}
+                                type="button"
+                                onClick={() => {
+                                  setDnaGenre((prev) => prev === (g.slug || g.id) ? "" : (g.slug || g.id));
+                                  setDnaPage(1);
+                                  goToPage(1);
+                                }}
+                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                  dnaGenre === (g.slug || g.id)
+                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                }`}
+                              >
+                                {g.title || g.name || g.slug}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </MotionDiv>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
           {/* Content tabs (Roliascan + Roliascan type tabs) */}
           {tabs.length > 0 && (
             <LifeSyncSectionNav
@@ -4622,6 +5006,32 @@ export default function LifeSyncManga() {
                   type="button"
                   disabled={busy || mdCurPage >= mdLastPage}
                   onClick={() => goToPage(mdCurPage + 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {source === "mangadna" && !dnaFilter.trim() && dnaLatest && (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                Page {dnaCurPage} of {dnaLastPage}
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy || dnaCurPage <= 1}
+                  onClick={() => goToPage(dnaCurPage - 1)}
+                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || dnaCurPage >= dnaLastPage}
+                  onClick={() => goToPage(dnaCurPage + 1)}
                   className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
                 >
                   Next
@@ -4960,11 +5370,22 @@ export default function LifeSyncManga() {
                           !mdSearchBusy &&
                           mdSearchResults.length === 0
                         ? "No titles matched your search."
-                        : source === "roliascan" &&
-                            roliascanCommittedSearch.trim()
-                          ? "No Roliascan titles matched your search."
-                          : source === "roliascan"
-                            ? "No Roliascan titles matched this tab and filter set."
+                        : source === "mangadna" &&
+                            dnaFilter.trim() &&
+                            dnaSearchBusy
+                          ? "Searching..."
+                          : source === "mangadna" &&
+                              dnaFilter.trim() &&
+                              !dnaSearchBusy &&
+                              dnaSearchResults.length === 0
+                            ? "No MangaDNA titles matched your search."
+                            : source === "mangadna"
+                              ? "No MangaDNA titles found for this filter."
+                              : source === "roliascan" &&
+                                  roliascanCommittedSearch.trim()
+                                ? "No Roliascan titles matched your search."
+                                : source === "roliascan"
+                                  ? "No Roliascan titles matched this tab and filter set."
                             : false &&
                                 tab === "search" &&
                                 committedSearchQuery.trim() &&

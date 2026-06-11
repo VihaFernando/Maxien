@@ -15,7 +15,7 @@ import { readProgressQueueSync, writeProgressQueueSync } from '../../features/ma
 const PROGRESS_LOCAL_SAVE_MS        = 8000
 const PROGRESS_REMOTE_DEBOUNCE_MS   = 6000
 const PROGRESS_FLUSH_BATCH          = 16
-const PROGRESS_SOURCES              = new Set(['mangadistrict', 'roliascan'])
+const PROGRESS_SOURCES              = new Set(['mangadistrict', 'roliascan', 'mangadna'])
 const INITIAL_PAGE_BURST            = 3
 const ZOOM_TRANSITION_MS            = 180
 const ZOOM_STEP                     = 10
@@ -82,7 +82,7 @@ function clampZoom(value, fs = false) {
 
 function normalizeSrc(value) {
     const s = String(value || '').trim().toLowerCase()
-    if (s === 'mangadistrict' || s === 'roliascan') return s
+    if (s === 'mangadistrict' || s === 'roliascan' || s === 'mangadna') return s
     return ''
 }
 
@@ -171,7 +171,7 @@ function pickRemoteResume(rows, mangaId, preferredSrc = '') {
 function imgProps(url) {
     try {
         const host = new URL(String(url || ''), window.location.origin).hostname
-        if (host.includes('mangadistrict') || host.includes('roliascan'))
+        if (host.includes('mangadistrict') || host.includes('roliascan') || host.includes('mangadna'))
             return { referrerPolicy: 'no-referrer' }
     } catch { /* ignore */ }
     return {}
@@ -468,6 +468,7 @@ export default function LifeSyncMangaRead() {
                 const url =
                     source === 'mangadistrict' ? `/api/v1/manga/mangadistrict/info/${encodeURIComponent(mangaId)}?view=full`
                   : source === 'roliascan'     ? `/api/v1/manga/roliascan/info/${encodeURIComponent(mangaId)}?view=full`
+                  : source === 'mangadna'      ? `/api/v1/manga/mangadna/info/${encodeURIComponent(mangaId)}?view=full`
                   : null
                 if (!url) throw new Error('Unknown source')
                 const data = await lifesyncFetch(url)
@@ -533,6 +534,7 @@ export default function LifeSyncMangaRead() {
             const path =
                 manga.source === 'mangadistrict' ? `/api/v1/manga/mangadistrict/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
               : manga.source === 'roliascan'     ? `/api/v1/manga/roliascan/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
+              : manga.source === 'mangadna'      ? `/api/v1/manga/mangadna/chapter/${encodeURIComponent(manga.id)}/${encodeURIComponent(chapter.id)}`
               : `/api/v1/manga/pages/${chapter.id}`
             try {
                 const data = await lifesyncFetch(`${path}${path.includes('?') ? '&' : '?'}view=full`)
