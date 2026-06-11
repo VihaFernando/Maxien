@@ -78,7 +78,7 @@ function TVStartButtonListener() {
     useEffect(() => {
         if (tvActive) return
         const onKeyDown = (event) => {
-            if (!event.shiftKey || event.code !== 'KeyT') return
+            if (!event.shiftKey || event.code !== 'Tab') return
             if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return
             const tag = String(event.target?.tagName || '').toLowerCase()
             if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target?.isContentEditable) return
@@ -126,11 +126,13 @@ function DashboardInner() {
         lifeSyncBroadcast,
         dismissLifeSyncBroadcast,
     } = useLifeSync()
+    const { enterTV } = useTVModeContext()
     const navigate = useNavigate()
     const location = useLocation()
     const openLifeSyncSettings = useCallback(() => {
         navigate("/dashboard/profile?tab=integrations")
     }, [navigate])
+    const openTVMode = useCallback(() => { void enterTV() }, [enterTV])
 
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [workspaceMode, setWorkspaceMode] = useState("personal")
@@ -457,7 +459,7 @@ function DashboardInner() {
                 </div>
 
                 <div className="mt-auto px-5 pb-5">
-                    <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} />
+                    <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} onOpenTVMode={isLifeSyncConnected ? openTVMode : null} />
                     <div className="bg-[var(--mx-color-f5f5f7)] rounded-2xl p-4">
                         <button
                             type="button"
@@ -552,7 +554,7 @@ function DashboardInner() {
                     )}
 
                     <div className="mt-auto pt-5 border-t border-[var(--mx-color-e5e5ea)]">
-                        <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} />
+                        <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} onOpenTVMode={isLifeSyncConnected ? openTVMode : null} />
                         <div className="rounded-2xl p-4">
                             <button
                                 type="button"

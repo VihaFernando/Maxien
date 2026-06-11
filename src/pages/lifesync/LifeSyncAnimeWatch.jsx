@@ -39,14 +39,6 @@ function clampPage(n) {
     return Number.isFinite(v) && v > 0 ? v : 1
 }
 
-function isIOSDevice() {
-    if (typeof navigator === 'undefined') return false
-    const ua = navigator.userAgent || ''
-    const iOS = /iPad|iPhone|iPod/.test(ua)
-    const iPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
-    return iOS || iPadOS
-}
-
 function normalizeStreamEpisodesForPlayer(list) {
     return (list || [])
         .map((ep, i) => {
@@ -131,6 +123,7 @@ export default function LifeSyncAnimeWatch() {
                 videoUrl: null,
                 iframeUrl: null,
                 textTracks: [],
+                qualities: [],
                 mirrors: [],
                 selectedMirrorId: null,
                 selectedMirrorLabel: null,
@@ -168,42 +161,7 @@ export default function LifeSyncAnimeWatch() {
                     : null
             const effectiveAudio =
                 meta.effectiveAudio === 'dub' || meta.effectiveAudio === 'sub' ? meta.effectiveAudio : type
-
-            if (iframeFromPack) {
-                return {
-                    ...base,
-                    title: epObj?.title || base.title,
-                    iframeUrl: iframeFromPack,
-                    mirrors: meta.mirrors || [],
-                    selectedMirrorId: meta.selectedMirrorId ?? null,
-                    selectedMirrorLabel: meta.selectedMirrorLabel ?? null,
-                    provider: meta.provider ?? null,
-                    audioAvailability,
-                    effectiveAudio,
-                }
-            }
-            const sources = Array.isArray(pack?.sources) ? pack.sources : []
-            const preferIframe = isIOSDevice()
-            const pick = preferIframe
-                ? sources.find(s => s?.kind === 'iframe') || sources.find(s => s?.kind === 'hls') || sources.find(s => s?.kind === 'mp4') || sources[0]
-                : sources.find(s => s?.kind === 'hls') || sources.find(s => s?.kind === 'mp4') || sources[0]
-            if (!pick?.url) {
-                return { ...base, title: epObj?.title || base.title, audioAvailability, effectiveAudio }
-            }
-            const url = String(pick.url).startsWith('http') ? pick.url : `${apiBase}${pick.url}`
-            const rawSubs = Array.isArray(pack?.subtitles) ? pack.subtitles : []
-            const textTracks = rawSubs.map((s, i) => ({
-                src: String(s?.url || '').startsWith('http') ? s.url : `${apiBase}${s.url}`,
-                label: s?.label || `Subtitles ${i + 1}`,
-                srclang: s?.lang || 'und',
-                default: i === 0,
-            }))
-            return {
-                ...base,
-                title: epObj?.title || base.title,
-                videoUrl: pick.kind === 'iframe' ? null : url,
-                iframeUrl: pick.kind === 'iframe' ? url : null,
-                textTracks,
+            const metaFields = {
                 mirrors: meta.mirrors || [],
                 selectedMirrorId: meta.selectedMirrorId ?? null,
                 selectedMirrorLabel: meta.selectedMirrorLabel ?? null,
@@ -211,6 +169,48 @@ export default function LifeSyncAnimeWatch() {
                 audioAvailability,
                 effectiveAudio,
             }
+
+            const toAbs = u => (String(u || '').startsWith('http') ? String(u) : `${apiBase}${u}`)
+            const sources = Array.isArray(pack?.sources) ? pack.sources : []
+            // Backend marks sources by `type` ('hls' | 'mp4'); prefer HLS (it carries
+            // the quality variants), then MP4. iOS Safari plays HLS natively too.
+            const pick = sources.find(s => s?.type === 'hls') || sources.find(s => s?.type === 'mp4') || sources[0]
+            const rawUrl = pick?.url ? toAbs(pick.url) : null
+
+            // Prefer the raw stream so the advanced player (subtitles + quality dropdown)
+            // is used; fall back to the embed iframe only when no raw source resolved.
+            if (rawUrl) {
+                const rawSubs = Array.isArray(pack?.subtitles) ? pack.subtitles : []
+                const textTracks = rawSubs.map((s, i) => ({
+                    src: toAbs(s?.url),
+                    label: s?.label || `Subtitles ${i + 1}`,
+                    srclang: s?.lang || 'und',
+                    default: i === 0,
+                }))
+                const rawQualities = Array.isArray(pack?.qualities) ? pack.qualities : []
+                const qualities = rawQualities
+                    .filter(q => q?.url)
+                    .map((q, i) => ({ id: q.id || q.label || `q${i}`, label: q.label || q.id || `Quality ${i + 1}`, url: toAbs(q.url) }))
+                return {
+                    ...base,
+                    ...metaFields,
+                    title: epObj?.title || base.title,
+                    videoUrl: rawUrl,
+                    iframeUrl: iframeFromPack,
+                    textTracks,
+                    qualities,
+                }
+            }
+
+            if (iframeFromPack) {
+                return {
+                    ...base,
+                    ...metaFields,
+                    title: epObj?.title || base.title,
+                    iframeUrl: iframeFromPack,
+                }
+            }
+            return { ...base, ...metaFields, title: epObj?.title || base.title }
         },
         [streamAudioType],
     )
@@ -412,17 +412,6 @@ export default function LifeSyncAnimeWatch() {
 
     const close = useCallback(() => navigate(closeTo, { replace: true }), [closeTo, navigate])
 
-    useEffect(() => {
-        const onKey = e => { if (e.key === 'Escape') close() }
-        window.addEventListener('keydown', onKey)
-        const prev = document.body.style.overflow
-        document.body.style.overflow = 'hidden'
-        return () => {
-            window.removeEventListener('keydown', onKey)
-            document.body.style.overflow = prev
-        }
-    }, [close])
-
     const goEpisode = useCallback(
         idx => {
             const next = Math.max(0, Math.min((episodes?.length || 1) - 1, idx))
@@ -447,12 +436,41 @@ export default function LifeSyncAnimeWatch() {
     const showSubDubPicker = subAvailable && dubAvailable
     const subOnlyTrack = subAvailable && !dubAvailable
     const dubOnlyTrack = dubAvailable && !subAvailable
-    const autoAudioLabel = subOnlyTrack
-        ? 'Sub'
-        : dubOnlyTrack
-          ? 'Dub'
-          : `Auto (${streamAudioType === 'dub' ? 'Dub' : 'Sub'})`
+    const hasSubtitleTracks = (stream?.textTracks || []).length > 0
+    const qualityList = (stream?.qualities || []).filter(q => q?.url)
+    const hasQualities = qualityList.length > 0
 
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [subtitlesOn, setSubtitlesOn] = useState(true)
+
+    // Reset quality when stream source changes
+    const streamVideoUrl = stream?.videoUrl || ''
+    const [qualitySelection, setQualitySelection] = useState({ forUrl: '', url: '' })
+    const resolvedQualityUrl = qualitySelection.forUrl === streamVideoUrl ? qualitySelection.url : ''
+    const handleQualityChange = useCallback((url) => {
+        setQualitySelection({ forUrl: streamVideoUrl, url: url || '' })
+    }, [streamVideoUrl])
+
+    useEffect(() => {
+        const onKey = e => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return
+            if (e.key === 'Escape') {
+                if (settingsOpen) { setSettingsOpen(false); return }
+                close()
+            }
+            if (e.key === ' ') {
+                e.preventDefault()
+                setSettingsOpen(v => !v)
+            }
+        }
+        window.addEventListener('keydown', onKey)
+        const prev = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            window.removeEventListener('keydown', onKey)
+            document.body.style.overflow = prev
+        }
+    }, [close, settingsOpen])
     const toggleIframeContainerFullscreen = useCallback(() => {
         const el = streamIframeContainerRef.current
         if (!el) return
@@ -504,8 +522,12 @@ export default function LifeSyncAnimeWatch() {
         [XBOX_GAMEPAD_BUTTONS.RB]: () => { if (!canNext) return; goEpisode(episodeIdx + 1) },
     }), [canNext, canPrev, episodeIdx, goEpisode, toggleIframeContainerFullscreen])
 
+    // Iframe controller handlers apply only when the embed iframe is actually
+    // rendered (i.e. no raw videoUrl took priority).
+    const usingIframe = Boolean(stream?.iframeUrl) && !stream?.videoUrl
+
     useLifeSyncGamepadInput({
-        enabled: controllerSupportEnabled && Boolean(stream?.iframeUrl),
+        enabled: controllerSupportEnabled && usingIframe,
         handlers: iframeGamepadHandlers,
         repeatableButtons: [
             XBOX_GAMEPAD_BUTTONS.LT,
@@ -516,13 +538,13 @@ export default function LifeSyncAnimeWatch() {
     })
 
     useEffect(() => {
-        if (!stream?.iframeUrl || typeof window === 'undefined') return undefined
+        if (!usingIframe || typeof window === 'undefined') return undefined
         const id = window.setTimeout(() => { focusIframeForControllerInput(streamIframeRef.current) }, 180)
         return () => window.clearTimeout(id)
-    }, [stream?.iframeUrl])
+    }, [usingIframe])
 
     useEffect(() => {
-        if (!stream?.iframeUrl || typeof window === 'undefined') return undefined
+        if (!usingIframe || typeof window === 'undefined') return undefined
         const onFullscreenChange = () => {
             const container = streamIframeContainerRef.current
             const fullscreenEl = document.fullscreenElement
@@ -538,7 +560,7 @@ export default function LifeSyncAnimeWatch() {
             document.removeEventListener('fullscreenchange', onFullscreenChange)
             document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
         }
-    }, [stream?.iframeUrl])
+    }, [usingIframe])
 
     const relatedAnime = Array.isArray(anime?.related) ? anime.related : []
 
@@ -660,6 +682,140 @@ export default function LifeSyncAnimeWatch() {
                                 <main className="min-w-0 space-y-3 sm:space-y-4">
                                     <div className="lifesync-anime-watch-media overflow-hidden rounded-3xl border border-(--color-border-strong)/12 bg-black">
                                         <div ref={streamIframeContainerRef} className="relative aspect-video w-full">
+                                            {/* Settings trigger button — top right of player */}
+                                            {!stream?.resolving && (stream?.videoUrl || stream?.iframeUrl) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSettingsOpen(v => !v)}
+                                                    className={`absolute right-2 top-2 z-30 flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all ${
+                                                        settingsOpen
+                                                            ? 'border-(--mx-color-c6ff00)/40 bg-(--mx-color-c6ff00)/10 text-(--mx-color-c6ff00)'
+                                                            : 'border-white/15 bg-black/50 text-white/70 hover:border-white/30 hover:text-white'
+                                                    }`}
+                                                    title="Playback settings (Space)"
+                                                >
+                                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.559.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.894.149c-.424.07-.764.383-.929.78-.165.398-.143.854.107 1.204l.527.738c.32.447.269 1.06-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.398.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.272-.806.108-1.204-.165-.397-.506-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.764-.384.93-.78.165-.398.143-.854-.108-1.204l-.526-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    <span className="hidden sm:inline">Settings</span>
+                                                </button>
+                                            )}
+
+                                            {/* Settings drawer — slides in from right inside the player */}
+                                            {settingsOpen && (
+                                                <div
+                                                    className="absolute inset-0 z-20 flex items-stretch justify-end overflow-hidden rounded-3xl"
+                                                    style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)' }}
+                                                    onClick={() => setSettingsOpen(false)}
+                                                >
+                                                    <div
+                                                        className="relative flex h-full w-[min(100%,22rem)] flex-col gap-1.5 overflow-y-auto p-4"
+                                                        onClick={e => e.stopPropagation()}
+                                                    >
+                                                        {/* Accent top line */}
+                                                        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-(--mx-color-c6ff00)/50 to-transparent" />
+
+                                                        {/* Header */}
+                                                        <div className="mb-1 flex items-center justify-between">
+                                                            <p className="text-[12px] font-black text-white">Playback Settings</p>
+                                                            <button type="button" onClick={() => setSettingsOpen(false)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/8 text-white/50 hover:bg-white/14 hover:text-white transition-colors">
+                                                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Audio */}
+                                                        <WatchSettingsSection label="Audio" icon="audio">
+                                                            {showSubDubPicker ? (
+                                                                <div className="flex gap-1.5">
+                                                                    {['sub', 'dub'].map(opt => (
+                                                                        <button key={opt} type="button"
+                                                                            onClick={() => { setAudioOverride(opt); setMirrorOverrideId('') }}
+                                                                            className={`flex-1 rounded-xl border py-2 text-[11px] font-black uppercase tracking-widest transition-all ${
+                                                                                (audioValue || (streamAudioType === 'dub' ? 'dub' : 'sub')) === opt
+                                                                                    ? 'border-(--mx-color-c6ff00)/50 bg-(--mx-color-c6ff00)/14 text-(--mx-color-c6ff00)'
+                                                                                    : 'border-white/10 bg-white/4 text-white/55 hover:border-white/20 hover:text-white/80'
+                                                                            }`}
+                                                                        >{opt}</button>
+                                                                    ))}
+                                                                </div>
+                                                            ) : subOnlyTrack ? (
+                                                                <p className="text-[11px] text-white/50">Sub only for this episode</p>
+                                                            ) : dubOnlyTrack ? (
+                                                                <p className="text-[11px] text-white/50">Dub only for this episode</p>
+                                                            ) : (
+                                                                <p className="text-[11px] text-white/40">No audio tracks reported</p>
+                                                            )}
+                                                            {showSubDubPicker && audioValue ? (
+                                                                <button type="button" onClick={() => { setAudioOverride(null); setMirrorOverrideId('') }}
+                                                                    className="mt-1 w-full rounded-xl border border-white/8 py-1 text-[10px] font-semibold text-white/35 hover:text-white/55 transition-colors">
+                                                                    Auto ({streamAudioType === 'dub' ? 'Dub' : 'Sub'})
+                                                                </button>
+                                                            ) : null}
+                                                        </WatchSettingsSection>
+
+                                                        {/* Subtitles */}
+                                                        <WatchSettingsSection label="Subtitles" icon="cc">
+                                                            <div className="flex gap-1.5">
+                                                                {[{ val: true, label: 'On' }, { val: false, label: 'Off' }].map(({ val, label }) => (
+                                                                    <button key={label} type="button"
+                                                                        onClick={() => setSubtitlesOn(val)}
+                                                                        disabled={val && !hasSubtitleTracks}
+                                                                        className={`flex-1 rounded-xl border py-2 text-[11px] font-black uppercase tracking-widest transition-all disabled:cursor-not-allowed disabled:opacity-30 ${
+                                                                            subtitlesOn === val
+                                                                                ? val
+                                                                                    ? 'border-blue-400/50 bg-blue-500/14 text-blue-300'
+                                                                                    : 'border-white/20 bg-white/8 text-white/80'
+                                                                                : 'border-white/10 bg-white/4 text-white/55 hover:border-white/20 hover:text-white/80'
+                                                                        }`}
+                                                                    >{label}</button>
+                                                                ))}
+                                                            </div>
+                                                            {!hasSubtitleTracks && <p className="mt-1 text-[10px] text-white/30">No subtitle tracks available</p>}
+                                                        </WatchSettingsSection>
+
+                                                        {/* Quality */}
+                                                        <WatchSettingsSection label="Quality" icon="quality">
+                                                            {hasQualities ? (
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    <button type="button" onClick={() => handleQualityChange('')}
+                                                                        className={`rounded-xl border px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wide transition-all ${
+                                                                            !resolvedQualityUrl ? 'border-(--mx-color-c6ff00)/50 bg-(--mx-color-c6ff00)/14 text-(--mx-color-c6ff00)' : 'border-white/10 bg-white/4 text-white/55 hover:border-white/20 hover:text-white/80'
+                                                                        }`}>Auto</button>
+                                                                    {qualityList.map(q => (
+                                                                        <button key={q.id || q.url} type="button" onClick={() => handleQualityChange(q.url)}
+                                                                            className={`rounded-xl border px-2.5 py-1.5 text-[10px] font-black tabular-nums tracking-wide transition-all ${
+                                                                                resolvedQualityUrl === q.url ? 'border-(--mx-color-c6ff00)/50 bg-(--mx-color-c6ff00)/14 text-(--mx-color-c6ff00)' : 'border-white/10 bg-white/4 text-white/55 hover:border-white/20 hover:text-white/80'
+                                                                            }`}>{q.label}</button>
+                                                                    ))}
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-[11px] text-white/40">{stream?.resolving ? 'Loading…' : 'Not available'}</p>
+                                                            )}
+                                                        </WatchSettingsSection>
+
+                                                        {/* Mirror */}
+                                                        <WatchSettingsSection label="Mirror" icon="mirror">
+                                                            <select
+                                                                value={mirrorOverrideId}
+                                                                onChange={e => setMirrorOverrideId(safeText(e.target.value).trim())}
+                                                                disabled={!Array.isArray(stream?.mirrors) || stream.mirrors.length === 0}
+                                                                className="h-9 w-full cursor-pointer rounded-xl border border-white/12 bg-black/50 px-2.5 text-[11px] font-semibold text-white/90 outline-none transition-colors hover:border-(--mx-color-c6ff00)/30 focus:border-(--mx-color-c6ff00)/45 disabled:cursor-not-allowed disabled:opacity-45"
+                                                            >
+                                                                <option value="" className="bg-(--mx-color-111)">Auto{stream?.selectedMirrorLabel ? ` (${stream.selectedMirrorLabel})` : ''}</option>
+                                                                {(Array.isArray(stream?.mirrors) ? stream.mirrors : []).map((m, idx) => {
+                                                                    const id = m?.id != null ? String(m.id) : ''
+                                                                    const label = m?.label ? String(m.label) : id || `Mirror ${idx + 1}`
+                                                                    if (!id) return null
+                                                                    return <option key={id} value={id} className="bg-(--mx-color-111)">{label}</option>
+                                                                })}
+                                                            </select>
+                                                        </WatchSettingsSection>
+
+                                                        <p className="mt-auto pt-2 text-center text-[9px] text-white/20">Space · toggle · Esc · close</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                             <AnimatePresence>
                                                 {stream?.resolving ? (
                                                 <MotionDiv
@@ -702,7 +858,25 @@ export default function LifeSyncAnimeWatch() {
                                                 </MotionDiv>
                                                 ) : null}
                                             </AnimatePresence>
-                                            {!stream?.resolving && stream?.iframeUrl ? (
+                                            {!stream?.resolving && stream?.videoUrl ? (
+                                                <AdvancedVideoPlayer
+                                                    key={stream.videoUrl}
+                                                    src={stream.videoUrl}
+                                                    preload={videoPreload}
+                                                    textTracks={stream.textTracks || []}
+                                                    qualities={stream.qualities || []}
+                                                    skipSegments={[]}
+                                                    suppressKeys={settingsOpen}
+                                                    subtitlesOnOverride={subtitlesOn}
+                                                    activeQualityUrl={resolvedQualityUrl}
+                                                    onQualityChange={handleQualityChange}
+                                                    onPrevEpisode={canPrev ? () => goEpisode(episodeIdx - 1) : undefined}
+                                                    onNextEpisode={canNext ? () => goEpisode(episodeIdx + 1) : undefined}
+                                                    canPrevEpisode={canPrev}
+                                                    canNextEpisode={canNext}
+                                                    onEnded={() => { if (canNext) goEpisode(episodeIdx + 1) }}
+                                                />
+                                            ) : !stream?.resolving && stream?.iframeUrl ? (
                                                 <iframe
                                                     ref={streamIframeRef}
                                                     key={stream.iframeUrl}
@@ -717,19 +891,6 @@ export default function LifeSyncAnimeWatch() {
                                                         selectedMirrorLabel: stream.selectedMirrorLabel,
                                                     })}
                                                     referrerPolicy="no-referrer-when-downgrade"
-                                                />
-                                            ) : stream?.videoUrl ? (
-                                                <AdvancedVideoPlayer
-                                                    key={stream.videoUrl}
-                                                    src={stream.videoUrl}
-                                                    preload={videoPreload}
-                                                    textTracks={stream.textTracks || []}
-                                                    skipSegments={[]}
-                                                    onPrevEpisode={canPrev ? () => goEpisode(episodeIdx - 1) : undefined}
-                                                    onNextEpisode={canNext ? () => goEpisode(episodeIdx + 1) : undefined}
-                                                    canPrevEpisode={canPrev}
-                                                    canNextEpisode={canNext}
-                                                    onEnded={() => { if (canNext) goEpisode(episodeIdx + 1) }}
                                                 />
                                             ) : (
                                                 <div className="lifesync-anime-watch-media flex h-full w-full items-center justify-center bg-(--mx-color-0f0f12) px-4 text-center">
@@ -791,120 +952,25 @@ export default function LifeSyncAnimeWatch() {
                                     ) : null}
 
                                     <MotionDiv
-                                        className="rounded-3xl border border-(--color-border-strong)/12 bg-linear-to-br from-(--color-surface)/10 via-black/22 to-black/38 p-4 sm:p-6"
+                                        className="rounded-3xl border border-(--color-border-strong)/12 bg-linear-to-br from-(--color-surface)/10 via-black/22 to-black/38 p-4 sm:p-5"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ type: 'spring', stiffness: 260, damping: 26, delay: 0.12 }}
                                     >
-                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between lg:gap-10">
-                                            <div className="min-w-0 flex-1 space-y-3 sm:space-y-4">
-                                                <div className="flex gap-2.5 sm:gap-4">
-                                                    {backdropUrl ? (
-                                                        <img
-                                                            src={backdropUrl}
-                                                            alt=""
-                                                            className="h-19 w-[3.35rem] shrink-0 rounded-2xl object-cover ring-1 ring-(--color-border-strong)/12 sm:h-21 sm:w-[3.7rem]"
-                                                            loading="lazy"
-                                                            referrerPolicy="no-referrer"
-                                                        />
-                                                    ) : (
-                                                        <div className="h-19 w-[3.35rem] shrink-0 rounded-2xl bg-(--color-surface)/6 ring-1 ring-(--color-border-strong)/10 sm:h-21 sm:w-[3.7rem]" />
-                                                    )}
-                                                    <div className="min-w-0 flex-1 pt-0.5">
-                                                        <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-white/95 sm:text-base">
-                                                            {anime?.title || '—'}
-                                                        </h2>
-                                                        <ul className="mt-2.5 flex flex-wrap gap-1.5" aria-label="Episode and source details">
-                                                            <li>
-                                                                <span className="inline-flex items-center rounded-lg border border-(--color-border-strong)/12 bg-black/35 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/70 sm:text-[11px]">
-                                                                    {epObj?.number != null ? `Ep ${epObj.number}` : `Ep ${episodeIdx + 1}`}
-                                                                </span>
-                                                            </li>
-                                                            {anime?.status ? (
-                                                                <li>
-                                                                    <span className="inline-flex items-center rounded-lg border border-(--color-border-strong)/12 bg-black/35 px-2 py-0.5 text-[10px] font-semibold capitalize text-white/70 sm:text-[11px]">
-                                                                        {String(anime.status).replace(/_/g, ' ')}
-                                                                    </span>
-                                                                </li>
-                                                            ) : null}
-                                                            {stream?.provider ? (
-                                                                <li>
-                                                                    <span className="inline-flex items-center rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-emerald-200/90 sm:text-[11px]">
-                                                                        {String(stream.provider)}
-                                                                    </span>
-                                                                </li>
-                                                            ) : null}
-                                                        </ul>
-                                                        {anime?.synopsis ? (
-                                                            <p className="mt-2 line-clamp-3 text-[11px] leading-relaxed text-white/50">
-                                                                {anime.synopsis}
-                                                            </p>
-                                                        ) : null}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex w-full shrink-0 flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-2.5 lg:w-[min(100%,15.5rem)] lg:grid-cols-1 lg:gap-2">
-                                                <div className="rounded-2xl border border-(--color-border-strong)/12 bg-black/28 p-3.5">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Audio</p>
-                                                        {showSubDubPicker ? (
-                                                            <span className="text-[10px] font-medium text-white/35" aria-hidden>Sub / Dub</span>
-                                                        ) : null}
-                                                    </div>
-                                                    {showSubDubPicker ? (
-                                                        <select
-                                                            value={audioValue}
-                                                            onChange={(e) => {
-                                                                const v = safeText(e.target.value).trim()
-                                                                setAudioOverride(v === 'sub' || v === 'dub' ? v : null)
-                                                                setMirrorOverrideId('')
-                                                            }}
-                                                            className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-(--color-border-strong)/14 bg-black/42 px-3 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-(--mx-color-c6ff00)/30 focus:border-(--mx-color-c6ff00)/45 focus:ring-2 focus:ring-(--mx-color-c6ff00)/20"
-                                                        >
-                                                            <option value="" className="bg-(--mx-color-111)">{autoAudioLabel}</option>
-                                                            <option value="sub" className="bg-(--mx-color-111)">Sub</option>
-                                                            <option value="dub" className="bg-(--mx-color-111)">Dub</option>
-                                                        </select>
-                                                    ) : subOnlyTrack ? (
-                                                        <p className="mt-2 rounded-xl border border-(--color-border-strong)/10 bg-black/25 px-3 py-2.5 text-[12px] font-semibold text-white/75">
-                                                            Sub only — no dub track for this episode.
-                                                        </p>
-                                                    ) : dubOnlyTrack ? (
-                                                        <p className="mt-2 rounded-xl border border-(--color-border-strong)/10 bg-black/25 px-3 py-2.5 text-[12px] font-semibold text-white/75">
-                                                            Dub only for this episode.
-                                                        </p>
-                                                    ) : (
-                                                        <p className="mt-2 text-[12px] text-white/45">No audio tracks reported.</p>
-                                                    )}
-                                                </div>
-
-                                                <div className="rounded-2xl border border-(--color-border-strong)/12 bg-black/28 p-3.5">
-                                                    <div className="flex items-center justify-between gap-2">
-                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/40">Mirror</p>
-                                                        <svg className="h-3.5 w-3.5 shrink-0 text-white/30" viewBox="0 0 24 24" fill="none" aria-hidden>
-                                                            <path d="M7 17l10-10M7 7h10v10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                                                        </svg>
-                                                    </div>
-                                                    <select
-                                                        value={mirrorOverrideId}
-                                                        onChange={(e) => setMirrorOverrideId(safeText(e.target.value).trim())}
-                                                        className="mt-2 h-10 w-full cursor-pointer rounded-xl border border-(--color-border-strong)/14 bg-black/42 px-3 text-[12px] font-semibold text-white/90 outline-none transition-colors hover:border-(--mx-color-c6ff00)/30 focus:border-(--mx-color-c6ff00)/45 focus:ring-2 focus:ring-(--mx-color-c6ff00)/20 disabled:cursor-not-allowed disabled:opacity-45"
-                                                        disabled={!Array.isArray(stream?.mirrors) || stream.mirrors.length === 0}
-                                                    >
-                                                        <option value="" className="bg-(--mx-color-111)">
-                                                            Auto{stream?.selectedMirrorLabel ? ` (${stream.selectedMirrorLabel})` : ''}
-                                                        </option>
-                                                        {(Array.isArray(stream?.mirrors) ? stream.mirrors : []).map((m, idx) => {
-                                                            const id = m?.id != null ? String(m.id) : ''
-                                                            const label = m?.label ? String(m.label) : id || `Mirror ${idx + 1}`
-                                                            if (!id) return null
-                                                            return (
-                                                                <option key={id} value={id} className="bg-(--mx-color-111)">{label}</option>
-                                                            )
-                                                        })}
-                                                    </select>
-                                                </div>
+                                        <div className="flex gap-2.5 sm:gap-4">
+                                            {backdropUrl ? (
+                                                <img src={backdropUrl} alt="" className="h-19 w-[3.35rem] shrink-0 rounded-2xl object-cover ring-1 ring-(--color-border-strong)/12 sm:h-21 sm:w-[3.7rem]" loading="lazy" referrerPolicy="no-referrer" />
+                                            ) : (
+                                                <div className="h-19 w-[3.35rem] shrink-0 rounded-2xl bg-(--color-surface)/6 ring-1 ring-(--color-border-strong)/10 sm:h-21 sm:w-[3.7rem]" />
+                                            )}
+                                            <div className="min-w-0 flex-1 pt-0.5">
+                                                <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-white/95 sm:text-base">{anime?.title || '—'}</h2>
+                                                <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Episode and source details">
+                                                    <li><span className="inline-flex items-center rounded-lg border border-(--color-border-strong)/12 bg-black/35 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/70 sm:text-[11px]">{epObj?.number != null ? `Ep ${epObj.number}` : `Ep ${episodeIdx + 1}`}</span></li>
+                                                    {anime?.status ? <li><span className="inline-flex items-center rounded-lg border border-(--color-border-strong)/12 bg-black/35 px-2 py-0.5 text-[10px] font-semibold capitalize text-white/70 sm:text-[11px]">{String(anime.status).replace(/_/g, ' ')}</span></li> : null}
+                                                    {stream?.provider ? <li><span className="inline-flex items-center rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold capitalize text-emerald-200/90 sm:text-[11px]">{String(stream.provider)}</span></li> : null}
+                                                </ul>
+                                                {anime?.synopsis ? <p className="mt-2 line-clamp-3 text-[11px] leading-relaxed text-white/50">{anime.synopsis}</p> : null}
                                             </div>
                                         </div>
                                     </MotionDiv>
@@ -1050,8 +1116,29 @@ export default function LifeSyncAnimeWatch() {
                     { btns: ['RT'], label: 'Seek forward' },
                     { btns: ['↑↓'], label: 'Volume' },
                     { btns: ['X'], label: 'Fullscreen' },
+                    { btns: ['Space'], label: 'Settings' },
                 ]}
             />
         </MotionDiv>
+    )
+}
+
+function WatchSettingsSection({ label, icon, children }) {
+    const icons = {
+        audio: <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.59-.714-1.59-1.596v-5.47c0-.882.71-1.596 1.59-1.596H6.75z" />,
+        cc: <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />,
+        quality: <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.703-1.342 2.703H6.14c-1.372 0-2.342-1.703-1.342-2.703L5 14.5" />,
+        mirror: <path strokeLinecap="round" strokeLinejoin="round" d="M7 17l10-10M7 7h10v10" />,
+    }
+    return (
+        <div className="rounded-2xl border border-white/8 bg-white/3 p-3">
+            <div className="mb-2 flex items-center gap-1.5">
+                <svg className="h-3 w-3 shrink-0 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                    {icons[icon]}
+                </svg>
+                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-white/40">{label}</p>
+            </div>
+            {children}
+        </div>
     )
 }

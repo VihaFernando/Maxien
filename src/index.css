@@ -1182,3 +1182,22 @@ html.maxien-reduce-motion .animate-ping {
   margin-top: 0.22em;
   margin-bottom: 0.22em;
 }
+
+/* Video subtitle (WebVTT ::cue) styling — smaller text, raised above controls */
+::cue {
+  font-size: 0.9em;
+  font-family: inherit;
+  background: rgba(0, 0, 0, 0.6);
+  color: #ffffff;
+  border-radius: 3px;
+  padding: 0.1em 0.3em;
+  line-height: 1.4;
+}
+
+video::-webkit-media-text-track-container {
+  transform: translateY(-5%);
+}
+
+video::cue {
+  font-size: 0.6em;
+}

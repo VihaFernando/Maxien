@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion as M, AnimatePresence } from 'framer-motion'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
 
+
 const SESSION_KEY = 'maxien_tv_prompt_dismissed'
 
 /**
@@ -61,7 +62,7 @@ export function TVModeStartPrompt({ tvActive }) {
 
                         {/* Keyboard shortcut chip */}
                         <span className="inline-flex items-center rounded-lg bg-(--mx-color-1d1d1f) px-2.5 py-1 text-[10px] font-black uppercase tracking-wider text-(--color-surface) shadow-sm">
-                            Shift + T
+                            ⇧ Tab
                         </span>
 
                         <span className="text-[12px] font-semibold text-(--mx-color-1d1d1f)/70">

@@ -12,7 +12,11 @@ import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
 import { readStoredReduceAnimationsSetting } from '../../lib/lifeSyncReduceMotion'
 import { setLifeSyncKeyboardGamepadActive, tvHintLabel } from '../../lib/lifeSyncKeyboardGamepad'
 import useLifeSyncInputSource from '../../hooks/useLifeSyncInputSource'
+import { useAnimeWatchHistory } from '../../hooks/useAnimeWatchHistory'
+import { useMangaReadingList } from '../../hooks/useMangaReadingList'
 
+import { clearTVHomeImagesCache, pickCollageImages, useTVHomeImages } from './tv/tvHomeImages'
+import { TVImageCollage } from './tv/TVImageCollage'
 import { TVIntroAnimation } from './tv/TVIntroAnimation'
 import { TVExitConfirmPopup } from './tv/TVExitConfirmPopup'
 import { TVDetailSheet } from './tv/TVDetailSheet'
@@ -87,69 +91,6 @@ const TAB_ACCENTS = {
     history: { text: 'text-violet-300', glow: 'rgba(167,139,250,0.20)', grad: 'from-violet-400/18 via-violet-400/4 to-transparent' },
 }
 const DEFAULT_ACCENT = { text: 'text-(--mx-color-c6ff00)', glow: 'rgba(198,255,0,0.18)', grad: 'from-(--mx-color-c6ff00)/15 via-transparent to-transparent' }
-
-/** Curated hero images for TV mode destination cards */
-const TV_HOME_IMAGES = {
-    anime: [
-        'https://cdn.myanimelist.net/images/anime/1286/99889.jpg',
-        'https://cdn.myanimelist.net/images/anime/1000/110531.jpg',
-        'https://cdn.myanimelist.net/images/anime/5/73199.jpg',
-        'https://cdn.myanimelist.net/images/anime/9/9453.jpg',
-        'https://cdn.myanimelist.net/images/anime/13/17405.jpg',
-        'https://cdn.myanimelist.net/images/anime/6/73245.jpg',
-        'https://cdn.myanimelist.net/images/anime/1171/109222.jpg',
-        'https://cdn.myanimelist.net/images/anime/10/78745.jpg',
-        'https://cdn.myanimelist.net/images/anime/1015/138006.jpg',
-        'https://cdn.myanimelist.net/images/anime/1806/126216.jpg',
-        'https://cdn.myanimelist.net/images/anime/1223/96541.jpg'
-    ],
-    manga: [
-        'https://roliascan.com/content/media/manga-10996-cover-1775133523.png',
-        'https://roliascan.com/content/media/manga-10492-cover-1775133327.jpg',
-        'https://roliascan.com/content/media/manga-10482-cover-1775133325.webp',
-        'https://roliascan.com/content/media/manga-10458-cover-1775133318.webp',
-        'https://roliascan.com/content/media/manga-10664-cover-1775133397.webp',
-        'https://roliascan.com/content/media/manga-1469-cover-1775048210.webp',
-        'https://roliascan.com/content/media/manga-11300-cover-1775134486.jpg',
-        'https://roliascan.com/content/media/manga-80194-cover-1775555921.png',
-        'https://roliascan.com/content/media/manga-10558-cover-1775133344.png',
-        'https://roliascan.com/content/media/manga-146584-cover-1777856073.jpg',
-    ],
-    hmanhwa: [
-        'https://mangadistrict.com/wp-content/uploads/2026/01/Everyones-Man-Uncensored-Edit-2.png',
-        'https://cdn.mangadistrict.com/thumbnail/snapping-into-love-uncensored-2.webp',
-        'https://cdn.mangadistrict.com/thumbnail/dont-tell-anyone-at-school-uncensored-official.webp',
-        'https://mangadistrict.com/wp-content/uploads/2025/11/Troublesome-Employee-Warning-Uncensored-Edited.png',
-        'https://cdn.mangadistrict.com/thumbnail/im-the-only-man-in-this-clan-official.webp',
-        'https://cdn.mangadistrict.com/thumbnail/daddys-girl-carcass-official.webp',
-        'https://cdn.mangadistrict.com/thumbnail/the-double-life-of-a-public-official-official.webp',
-        'https://cdn.mangadistrict.com/thumbnail/only-with-consent.webp',
-        'https://cdn.mangadistrict.com/thumbnail/secret-class.webp'
-    ],
-    hentai: [
-        'https://watchhentai.net/uploads/2022/11/boy-meets-harem-the-animation/poster.jpg',
-        'https://watchhentai.net/uploads/2022/12/shinshou-genmukan/poster.jpg',
-        'https://watchhentai.net/uploads/2023/8/kono-koi-ni-kiduite/poster.jpg',
-        'https://watchhentai.net/uploads/2022/10/oppai-no-ouja-48/poster.jpg',
-        'https://watchhentai.net/uploads/2024/gomu-o-tsukete-iimashita-yo-ne/poster.jpg',
-        'https://watchhentai.net/uploads/2022/12/takarasagashi-no-natsuyasumi/poster.jpg',
-        'https://watchhentai.net/uploads/2026/meijyou/3.jpg',
-        'https://watchhentai.net/uploads/2026/anal-mania-otaku-to-ananii-daisuki-na-ojou-sama/1.jpg',
-        'https://watchhentai.net/uploads/2025/reika-wa-karei-na-boku-no-joou-the-animation/poster.jpg',
-        'https://watchhentai.net/uploads/2025/natsu-to-hako/poster.jpg'
-    ]
-}
-
-function getRandomImageForTab(tabId, seedValue) {
-    const images = TV_HOME_IMAGES[tabId] || []
-    if (!images.length) return null
-    const seed = String(seedValue || tabId)
-    let hash = 2166136261
-    for (let i = 0; i < seed.length; i++) {
-        hash = Math.imul(hash ^ seed.charCodeAt(i), 16777619)
-    }
-    return images[Math.abs(hash >>> 0) % images.length]
-}
 
 function TVKeycap({ children, accent = false }) {
     return (
@@ -277,112 +218,229 @@ function tvGreeting() {
     return 'Good evening'
 }
 
+const HERO_ROTATE_MS = 14000
+
 function TVHomeSection({ tabs, focusPos, onOpenTab }) {
     const inputSource = useLifeSyncInputSource()
-    const cards = tabs.filter(tab => !tab.isHome && !tab.isExit)
-    const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    return (
-        <div className="space-y-8">
-            {/* Cinematic hero */}
-            <div className="relative overflow-hidden rounded-4xl border border-white/8 bg-linear-to-br from-white/6 via-white/3 to-transparent p-9">
-                {!LOW_END && (
-                    <>
-                        <div className="pointer-events-none absolute -right-24 -top-28 h-80 w-80 rounded-full bg-(--mx-color-c6ff00)/12 blur-3xl" aria-hidden />
-                        <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-indigo-500/12 blur-3xl" aria-hidden />
-                    </>
-                )}
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-(--mx-color-c6ff00)/50 to-transparent" aria-hidden />
+    const { lifeSyncUser } = useLifeSync()
+    const prefs = lifeSyncUser?.preferences
 
-                <div className="relative flex items-center justify-between gap-3">
-                    <p className="flex items-center gap-3 text-[13px] font-black uppercase tracking-[0.28em] text-(--mx-color-c6ff00)">
-                        <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-(--mx-color-c6ff00)" aria-hidden />
-                        {tvGreeting()}
-                    </p>
-                    <p className="text-[13px] font-bold text-white/35">{dateLabel}</p>
+    const cards = useMemo(() => tabs.filter(tab => !tab.isHome && !tab.isExit), [tabs])
+    const cardIds = useMemo(() => cards.map(card => card.id), [cards])
+
+    // Pull user history to populate the history tile collage with real covers
+    const { entries: animeEntries } = useAnimeWatchHistory({ enabled: true, limit: 30 })
+    const { visibleEntries: mangaEntries } = useMangaReadingList({
+        enabled: true,
+        nsfwEnabled: Boolean(prefs?.nsfwContentEnabled),
+        hManhwaEnabled: Boolean(prefs?.hmanhwaEnabled || prefs?.nsfwContentEnabled),
+        filters: { sortBy: 'updatedAt', order: 'desc', limit: 30 },
+    })
+    const historyImages = useMemo(() => {
+        const urls = [
+            ...(Array.isArray(animeEntries) ? animeEntries : []).map(e => e?.imageUrl || e?.posterUrl),
+            ...(Array.isArray(mangaEntries) ? mangaEntries : []).map(e => e?.coverUrl || e?.cover),
+        ]
+        return urls.filter(url => typeof url === 'string' && /^https?:\/\//.test(url))
+    }, [animeEntries, mangaEntries])
+
+    const homeImages = useTVHomeImages(cardIds, historyImages)
+
+    // Fresh seed per TV session so every visit deals a different hand of covers
+    const [sessionSeed] = useState(() => Math.floor(Math.random() * 0xffffffff))
+    const [heroTick, setHeroTick] = useState(0)
+    const dateLabel = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+
+    // Slowly cycle the hero collage through the focused tab's pool
+    useEffect(() => {
+        if (LOW_END) return
+        const timer = setInterval(() => setHeroTick(tick => tick + 1), HERO_ROTATE_MS)
+        return () => clearInterval(timer)
+    }, [])
+
+    // Which card is focused (or default to 0)
+    const focusedIndex = Math.max(0, Math.min(focusPos.row, cards.length - 1))
+    const focusedCard = cards[focusedIndex]
+    const focusedAccent = focusedCard ? (TAB_ACCENTS[focusedCard.id] || DEFAULT_ACCENT) : DEFAULT_ACCENT
+    const heroSeed = `${sessionSeed}-${focusedIndex}-${heroTick}`
+    const heroCollageImages = useMemo(
+        () => focusedCard ? pickCollageImages(homeImages, focusedCard.id, heroSeed, 12) : [],
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [homeImages, focusedCard?.id, heroTick, sessionSeed, focusedIndex],
+    )
+
+    return (
+        <div className="flex h-full gap-6" style={{ minHeight: 'calc(100vh - 200px)' }}>
+            {/* ── LEFT: Spotlight panel ──────────────────────────────────── */}
+            <div className="relative flex-1 overflow-hidden rounded-[28px]">
+                <AnimatePresence mode="crossfade">
+                    {!LOW_END && focusedCard && (
+                        <Motion.div
+                            key={`hero-${focusedCard.id}-${heroTick}`}
+                            className="absolute inset-0"
+                            initial={{ opacity: 0, scale: 1.04 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                        >
+                            <TVImageCollage images={heroCollageImages} seed={heroSeed} />
+                        </Motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Multi-stop gradient scrim */}
+                <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/90 via-black/40 to-black/10" aria-hidden />
+                <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-black/30 to-transparent" aria-hidden />
+
+                {/* Accent colour glow at bottom */}
+                {!LOW_END && (
+                    <Motion.div
+                        key={`glow-${focusedCard?.id}`}
+                        className="pointer-events-none absolute inset-x-0 bottom-0 h-64 blur-3xl"
+                        style={{ background: `radial-gradient(ellipse at 50% 100%, ${focusedAccent.glow} 0%, transparent 70%)` }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.4 }}
+                        aria-hidden
+                    />
+                )}
+
+                {/* Content */}
+                <div className="absolute inset-0 flex flex-col justify-between p-10">
+                    {/* Top: greeting + date */}
+                    <div className="flex items-start justify-between">
+                        <p className="flex items-center gap-3 text-[13px] font-black uppercase tracking-[0.26em] text-(--mx-color-c6ff00)">
+                            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-(--mx-color-c6ff00)" aria-hidden />
+                            {tvGreeting()}
+                        </p>
+                        <p className="rounded-full bg-black/30 px-4 py-1.5 text-[12px] font-bold text-white/50 ring-1 ring-white/10 backdrop-blur-sm">
+                            {dateLabel}
+                        </p>
+                    </div>
+
+                    {/* Bottom: title + cta */}
+                    <div>
+                        <AnimatePresence mode="wait">
+                            <Motion.div
+                                key={`label-${focusedCard?.id}`}
+                                initial={{ opacity: 0, y: 14 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -8 }}
+                                transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                            >
+                                {focusedCard && (() => {
+                                    const Icon = TAB_ICONS[focusedCard.id]
+                                    const accent = TAB_ACCENTS[focusedCard.id] || DEFAULT_ACCENT
+                                    return (
+                                        <>
+                                            <div className={`mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] ring-1 ring-white/15 backdrop-blur-sm ${accent.text}`}
+                                                style={{ background: 'rgba(0,0,0,0.35)' }}>
+                                                {Icon && <Icon className="h-3 w-3" aria-hidden />}
+                                                {focusedCard.label}
+                                            </div>
+                                            <h1 className="text-[62px] font-black leading-[0.92] tracking-tight text-white drop-shadow-2xl">
+                                                What are we
+                                                <br />
+                                                <span className={`bg-clip-text text-transparent bg-linear-to-r from-(--mx-color-c6ff00) to-lime-200`}>
+                                                    watching tonight?
+                                                </span>
+                                            </h1>
+                                            <div className="mt-6 flex items-center gap-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onOpenTab(focusedCard.id)}
+                                                    className={`flex items-center gap-2.5 rounded-full bg-(--mx-color-c6ff00) px-6 py-2.5 text-[14px] font-black text-black shadow-[0_0_28px_rgba(198,255,0,0.4)] transition-transform active:scale-95`}
+                                                >
+                                                    <TVKeycap accent>{tvHintLabel('A', inputSource)}</TVKeycap>
+                                                    Open {focusedCard.label}
+                                                </button>
+                                                <div className="flex items-center gap-3 text-[12px] font-bold text-white/45">
+                                                    <span className="flex items-center gap-1.5"><TVKeycap>{tvHintLabel('✛', inputSource)}</TVKeycap> navigate</span>
+                                                    <span className="flex items-center gap-1.5"><TVKeycap>{tvHintLabel('B', inputSource)}</TVKeycap> back</span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )
+                                })()}
+                            </Motion.div>
+                        </AnimatePresence>
+                    </div>
                 </div>
-                <h1 className="mt-4 max-w-3xl text-[56px] font-black leading-[0.95] tracking-tight text-white">
-                    What are we watching
-                    <span className="bg-linear-to-r from-(--mx-color-c6ff00) to-lime-200 bg-clip-text text-transparent"> tonight?</span>
-                </h1>
-                <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-bold text-white/40">
-                    <span className="flex items-center gap-2"><TVKeycap>{tvHintLabel('✛', inputSource)}</TVKeycap> move</span>
-                    <span className="flex items-center gap-2"><TVKeycap accent>{tvHintLabel('A', inputSource)}</TVKeycap> open</span>
-                    <span className="flex items-center gap-2"><TVKeycap>{tvHintLabel('Y', inputSource)}</TVKeycap> filters</span>
-                    <span className="flex items-center gap-2"><TVKeycap>{tvHintLabel('X', inputSource)}</TVKeycap> page jump</span>
-                    <span className="flex items-center gap-2"><TVKeycap>{tvHintLabel('B', inputSource)}</TVKeycap> back</span>
-                </div>
-                <p className="mt-3 text-[12px] font-bold text-white/25">
-                    {inputSource === 'keyboard'
-                        ? 'Keyboard mode — controller hints switch back the moment you press a gamepad button.'
-                        : 'Keyboard works too — WASD / arrows, Enter, Backspace, Q/E, N/M, Space, and Tab.'}
-                </p>
             </div>
 
-            {/* Destination cards with enhanced animations */}
-            <div className="grid gap-5" style={{ gridTemplateColumns: `repeat(${Math.max(1, cards.length)}, minmax(0, 1fr))` }}>
+            {/* ── RIGHT: Category tiles ──────────────────────────────────── */}
+            <div className="flex w-[340px] shrink-0 flex-col gap-3">
                 {cards.map((tab, index) => {
-                    const focused = focusPos.row === 0 && focusPos.col === index
+                    const focused = focusPos.row === index && focusPos.col === 0
                     const accent = TAB_ACCENTS[tab.id] || DEFAULT_ACCENT
                     const Icon = TAB_ICONS[tab.id]
+                    const tileBgImg = pickCollageImages(homeImages, tab.id, `${sessionSeed}-tile-${index}`, 1)[0]
                     return (
                         <Motion.div
                             key={tab.id}
-                            animate={focused ? { scale: 1.05, transition: { type: 'spring', stiffness: 400, damping: 24 } } : { scale: 1 }}
-                            className="relative"
+                            animate={focused
+                                ? { scale: 1.03, x: -6, transition: { type: 'spring', stiffness: 420, damping: 28 } }
+                                : { scale: 1, x: 0, transition: { type: 'spring', stiffness: 420, damping: 28 } }
+                            }
+                            className="flex-1"
                         >
-                        <button
-                            type="button"
-                            data-focused-card={focused ? 'true' : undefined}
-                            onClick={() => onOpenTab(tab.id)}
-                            className={`group relative min-h-56 overflow-hidden rounded-[26px] border p-5 text-left transition-all duration-200 ${
-                                focused
-                                    ? 'border-(--mx-color-c6ff00) shadow-[0_0_0_4px_rgba(198,255,0,0.18),0_24px_60px_-20px_rgba(0,0,0,0.8)]'
-                                    : 'border-white/8 hover:border-white/12'
-                            }`}
-                            style={focused && !LOW_END ? { boxShadow: `0 0 0 4px rgba(198,255,0,0.18), 0 0 60px ${accent.glow}, 0 24px 60px -20px rgba(0,0,0,0.8)` } : undefined}
-                        >
-                            {/* Background image */}
-                            {!LOW_END && (
-                                <>
+                            <button
+                                type="button"
+                                data-focused-card={focused ? 'true' : undefined}
+                                onClick={() => onOpenTab(tab.id)}
+                                className={`group relative flex h-full w-full items-center gap-4 overflow-hidden rounded-2xl border p-5 text-left transition-all duration-200 ${
+                                    focused
+                                        ? 'border-(--mx-color-c6ff00)/60'
+                                        : 'border-white/6 hover:border-white/12'
+                                }`}
+                                style={focused && !LOW_END
+                                    ? { boxShadow: `0 0 0 3px rgba(198,255,0,0.16), 0 0 40px ${accent.glow}` }
+                                    : { background: 'rgba(255,255,255,0.03)' }
+                                }
+                            >
+                                {/* BG image */}
+                                {!LOW_END && tileBgImg && (
                                     <img
-                                        src={getRandomImageForTab(tab.id, index)}
+                                        src={tileBgImg}
                                         alt=""
-                                        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20 transition-opacity duration-300 group-hover:opacity-30"
+                                        className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-all duration-500 ${focused ? 'opacity-30 scale-105' : 'opacity-12'}`}
                                     />
-                                </>
-                            )}
-                            {/* Accent wash with gradient overlay */}
-                            <div className={`pointer-events-none absolute inset-0 bg-linear-to-br ${accent.grad} transition-opacity duration-200 ${focused ? 'opacity-100' : 'opacity-60'}`} aria-hidden />
-                            {/* Enhanced dark overlay for text legibility */}
-                            <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-black/0" aria-hidden />
-                            {/* Watermark glyph */}
-                            {Icon && (
-                                <Icon
-                                    className={`pointer-events-none absolute -bottom-6 -right-5 h-28 w-28 transition-all duration-300 ${accent.text} ${
-                                        focused ? 'opacity-25 -rotate-6 scale-110' : 'opacity-10 rotate-0'
-                                    }`}
-                                    aria-hidden
-                                />
-                            )}
+                                )}
+                                {/* Scrim */}
+                                <div className="pointer-events-none absolute inset-0 bg-linear-to-r from-black/80 via-black/50 to-black/20" aria-hidden />
+                                {/* Accent tint */}
+                                <div className={`pointer-events-none absolute inset-0 bg-linear-to-br ${accent.grad} transition-opacity duration-200 ${focused ? 'opacity-100' : 'opacity-40'}`} aria-hidden />
 
-                            <div className="relative flex h-full min-h-[inherit] flex-col">
-                                <div className="flex items-center justify-between">
-                                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-white/8 ring-1 ring-white/10 ${accent.text}`}>
-                                        {Icon ? <Icon className="h-5 w-5" aria-hidden /> : <span className="text-[18px] font-black">{index + 1}</span>}
-                                    </div>
-                                    <span className={`text-[12px] font-black tabular-nums tracking-[0.2em] ${focused ? 'text-(--mx-color-c6ff00)' : 'text-white/20'}`}>
+                                {/* Icon badge */}
+                                <div className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ring-1 ring-white/10 transition-all duration-200 ${
+                                    focused ? `bg-white/15 ${accent.text}` : 'bg-white/6 text-white/50'
+                                }`}>
+                                    {Icon ? <Icon className="h-5 w-5" aria-hidden /> : <span className="text-[16px] font-black">{index + 1}</span>}
+                                </div>
+
+                                {/* Text */}
+                                <div className="relative z-10 flex-1 overflow-hidden">
+                                    <p className={`text-[11px] font-black uppercase tracking-[0.22em] transition-colors ${focused ? 'text-(--mx-color-c6ff00)' : 'text-white/30'}`}>
                                         0{index + 1}
-                                    </span>
-                                </div>
-                                <div className="mt-auto">
-                                    <h3 className="text-[27px] font-black tracking-tight text-white">{tab.label}</h3>
-                                    <div className={`mt-2 h-1 rounded-full bg-(--mx-color-c6ff00) transition-all duration-300 ${focused ? 'w-12 opacity-100' : 'w-5 opacity-25'}`} aria-hidden />
-                                    <p className={`mt-3 flex items-center gap-2 text-[12px] font-bold transition-colors ${focused ? 'text-white/70' : 'text-white/30'}`}>
-                                        {focused ? <><TVKeycap accent>{tvHintLabel('A', inputSource)}</TVKeycap> Open {tab.label}</> : `Browse ${tab.label.toLowerCase()}`}
                                     </p>
+                                    <h3 className="text-[20px] font-black leading-tight tracking-tight text-white">{tab.label}</h3>
                                 </div>
-                            </div>
-                        </button>
+
+                                {/* Arrow indicator */}
+                                <Motion.div
+                                    className="relative z-10 shrink-0"
+                                    animate={focused ? { x: 0, opacity: 1 } : { x: -4, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    <svg className="h-5 w-5 text-(--mx-color-c6ff00)" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </Motion.div>
+
+                                {/* Focus bar */}
+                                <div className={`pointer-events-none absolute bottom-0 left-0 h-[3px] bg-(--mx-color-c6ff00) transition-all duration-300 rounded-full ${focused ? 'w-full opacity-100' : 'w-0 opacity-0'}`} aria-hidden />
+                            </button>
                         </Motion.div>
                     )
                 })}
@@ -493,7 +551,7 @@ function LifeSyncTVModeInner({ onExit }) {
     }, [activeTab?.id])
 
     const SECTION_COLS = { anime: 5, manga: 5, hmanhwa: 5, hentai: 5, history: 5, exit: 1 }
-    SECTION_COLS.home = Math.max(1, tabs.filter(tab => !tab.isHome && !tab.isExit).length)
+    SECTION_COLS.home = 1
     const cols = SECTION_COLS[activeTab?.id] || 5
 
     const flatIndex = (detailItem || filterOpen) ? -1 : (focusPos.row * cols + focusPos.col)
@@ -534,7 +592,10 @@ function LifeSyncTVModeInner({ onExit }) {
     // WASD/arrows, Q/E (LB/RB), N/M (LT/RT), Space (X), Tab (Y), Enter (A), Backspace (B).
     useEffect(() => {
         setLifeSyncKeyboardGamepadActive(true)
-        return () => setLifeSyncKeyboardGamepadActive(false)
+        return () => {
+            setLifeSyncKeyboardGamepadActive(false)
+            clearTVHomeImagesCache()
+        }
     }, [])
 
     if (mangaReaderBackBlocked && playerState?.type !== 'manga') {
@@ -628,7 +689,7 @@ function LifeSyncTVModeInner({ onExit }) {
             lastAPressRef.current = now
             if (activeTab?.id === 'home') {
                 const homeTabs = tabs.filter(tab => !tab.isHome && !tab.isExit)
-                const target = homeTabs[focusPos.col]
+                const target = homeTabs[focusPos.row]
                 if (target) setActiveTabIdx(tabs.findIndex(tab => tab.id === target.id))
                 return
             }
@@ -669,7 +730,7 @@ function LifeSyncTVModeInner({ onExit }) {
             if (filterOpen) { setFilterOpen(false); return }
             setActiveTabIdx(tabs.length - 1)
         },
-    }), [activeTab?.id, blocked, canPageJump, cols, currentPage, detailItem, filterOpen, filterPanel?.filterConfig?.length, focusedItem, focusPos.col, mangaReaderBackBlocked, pageJumpOpen, playerState, setCurrentPage, setHistoryFocusedStatus, showExitConfirm, tabs])
+    }), [activeTab?.id, blocked, canPageJump, cols, currentPage, detailItem, filterOpen, filterPanel?.filterConfig?.length, focusedItem, focusPos.row, mangaReaderBackBlocked, pageJumpOpen, playerState, setCurrentPage, setHistoryFocusedStatus, showExitConfirm, tabs])
 
     const confirmPageJump = useCallback(() => {
         const next = Number.parseInt(pageJumpValue, 10)
@@ -740,7 +801,7 @@ function LifeSyncTVModeInner({ onExit }) {
 
             {/* Content */}
             <div className="relative min-h-0 flex-1 overflow-hidden">
-                <div className="h-full overflow-y-auto px-8 py-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className={`h-full overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${activeTab?.id === 'home' ? 'p-5' : 'px-8 py-6'}`}>
                     {activeTab?.id !== 'exit' && activeTab?.id !== 'home' && (
                         <TVSectionHeading
                             title={activeTab?.label || ''}
@@ -751,6 +812,7 @@ function LifeSyncTVModeInner({ onExit }) {
                     <AnimatePresence mode="wait">
                         <Motion.div
                             key={activeTab?.id}
+                            className={activeTab?.id === 'home' ? 'h-full' : undefined}
                             initial={{ opacity: 0, x: 40 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -40 }}
