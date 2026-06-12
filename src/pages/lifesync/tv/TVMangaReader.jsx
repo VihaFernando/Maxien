@@ -156,6 +156,8 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
         const endpoint =
             source === 'mangadistrict'
                 ? `/api/v1/manga/mangadistrict/chapter/${encodeURIComponent(mangaId)}/${encodeURIComponent(currentChapterId)}`
+                : source === 'mangadna'
+                ? `/api/v1/manga/mangadna/chapter/${encodeURIComponent(mangaId)}/${encodeURIComponent(currentChapterId)}`
                 : `/api/v1/manga/roliascan/chapter/${encodeURIComponent(mangaId)}/${encodeURIComponent(currentChapterId)}`
 
         lifesyncFetch(`${endpoint}?view=full`)

@@ -43,11 +43,11 @@ function normalizePercent(value) {
     return Math.max(0, Math.min(100, Math.round(n * 10) / 10))
 }
 
+const VALID_SOURCES = new Set(['mangadistrict', 'roliascan', 'mangadna'])
+
 function normalizeSource(value) {
     const source = String(value || '').trim().toLowerCase()
-    if (source === 'mangadistrict') return 'mangadistrict'
-    if (source === 'roliascan') return 'roliascan'
-    return ''
+    return VALID_SOURCES.has(source) ? source : ''
 }
 
 function toBookId(payload) {

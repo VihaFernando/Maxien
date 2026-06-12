@@ -27,6 +27,7 @@ import { TVHentaiPlayer } from './tv/TVHentaiPlayer'
 import { TVAnimeSection } from './tv/sections/TVAnimeSection'
 import { TVMangaSection } from './tv/sections/TVMangaSection'
 import { TVHManhwaSection } from './tv/sections/TVHManhwaSection'
+import { TVMangaDNASection } from './tv/sections/TVMangaDNASection'
 import { TVHentaiSection } from './tv/sections/TVHentaiSection'
 import { TVHistorySection } from './tv/sections/TVHistorySection'
 
@@ -77,6 +78,7 @@ const TAB_ICONS = {
     anime: FaFilm,
     manga: FaBookOpen,
     hmanhwa: FaBook,
+    mangadna: FaBook,
     hentai: FaFire,
     history: FaHistory,
     exit: FaPowerOff,
@@ -87,6 +89,7 @@ const TAB_ACCENTS = {
     anime: { text: 'text-sky-300', glow: 'rgba(56,189,248,0.20)', grad: 'from-sky-400/18 via-sky-400/4 to-transparent' },
     manga: { text: 'text-amber-300', glow: 'rgba(251,191,36,0.20)', grad: 'from-amber-400/18 via-amber-400/4 to-transparent' },
     hmanhwa: { text: 'text-rose-300', glow: 'rgba(251,113,133,0.20)', grad: 'from-rose-400/18 via-rose-400/4 to-transparent' },
+    mangadna: { text: 'text-rose-300', glow: 'rgba(251,113,133,0.20)', grad: 'from-rose-400/18 via-rose-400/4 to-transparent' },
     hentai: { text: 'text-fuchsia-300', glow: 'rgba(232,121,249,0.20)', grad: 'from-fuchsia-400/18 via-fuchsia-400/4 to-transparent' },
     history: { text: 'text-violet-300', glow: 'rgba(167,139,250,0.20)', grad: 'from-violet-400/18 via-violet-400/4 to-transparent' },
 }
@@ -516,6 +519,7 @@ function LifeSyncTVModeInner({ onExit }) {
         if (animePluginOn) t.push({ id: 'anime', label: 'Anime' })
         if (mangaPluginOn) t.push({ id: 'manga', label: 'Manga' })
         if (hManhwaVisible) t.push({ id: 'hmanhwa', label: 'H Manhwa' })
+        if (hManhwaVisible) t.push({ id: 'mangadna', label: 'MangaDNA' })
         if (hentaiVisible) t.push({ id: 'hentai', label: 'Hentai' })
         t.push({ id: 'history', label: 'History' })
         t.push({ id: 'exit', label: 'Exit', isExit: true })
@@ -550,7 +554,7 @@ function LifeSyncTVModeInner({ onExit }) {
         })
     }, [activeTab?.id])
 
-    const SECTION_COLS = { anime: 5, manga: 5, hmanhwa: 5, hentai: 5, history: 5, exit: 1 }
+    const SECTION_COLS = { anime: 5, manga: 5, hmanhwa: 5, mangadna: 5, hentai: 5, history: 5, exit: 1 }
     SECTION_COLS.home = 1
     const cols = SECTION_COLS[activeTab?.id] || 5
 
@@ -576,7 +580,7 @@ function LifeSyncTVModeInner({ onExit }) {
     const showExitConfirm = exitConfirmOpen || isOnExitTab
 
     const blocked = detailItem || filterOpen || playerState || showExitConfirm || pageJumpOpen
-    const canPageJump = ['anime', 'manga', 'hmanhwa', 'hentai'].includes(activeTab?.id)
+    const canPageJump = ['anime', 'manga', 'hmanhwa', 'mangadna', 'hentai'].includes(activeTab?.id)
 
     if (ctx?.playIntroRef?.current && !showIntro) {
         setShowIntro(true)
@@ -822,6 +826,7 @@ function LifeSyncTVModeInner({ onExit }) {
                             {activeTab?.id === 'anime' && <TVAnimeSection {...sectionCommonProps} />}
                             {activeTab?.id === 'manga' && <TVMangaSection {...sectionCommonProps} />}
                             {activeTab?.id === 'hmanhwa' && <TVHManhwaSection {...sectionCommonProps} />}
+                            {activeTab?.id === 'mangadna' && <TVMangaDNASection {...sectionCommonProps} />}
                             {activeTab?.id === 'hentai' && <TVHentaiSection {...sectionCommonProps} />}
                             {activeTab?.id === 'history' && <TVHistorySection {...sectionCommonProps} />}
                             {activeTab?.id === 'exit' && (

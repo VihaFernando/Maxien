@@ -2529,7 +2529,7 @@ export default function LifeSyncManga() {
   useEffect(() => {
     if (lifeSyncLoading || !isLifeSyncConnected) return;
     if (hManhwaEnabled) return;
-    if (route.src !== "mangadistrict") return;
+    if (route.src !== "mangadistrict" && route.src !== "mangadna") return;
     navigate(`${basePath}/roliascan/manga/page/1${location.search || ""}`, {
       replace: true,
     });
@@ -2545,7 +2545,7 @@ export default function LifeSyncManga() {
 
   useEffect(() => {
     if (hManhwaEnabled) return;
-    const nsfwSrc = (m) => m?.source === "mangadistrict";
+    const nsfwSrc = (m) => m?.source === "mangadistrict" || m?.source === "mangadna";
     if (selectedManga && nsfwSrc(selectedManga)) setSelectedManga(null);
   }, [hManhwaEnabled, selectedManga]);
 
@@ -3763,9 +3763,9 @@ export default function LifeSyncManga() {
           style={{ pointerEvents: selectedManga ? "none" : undefined }}
         >
           <MediaPageHeader
-            accent={source === "mangadistrict" ? "hmanhwa" : "manga"}
+            accent={source === "mangadistrict" || source === "mangadna" ? "hmanhwa" : "manga"}
             kicker="LifeSync · Reading"
-            title={source === "mangadistrict" ? "H Manhwa" : "Manga"}
+            title={source === "mangadistrict" || source === "mangadna" ? "H Manhwa" : "Manga"}
             subtitle="Browse manga, manhwa, and manhua — open chapters straight into the reader."
             icon={
               <svg
@@ -3809,8 +3809,7 @@ export default function LifeSyncManga() {
           <div className="flex min-w-0 flex-wrap items-center gap-1.5">
             {[
               { id: "roliascan", label: "Roliascan" },
-              { id: "mangadna", label: "MangaDNA" },
-              ...(hManhwaEnabled ? [{ id: "mangadistrict", label: "H Manhwa" }] : []),
+              ...(hManhwaEnabled ? [{ id: "mangadna", label: "MangaDNA" }, { id: "mangadistrict", label: "H Manhwa" }] : []),
             ].map(({ id, label }) => (
               <button
                 key={id}

@@ -21,6 +21,7 @@ const MANGA_SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
     { id: 'roliascan', label: 'Roliascan' },
     { id: 'mangadistrict', label: 'Manga District' },
+    { id: 'mangadna', label: 'MangaDNA' },
 ]
 const MANGA_STATUS_OPTIONS = [
     { id: 'all', label: 'Any status' },
@@ -54,20 +55,30 @@ function buildHistoryDetailItem(entry, subTab) {
 
     const lastChapterId = entry.lastChapterId || entry.remoteLatestChapterId
     const badge = entry.lastChapterLabel || undefined
-    const navigateTo = entry.mangaId && entry.source && lastChapterId
-        ? `/dashboard/lifesync/anime/manga/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(String(lastChapterId))}?source=${encodeURIComponent(entry.source)}&lang=en`
+
+    // When a mirror source has a newer chapter, deep-link there instead.
+    const readSource = (entry?.hasNewChapter && entry?.remoteLatestChapterSource && entry.remoteLatestChapterSource !== entry.source)
+        ? String(entry.remoteLatestChapterSource)
+        : String(entry.source)
+    const readChapterId = (readSource !== entry.source && entry.remoteLatestChapterId) ? String(entry.remoteLatestChapterId) : String(lastChapterId || '')
+
+    const navigateTo = entry.mangaId && readSource && readChapterId
+        ? `/dashboard/lifesync/anime/manga/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(readChapterId)}?source=${encodeURIComponent(readSource)}&lang=en`
         : '/dashboard/lifesync/anime/manga'
+
+    const allSources = [entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean)
+    const sourceChips = allSources.map(s => s === 'mangadistrict' ? 'Manga District' : s === 'mangadna' ? 'MangaDNA' : 'Roliascan')
 
     return {
         type: 'manga',
-        source: entry.source,
+        source: readSource,
         title: entry.title,
         imageUrl: entry.coverUrl,
         badge,
         mangaId: String(entry.mangaId || ''),
-        chips: [entry.source === 'mangadistrict' ? 'Manga District' : 'Roliascan'],
+        chips: sourceChips,
         navigateTo,
-        lastChapterId: lastChapterId ? String(lastChapterId) : undefined,
+        lastChapterId: readChapterId || undefined,
     }
 }
 
@@ -258,7 +269,9 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
                         }
 
                         const badge = entry.lastChapterLabel || undefined
-                        const subtitle = [entry.source, entry.status].filter(Boolean).join(' · ') || 'Manga'
+                        const allSrcs = [entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean)
+                        const srcLabel = allSrcs.map(s => s === 'mangadistrict' ? 'District' : s === 'mangadna' ? 'DNA' : s).join('+')
+                        const subtitle = [srcLabel, entry.status].filter(Boolean).join(' · ') || 'Manga'
 
                         return (
                             <div key={entry.source && entry.mangaId ? `${entry.source}:${entry.mangaId}` : i} data-focused-card={focused ? 'true' : undefined}>

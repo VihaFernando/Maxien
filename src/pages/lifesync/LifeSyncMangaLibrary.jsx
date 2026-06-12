@@ -286,7 +286,7 @@ function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                                 {entry.source && (
                                     <span className="rounded-lg bg-amber-500/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-400">
-                                        {sourceLabel(entry.source)}
+                                        {[entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean).map(sourceLabel).join(' + ')}
                                     </span>
                                 )}
                                 {entry.readingStatus && (
@@ -331,7 +331,9 @@ function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
                             {entry.source && (
                                 <>
                                     <p className="text-[11px] text-(--color-text-secondary)">Source</p>
-                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{sourceLabel(entry.source)}</p>
+                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">
+                                        {[entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean).map(sourceLabel).join(' + ')}
+                                    </p>
                                 </>
                             )}
                             {entry.readingStatus && (
@@ -569,10 +571,16 @@ function resumeTarget(entry, browseTranslatedLang) {
     const latestChapterId = String(entry?.remoteLatestChapterId || '').trim()
     const chapterId = lastChapterId || latestChapterId
     if (entry?.mangaId != null && entry?.source && chapterId) {
-        const q = new URLSearchParams({ source: String(entry.source), lang: browseTranslatedLang === 'all' ? 'all' : 'en' }).toString()
+        // When a new chapter exists on a mirror source (e.g. mangadna has ch 309 but user read on
+        // mangadistrict at ch 306), deep-link to the mirror source so they can read the latest.
+        const readSource = (entry?.hasNewChapter && entry?.remoteLatestChapterSource && entry.remoteLatestChapterSource !== entry.source)
+            ? String(entry.remoteLatestChapterSource)
+            : String(entry.source)
+        const readChapterId = (readSource !== entry.source && latestChapterId) ? latestChapterId : chapterId
+        const q = new URLSearchParams({ source: readSource, lang: browseTranslatedLang === 'all' ? 'all' : 'en' }).toString()
         return {
-            to: `${MANGA_BASE}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(chapterId)}?${q}`,
-            state: { from: MANGA_LIBRARY_PATH, source: entry.source, browseTranslatedLang, resumeChapterId: chapterId, resumePercent: Number(entry?.lastReadPercent || 0) },
+            to: `${MANGA_BASE}/read/${encodeURIComponent(String(entry.mangaId))}/${encodeURIComponent(readChapterId)}?${q}`,
+            state: { from: MANGA_LIBRARY_PATH, source: readSource, browseTranslatedLang, resumeChapterId: readChapterId, resumePercent: Number(entry?.lastReadPercent || 0) },
         }
     }
     return { to: MANGA_BASE, state: { resumeEntry: entry } }
@@ -625,14 +633,14 @@ export default function LifeSyncMangaLibrary() {
     const [detailEntry, setDetailEntry] = useState(null)
 
     const sourceOptions = useMemo(
-        () => hManhwaEnabled ? SOURCE_OPTIONS : SOURCE_OPTIONS.filter((o) => o.id !== 'mangadistrict'),
+        () => hManhwaEnabled ? SOURCE_OPTIONS : SOURCE_OPTIONS.filter((o) => o.id !== 'mangadistrict' && o.id !== 'mangadna'),
         [hManhwaEnabled],
     )
 
     useEffect(() => { if (!isLifeSyncConnected) navigate('/dashboard/profile?tab=integrations', { replace: true }) }, [isLifeSyncConnected, navigate])
     useEffect(() => { const id = setTimeout(() => setQuery(queryInput.trim()), 260); return () => clearTimeout(id) }, [queryInput])
     useEffect(() => { setPage(1) }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder])
-    useEffect(() => { if (!hManhwaEnabled && sourceFilter === 'mangadistrict') setSourceFilter('all') }, [hManhwaEnabled, sourceFilter])
+    useEffect(() => { if (!hManhwaEnabled && (sourceFilter === 'mangadistrict' || sourceFilter === 'mangadna')) setSourceFilter('all') }, [hManhwaEnabled, sourceFilter])
 
     const listFilters = useMemo(() => ({ q: query, source: sourceFilter, status: statusFilter, updateState: updateStateFilter, sortBy, order: sortOrder, page, limit: PAGE_SIZE }), [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, page])
 

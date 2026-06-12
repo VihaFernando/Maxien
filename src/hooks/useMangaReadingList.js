@@ -8,7 +8,7 @@ const EMPTY_SUMMARY = {
     caughtUp: 0,
     seriesEnded: 0,
     pinned: 0,
-    sources: { mangadistrict: 0, roliascan: 0 },
+    sources: { mangadistrict: 0, roliascan: 0, mangadna: 0 },
     statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
 }
 
@@ -49,11 +49,15 @@ function summarizeEntries(entries) {
         caughtUp: 0,
         seriesEnded: 0,
         pinned: 0,
-        sources: { mangadistrict: 0, roliascan: 0 },
+        sources: { mangadistrict: 0, roliascan: 0, mangadna: 0 },
         statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
     }
     for (const entry of entries) {
-        if (entry?.source && summary.sources[entry.source] != null) summary.sources[entry.source] += 1
+        // A merged entry may carry mirrorSources — count all sources it spans.
+        const sources = [entry?.source, ...(Array.isArray(entry?.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean)
+        for (const src of sources) {
+            if (summary.sources[src] != null) summary.sources[src] += 1
+        }
         const status = normalizeReadingStatus(entry)
         if (status && summary.statuses[status] != null) summary.statuses[status] += 1
         if (entry?.hasNewChapter) summary.withNewChapter += 1
@@ -115,10 +119,12 @@ function buildReadingQuery(filters) {
     return params.toString()
 }
 
+const H_MANHWA_SOURCES = new Set(['mangadistrict', 'mangadna'])
+
 export function filterMangaReadingByNsfw(entries, nsfwEnabled, hManhwaEnabled = true) {
     if (nsfwEnabled && hManhwaEnabled) return entries
     return entries.filter((entry) => {
-        if (entry.source === 'mangadistrict') return Boolean(nsfwEnabled && hManhwaEnabled)
+        if (H_MANHWA_SOURCES.has(entry.source)) return Boolean(nsfwEnabled && hManhwaEnabled)
         return true
     })
 }
@@ -268,17 +274,25 @@ export function useMangaReadingList({ enabled, nsfwEnabled, hManhwaEnabled = tru
 
     const removeEntry = useCallback(
         async (entry) => {
-            await lifesyncFetch('/api/v1/progress/batch', {
-                method: 'POST',
-                json: {
-                    items: [{
+            const items = [{
+                delete: true,
+                bookId: String(entry?.bookId || `${entry?.source || ''}:${entry?.mangaId || ''}`),
+                source: entry?.source,
+                mangaId: entry?.mangaId,
+            }]
+            // Also delete mirror source records (e.g. mangadistrict + mangadna same slug).
+            if (Array.isArray(entry?.mirrorSources)) {
+                for (const mirror of entry.mirrorSources) {
+                    if (!mirror?.source || !entry?.mangaId) continue
+                    items.push({
                         delete: true,
-                        bookId: String(entry?.bookId || `${entry?.source || ''}:${entry?.mangaId || ''}`),
-                        source: entry?.source,
-                        mangaId: entry?.mangaId,
-                    }],
-                },
-            })
+                        bookId: String(mirror?.bookId || `${mirror.source}:${entry.mangaId}`),
+                        source: mirror.source,
+                        mangaId: entry.mangaId,
+                    })
+                }
+            }
+            await lifesyncFetch('/api/v1/progress/batch', { method: 'POST', json: { items } })
             await refresh()
         },
         [refresh],
