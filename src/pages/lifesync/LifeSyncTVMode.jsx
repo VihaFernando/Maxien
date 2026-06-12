@@ -277,14 +277,14 @@ function TVHomeSection({ tabs, focusPos, onOpenTab }) {
             {/* ── LEFT: Spotlight panel ──────────────────────────────────── */}
             <div className="relative flex-1 overflow-hidden rounded-[28px]">
                 <AnimatePresence mode="crossfade">
-                    {!LOW_END && focusedCard && (
+                    {focusedCard && (
                         <Motion.div
                             key={`hero-${focusedCard.id}-${heroTick}`}
                             className="absolute inset-0"
-                            initial={{ opacity: 0, scale: 1.04 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                            initial={LOW_END ? false : { opacity: 0, scale: 1.04 }}
+                            animate={LOW_END ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                            exit={LOW_END ? {} : { opacity: 0 }}
+                            transition={LOW_END ? { duration: 0 } : { duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                         >
                             <TVImageCollage images={heroCollageImages} seed={heroSeed} />
                         </Motion.div>
@@ -403,11 +403,11 @@ function TVHomeSection({ tabs, focusPos, onOpenTab }) {
                                 }
                             >
                                 {/* BG image */}
-                                {!LOW_END && tileBgImg && (
+                                {tileBgImg && (
                                     <img
                                         src={tileBgImg}
                                         alt=""
-                                        className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-all duration-500 ${focused ? 'opacity-30 scale-105' : 'opacity-12'}`}
+                                        className={`pointer-events-none absolute inset-0 h-full w-full object-cover ${LOW_END ? (focused ? 'opacity-30' : 'opacity-12') : `transition-all duration-500 ${focused ? 'opacity-30 scale-105' : 'opacity-12'}`}`}
                                     />
                                 )}
                                 {/* Scrim */}
