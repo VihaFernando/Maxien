@@ -268,12 +268,14 @@ export default function AdvancedVideoPlayer({
         // Resume position when only the quality variant changed (same episode)
         const resumeAt = resumeTimeRef.current
         const wasPlaying = playingRef.current
+        let seekOnReady = null
         if (resumeAt > 0) {
-            const seekOnReady = () => {
+            seekOnReady = () => {
                 try { v.currentTime = resumeAt } catch { /* ignore */ }
                 if (wasPlaying) v.play?.().catch(() => {})
                 resumeTimeRef.current = 0
                 v.removeEventListener('loadedmetadata', seekOnReady)
+                seekOnReady = null
             }
             v.addEventListener('loadedmetadata', seekOnReady)
         }
@@ -365,6 +367,7 @@ export default function AdvancedVideoPlayer({
 
         return () => {
             cancelled = true
+            if (seekOnReady) v.removeEventListener('loadedmetadata', seekOnReady)
             destroyHls()
             v.removeAttribute('src')
             v.load()

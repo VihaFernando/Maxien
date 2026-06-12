@@ -17,7 +17,7 @@ export function decodeHtmlEntities(str) {
  * @param {string|null|undefined} src
  * @returns {{ referrerPolicy?: 'no-referrer' }}
  */
-const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com', 'roliascan.to', 'roliascan.org'])
+const SCRAPER_IMAGE_ORIGINS = new Set(['mangadistrict.com', 'roliascan.to', 'roliascan.org', 'mangadna.com'])
 
 /**
  * Manga District APIs may still return root-relative cover URLs; the detail sheet

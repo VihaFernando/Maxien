@@ -245,13 +245,15 @@ export default function AIAssistant() {
 
     // ── Check if user has key ──────────────────────────────────────────────────
     useEffect(() => {
-        if (!user) return
+        if (!user) return undefined
+        let stale = false
         supabase
             .from("user_ai_settings")
             .select("id")
             .eq("user_id", user.id)
             .maybeSingle()
             .then(({ data }) => {
+                if (stale) return
                 setHasKey(!!data)
                 if (data) {
                     // Show welcome message
@@ -264,6 +266,9 @@ export default function AIAssistant() {
                     }])
                 }
             })
+        return () => {
+            stale = true
+        }
     }, [user])
 
     // ── Auto-scroll ────────────────────────────────────────────────────────────

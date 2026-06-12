@@ -157,6 +157,11 @@ const IMAGE_FETCHERS = {
         const rows = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
         return rows.map(m => m?.coverUrl || m?.cover || m?.thumbnail)
     },
+    mangadna: async () => {
+        const data = await lifesyncFetch(`/api/v1/manga/mangadna/latest/${randomPage(5)}?view=standard`).catch(() => null)
+        const rows = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
+        return rows.map(m => m?.coverUrl || m?.cover || m?.thumbnail)
+    },
     hentai: async () => {
         const data = await lifesyncFetch('/api/v1/hentai/watchhentai/home').catch(() => null)
         const series = Array.isArray(data?.series) ? data.series : (Array.isArray(data?.items) ? data.items : [])

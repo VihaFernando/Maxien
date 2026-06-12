@@ -13,6 +13,7 @@ export function useGameRantNews({ count = 20, page = 1 } = {}) {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const mountedRef = useRef(true)
+    const requestIdRef = useRef(0)
 
     useEffect(() => {
         mountedRef.current = true
@@ -23,6 +24,7 @@ export function useGameRantNews({ count = 20, page = 1 } = {}) {
 
     const fetch = async () => {
         if (!mountedRef.current) return
+        const requestId = ++requestIdRef.current
         setLoading(true)
         setError(null)
         try {
@@ -31,15 +33,15 @@ export function useGameRantNews({ count = 20, page = 1 } = {}) {
             if (page !== undefined) qs.set('page', String(page))
             const path = `/api/gamerant/gaming-news${qs.toString() ? '?' + qs.toString() : ''}`
             const result = await lifesyncFetch(path)
-            if (mountedRef.current) {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setData(result)
             }
         } catch (err) {
-            if (mountedRef.current) {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setError(err)
             }
         } finally {
-            if (mountedRef.current) {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setLoading(false)
             }
         }

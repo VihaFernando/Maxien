@@ -21,27 +21,31 @@ export function useGameRantArticle(slug) {
             return
         }
 
+        let stale = false
         const run = async () => {
             if (!mountedRef.current) return
             setLoading(true)
             setError(null)
             try {
                 const result = await lifesyncFetch(`/api/gamerant/gaming-news/${encodeURIComponent(cleanSlug)}`)
-                if (mountedRef.current) {
+                if (mountedRef.current && !stale) {
                     setData(result)
                 }
             } catch (err) {
-                if (mountedRef.current) {
+                if (mountedRef.current && !stale) {
                     setError(err)
                 }
             } finally {
-                if (mountedRef.current) {
+                if (mountedRef.current && !stale) {
                     setLoading(false)
                 }
             }
         }
 
         void run()
+        return () => {
+            stale = true
+        }
     }, [slug])
 
     return {

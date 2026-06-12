@@ -606,7 +606,9 @@ export default function LifeSyncMangaLibrary() {
     const [sortBy, setSortBy] = useState('updatedAt')
     const [sortOrder, setSortOrder] = useState('desc')
     const [page, setPage] = useState(1)
-    const [layout, setLayout] = useState('list')
+    const [layout, setLayout] = useState(() => {
+        try { return localStorage.getItem('lifesync.mangaLibrary.layout') === 'grid' ? 'grid' : 'list' } catch { return 'list' }
+    })
     const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
     useFocusedCardScroll(focusedCardIndex)
     useHideCursorOnDpad()
@@ -681,14 +683,24 @@ export default function LifeSyncMangaLibrary() {
     const startSyncPoll = useCallback(() => {
         stopSyncPoll()
         setSyncDismissed(false)
-        syncPollRef.current = setInterval(async () => {
+        // Skip ticks while a previous poll request is still in flight, and drop
+        // responses that resolve after this poll generation was stopped.
+        let inFlight = false
+        const intervalId = setInterval(async () => {
+            if (inFlight) return
+            inFlight = true
             try {
                 const data = await lifesyncFetch('/api/v1/progress/sync', { method: 'GET' })
+                if (syncPollRef.current !== intervalId) return
                 const job = data?.job || null
                 setSyncJob(job)
                 if (!job || isSyncTerminal(job.status)) { stopSyncPoll(); await refreshAll(); scheduleSyncDismiss() }
-            } catch { stopSyncPoll(); scheduleSyncDismiss() }
+            } catch {
+                if (syncPollRef.current !== intervalId) return
+                stopSyncPoll(); scheduleSyncDismiss()
+            } finally { inFlight = false }
         }, 2000)
+        syncPollRef.current = intervalId
     }, [refreshAll, scheduleSyncDismiss, stopSyncPoll])
 
     useEffect(() => () => { stopSyncPoll(); if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current) }, [stopSyncPoll])
@@ -761,7 +773,11 @@ export default function LifeSyncMangaLibrary() {
 
     const libGamepadHandlers = useMemo(() => ({
         [XBOX_GAMEPAD_BUTTONS.Y]: () => {
-            setLayout(l => l === 'list' ? 'grid' : 'list')
+            setLayout(l => {
+                const next = l === 'list' ? 'grid' : 'list'
+                try { localStorage.setItem('lifesync.mangaLibrary.layout', next) } catch { /* ignore */ }
+                return next
+            })
             setFocusedCardIndex(-1)
         },
         [XBOX_GAMEPAD_BUTTONS.LB]: () => {
@@ -961,10 +977,10 @@ export default function LifeSyncMangaLibrary() {
 
                 {/* Layout toggle */}
                 <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
-                    <button type="button" onClick={() => setLayout('list')}
+                    <button type="button" onClick={() => { setLayout('list'); try { localStorage.setItem('lifesync.mangaLibrary.layout', 'list') } catch { /* ignore */ } }}
                         className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
                         aria-label="List view"><IconList /></button>
-                    <button type="button" onClick={() => setLayout('grid')}
+                    <button type="button" onClick={() => { setLayout('grid'); try { localStorage.setItem('lifesync.mangaLibrary.layout', 'grid') } catch { /* ignore */ } }}
                         className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
                         aria-label="Grid view"><IconGrid /></button>
                 </div>

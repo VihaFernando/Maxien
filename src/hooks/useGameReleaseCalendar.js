@@ -13,6 +13,7 @@ export function useGameReleaseCalendar({
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const mountedRef = useRef(true)
+    const requestIdRef = useRef(0)
 
     useEffect(() => {
         mountedRef.current = true
@@ -23,6 +24,7 @@ export function useGameReleaseCalendar({
 
     const fetchCalendar = async () => {
         if (!mountedRef.current || !enabled) return
+        const requestId = ++requestIdRef.current
         setLoading(true)
         setError(null)
 
@@ -37,15 +39,15 @@ export function useGameReleaseCalendar({
             const path = `/api/gamesearch/calendar${qs.toString() ? '?' + qs.toString() : ''}`
             const result = await lifesyncFetch(path)
 
-            if (mountedRef.current) {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setData(result)
             }
         } catch (err) {
-            if (mountedRef.current) {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setError(err)
             }
         } finally {
-            if (mountedRef.current) {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setLoading(false)
             }
         }

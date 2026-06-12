@@ -35,7 +35,7 @@ function clampZoom(v) {
 function imgProps(url) {
     try {
         const host = new URL(String(url || ''), window.location.origin).hostname
-        if (host.includes('mangadistrict') || host.includes('roliascan'))
+        if (host.includes('mangadistrict') || host.includes('roliascan') || host.includes('mangadna'))
             return { referrerPolicy: 'no-referrer' }
     } catch { /* ignore */ }
     return {}
