@@ -373,7 +373,7 @@ function TVHomeSection({ tabs, focusPos, onOpenTab }) {
             </div>
 
             {/* ── RIGHT: Category tiles ──────────────────────────────────── */}
-            <div className="flex w-[340px] shrink-0 flex-col gap-3">
+            <div className="flex w-85 shrink-0 flex-col gap-3">
                 {cards.map((tab, index) => {
                     const focused = focusPos.row === index && focusPos.col === 0
                     const accent = TAB_ACCENTS[tab.id] || DEFAULT_ACCENT
@@ -442,7 +442,7 @@ function TVHomeSection({ tabs, focusPos, onOpenTab }) {
                                 </Motion.div>
 
                                 {/* Focus bar */}
-                                <div className={`pointer-events-none absolute bottom-0 left-0 h-[3px] bg-(--mx-color-c6ff00) transition-all duration-300 rounded-full ${focused ? 'w-full opacity-100' : 'w-0 opacity-0'}`} aria-hidden />
+                                <div className={`pointer-events-none absolute bottom-0 left-0 h-0.75 bg-(--mx-color-c6ff00) transition-all duration-300 rounded-full ${focused ? 'w-full opacity-100' : 'w-0 opacity-0'}`} aria-hidden />
                             </button>
                         </Motion.div>
                     )

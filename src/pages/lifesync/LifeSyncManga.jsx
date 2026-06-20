@@ -35,7 +35,6 @@ import {
   lifeSyncDetailSheetMainTransition,
   lifeSyncDollyPageTransition,
   lifeSyncDollyPageVariants,
-  lifeSyncEaseOut,
   lifeSyncPageTransition,
   lifeSyncSectionPresenceTransition,
   lifeSyncSectionPresenceVariants,
@@ -46,17 +45,10 @@ import {
 } from "../../lib/lifesyncMotion";
 import {
   compareChapters,
-  DEX_TRANSLATION_LANG_OPTIONS,
   formatChapterLabel,
   mangaImageProps,
   resolveMangaCoverDisplayUrl,
 } from "../../lib/mangaChapterUtils";
-
-/** Expand/collapse for filter drawers (catalog toolbar, Manga District, DexGenreFilter). */
-const mangaFilterExpandTransition = {
-  height: { duration: 0.3, ease: lifeSyncEaseOut },
-  opacity: { duration: 0.22, ease: lifeSyncEaseOut },
-};
 
 function mangaCoverLayoutId(source, id) {
   return `lifesync-manga-cover-${String(source || "roliascan")}-${String(id)}`;
@@ -110,7 +102,7 @@ function FilterDrawer({ open, onClose, title, count, onReset, children }) {
     <AnimatePresence>
       {open && (
         <MotionDiv
-          className="fixed inset-0 z-[9997] flex justify-end"
+          className="fixed inset-0 z-9997 flex justify-end"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -137,7 +129,7 @@ function FilterDrawer({ open, onClose, title, count, onReset, children }) {
                   {title}
                 </h2>
                 {count > 0 && (
-                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--color-primary) px-1.5 text-[11px] font-black tabular-nums text-(--color-ink-strong)">
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-black tabular-nums text-(--color-ink-strong)">
                     {count}
                   </span>
                 )}
@@ -158,8 +150,19 @@ function FilterDrawer({ open, onClose, title, count, onReset, children }) {
                   aria-label="Close filters"
                   className="flex h-8 w-8 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)"
                 >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" aria-hidden>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2.5"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -195,8 +198,19 @@ function MangaPagerFooter({ page, lastPage, total, busy, onPrev, onNext }) {
         aria-label="Previous page"
         className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary) disabled:opacity-40"
       >
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        <svg
+          className="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2.5"
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M15 19l-7-7 7-7"
+          />
         </svg>
       </button>
       <p className="min-w-0 text-center text-[12px] font-semibold text-(--color-text-primary)">
@@ -214,7 +228,14 @@ function MangaPagerFooter({ page, lastPage, total, busy, onPrev, onNext }) {
         aria-label="Next page"
         className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary) disabled:opacity-40"
       >
-        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" aria-hidden>
+        <svg
+          className="h-3.5 w-3.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          strokeWidth="2.5"
+          aria-hidden
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
         </svg>
       </button>
@@ -242,8 +263,6 @@ function mangaTagKey(tag, index, prefix = "") {
   return `${prefix || "t"}-${index}-${label || "tag"}`;
 }
 
-const DEX_PAGE_SIZE = 24;
-const DEX_MAX_OFFSET = 9900;
 const STATUS_FILTERS = ["ongoing", "completed", "hiatus", "cancelled"];
 const DEMOGRAPHIC_FILTERS = ["shounen", "shoujo", "josei", "seinen"];
 const TAG_GROUP_ORDER = ["genre", "theme", "format", "content"];
@@ -435,413 +454,6 @@ function buildMangaDistrictListQuery(
   return q.toString();
 }
 
-/** Roliascan personal list  aligned with `client/src/pages/MangaPage.jsx` READING_STATUSES. */
-const MANGADEX_READING_STATUSES = [
-  { value: "reading", label: "Reading" },
-  { value: "on_hold", label: "On Hold" },
-  { value: "plan_to_read", label: "Plan to Read" },
-  { value: "dropped", label: "Dropped" },
-  { value: "completed", label: "Completed" },
-  { value: "re_reading", label: "Re-reading" },
-];
-
-/** Status pills under the Library tab (single row, horizontal scroll on narrow viewports). */
-const MANGADEX_LIBRARY_STATUS_TABS = [
-  { value: "reading", label: "Reading" },
-  { value: "on_hold", label: "On Hold" },
-  { value: "completed", label: "Completed" },
-  { value: "dropped", label: "Dropped" },
-  { value: "plan_to_read", label: "Plan to Read" },
-  { value: "re_reading", label: "Re-reading" },
-];
-
-
-/** Roliascan API `contentRating`  order preserved for stable query strings. */
-const MD_CONTENT_RATING_ORDER = [
-  "safe",
-  "suggestive",
-  "erotica",
-  "pornographic",
-];
-
-const MD_CONTENT_RATING_OPTIONS = [
-  { id: "safe", label: "Safe", description: "All-ages content." },
-  {
-    id: "suggestive",
-    label: "Suggestive",
-    description: "Ecchi/mildly explicit content.",
-  },
-  {
-    id: "erotica",
-    label: "Erotica",
-    description: "Highly explicit.",
-    nsfwOnly: true,
-  },
-  {
-    id: "pornographic",
-    label: "Pornographic",
-    description: "Explicit content.",
-    nsfwOnly: true,
-  },
-];
-
-const DEFAULT_DEX_CONTENT_RATINGS = ["safe", "suggestive"];
-
-function sortDexContentRatings(ids) {
-  return MD_CONTENT_RATING_ORDER.filter((id) => ids.includes(id));
-}
-
-/** Query string for server `parseRoliascanListQuery` (client MangaPage.jsx parity). */
-function buildDexListQuery(opts) {
-  const {
-    limit,
-    offset = 0,
-    contentRatings = DEFAULT_DEX_CONTENT_RATINGS,
-    nsfwEnabled,
-    dexTranslatedLang,
-    englishOnly = false,
-    includedTags = [],
-    excludedTags = [],
-    statusFilter = [],
-    demographicFilter = [],
-    includedTagsMode,
-    excludedTagsMode,
-    originalLangFilter = [],
-    searchYear,
-    orderBy,
-    orderDir = "desc",
-    shuffle = false,
-  } = opts;
-  const q = new URLSearchParams();
-  q.set("limit", String(limit));
-  if (offset > 0) q.set("offset", String(offset));
-
-  const allowedIds = nsfwEnabled
-    ? MD_CONTENT_RATING_ORDER
-    : ["safe", "suggestive"];
-  let picked = sortDexContentRatings(
-    (Array.isArray(contentRatings) ? contentRatings : []).filter((r) =>
-      allowedIds.includes(r),
-    ),
-  );
-  if (!picked.length) picked = [...DEFAULT_DEX_CONTENT_RATINGS];
-  for (const cr of picked) {
-    q.append("contentRating[]", cr);
-  }
-  if (englishOnly) {
-    q.set("englishOnly", "1");
-    q.append("translatedLanguage[]", "en");
-  } else if (dexTranslatedLang === "all") {
-    q.set("anyLanguage", "1");
-  } else {
-    q.append("translatedLanguage[]", dexTranslatedLang);
-  }
-  for (const id of includedTags) q.append("includedTags[]", id);
-  for (const id of excludedTags) q.append("excludedTags[]", id);
-  for (const s of statusFilter) q.append("status[]", s);
-  for (const d of demographicFilter) q.append("demographic[]", d);
-  if (includedTags.length && includedTagsMode)
-    q.set("includedTagsMode", includedTagsMode);
-  if (excludedTags.length && excludedTagsMode)
-    q.set("excludedTagsMode", excludedTagsMode);
-  for (const ol of originalLangFilter) q.append("originalLanguage[]", ol);
-  if (searchYear != null && String(searchYear).trim() !== "")
-    q.set("year", String(searchYear).trim());
-  if (shuffle) q.set("shuffle", "1");
-  if (orderBy != null && String(orderBy).trim() !== "") {
-    q.set("orderBy", String(orderBy).trim());
-    q.set("orderDir", orderDir === "asc" ? "asc" : "desc");
-  }
-  return q;
-}
-
-function DexContentRatingSection({ selectedIds, nsfwEnabled, onToggle }) {
-  const visible = MD_CONTENT_RATING_OPTIONS.filter(
-    (o) => !o.nsfwOnly || nsfwEnabled,
-  );
-  return (
-    <section className="rounded-2xl border border-(--color-border-soft)/80 bg-linear-to-br from-(--color-surface)/90 to-(--color-surface-soft)/80 p-3.5 sm:p-4">
-      <div className="mb-3">
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-(--color-text-secondary)">
-          Content rating
-        </h3>
-        <p className="mt-1 text-[10px] leading-relaxed text-(--color-text-secondary)">
-          Roliascan catalog filter (see{" "}
-          <a
-            href="https://roliascan.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-violet-600 underline decoration-violet-300 underline-offset-2 hover:text-violet-800"
-          >
-            API docs
-          </a>
-          ). Keep at least one option on.
-        </p>
-      </div>
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {visible.map((opt) => {
-          const on = selectedIds.includes(opt.id);
-          return (
-            <li key={opt.id}>
-              <label
-                className={`flex cursor-pointer gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
-                  on
-                    ? "border-(--color-primary)/70 bg-(--color-primary)/12 ring-1 ring-(--color-primary)/35"
-                    : "border-(--color-border-soft) bg-(--color-surface)/80 hover:border-(--color-border-strong)"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={on}
-                  onChange={() => onToggle(opt.id)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-(--color-border-strong) text-(--color-text-primary) focus:ring-(--color-primary)"
-                />
-                <span className="min-w-0">
-                  <span className="block text-[12px] font-semibold text-(--color-text-primary)">
-                    {opt.label}
-                  </span>
-                  <span className="mt-0.5 block text-[10px] leading-snug text-(--color-text-secondary)">
-                    {opt.description}
-                  </span>
-                </span>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
-  );
-}
-
-function DexTagChip({ tag, selected, excluded, onToggle }) {
-  const cls = excluded
-    ? "bg-red-100 text-red-700 ring-1 ring-red-200 dark:bg-red-900/25 dark:text-red-300 dark:ring-red-500/30"
-    : selected
-      ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)";
-  return (
-    <button
-      type="button"
-      onClick={() => onToggle(tag.id)}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        onToggle(tag.id, true);
-      }}
-      className={`flex min-w-0 max-w-[min(100%,13rem)] items-center gap-0.5 rounded-full px-2.5 py-0.5 text-left text-[10px] font-medium transition-colors ${cls}`}
-      title={`${tag.name}  tap include · right-click exclude`}
-    >
-      <span className="shrink-0">{excluded ? "−" : selected ? "✓" : ""}</span>
-      <span className="min-w-0 truncate">{tag.name}</span>
-    </button>
-  );
-}
-
-function DexGenreFilter({
-  tags,
-  includedTags,
-  excludedTags,
-  onToggleInclude,
-  onToggleExclude,
-  statusFilter,
-  onStatusChange,
-  demographicFilter,
-  onDemographicChange,
-  includedTagsMode,
-  excludedTagsMode,
-  onIncludedTagsMode,
-  onExcludedTagsMode,
-  embedded = false,
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const [tagSearch, setTagSearch] = useState("");
-
-  const grouped = useMemo(() => {
-    const groups = {};
-    for (const t of tags) {
-      const g = t.group || "other";
-      if (!groups[g]) groups[g] = [];
-      groups[g].push(t);
-    }
-    for (const g of Object.keys(groups)) {
-      groups[g].sort((a, b) => a.name.localeCompare(b.name));
-    }
-    return groups;
-  }, [tags]);
-
-  const filteredGrouped = useMemo(() => {
-    if (!tagSearch.trim()) return grouped;
-    const q = tagSearch.toLowerCase();
-    const result = {};
-    for (const [group, tagList] of Object.entries(grouped)) {
-      const filtered = tagList.filter((t) => t.name.toLowerCase().includes(q));
-      if (filtered.length) result[group] = filtered;
-    }
-    return result;
-  }, [grouped, tagSearch]);
-
-  const activeCount =
-    includedTags.length +
-    excludedTags.length +
-    (statusFilter?.length || 0) +
-    (demographicFilter?.length || 0);
-
-  const body = (
-    <div
-      className={`${embedded ? "" : "border-t border-(--color-border-soft)"} min-w-0 max-w-full`}
-    >
-      <div
-        className={`${embedded ? "px-0 py-0" : "px-4 py-4"} min-w-0 max-w-full space-y-4`}
-      >
-        <div className="flex flex-wrap gap-4">
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-              Status
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {STATUS_FILTERS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => onStatusChange(s)}
-                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-                    statusFilter?.includes(s)
-                      ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-              Demographic
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {DEMOGRAPHIC_FILTERS.map((d) => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => onDemographicChange(d)}
-                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-                    demographicFilter?.includes(d)
-                      ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                  }`}
-                >
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-3 border-t border-(--color-border-soft) pt-3">
-          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-            Include tags
-            <select
-              value={includedTagsMode}
-              onChange={(e) => onIncludedTagsMode(e.target.value)}
-              className="rounded-lg border border-(--color-border-soft) bg-(--color-surface-muted) px-2 py-1.5 text-[11px] text-(--color-text-primary)"
-            >
-              <option value="AND">All (AND)</option>
-              <option value="OR">Any (OR)</option>
-            </select>
-          </label>
-          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-            Exclude tags
-            <select
-              value={excludedTagsMode}
-              onChange={(e) => onExcludedTagsMode(e.target.value)}
-              className="rounded-lg border border-(--color-border-soft) bg-(--color-surface-muted) px-2 py-1.5 text-[11px] text-(--color-text-primary)"
-            >
-              <option value="OR">Any (OR)</option>
-              <option value="AND">All (AND)</option>
-            </select>
-          </label>
-        </div>
-        <div className="space-y-2">
-          <input
-            type="text"
-            value={tagSearch}
-            onChange={(e) => setTagSearch(e.target.value)}
-            placeholder="Filter tag list…"
-            className="w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
-          />
-          <p className="text-[10px] text-(--color-text-secondary)">
-            Tap = include · right-click = exclude
-          </p>
-        </div>
-        {TAG_GROUP_ORDER.filter((g) => filteredGrouped[g]).map((group) => (
-          <div key={group} className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-              {group}
-            </h4>
-            <div className="flex min-w-0 max-w-full flex-wrap gap-1">
-              {filteredGrouped[group].map((tag) => (
-                <DexTagChip
-                  key={tag.id}
-                  tag={tag}
-                  selected={includedTags.includes(tag.id)}
-                  excluded={excludedTags.includes(tag.id)}
-                  onToggle={(id, isExclude) => {
-                    if (isExclude) onToggleExclude(id);
-                    else onToggleInclude(id);
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  return (
-    <div
-      className={`min-w-0 w-full max-w-full overflow-hidden ${embedded ? "" : "rounded-[18px] border border-(--color-border-strong)/50 bg-(--color-surface) shadow-sm"}`}
-    >
-      {embedded ? (
-        body
-      ) : (
-        <>
-          <button
-            type="button"
-            onClick={() => setExpanded((p) => !p)}
-            className="flex w-full min-w-0 items-center justify-between gap-2 px-4 py-3 text-left text-[13px] font-semibold text-(--color-text-primary) hover:bg-(--color-surface-soft) transition-colors"
-          >
-            <span className="inline-flex min-w-0 flex-1 items-center gap-2">
-              <span className="min-w-0 truncate">Filters &amp; genres</span>
-              {activeCount > 0 && (
-                <span className="shrink-0 rounded-full bg-(--color-primary)/30 px-2 py-0.5 text-[10px] font-bold text-(--color-text-primary)">
-                  {activeCount}
-                </span>
-              )}
-            </span>
-            <span className="shrink-0 text-(--color-text-secondary) text-[11px]">
-              {expanded ? "Hide" : "Show"}
-            </span>
-          </button>
-          <AnimatePresence initial={false}>
-            {expanded && (
-              <MotionDiv
-                key="dex-genre-filter-body"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={mangaFilterExpandTransition}
-                className="w-full min-w-0 max-w-full overflow-hidden border-t border-(--color-border-soft)"
-              >
-                {body}
-              </MotionDiv>
-            )}
-          </AnimatePresence>
-        </>
-      )}
-    </div>
-  );
-}
-
 const MangaCard = memo(function MangaCard({ manga, onClick }) {
   const cardSrc = manga.source || "roliascan";
   const coverDisplayUrl = resolveMangaCoverDisplayUrl(manga.coverUrl, cardSrc);
@@ -852,25 +464,33 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
   const overlayBadges = (
     <>
       {manga.status && (
-        <span className="absolute left-2 top-2 z-[2] rounded-lg bg-(--color-surface)/90 px-2 py-0.5 text-[10px] font-medium capitalize text-(--color-text-primary)">
+        <span className="absolute left-2 top-2 z-2 rounded-lg bg-(--color-surface)/90 px-2 py-0.5 text-[10px] font-medium capitalize text-(--color-text-primary)">
           {manga.status}
         </span>
       )}
       {manga.contentRating && manga.contentRating !== "safe" && (
-        <span className="absolute right-2 top-2 z-[2] rounded-lg bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-black shadow-sm backdrop-blur-sm">
+        <span className="absolute right-2 top-2 z-2 rounded-lg bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-black shadow-sm backdrop-blur-sm">
           {manga.contentRating}
         </span>
       )}
       {manga.source && manga.source !== "roliascan" && (
-        <span className="pointer-events-none absolute bottom-12 left-2 z-[2] rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase text-white backdrop-blur-sm">
-          {manga.source === "mangadistrict" ? "District" : manga.source === "mangadna" ? "DNA" : manga.source}
+        <span className="pointer-events-none absolute bottom-12 left-2 z-2 rounded bg-black/60 px-1.5 py-0.5 text-[9px] font-medium uppercase text-white backdrop-blur-sm">
+          {manga.source === "mangadistrict"
+            ? "District"
+            : manga.source === "mangadna"
+              ? "DNA"
+              : manga.source}
         </span>
       )}
     </>
   );
   return (
     <MotionDiv
-      whileHover={{ y: -6, scale: 1.02, transition: { type: "spring", stiffness: 420, damping: 26 } }}
+      whileHover={{
+        y: -6,
+        scale: 1.02,
+        transition: { type: "spring", stiffness: 420, damping: 26 },
+      }}
       whileTap={{ scale: 0.98 }}
       className="group w-full text-left"
     >
@@ -880,134 +500,134 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
         className="w-full text-left"
       >
         <div className={mediaPosterFrameClass}>
-          <div className="relative aspect-[2/3] w-full overflow-hidden">
-          {manga.id != null ? (
-            <MotionDiv
-              layoutId={mangaCoverLayoutId(
-                manga.source || "roliascan",
-                manga.id,
-              )}
-              transition={lifeSyncSharedLayoutTransitionProps}
-              className="absolute inset-0"
-            >
-              {coverDisplayUrl ? (
-                <LifesyncEpisodeThumbnail
-                  src={coverDisplayUrl}
-                  className="absolute inset-0 h-full w-full"
-                  imgClassName="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-                  imgProps={mangaImageProps(coverDisplayUrl)}
+          <div className="relative aspect-2/3 w-full overflow-hidden">
+            {manga.id != null ? (
+              <MotionDiv
+                layoutId={mangaCoverLayoutId(
+                  manga.source || "roliascan",
+                  manga.id,
+                )}
+                transition={lifeSyncSharedLayoutTransitionProps}
+                className="absolute inset-0"
+              >
+                {coverDisplayUrl ? (
+                  <LifesyncEpisodeThumbnail
+                    src={coverDisplayUrl}
+                    className="absolute inset-0 h-full w-full"
+                    imgClassName="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
+                    imgProps={mangaImageProps(coverDisplayUrl)}
+                  >
+                    {overlayBadges}
+                  </LifesyncEpisodeThumbnail>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+                    {overlayBadges}
+                    <svg
+                      className="w-10 h-10"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth="1.5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                      />
+                    </svg>
+                  </div>
+                )}
+              </MotionDiv>
+            ) : coverDisplayUrl ? (
+              <LifesyncEpisodeThumbnail
+                src={coverDisplayUrl}
+                className="absolute inset-0 h-full w-full"
+                imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                imgProps={mangaImageProps(coverDisplayUrl)}
+              >
+                {overlayBadges}
+              </LifesyncEpisodeThumbnail>
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+                {overlayBadges}
+                <svg
+                  className="w-10 h-10"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
                 >
-                  {overlayBadges}
-                </LifesyncEpisodeThumbnail>
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
-                  {overlayBadges}
-                  <svg
-                    className="w-10 h-10"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="1.5"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                    />
-                  </svg>
-                </div>
-              )}
-            </MotionDiv>
-          ) : coverDisplayUrl ? (
-            <LifesyncEpisodeThumbnail
-              src={coverDisplayUrl}
-              className="absolute inset-0 h-full w-full"
-              imgClassName="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-              imgProps={mangaImageProps(coverDisplayUrl)}
-            >
-              {overlayBadges}
-            </LifesyncEpisodeThumbnail>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
-              {overlayBadges}
-              <svg
-                className="w-10 h-10"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
-                />
-              </svg>
-            </div>
-          )}
-          <div
-            className="pointer-events-none absolute inset-0 z-[1] bg-linear-to-t from-black/75 via-black/10 to-transparent"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-0.5 bg-linear-to-r from-transparent via-(--color-primary) to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-            aria-hidden
-          />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
-            <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
-              {manga.title}
-            </p>
-            {manga.author ? (
-              <p className="mt-0.5 line-clamp-1 text-[11px] text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
-                {manga.author}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"
+                  />
+                </svg>
+              </div>
+            )}
+            <div
+              className="pointer-events-none absolute inset-0 z-1 bg-linear-to-t from-black/75 via-black/10 to-transparent"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-3 h-0.5 bg-linear-to-r from-transparent via-primary to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+              aria-hidden
+            />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-2 p-3">
+              <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
+                {manga.title}
               </p>
-            ) : null}
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {manga.year && (
-                <span className="rounded bg-(--color-surface)/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
-                  {manga.year}
-                </span>
-              )}
-              {showRating && (
-                <span className="flex items-center gap-0.5 rounded bg-(--color-surface)/20 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                  <svg
-                    className="h-2.5 w-2.5 fill-amber-300 text-amber-300"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                  {ratingNum.toFixed(1)}
-                </span>
-              )}
-              {manga.tags?.slice(0, 2).map((tag, i) => {
-                const label = mangaTagLabel(tag);
-                if (!label) return null;
-                return (
-                  <span
-                    key={mangaTagKey(tag, i, `${manga.id}-`)}
-                    className="rounded bg-(--color-primary)/25 px-1.5 py-0.5 text-[10px] font-medium text-(--color-text-primary) ring-1 ring-(--color-border-strong)/30"
-                  >
-                    {label}
+              {manga.author ? (
+                <p className="mt-0.5 line-clamp-1 text-[11px] text-white/80 drop-shadow-[0_1px_2px_rgba(0,0,0,0.75)]">
+                  {manga.author}
+                </p>
+              ) : null}
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {manga.year && (
+                  <span className="rounded bg-(--color-surface)/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
+                    {manga.year}
                   </span>
-                );
-              })}
+                )}
+                {showRating && (
+                  <span className="flex items-center gap-0.5 rounded bg-(--color-surface)/20 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                    <svg
+                      className="h-2.5 w-2.5 fill-amber-300 text-amber-300"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {ratingNum.toFixed(1)}
+                  </span>
+                )}
+                {manga.tags?.slice(0, 2).map((tag, i) => {
+                  const label = mangaTagLabel(tag);
+                  if (!label) return null;
+                  return (
+                    <span
+                      key={mangaTagKey(tag, i, `${manga.id}-`)}
+                      className="rounded bg-primary/25 px-1.5 py-0.5 text-[10px] font-medium text-(--color-text-primary) ring-1 ring-(--color-border-strong)/30"
+                    >
+                      {label}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-          {/* Hover affordance */}
-          <div className="absolute inset-0 z-[2] flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
-            <div className="flex h-11 w-11 scale-90 items-center justify-center rounded-full bg-(--color-primary) text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.8)] transition-transform duration-300 group-hover:scale-100">
-              <svg
-                className="h-4 w-4"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden
-              >
-                <path d="M8 5v14l11-7z" />
-              </svg>
+            {/* Hover affordance */}
+            <div className="absolute inset-0 z-2 flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
+              <div className="flex h-11 w-11 scale-90 items-center justify-center rounded-full bg-primary text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.8)] transition-transform duration-300 group-hover:scale-100">
+                <svg
+                  className="h-4 w-4"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </button>
     </MotionDiv>
   );
@@ -1028,9 +648,6 @@ function MangaDetail({
   const [chapBusy, setChapBusy] = useState(false);
   const [currentChapterId, setCurrentChapterId] = useState("");
   const [descExpanded, setDescExpanded] = useState(false);
-  const [dexStats, setDexStats] = useState(null);
-  const [isDexFollowing, setIsDexFollowing] = useState(null);
-  const [dexReadingStatus, setDexReadingStatus] = useState(null);
   const [chapterLang, setChapterLang] = useState(() =>
     browseTranslatedLang === "all" ? "all" : browseTranslatedLang,
   );
@@ -1040,6 +657,10 @@ function MangaDetail({
   const currentChapterButtonRef = useRef(null);
   const didAutoScrollCurrentChapterRef = useRef(false);
 
+  // Reset per-manga view state when a different manga is opened. These are
+  // genuine "sync local state to the manga prop" resets; the React Compiler's
+  // set-state-in-effect heuristic flags them but the behavior is intentional.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     setChapterLang(
       browseTranslatedLang === "all" ? "all" : browseTranslatedLang,
@@ -1054,6 +675,7 @@ function MangaDetail({
     didAutoScrollCurrentChapterRef.current = false;
     setCurrentChapterId("");
   }, [manga?.id, manga?.source]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!manga?.id || !isLifeSyncConnected) return;
@@ -1101,6 +723,10 @@ function MangaDetail({
     };
   }, [isLifeSyncConnected, manga?.id, manga?.source, source]);
 
+  // These two effects sync detail/chapter state to the `manga` prop (and fetch
+  // for non-roliascan sources). The synchronous resets are intentional priming
+  // before the async load; the React Compiler's heuristic flags them anyway.
+  /* eslint-disable react-hooks/set-state-in-effect */
   // Roliascan: full detail arrives via parent enrichment (`/roliascan/info`) merged into
   // the `manga` prop after mount, so sync on every `manga` change  not just id changes.
   useEffect(() => {
@@ -1110,9 +736,6 @@ function MangaDetail({
     setChapters(hasChapterPayload ? { data: [...manga.chapters] } : null);
     setDetail({ ...manga });
     setMetaBusy(false);
-    setDexStats(null);
-    setIsDexFollowing(null);
-    setDexReadingStatus(null);
     setChapBusy(!hasChapterPayload);
   }, [manga, source]);
 
@@ -1127,9 +750,6 @@ function MangaDetail({
       setChapters(null);
       setMetaBusy(true);
       setChapBusy(true);
-      setDexStats(null);
-      setIsDexFollowing(null);
-      setDexReadingStatus(null);
 
       let cancelled = false;
       const id = String(manga.id);
@@ -1180,9 +800,6 @@ function MangaDetail({
       setChapters(null);
       setMetaBusy(true);
       setChapBusy(true);
-      setDexStats(null);
-      setIsDexFollowing(null);
-      setDexReadingStatus(null);
 
       let cancelled = false;
       const slug = String(manga.id);
@@ -1214,12 +831,10 @@ function MangaDetail({
     setDetail(null);
     setChapters({ data: [] });
     setMetaBusy(false);
-    setDexStats(null);
-    setIsDexFollowing(null);
-    setDexReadingStatus(null);
     setChapBusy(false);
     return undefined;
   }, [manga?.id, manga.source, source, roliascanConnected, chapterLang]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const chaptersInSeriesOrder = useMemo(() => {
     const list = chapters?.data ? [...chapters.data] : [];
@@ -1232,15 +847,12 @@ function MangaDetail({
     return chaptersInSeriesOrder;
   }, [chaptersInSeriesOrder, chapterOrder]);
 
-  const highlightedChapterId = useMemo(() => {
-    const fromProgress = String(currentChapterId || "").trim();
-    if (fromProgress) return fromProgress;
-    const fromManga = String(
-      manga?.lastChapterId || detail?.lastChapterId || "",
-    ).trim();
-    if (fromManga) return fromManga;
-    return "";
-  }, [currentChapterId, detail?.lastChapterId, manga?.lastChapterId]);
+  // Plain derivation (cheap string ops) — no memo needed, and avoids a
+  // manual-deps mismatch the React Compiler can't reconcile.
+  const highlightedChapterId =
+    String(currentChapterId || "").trim() ||
+    String(manga?.lastChapterId || detail?.lastChapterId || "").trim() ||
+    "";
 
   const chapterSeriesIndex = useCallback(
     (ch) => {
@@ -1251,7 +863,6 @@ function MangaDetail({
     },
     [chaptersInSeriesOrder],
   );
-
 
   useEffect(() => {
     if (didAutoScrollCurrentChapterRef.current) return;
@@ -1355,7 +966,7 @@ function MangaDetail({
   const blurDetailHero =
     src !== "mangadistrict" && !heroBannerUrl && Boolean(coverImg);
   const rating =
-    d.ratings?.average ?? dexStats?.rating?.average ?? d.ratingAverage;
+    d.ratings?.average ?? d.ratingAverage;
   const ratingNum = rating != null ? Number(rating) : null;
   const showRating =
     ratingNum != null && Number.isFinite(ratingNum) && ratingNum > 0;
@@ -1380,7 +991,7 @@ function MangaDetail({
 
   return createPortal(
     <MotionDiv
-      className="fixed inset-0 z-[9998] flex h-dvh max-h-dvh w-full max-w-[100vw] min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
+      className="fixed inset-0 z-9998 flex h-dvh max-h-dvh w-full max-w-[100vw] min-w-0 items-end justify-center overflow-hidden p-0 sm:items-center sm:p-4"
       onClick={onClose}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -1417,7 +1028,7 @@ function MangaDetail({
                   className={
                     blurDetailHero
                       ? "h-full w-full scale-110 object-cover opacity-60 blur-2xl"
-                      : "h-full min-h-[11rem] w-full object-cover object-center sm:min-h-[13rem]"
+                      : "h-full min-h-44 w-full object-cover object-center sm:min-h-52"
                   }
                   {...mangaImageProps(heroBackdropUrl)}
                 />
@@ -1471,7 +1082,7 @@ function MangaDetail({
                     {...mangaImageProps(coverImg)}
                   />
                 ) : (
-                  <div className="flex h-full min-h-[7.5rem] w-full items-center justify-center">
+                  <div className="flex h-full min-h-30 w-full items-center justify-center">
                     <svg
                       className="h-10 w-10 text-(--color-text-secondary)"
                       fill="none"
@@ -1516,15 +1127,15 @@ function MangaDetail({
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {metaBusy && src === "mangadistrict" ? (
                   <>
-                    <span className="h-5 w-16 rounded-full bg-(--color-primary)/20 animate-pulse" />
+                    <span className="h-5 w-16 rounded-full bg-primary/20 animate-pulse" />
                     <span className="h-5 w-12 rounded-full bg-(--color-surface-muted) animate-pulse" />
                   </>
                 ) : (
                   <>
                     {d.status && (
-                      <span className="inline-flex items-center gap-1 bg-(--color-primary)/20 text-(--color-text-primary) text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
+                      <span className="inline-flex items-center gap-1 bg-primary/20 text-(--color-text-primary) text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${d.status === "completed" || d.status === "cancelled" ? "bg-(--color-text-secondary)" : "bg-(--color-primary)"}`}
+                          className={`w-1.5 h-1.5 rounded-full ${d.status === "completed" || d.status === "cancelled" ? "bg-(--color-text-secondary)" : "bg-primary"}`}
                         />
                         {d.status}
                       </span>
@@ -1555,11 +1166,6 @@ function MangaDetail({
                 {chaptersInSeriesOrder.length > 0 && (
                   <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-surface-muted) px-2 py-0.5 rounded-full">
                     {chaptersInSeriesOrder.length} ch.
-                  </span>
-                )}
-                {dexStats?.follows != null && dexStats.follows > 0 && (
-                  <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-surface-muted) px-2 py-0.5 rounded-full">
-                    {dexStats.follows.toLocaleString()} follows
                   </span>
                 )}
               </div>
@@ -1622,7 +1228,7 @@ function MangaDetail({
                   <button
                     type="button"
                     onClick={() => setDescExpanded((v) => !v)}
-                    className="mt-1 text-[11px] font-semibold text-(--color-primary) hover:underline"
+                    className="mt-1 text-[11px] font-semibold text-primary hover:underline"
                   >
                     {descExpanded ? "Show less" : "Read more"}
                   </button>
@@ -1707,7 +1313,7 @@ function MangaDetail({
                       onClick={() =>
                         onStartRead(mergedManga, chaptersInSeriesOrder[0])
                       }
-                      className="flex items-center gap-1.5 rounded-lg bg-(--color-primary) px-3 py-1.5 text-[11px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95"
+                      className="flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[11px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95"
                     >
                       <svg
                         className="h-3 w-3"
@@ -1726,7 +1332,9 @@ function MangaDetail({
               ) : chaptersInSeriesOrder.length === 0 ? (
                 <div className="rounded-xl bg-(--color-surface-muted) px-4 py-6 text-center">
                   <p className="text-[12px] text-(--color-text-secondary)">
-                    {src === "mangadistrict" || src === "roliascan" || src === "mangadna"
+                    {src === "mangadistrict" ||
+                    src === "roliascan" ||
+                    src === "mangadna"
                       ? "No chapters in listing."
                       : "No chapters for this language filter."}
                   </p>
@@ -1751,17 +1359,17 @@ function MangaDetail({
                             aria-current={isCurrentChapter ? "true" : undefined}
                             className={`group flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left transition-colors ${
                               isFocusedCh
-                                ? "bg-(--color-primary)/25 ring-2 ring-(--color-primary)/70"
+                                ? "bg-primary/25 ring-2 ring-primary/70"
                                 : isCurrentChapter
-                                  ? "bg-(--color-primary)/18 ring-1 ring-(--color-primary)/45"
+                                  ? "bg-primary/18 ring-1 ring-primary/45"
                                   : "hover:bg-(--color-surface-muted)"
                             }`}
                           >
                             <span
                               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold transition-colors ${
                                 isCurrentChapter
-                                  ? "bg-(--color-primary)/32 text-(--color-text-primary)"
-                                  : "text-(--color-text-secondary) group-hover:bg-(--color-primary)/20 group-hover:text-(--color-text-primary)"
+                                  ? "bg-primary/32 text-(--color-text-primary)"
+                                  : "text-(--color-text-secondary) group-hover:bg-primary/20 group-hover:text-(--color-text-primary)"
                               }`}
                             >
                               {chapterSeriesIndex(ch) || ""}
@@ -1772,7 +1380,7 @@ function MangaDetail({
                                   {formatChapterLabel(ch)}
                                 </span>
                                 {isCurrentChapter && (
-                                  <span className="shrink-0 rounded-full bg-(--color-primary)/28 px-1.5 py-0.5 text-[9px] font-semibold text-(--color-ink-strong)">
+                                  <span className="shrink-0 rounded-full bg-primary/28 px-1.5 py-0.5 text-[9px] font-semibold text-(--color-ink-strong)">
                                     Current
                                   </span>
                                 )}
@@ -1784,7 +1392,7 @@ function MangaDetail({
                               )}
                             </span>
                             <svg
-                              className="w-3.5 h-3.5 shrink-0 text-(--color-border-strong) group-hover:text-(--color-primary) transition-colors"
+                              className="w-3.5 h-3.5 shrink-0 text-(--color-border-strong) group-hover:text-primary transition-colors"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -1811,18 +1419,6 @@ function MangaDetail({
     document.body,
   );
 }
-
-const DEX_TABS = [
-  { id: "popular", label: "Popular" },
-  { id: "recent", label: "Recent" },
-];
-const DEX_TAB_IDS = new Set([
-  "popular",
-  "recent",
-  "library",
-  "following",
-  "search",
-]);
 
 const ROLIASCAN_TABS = [
   { id: "manga", label: "Manga", type: "manga" },
@@ -1869,7 +1465,9 @@ const MANGADNA_ORDER_BY_OPTIONS = [
   { id: "trending", label: "Trending" },
 ];
 
-const MANGADNA_ORDER_BY_IDS = new Set(MANGADNA_ORDER_BY_OPTIONS.map((o) => o.id));
+const MANGADNA_ORDER_BY_IDS = new Set(
+  MANGADNA_ORDER_BY_OPTIONS.map((o) => o.id),
+);
 
 function defaultTabForSource(src) {
   if (src === "roliascan") return "manga";
@@ -1938,14 +1536,8 @@ export default function LifeSyncManga() {
     }
     return { src, tab, page, detailMangaId };
   }, [location.pathname]);
-  const {
-    isLifeSyncConnected,
-    lifeSyncLoading,
-    lifeSyncUser,
-    lifeSyncUpdatePreferences,
-  } = useLifeSync();
+  const { isLifeSyncConnected, lifeSyncLoading, lifeSyncUser } = useLifeSync();
   const prefs = lifeSyncUser?.preferences;
-  const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled);
   const hManhwaEnabled = isLifeSyncHManhwaVisible(prefs);
   /** Synced from LifeSync viewing preferences (default on when unset). */
   const mangaEnglishReleasesOnly = prefs?.mangaEnglishReleasesOnly !== false;
@@ -2020,8 +1612,8 @@ export default function LifeSyncManga() {
     [basePath, location.search, navigate, route.page, route.src, route.tab],
   );
 
-  // Roliascan state (needs to exist before `goToRead`)
-  const [dexTranslatedLang, setDexTranslatedLang] = useState("en");
+  // Reader language preference (kept constant; consumed by `goToRead`).
+  const dexTranslatedLang = "en";
 
   const goToRead = useCallback(
     (mangaId, chapterId, srcOverride, options = {}) => {
@@ -2061,91 +1653,6 @@ export default function LifeSyncManga() {
     ],
   );
 
-  // Roliascan state
-  const [dexAuthStatus, setDexAuthStatus] = useState(null);
-  const [popular, setPopular] = useState([]);
-  const [recent, setRecent] = useState([]);
-  const [dexFollows, setDexFollows] = useState([]);
-  const [dexFollowsTotal, setDexFollowsTotal] = useState(0);
-  const [dexFollowsBusy, setDexFollowsBusy] = useState(false);
-  const [dexLibraryList, setDexLibraryList] = useState([]);
-  const [dexLibraryBusy, setDexLibraryBusy] = useState(false);
-  const [libraryListStatus, setLibraryListStatus] = useState("reading");
-  const [dexContentRatings, setDexContentRatings] = useState(() => [
-    ...DEFAULT_DEX_CONTENT_RATINGS,
-  ]);
-  const [searchQ, setSearchQ] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const [popularLoading, setPopularLoading] = useState(false);
-  const [recentLoading, setRecentLoading] = useState(false);
-  const [committedSearchQuery, setCommittedSearchQuery] = useState("");
-  const [dexTags, setDexTags] = useState([]);
-  const [dexFiltersOpen, setDexFiltersOpen] = useState(false);
-  const [dexTagsPanelOpen, setDexTagsPanelOpen] = useState(false);
-  const [includedTags, setIncludedTags] = useState([]);
-  const [excludedTags, setExcludedTags] = useState([]);
-  const [includedTagsMode, setIncludedTagsMode] = useState("AND");
-  const [excludedTagsMode, setExcludedTagsMode] = useState("OR");
-  const [statusFilter, setStatusFilter] = useState([]);
-  const [demographicFilter, setDemographicFilter] = useState([]);
-  const [originalLangFilter, setOriginalLangFilter] = useState([]);
-  const [dexYear, setDexYear] = useState("");
-  const [dexBrowseSort, setDexBrowseSort] = useState("random");
-  const [dexSearchOrderBy, setDexSearchOrderBy] = useState("relevance");
-  const [dexSearchOrderDir, setDexSearchOrderDir] = useState("desc");
-  const [dexPopularPage, setDexPopularPage] = useState(1);
-  const [dexRecentPage, setDexRecentPage] = useState(1);
-  const [dexSearchPage, setDexSearchPage] = useState(1);
-  const [popularTotal, setPopularTotal] = useState(0);
-  const [recentTotal, setRecentTotal] = useState(0);
-  const [searchTotal, setSearchTotal] = useState(0);
-
-  const dexFilterSig = useMemo(
-    () =>
-      JSON.stringify({
-        dexTranslatedLang,
-        eo: mangaEnglishReleasesOnly,
-        it: [...includedTags].sort(),
-        et: [...excludedTags].sort(),
-        st: [...statusFilter].sort(),
-        dm: [...demographicFilter].sort(),
-        ol: [...originalLangFilter].sort(),
-        im: includedTagsMode,
-        em: excludedTagsMode,
-        y: String(dexYear || ""),
-        dbs: dexBrowseSort,
-        sob: dexSearchOrderBy,
-        sod: dexSearchOrderDir,
-        cr: sortDexContentRatings(dexContentRatings).join(","),
-      }),
-    [
-      dexTranslatedLang,
-      mangaEnglishReleasesOnly,
-      includedTags,
-      excludedTags,
-      statusFilter,
-      demographicFilter,
-      originalLangFilter,
-      includedTagsMode,
-      excludedTagsMode,
-      dexYear,
-      dexBrowseSort,
-      dexSearchOrderBy,
-      dexSearchOrderDir,
-      dexContentRatings,
-    ],
-  );
-
-  const [dexListSigBound, setDexListSigBound] = useState(dexFilterSig);
-  useEffect(() => {
-    if (dexFilterSig === dexListSigBound) return;
-    setDexListSigBound(dexFilterSig);
-    setDexPopularPage(1);
-    setDexRecentPage(1);
-    setDexSearchPage(1);
-  }, [dexFilterSig, dexListSigBound]);
-
   // Manga District state
   const [mdLatest, setMdLatest] = useState(null);
   const [mdPage, setMdPage] = useState(1);
@@ -2171,7 +1678,6 @@ export default function LifeSyncManga() {
   const [dnaTermsLoaded, setDnaTermsLoaded] = useState(false);
 
   // Roliascan state
-  const [roliascanStatus, setRoliascanStatus] = useState(null);
   const [roliascanTerms, setRoliascanTerms] = useState({});
   const [roliascanRows, setRoliascanRows] = useState([]);
   const [roliascanLoading, setRoliascanLoading] = useState(false);
@@ -2219,7 +1725,24 @@ export default function LifeSyncManga() {
         tg: [...roliascanIncludeTags].sort(),
         te: [...roliascanExcludeTags].sort(),
       }),
-    [roliascanArtistsInput, roliascanAuthorsInput, roliascanCommittedSearch, roliascanExcludeDemographics, roliascanExcludeGenres, roliascanExcludeTags, roliascanFolder, roliascanIncludeDemographics, roliascanIncludeGenres, roliascanIncludeTags, roliascanMinchap, roliascanOrderDir, roliascanOrderKey, roliascanStatuses, roliascanYearFrom, roliascanYearTo],
+    [
+      roliascanArtistsInput,
+      roliascanAuthorsInput,
+      roliascanCommittedSearch,
+      roliascanExcludeDemographics,
+      roliascanExcludeGenres,
+      roliascanExcludeTags,
+      roliascanFolder,
+      roliascanIncludeDemographics,
+      roliascanIncludeGenres,
+      roliascanIncludeTags,
+      roliascanMinchap,
+      roliascanOrderDir,
+      roliascanOrderKey,
+      roliascanStatuses,
+      roliascanYearFrom,
+      roliascanYearTo,
+    ],
   );
   const [roliascanListSigBound, setRoliascanListSigBound] =
     useState(roliascanFilterSig);
@@ -2315,12 +1838,6 @@ export default function LifeSyncManga() {
     const nextTab = normalizeTabForSource(route.src, route.tab);
     if (tab !== nextTab) setTab(nextTab);
 
-    if (false && nextTab === "popular" && dexPopularPage !== route.page)
-      setDexPopularPage(route.page);
-    if (false && nextTab === "recent" && dexRecentPage !== route.page)
-      setDexRecentPage(route.page);
-    if (false && nextTab === "search" && dexSearchPage !== route.page)
-      setDexSearchPage(route.page);
     if (route.src === "mangadistrict" && mdPage !== route.page)
       setMdPage(route.page);
     if (route.src === "roliascan" && roliascanPage !== route.page)
@@ -2329,9 +1846,6 @@ export default function LifeSyncManga() {
       setDnaPage(route.page);
   }, [
     roliascanPage,
-    dexPopularPage,
-    dexRecentPage,
-    dexSearchPage,
     mdPage,
     dnaPage,
     route.page,
@@ -2345,16 +1859,6 @@ export default function LifeSyncManga() {
     if (source !== "mangadistrict") return;
     if (!MD_ORDER_BY_IDS.has(mdBrowse)) setMdBrowse("latest-updates");
   }, [source, mdBrowse]);
-
-  useEffect(() => {
-    if (true || route.tab !== "search") return;
-    const q = new URLSearchParams(location.search || "").get("q") || "";
-    const next = q.trim();
-    if (next && next !== committedSearchQuery) {
-      setCommittedSearchQuery(next);
-      setSearchQ(next);
-    }
-  }, [committedSearchQuery, location.search, route.src, route.tab]);
 
   const mdFilterBarCount =
     (mdSection !== "uncensored" ? 1 : 0) +
@@ -2453,7 +1957,7 @@ export default function LifeSyncManga() {
         setError(e.message || "Could not resume reading");
       }
     },
-    [goToRead, hManhwaEnabled, nsfwEnabled],
+    [goToRead, hManhwaEnabled],
   );
 
   useEffect(() => {
@@ -2478,11 +1982,6 @@ export default function LifeSyncManga() {
   ]);
 
   useEffect(() => {
-    setDexAuthStatus({ oauthConfigured: false, connected: false });
-  }, []);
-
-  useEffect(() => {
-    setRoliascanStatus(null);
     setRoliascanTerms({});
   }, []);
 
@@ -2492,12 +1991,10 @@ export default function LifeSyncManga() {
     let cancelled = false;
     (async () => {
       try {
-        const [statusData, termsData] = await Promise.all([
-          lifesyncFetch("/api/v1/manga/roliascan/status?view=standard"),
-          lifesyncFetch("/api/v1/manga/roliascan/terms?view=full"),
-        ]);
+        const termsData = await lifesyncFetch(
+          "/api/v1/manga/roliascan/terms?view=full",
+        );
         if (cancelled) return;
-        setRoliascanStatus(statusData || null);
         const termsPayload =
           termsData?.terms && typeof termsData.terms === "object"
             ? termsData.terms
@@ -2511,7 +2008,6 @@ export default function LifeSyncManga() {
         });
       } catch {
         if (cancelled) return;
-        setRoliascanStatus(null);
         setRoliascanTerms({});
       }
     })();
@@ -2519,11 +2015,6 @@ export default function LifeSyncManga() {
       cancelled = true;
     };
   }, [isLifeSyncConnected, lifeSyncLoading, source]);
-
-  useEffect(() => {
-    if (true || (tab !== "following" && tab !== "library")) return;
-    if (dexAuthStatus && !dexAuthStatus.connected) setTab("popular");
-  }, [source, tab, dexAuthStatus]);
 
   /** Keep URL and NSFW policy aligned. Only `setSource` caused a fight with route sync on hard refresh (URL still MD → sync set MD again → repeat). */
   useEffect(() => {
@@ -2545,271 +2036,10 @@ export default function LifeSyncManga() {
 
   useEffect(() => {
     if (hManhwaEnabled) return;
-    const nsfwSrc = (m) => m?.source === "mangadistrict" || m?.source === "mangadna";
+    const nsfwSrc = (m) =>
+      m?.source === "mangadistrict" || m?.source === "mangadna";
     if (selectedManga && nsfwSrc(selectedManga)) setSelectedManga(null);
   }, [hManhwaEnabled, selectedManga]);
-
-  useEffect(() => {
-    if (nsfwEnabled) return;
-    setDexContentRatings((prev) => {
-      const next = prev.filter((r) => r !== "erotica" && r !== "pornographic");
-      return next.length
-        ? sortDexContentRatings(next)
-        : [...DEFAULT_DEX_CONTENT_RATINGS];
-    });
-  }, [nsfwEnabled]);
-
-  const browseShuffle = dexBrowseSort === "random";
-  const browseOrderBy = browseShuffle ? "" : dexBrowseSort;
-
-  // Roliascan loaders (`shuffle=1` for random browse; otherwise stable order + pagination)
-  const loadPopular = useCallback(async () => {
-    setPopularLoading(true);
-    try {
-      const offset = browseShuffle ? 0 : (dexPopularPage - 1) * DEX_PAGE_SIZE;
-      const q = buildDexListQuery({
-        limit: DEX_PAGE_SIZE,
-        offset,
-        contentRatings: dexContentRatings,
-        nsfwEnabled,
-        dexTranslatedLang,
-        englishOnly: mangaEnglishReleasesOnly,
-        includedTags,
-        excludedTags,
-        statusFilter,
-        demographicFilter,
-        includedTagsMode,
-        excludedTagsMode,
-        originalLangFilter,
-        searchYear: dexYear,
-        orderBy: browseOrderBy,
-        orderDir: "desc",
-        shuffle: browseShuffle,
-      });
-      const d = await lifesyncFetch(
-        `/api/v1/manga/roliascan/browser?${q}&view=standard`,
-      );
-      setPopular(d?.data || []);
-      setPopularTotal(
-        typeof d?.total === "number" ? d.total : (d?.data || []).length,
-      );
-    } catch {
-      /* ignore */
-    } finally {
-      setPopularLoading(false);
-    }
-  }, [
-    dexPopularPage,
-    dexTranslatedLang,
-    mangaEnglishReleasesOnly,
-    includedTags,
-    excludedTags,
-    statusFilter,
-    demographicFilter,
-    includedTagsMode,
-    excludedTagsMode,
-    originalLangFilter,
-    dexYear,
-    browseOrderBy,
-    browseShuffle,
-    dexContentRatings,
-    nsfwEnabled,
-  ]);
-
-  const loadRecent = useCallback(async () => {
-    setRecentLoading(true);
-    try {
-      const offset = browseShuffle ? 0 : (dexRecentPage - 1) * DEX_PAGE_SIZE;
-      const q = buildDexListQuery({
-        limit: DEX_PAGE_SIZE,
-        offset,
-        contentRatings: dexContentRatings,
-        nsfwEnabled,
-        dexTranslatedLang,
-        englishOnly: mangaEnglishReleasesOnly,
-        includedTags,
-        excludedTags,
-        statusFilter,
-        demographicFilter,
-        includedTagsMode,
-        excludedTagsMode,
-        originalLangFilter,
-        searchYear: dexYear,
-        orderBy: browseOrderBy,
-        orderDir: "desc",
-        shuffle: browseShuffle,
-      });
-      const d = await lifesyncFetch(
-        `/api/v1/manga/roliascan/browser?${q}&view=standard`,
-      );
-      setRecent(d?.data || []);
-      setRecentTotal(
-        typeof d?.total === "number" ? d.total : (d?.data || []).length,
-      );
-    } catch {
-      /* ignore */
-    } finally {
-      setRecentLoading(false);
-    }
-  }, [
-    dexRecentPage,
-    dexTranslatedLang,
-    mangaEnglishReleasesOnly,
-    includedTags,
-    excludedTags,
-    statusFilter,
-    demographicFilter,
-    includedTagsMode,
-    excludedTagsMode,
-    originalLangFilter,
-    dexYear,
-    browseOrderBy,
-    browseShuffle,
-    dexContentRatings,
-    nsfwEnabled,
-  ]);
-
-  const loadFollows = useCallback(async (offset = 0) => {
-    setDexFollowsBusy(true);
-    if (offset === 0) setError("");
-    try {
-      if (offset === 0) {
-        setDexFollows([]);
-        setDexFollowsTotal(0);
-      }
-    } catch (e) {
-      if (offset === 0) {
-        setDexFollows([]);
-        setDexFollowsTotal(0);
-      }
-      setError(e.message || "Could not load follows");
-    } finally {
-      setDexFollowsBusy(false);
-    }
-  }, []);
-
-  const loadDexLibrary = useCallback(async (status) => {
-    setDexLibraryBusy(true);
-    setError("");
-    try {
-      void status;
-      setDexLibraryList([]);
-    } catch (e) {
-      setDexLibraryList([]);
-      setError(e.message || "Could not load library");
-    } finally {
-      setDexLibraryBusy(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isLifeSyncConnected || true || tab === "library") return;
-    void loadPopular();
-  }, [isLifeSyncConnected, source, tab, loadPopular]);
-
-  useEffect(() => {
-    if (!isLifeSyncConnected || true || tab === "library") return;
-    void loadRecent();
-  }, [isLifeSyncConnected, source, tab, loadRecent]);
-
-  useEffect(() => {
-    setDexTags([]);
-  }, [isLifeSyncConnected]);
-
-  useEffect(() => {
-    if (
-      !isLifeSyncConnected ||
-      true ||
-      tab !== "search" ||
-      !committedSearchQuery.trim()
-    )
-      return;
-    let cancelled = false;
-    (async () => {
-      setSearching(true);
-      try {
-        const offset = (dexSearchPage - 1) * DEX_PAGE_SIZE;
-        const q = buildDexListQuery({
-          limit: DEX_PAGE_SIZE,
-          offset,
-          contentRatings: dexContentRatings,
-          nsfwEnabled,
-          dexTranslatedLang,
-          englishOnly: mangaEnglishReleasesOnly,
-          includedTags,
-          excludedTags,
-          statusFilter,
-          demographicFilter,
-          includedTagsMode,
-          excludedTagsMode,
-          originalLangFilter,
-          searchYear: dexYear,
-          orderBy: dexSearchOrderBy,
-          orderDir: dexSearchOrderDir,
-        });
-        q.set("q", committedSearchQuery.trim());
-        const d = await lifesyncFetch(
-          `/api/v1/manga/roliascan/browser?${q}&view=standard`,
-        );
-        if (!cancelled) {
-          setSearchResults(d?.data || []);
-          setSearchTotal(
-            typeof d?.total === "number" ? d.total : (d?.data || []).length,
-          );
-        }
-      } catch {
-        if (!cancelled) {
-          setSearchResults([]);
-          setSearchTotal(0);
-        }
-      } finally {
-        if (!cancelled) setSearching(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    isLifeSyncConnected,
-    source,
-    tab,
-    committedSearchQuery,
-    dexSearchPage,
-    dexTranslatedLang,
-    mangaEnglishReleasesOnly,
-    includedTags,
-    excludedTags,
-    statusFilter,
-    demographicFilter,
-    includedTagsMode,
-    excludedTagsMode,
-    originalLangFilter,
-    dexYear,
-    dexSearchOrderBy,
-    dexSearchOrderDir,
-    dexContentRatings,
-    nsfwEnabled,
-  ]);
-
-  useEffect(() => {
-    if (!isLifeSyncConnected || true || tab !== "following") return;
-    if (!dexAuthStatus?.connected) return;
-    void loadFollows(0);
-  }, [isLifeSyncConnected, source, tab, dexAuthStatus?.connected, loadFollows]);
-
-  useEffect(() => {
-    if (!isLifeSyncConnected || true || tab !== "library") return;
-    if (!dexAuthStatus?.connected) return;
-    setDexLibraryList([]);
-    void loadDexLibrary(libraryListStatus);
-  }, [
-    isLifeSyncConnected,
-    source,
-    tab,
-    dexAuthStatus?.connected,
-    libraryListStatus,
-    loadDexLibrary,
-  ]);
 
   // Manga District latest  single effect + generation guard so order-by / section / page changes never apply stale responses
   useEffect(() => {
@@ -2892,12 +2122,15 @@ export default function LifeSyncManga() {
 
   // MangaDNA terms (genres + sort options)  load once when source becomes mangadna
   useEffect(() => {
-    if (!isLifeSyncConnected || lifeSyncLoading || source !== "mangadna") return;
+    if (!isLifeSyncConnected || lifeSyncLoading || source !== "mangadna")
+      return;
     if (dnaTermsLoaded) return;
     let cancelled = false;
     (async () => {
       try {
-        const data = await lifesyncFetch("/api/v1/manga/mangadna/terms?view=full");
+        const data = await lifesyncFetch(
+          "/api/v1/manga/mangadna/terms?view=full",
+        );
         if (cancelled) return;
         setDnaGenres(Array.isArray(data?.genres) ? data.genres : []);
         setDnaTermsLoaded(true);
@@ -2905,7 +2138,9 @@ export default function LifeSyncManga() {
         /* use empty genres if terms fail */
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isLifeSyncConnected, lifeSyncLoading, source, dnaTermsLoaded]);
 
   // MangaDNA latest listing
@@ -2978,7 +2213,9 @@ export default function LifeSyncManga() {
         if (dnaSearchFetchGenRef.current === gen) setDnaSearchBusy(false);
       }
     }, 400);
-    return () => { clearTimeout(t); };
+    return () => {
+      clearTimeout(t);
+    };
   }, [isLifeSyncConnected, lifeSyncLoading, source, dnaFilter]);
 
   useEffect(() => {
@@ -3088,9 +2325,11 @@ export default function LifeSyncManga() {
     roliascanCommittedSearch,
     roliascanExcludeDemographics,
     roliascanExcludeGenres,
+    roliascanExcludeTags,
     roliascanFolder,
     roliascanIncludeDemographics,
     roliascanIncludeGenres,
+    roliascanIncludeTags,
     roliascanMinchap,
     roliascanOrderDir,
     roliascanOrderKey,
@@ -3362,35 +2601,6 @@ export default function LifeSyncManga() {
     );
   }, []);
 
-  const toggleDexContentRating = useCallback((id) => {
-    setDexContentRatings((prev) => {
-      const set = new Set(prev);
-      if (set.has(id)) {
-        if (set.size <= 1) return prev;
-        set.delete(id);
-      } else {
-        set.add(id);
-      }
-      return sortDexContentRatings([...set]);
-    });
-  }, []);
-
-  const resetDexFilters = useCallback(() => {
-    setDexContentRatings([...DEFAULT_DEX_CONTENT_RATINGS]);
-    setIncludedTags([]);
-    setExcludedTags([]);
-    setIncludedTagsMode("AND");
-    setExcludedTagsMode("OR");
-    setStatusFilter([]);
-    setDemographicFilter([]);
-    setOriginalLangFilter([]);
-    setDexYear("");
-    setDexBrowseSort("random");
-    setDexSearchOrderBy("relevance");
-    setDexSearchOrderDir("desc");
-    setDexTagsPanelOpen(false);
-  }, []);
-
   const resetRoliascanFilters = useCallback(() => {
     setRoliascanIncludeGenres([]);
     setRoliascanExcludeGenres([]);
@@ -3459,13 +2669,6 @@ export default function LifeSyncManga() {
     : [];
 
   const currentItems = useMemo(() => {
-    if (false) {
-      if (tab === "following") return dexFollows;
-      if (tab === "library") return dexLibraryList;
-      if (tab === "popular") return popular;
-      if (tab === "recent") return recent;
-      if (tab === "search") return searchResults;
-    }
     if (source === "mangadistrict") {
       if (mdFilter.trim()) return mdSearchResults;
       return mdLatest?.data || [];
@@ -3480,12 +2683,6 @@ export default function LifeSyncManga() {
     return [];
   }, [
     source,
-    tab,
-    popular,
-    recent,
-    searchResults,
-    dexFollows,
-    dexLibraryList,
     roliascanRows,
     mdLatest,
     mdFilter,
@@ -3498,14 +2695,6 @@ export default function LifeSyncManga() {
   const mangaGridLoading = useMemo(() => {
     if (currentItems.length > 0) return false;
     if (busy) return true;
-    if (false) {
-      if (tab === "following" && dexFollowsBusy) return true;
-      if (tab === "library" && dexLibraryBusy) return true;
-      if (tab === "search" && committedSearchQuery.trim() && searching)
-        return true;
-      if (tab === "popular" && popularLoading) return true;
-      if (tab === "recent" && recentLoading) return true;
-    }
     if (source === "mangadistrict" && mdFilter.trim() && mdSearchBusy)
       return true;
     if (source === "roliascan" && roliascanLoading) return true;
@@ -3515,13 +2704,6 @@ export default function LifeSyncManga() {
     currentItems.length,
     busy,
     source,
-    tab,
-    dexFollowsBusy,
-    dexLibraryBusy,
-    committedSearchQuery,
-    searching,
-    popularLoading,
-    recentLoading,
     roliascanLoading,
     mdFilter,
     mdSearchBusy,
@@ -3529,18 +2711,8 @@ export default function LifeSyncManga() {
     dnaSearchBusy,
   ]);
 
-  const dexTabs = useMemo(() => {
-    const t = [...DEX_TABS, { id: "library", label: "Library" }];
-    if (dexAuthStatus?.connected)
-      t.push({ id: "following", label: "Following" });
-    if (committedSearchQuery.trim())
-      t.push({ id: "search", label: "Search Results" });
-    return t;
-  }, [dexAuthStatus?.connected, committedSearchQuery]);
-
-  const tabs = false
-    ? dexTabs
-    : source === "roliascan"
+  const tabs =
+    source === "roliascan"
       ? ROLIASCAN_TABS.map((t) => ({ id: t.id, label: t.label }))
       : [];
 
@@ -3574,13 +2746,23 @@ export default function LifeSyncManga() {
     () => ({
       [XBOX_GAMEPAD_BUTTONS.LB]: () => {
         if (!mangaCanPrevPage || busy) return;
-        const cur = source === "mangadistrict" ? mdCurPage : source === "mangadna" ? dnaCurPage : roliascanPage;
+        const cur =
+          source === "mangadistrict"
+            ? mdCurPage
+            : source === "mangadna"
+              ? dnaCurPage
+              : roliascanPage;
         goToPage(cur - 1);
         setFocusedCardIndex(0);
       },
       [XBOX_GAMEPAD_BUTTONS.RB]: () => {
         if (!mangaCanNextPage || busy) return;
-        const cur = source === "mangadistrict" ? mdCurPage : source === "mangadna" ? dnaCurPage : roliascanPage;
+        const cur =
+          source === "mangadistrict"
+            ? mdCurPage
+            : source === "mangadna"
+              ? dnaCurPage
+              : roliascanPage;
         goToPage(cur + 1);
         setFocusedCardIndex(0);
       },
@@ -3624,7 +2806,9 @@ export default function LifeSyncManga() {
     [
       busy,
       currentItems,
+      dnaCurPage,
       focusedCardIndex,
+      goToList,
       goToPage,
       mangaCanNextPage,
       mangaCanPrevPage,
@@ -3677,7 +2861,7 @@ export default function LifeSyncManga() {
               isLifeSyncConnected={isLifeSyncConnected}
               onClose={() => goToList({ replace: true })}
               onStartRead={handleStartRead}
-              roliascanConnected={Boolean(dexAuthStatus?.connected)}
+              roliascanConnected={false}
               browseTranslatedLang={
                 mangaEnglishReleasesOnly ? "en" : dexTranslatedLang
               }
@@ -3690,9 +2874,17 @@ export default function LifeSyncManga() {
           style={{ pointerEvents: selectedManga ? "none" : undefined }}
         >
           <MediaPageHeader
-            accent={source === "mangadistrict" || source === "mangadna" ? "hmanhwa" : "manga"}
+            accent={
+              source === "mangadistrict" || source === "mangadna"
+                ? "hmanhwa"
+                : "manga"
+            }
             kicker="LifeSync · Reading"
-            title={source === "mangadistrict" || source === "mangadna" ? "H Manhwa" : "Manga"}
+            title={
+              source === "mangadistrict" || source === "mangadna"
+                ? "H Manhwa"
+                : "Manga"
+            }
             subtitle="Browse manga, manhwa, and manhua  open chapters straight into the reader."
             icon={
               <svg
@@ -3730,7 +2922,12 @@ export default function LifeSyncManga() {
           <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 self-start rounded-2xl border border-(--color-border-soft) bg-(--color-surface-muted) p-1">
             {[
               { id: "roliascan", label: "Roliascan" },
-              ...(hManhwaEnabled ? [{ id: "mangadna", label: "MangaDNA" }, { id: "mangadistrict", label: "H Manhwa" }] : []),
+              ...(hManhwaEnabled
+                ? [
+                    { id: "mangadna", label: "MangaDNA" },
+                    { id: "mangadistrict", label: "H Manhwa" },
+                  ]
+                : []),
             ].map(({ id, label }) => (
               <button
                 key={id}
@@ -3743,7 +2940,7 @@ export default function LifeSyncManga() {
                 aria-pressed={source === id}
                 className={`rounded-xl px-3.5 py-1.5 text-[12px] font-bold transition-all ${
                   source === id
-                    ? "bg-(--color-primary) text-(--color-ink-strong) shadow-sm"
+                    ? "bg-primary text-(--color-ink-strong) shadow-sm"
                     : "text-(--color-text-secondary) hover:text-(--color-text-primary)"
                 }`}
               >
@@ -3770,7 +2967,7 @@ export default function LifeSyncManga() {
                   value={roliascanSearchQ}
                   onChange={(e) => setRoliascanSearchQ(e.target.value)}
                   placeholder="Search Roliascan…"
-                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-(--color-primary)/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-primary/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -3780,7 +2977,7 @@ export default function LifeSyncManga() {
                 >
                   Filters
                   {roliascanFilterBarCount > 0 && (
-                    <span className="rounded-full bg-(--color-primary)/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    <span className="rounded-full bg-primary/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
                       {roliascanFilterBarCount}
                     </span>
                   )}
@@ -3810,7 +3007,7 @@ export default function LifeSyncManga() {
                 )}
                 <button
                   type="submit"
-                  className="w-full sm:w-auto shrink-0 rounded-xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95"
+                  className="w-full sm:w-auto shrink-0 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95"
                 >
                   Search
                 </button>
@@ -3823,287 +3020,271 @@ export default function LifeSyncManga() {
                 count={roliascanFilterBarCount}
                 onReset={resetRoliascanFilters}
               >
-                    <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4">
-                      <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Sorting
-                        </p>
-                        <div className="grid grid-cols-2 gap-2">
+                <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4">
+                  <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Sorting
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                        Order
+                        <select
+                          value={roliascanOrderKey}
+                          onChange={(e) => setRoliascanOrderKey(e.target.value)}
+                          className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none"
+                        >
+                          {ROLIASCAN_ORDER_OPTIONS.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                        Direction
+                        <select
+                          value={roliascanOrderDir}
+                          onChange={(e) => setRoliascanOrderDir(e.target.value)}
+                          className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none"
+                        >
+                          <option value="desc">Descending</option>
+                          <option value="asc">Ascending</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                        Min chapter
+                        <input
+                          type="number"
+                          value={roliascanMinchap}
+                          onChange={(e) => setRoliascanMinchap(e.target.value)}
+                          className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
+                        />
+                      </label>
+                      {roliascanYears.length > 0 ? (
+                        <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                          Year
+                          <select
+                            value={roliascanYearFrom || ""}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setRoliascanYearFrom(v);
+                              setRoliascanYearTo(v);
+                            }}
+                            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
+                          >
+                            <option value="">Any year</option>
+                            {roliascanYears.map((y) => (
+                              <option key={String(y)} value={String(y)}>
+                                {String(y)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      ) : (
+                        <>
                           <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                            Order
-                            <select
-                              value={roliascanOrderKey}
-                              onChange={(e) =>
-                                setRoliascanOrderKey(e.target.value)
-                              }
-                              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
-                            >
-                              {ROLIASCAN_ORDER_OPTIONS.map((option) => (
-                                <option key={option.id} value={option.id}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                            Direction
-                            <select
-                              value={roliascanOrderDir}
-                              onChange={(e) =>
-                                setRoliascanOrderDir(e.target.value)
-                              }
-                              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
-                            >
-                              <option value="desc">Descending</option>
-                              <option value="asc">Ascending</option>
-                            </select>
-                          </label>
-                        </div>
-                        <div className="mt-3 grid grid-cols-3 gap-2">
-                          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                            Min chapter
+                            Year from
                             <input
                               type="number"
-                              value={roliascanMinchap}
+                              value={roliascanYearFrom}
                               onChange={(e) =>
-                                setRoliascanMinchap(e.target.value)
+                                setRoliascanYearFrom(e.target.value)
                               }
                               className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
                             />
                           </label>
-                          {roliascanYears.length > 0 ? (
-                            <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                              Year
-                              <select
-                                value={roliascanYearFrom || ""}
-                                onChange={(e) => {
-                                  const v = e.target.value;
-                                  setRoliascanYearFrom(v);
-                                  setRoliascanYearTo(v);
-                                }}
-                                className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
-                              >
-                                <option value="">Any year</option>
-                                {roliascanYears.map((y) => (
-                                  <option key={String(y)} value={String(y)}>
-                                    {String(y)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                          ) : (
-                            <>
-                              <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                                Year from
-                                <input
-                                  type="number"
-                                  value={roliascanYearFrom}
-                                  onChange={(e) =>
-                                    setRoliascanYearFrom(e.target.value)
-                                  }
-                                  className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
-                                />
-                              </label>
-                              <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                                Year to
-                                <input
-                                  type="number"
-                                  value={roliascanYearTo}
-                                  onChange={(e) =>
-                                    setRoliascanYearTo(e.target.value)
-                                  }
-                                  className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
-                                />
-                              </label>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Authors & Artists
-                        </p>
-                        <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                          Authors (comma separated)
-                          <input
-                            type="text"
-                            value={roliascanAuthorsInput}
-                            onChange={(e) =>
-                              setRoliascanAuthorsInput(e.target.value)
-                            }
-                            placeholder="eiichiro oda, ..."
-                            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
-                          />
-                        </label>
-                        <label className="mt-2 text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                          Artists (comma separated)
-                          <input
-                            type="text"
-                            value={roliascanArtistsInput}
-                            onChange={(e) =>
-                              setRoliascanArtistsInput(e.target.value)
-                            }
-                            placeholder="artist slug, ..."
-                            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
-                          />
-                        </label>
-                      </div>
-
-                      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Genres
-                        </p>
-                        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                          {roliascanGenreTerms.slice(0, 240).map((term) => {
-                            const key = roliascanTermToken(term);
-                            const title = String(
-                              term.title || term.slug || key,
-                            );
-                            if (!key || !title) return null;
-                            const included =
-                              roliascanIncludeGenres.includes(key);
-                            const excluded =
-                              roliascanExcludeGenres.includes(key);
-                            return (
-                              <button
-                                key={`cg-${key}`}
-                                type="button"
-                                onClick={() => cycleRoliascanGenre(key)}
-                                onContextMenu={(event) => {
-                                  event.preventDefault();
-                                  toggleRoliascanGenre(key, "exclude");
-                                }}
-                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                  included
-                                    ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                    : excluded
-                                      ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                                }`}
-                              >
-                                {title}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <p className="text-[11px] text-(--color-text-secondary)">
-                          Tap cycles include → exclude → clear. Right-click
-                          toggles exclude.
-                        </p>
-                      </div>
-
-                      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Tags
-                        </p>
-                        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                          {roliascanFormatTerms.slice(0, 240).map((term) => {
-                            const key = roliascanTermToken(term);
-                            const title = String(
-                              term.title || term.slug || key,
-                            );
-                            if (!key || !title) return null;
-                            const included = roliascanIncludeTags.includes(key);
-                            const excluded = roliascanExcludeTags.includes(key);
-                            return (
-                              <button
-                                key={`ct-${key}`}
-                                type="button"
-                                onClick={() => cycleRoliascanTag(key)}
-                                onContextMenu={(event) => {
-                                  event.preventDefault();
-                                  toggleRoliascanTag(key, "exclude");
-                                }}
-                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                  included
-                                    ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                    : excluded
-                                      ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                                }`}
-                              >
-                                {title}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <p className="text-[11px] text-(--color-text-secondary)">
-                          Tap cycles include → exclude → clear. Right-click
-                          toggles exclude.
-                        </p>
-                      </div>
-
-                      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Demographics & Status
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {roliascanDemographicTerms
-                            .slice(0, 120)
-                            .map((term) => {
-                              const key = roliascanTermToken(term);
-                              const title = String(
-                                term.title || term.slug || key,
-                              );
-                              if (!key || !title) return null;
-                              const included =
-                                roliascanIncludeDemographics.includes(key);
-                              const excluded =
-                                roliascanExcludeDemographics.includes(key);
-                              return (
-                                <button
-                                  key={`cd-${key}`}
-                                  type="button"
-                                  onClick={() => cycleRoliascanDemographic(key)}
-                                  onContextMenu={(event) => {
-                                    event.preventDefault();
-                                    toggleRoliascanDemographic(key, "exclude");
-                                  }}
-                                  className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                    included
-                                      ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                      : excluded
-                                        ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                        : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                                  }`}
-                                >
-                                  {title}
-                                </button>
-                              );
-                            })}
-                        </div>
-                        <p className="text-[11px] text-(--color-text-secondary)">
-                          Tap cycles include → exclude → clear. Right-click
-                          toggles exclude.
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {roliascanStatusTerms.map((status) => {
-                            const key = String(
-                              status.id || status.slug || status.title || "",
-                            ).trim();
-                            const title = String(
-                              status.title || status.slug || key,
-                            );
-                            if (!key || !title) return null;
-                            return (
-                              <button
-                                key={`cs-${key}`}
-                                type="button"
-                                onClick={() => toggleRoliascanStatus(key)}
-                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                  roliascanStatuses.includes(key)
-                                    ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                    : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                                }`}
-                              >
-                                {title}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                            Year to
+                            <input
+                              type="number"
+                              value={roliascanYearTo}
+                              onChange={(e) =>
+                                setRoliascanYearTo(e.target.value)
+                              }
+                              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
+                            />
+                          </label>
+                        </>
+                      )}
                     </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
+                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Authors & Artists
+                    </p>
+                    <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                      Authors (comma separated)
+                      <input
+                        type="text"
+                        value={roliascanAuthorsInput}
+                        onChange={(e) =>
+                          setRoliascanAuthorsInput(e.target.value)
+                        }
+                        placeholder="eiichiro oda, ..."
+                        className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
+                      />
+                    </label>
+                    <label className="mt-2 text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                      Artists (comma separated)
+                      <input
+                        type="text"
+                        value={roliascanArtistsInput}
+                        onChange={(e) =>
+                          setRoliascanArtistsInput(e.target.value)
+                        }
+                        placeholder="artist slug, ..."
+                        className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Genres
+                    </p>
+                    <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                      {roliascanGenreTerms.slice(0, 240).map((term) => {
+                        const key = roliascanTermToken(term);
+                        const title = String(term.title || term.slug || key);
+                        if (!key || !title) return null;
+                        const included = roliascanIncludeGenres.includes(key);
+                        const excluded = roliascanExcludeGenres.includes(key);
+                        return (
+                          <button
+                            key={`cg-${key}`}
+                            type="button"
+                            onClick={() => cycleRoliascanGenre(key)}
+                            onContextMenu={(event) => {
+                              event.preventDefault();
+                              toggleRoliascanGenre(key, "exclude");
+                            }}
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                              included
+                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                                : excluded
+                                  ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                            }`}
+                          >
+                            {title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-(--color-text-secondary)">
+                      Tap cycles include → exclude → clear. Right-click toggles
+                      exclude.
+                    </p>
+                  </div>
+
+                  <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Tags
+                    </p>
+                    <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                      {roliascanFormatTerms.slice(0, 240).map((term) => {
+                        const key = roliascanTermToken(term);
+                        const title = String(term.title || term.slug || key);
+                        if (!key || !title) return null;
+                        const included = roliascanIncludeTags.includes(key);
+                        const excluded = roliascanExcludeTags.includes(key);
+                        return (
+                          <button
+                            key={`ct-${key}`}
+                            type="button"
+                            onClick={() => cycleRoliascanTag(key)}
+                            onContextMenu={(event) => {
+                              event.preventDefault();
+                              toggleRoliascanTag(key, "exclude");
+                            }}
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                              included
+                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                                : excluded
+                                  ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                            }`}
+                          >
+                            {title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-(--color-text-secondary)">
+                      Tap cycles include → exclude → clear. Right-click toggles
+                      exclude.
+                    </p>
+                  </div>
+
+                  <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Demographics & Status
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {roliascanDemographicTerms.slice(0, 120).map((term) => {
+                        const key = roliascanTermToken(term);
+                        const title = String(term.title || term.slug || key);
+                        if (!key || !title) return null;
+                        const included =
+                          roliascanIncludeDemographics.includes(key);
+                        const excluded =
+                          roliascanExcludeDemographics.includes(key);
+                        return (
+                          <button
+                            key={`cd-${key}`}
+                            type="button"
+                            onClick={() => cycleRoliascanDemographic(key)}
+                            onContextMenu={(event) => {
+                              event.preventDefault();
+                              toggleRoliascanDemographic(key, "exclude");
+                            }}
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                              included
+                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                                : excluded
+                                  ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                            }`}
+                          >
+                            {title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-(--color-text-secondary)">
+                      Tap cycles include → exclude → clear. Right-click toggles
+                      exclude.
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {roliascanStatusTerms.map((status) => {
+                        const key = String(
+                          status.id || status.slug || status.title || "",
+                        ).trim();
+                        const title = String(
+                          status.title || status.slug || key,
+                        );
+                        if (!key || !title) return null;
+                        return (
+                          <button
+                            key={`cs-${key}`}
+                            type="button"
+                            onClick={() => toggleRoliascanStatus(key)}
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                              roliascanStatuses.includes(key)
+                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                                : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                            }`}
+                          >
+                            {title}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               </FilterDrawer>
             </div>
           )}
@@ -4122,7 +3303,7 @@ export default function LifeSyncManga() {
                   value={mdFilter}
                   onChange={(e) => setMdFilter(e.target.value)}
                   placeholder="Search Manga District…"
-                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-(--color-primary)/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-primary/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -4132,7 +3313,7 @@ export default function LifeSyncManga() {
                 >
                   Filters
                   {mdFilterBarCount > 0 && (
-                    <span className="rounded-full bg-(--color-primary)/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    <span className="rounded-full bg-primary/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
                       {mdFilterBarCount}
                     </span>
                   )}
@@ -4154,7 +3335,7 @@ export default function LifeSyncManga() {
                 <button
                   type="submit"
                   disabled={mdSearchBusy && Boolean(mdFilter.trim())}
-                  className="shrink-0 rounded-xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50"
                 >
                   {mdSearchBusy && mdFilter.trim() ? "Searching..." : "Search"}
                 </button>
@@ -4186,113 +3367,111 @@ export default function LifeSyncManga() {
                 title="Manga District filters"
                 count={mdFilterBarCount}
               >
-                    <div className="min-w-0 max-w-full space-y-4">
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Section
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {["latest", "censored", "uncensored"].map((s) => (
-                            <button
-                              key={s}
-                              type="button"
-                              onClick={() => setMdSection(s)}
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-                                mdSection === s
-                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                              }`}
-                            >
-                              {s === "latest" ? "All Latest" : s}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-[11px] text-(--color-text-secondary)">
-                          Section applies when no type is selected (latest
-                          releases feed). Censored still filters out uncensored
-                          rows from listings.
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Type of manga
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {MD_TYPE_OPTIONS.map(({ slug, label }) => (
-                            <button
-                              key={slug}
-                              type="button"
-                              onClick={() =>
-                                setMdTypeSlug((prev) =>
-                                  prev === slug ? "" : slug,
-                                )
-                              }
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                mdTypeSlug === slug
-                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Order by
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {MD_ORDER_BY_OPTIONS.map(({ id, label }) => (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() => {
-                                setMdBrowse(id);
-                                goToPage(1);
-                              }}
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                mdBrowse === id
-                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Filters
-                        </p>
-                        <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                          {MD_FILTER_OPTIONS.map(({ slug, label }) => (
-                            <button
-                              key={slug}
-                              type="button"
-                              onClick={() =>
-                                setMdFilterGenre((prev) =>
-                                  prev === slug ? "" : slug,
-                                )
-                              }
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                mdFilterGenre === slug
-                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-[11px] text-(--color-text-secondary)">
-                          {
-                            "With a type selected, the tag narrows via the site's genre filter. With no type, the tag becomes the main browse path."
-                          }
-                        </p>
-                      </div>
+                <div className="min-w-0 max-w-full space-y-4">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Section
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {["latest", "censored", "uncensored"].map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setMdSection(s)}
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
+                            mdSection === s
+                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                          }`}
+                        >
+                          {s === "latest" ? "All Latest" : s}
+                        </button>
+                      ))}
                     </div>
+                    <p className="text-[11px] text-(--color-text-secondary)">
+                      Section applies when no type is selected (latest releases
+                      feed). Censored still filters out uncensored rows from
+                      listings.
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Type of manga
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {MD_TYPE_OPTIONS.map(({ slug, label }) => (
+                        <button
+                          key={slug}
+                          type="button"
+                          onClick={() =>
+                            setMdTypeSlug((prev) => (prev === slug ? "" : slug))
+                          }
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            mdTypeSlug === slug
+                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Order by
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {MD_ORDER_BY_OPTIONS.map(({ id, label }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => {
+                            setMdBrowse(id);
+                            goToPage(1);
+                          }}
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            mdBrowse === id
+                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Filters
+                    </p>
+                    <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                      {MD_FILTER_OPTIONS.map(({ slug, label }) => (
+                        <button
+                          key={slug}
+                          type="button"
+                          onClick={() =>
+                            setMdFilterGenre((prev) =>
+                              prev === slug ? "" : slug,
+                            )
+                          }
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            mdFilterGenre === slug
+                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-(--color-text-secondary)">
+                      {
+                        "With a type selected, the tag narrows via the site's genre filter. With no type, the tag becomes the main browse path."
+                      }
+                    </p>
+                  </div>
+                </div>
               </FilterDrawer>
             </div>
           )}
@@ -4309,7 +3488,7 @@ export default function LifeSyncManga() {
                   value={dnaFilter}
                   onChange={(e) => setDnaFilter(e.target.value)}
                   placeholder="Search MangaDNA…"
-                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-(--color-primary)/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-primary/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
                 />
                 <button
                   type="button"
@@ -4318,8 +3497,9 @@ export default function LifeSyncManga() {
                   className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2.5 text-[13px] font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-surface-muted)"
                 >
                   Filters
-                  {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0) > 0 && (
-                    <span className="rounded-full bg-(--color-primary)/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                  {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0) >
+                    0 && (
+                    <span className="rounded-full bg-primary/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
                       {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0)}
                     </span>
                   )}
@@ -4331,15 +3511,21 @@ export default function LifeSyncManga() {
                     strokeWidth="2"
                     aria-hidden
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12M10 19h4" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M3 5h18M6 12h12M10 19h4"
+                    />
                   </svg>
                 </button>
                 <button
                   type="submit"
                   disabled={dnaSearchBusy && Boolean(dnaFilter.trim())}
-                  className="shrink-0 rounded-xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-primary px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50"
                 >
-                  {dnaSearchBusy && dnaFilter.trim() ? "Searching..." : "Search"}
+                  {dnaSearchBusy && dnaFilter.trim()
+                    ? "Searching..."
+                    : "Search"}
                 </button>
               </form>
               {!dnaFilter.trim() && (
@@ -4351,7 +3537,10 @@ export default function LifeSyncManga() {
                     size="dense"
                     ariaLabel="MangaDNA sort order"
                     layoutId="lifesync-manga-dna-order-by"
-                    items={MANGADNA_ORDER_BY_OPTIONS.map((o) => ({ id: o.id, label: o.label }))}
+                    items={MANGADNA_ORDER_BY_OPTIONS.map((o) => ({
+                      id: o.id,
+                      label: o.label,
+                    }))}
                     activeId={dnaOrderBy}
                     onSelect={(id) => {
                       setDnaOrderBy(id);
@@ -4367,67 +3556,77 @@ export default function LifeSyncManga() {
                 title="MangaDNA filters"
                 count={(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0)}
               >
-                    <div className="min-w-0 max-w-full space-y-4">
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                          Order by
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {MANGADNA_ORDER_BY_OPTIONS.map(({ id, label }) => (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() => { setDnaOrderBy(id); setDnaPage(1); goToPage(1); }}
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                dnaOrderBy === id
-                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                              }`}
-                            >
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      {dnaGenres.length > 0 && (
-                        <div className="space-y-1.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                            Genre
-                          </p>
-                          <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                            <button
-                              type="button"
-                              onClick={() => { setDnaGenre(""); setDnaPage(1); goToPage(1); }}
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                !dnaGenre
-                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                              }`}
-                            >
-                              All
-                            </button>
-                            {dnaGenres.map((g) => (
-                              <button
-                                key={g.slug || g.id}
-                                type="button"
-                                onClick={() => {
-                                  setDnaGenre((prev) => prev === (g.slug || g.id) ? "" : (g.slug || g.id));
-                                  setDnaPage(1);
-                                  goToPage(1);
-                                }}
-                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                  dnaGenre === (g.slug || g.id)
-                                    ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
-                                    : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                                }`}
-                              >
-                                {g.title || g.name || g.slug}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                <div className="min-w-0 max-w-full space-y-4">
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                      Order by
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {MANGADNA_ORDER_BY_OPTIONS.map(({ id, label }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => {
+                            setDnaOrderBy(id);
+                            setDnaPage(1);
+                            goToPage(1);
+                          }}
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            dnaOrderBy === id
+                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
                     </div>
+                  </div>
+                  {dnaGenres.length > 0 && (
+                    <div className="space-y-1.5">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+                        Genre
+                      </p>
+                      <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDnaGenre("");
+                            setDnaPage(1);
+                            goToPage(1);
+                          }}
+                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            !dnaGenre
+                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                          }`}
+                        >
+                          All
+                        </button>
+                        {dnaGenres.map((g) => (
+                          <button
+                            key={g.slug || g.id}
+                            type="button"
+                            onClick={() => {
+                              setDnaGenre((prev) =>
+                                prev === (g.slug || g.id) ? "" : g.slug || g.id,
+                              );
+                              setDnaPage(1);
+                              goToPage(1);
+                            }}
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                              dnaGenre === (g.slug || g.id)
+                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                                : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                            }`}
+                          >
+                            {g.title || g.name || g.slug}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </FilterDrawer>
             </div>
           )}
@@ -4508,7 +3707,6 @@ export default function LifeSyncManga() {
             />
           )}
 
-
           {/* Content grid  only this block animates on source/tab change */}
           <AnimatePresence mode="wait">
             <MotionDiv
@@ -4536,7 +3734,7 @@ export default function LifeSyncManga() {
                         data-focused-card={
                           focusedCardIndex === i ? "true" : undefined
                         }
-                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-(--color-primary) ring-offset-2" : ""}`}
+                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-primary ring-offset-2" : ""}`}
                         variants={lifeSyncStaggerItemFade}
                       >
                         <MangaCard
@@ -4559,7 +3757,7 @@ export default function LifeSyncManga() {
                         data-focused-card={
                           focusedCardIndex === i ? "true" : undefined
                         }
-                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-(--color-primary) ring-offset-2" : ""}`}
+                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-primary ring-offset-2" : ""}`}
                       >
                         <MangaCard
                           manga={{ ...manga, source: manga.source || source }}

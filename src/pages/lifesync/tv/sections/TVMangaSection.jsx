@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { lifesyncFetch } from '../../../../lib/lifesyncApi'
 import { TVCard, TVCardSkeleton, TVPageHints } from '../TVCard'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
+import { useTVCardSelect } from '../useTVCardSelect'
 
 const COLS = 5
 const TYPE_OPTIONS = [
@@ -123,16 +124,20 @@ export function TVMangaSection({ focusPos, onItemSelect, enabled, filterOpen, on
         onRegisterFilter?.({ title: 'Manga Filters', filterConfig, filters, onFilterChange: handleFilterChange })
     }, [filterConfig, filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
+    const detailItems = useMemo(() => items.map(m => buildMangaDetailItem(m, typeOption)), [items, typeOption])
+
     const focusedItem = useMemo(() => {
         if (filterOpen) return null
         const idx = focusPos.row * COLS + focusPos.col
-        return buildMangaDetailItem(items[idx], typeOption)
-    }, [filterOpen, focusPos.col, focusPos.row, items, typeOption])
+        return detailItems[idx] || null
+    }, [filterOpen, focusPos.col, focusPos.row, detailItems])
 
     useEffect(() => {
         if (!enabled) return
         onFocusedItemChange?.(focusedItem)
     }, [enabled, focusedItem, onFocusedItemChange])
+
+    const getSelectHandler = useTVCardSelect(detailItems, onItemSelect)
 
     return (
         <div className="relative">
@@ -144,7 +149,6 @@ export function TVMangaSection({ focusPos, onItemSelect, enabled, filterOpen, on
                         const row = Math.floor(i / COLS)
                         const col = i % COLS
                         const focused = !filterOpen && focusPos.row === row && focusPos.col === col
-                        const detailItem = buildMangaDetailItem(manga, typeOption)
                         const chCount = manga.totalChapters || manga.chapterCount || manga.chapters
                         const badge = chCount ? `CH ${chCount}` : undefined
                         const subtitle = [typeOption?.label, manga.status].filter(Boolean).join(' · ') || undefined
@@ -157,7 +161,7 @@ export function TVMangaSection({ focusPos, onItemSelect, enabled, filterOpen, on
                                     subtitle={subtitle}
                                     ratingBadge={manga.contentRating}
                                     focused={focused}
-                                    onSelect={() => detailItem && onItemSelect(detailItem)}
+                                    onSelect={getSelectHandler(i)}
                                 />
                             </div>
                         )

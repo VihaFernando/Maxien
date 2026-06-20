@@ -48,6 +48,12 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
         document.querySelector('[data-focused-filter-chip="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
     }, [activeChipIndex, rowIndex])
 
+    // Clear the pending search-blur timer on unmount so it can't fire setState
+    // after the panel closes (React warning + retained closure over stale state).
+    useEffect(() => () => {
+        if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current)
+    }, [])
+
     const toggleChipValue = (row, value) => {
         const current = Array.isArray(filters[row.id]) ? filters[row.id] : []
         const next = current.includes(value)

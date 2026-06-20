@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { lifesyncFetch } from '../../../../lib/lifesyncApi'
 import { TVCard, TVCardSkeleton, TVPageHints } from '../TVCard'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
+import { useTVCardSelect } from '../useTVCardSelect'
 
 const COLS = 5
 const DEFAULT_FILTERS = { genre: '', year: '' }
@@ -89,16 +90,20 @@ export function TVHentaiSection({ focusPos, onItemSelect, enabled, filterOpen, o
         onRegisterFilter?.({ title: 'Hentai Filters', filterConfig, filters, onFilterChange: handleFilterChange })
     }, [filterConfig, filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
+    const detailItems = useMemo(() => items.map(buildHentaiDetailItem), [items])
+
     const focusedItem = useMemo(() => {
         if (filterOpen) return null
         const idx = focusPos.row * COLS + focusPos.col
-        return buildHentaiDetailItem(items[idx])
-    }, [filterOpen, focusPos.col, focusPos.row, items])
+        return detailItems[idx] || null
+    }, [filterOpen, focusPos.col, focusPos.row, detailItems])
 
     useEffect(() => {
         if (!enabled) return
         onFocusedItemChange?.(focusedItem)
     }, [enabled, focusedItem, onFocusedItemChange])
+
+    const getSelectHandler = useTVCardSelect(detailItems, onItemSelect)
 
     return (
         <div className="relative">
@@ -112,7 +117,6 @@ export function TVHentaiSection({ focusPos, onItemSelect, enabled, filterOpen, o
                         const focused = !filterOpen && focusPos.row === rowIdx && focusPos.col === colIdx
                         const key = series.seriesKey || series.slug || i
                         const epCount = series.episodeCount || series.episodes?.length
-                        const detailItem = buildHentaiDetailItem(series)
                         const subtitle = series.year ? String(series.year) : undefined
                         return (
                             <div key={key} data-focused-card={focused ? 'true' : undefined}>
@@ -123,7 +127,7 @@ export function TVHentaiSection({ focusPos, onItemSelect, enabled, filterOpen, o
                                     subtitle={subtitle}
                                     ratingBadge="18+"
                                     focused={focused}
-                                    onSelect={() => detailItem && onItemSelect(detailItem)}
+                                    onSelect={getSelectHandler(i)}
                                 />
                             </div>
                         )

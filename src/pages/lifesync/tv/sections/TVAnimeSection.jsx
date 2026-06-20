@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { lifesyncFetch } from '../../../../lib/lifesyncApi'
 import { TVCard, TVCardSkeleton, TVPageHints } from '../TVCard'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
+import { useTVCardSelect } from '../useTVCardSelect'
 
 const COLS = 5
 const BROWSE_TYPE_OPTIONS = [
@@ -139,16 +140,24 @@ export function TVAnimeSection({ focusPos, onItemSelect, enabled, filterOpen, on
         onRegisterFilter?.({ title: 'Anime Filters', filterConfig, filters, onFilterChange: handleFilterChange })
     }, [filterConfig, filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Precompute one detail item per card so TVCard's memo isn't defeated by a
+    // fresh object on every focus move, and so onSelect closures stay stable.
+    const detailItems = useMemo(() => items.map(buildAnimeDetailItem), [items])
+
     const focusedItem = useMemo(() => {
         if (filterOpen) return null
         const idx = focusPos.row * COLS + focusPos.col
-        return buildAnimeDetailItem(items[idx])
-    }, [filterOpen, focusPos.col, focusPos.row, items])
+        return detailItems[idx] || null
+    }, [filterOpen, focusPos.col, focusPos.row, detailItems])
 
     useEffect(() => {
         if (!enabled) return
         onFocusedItemChange?.(focusedItem)
     }, [enabled, focusedItem, onFocusedItemChange])
+
+    // Stable per-card select handlers so memoized cards don't re-render when an
+    // unrelated card gains/loses focus.
+    const getSelectHandler = useTVCardSelect(detailItems, onItemSelect)
 
     if (loading && items.length === 0) {
         return <div className="grid grid-cols-5 gap-5">{Array.from({ length: 10 }).map((_, i) => <TVCardSkeleton key={i} />)}</div>
@@ -161,7 +170,7 @@ export function TVAnimeSection({ focusPos, onItemSelect, enabled, filterOpen, on
                     const row = Math.floor(i / COLS)
                     const col = i % COLS
                     const focused = !filterOpen && focusPos.row === row && focusPos.col === col
-                    const detailItem = buildAnimeDetailItem(node)
+                    const detailItem = detailItems[i]
                     const epCount = node?.num_episodes || node?.episodes
                     const badge = epCount ? `EP ${epCount}` : undefined
                     const typePart = node?.type || node?.media_type
@@ -177,7 +186,7 @@ export function TVAnimeSection({ focusPos, onItemSelect, enabled, filterOpen, on
                                 subtitle={subtitle}
                                 score={score}
                                 focused={focused}
-                                onSelect={() => detailItem && onItemSelect(detailItem)}
+                                onSelect={getSelectHandler(i)}
                             />
                         </div>
                     )

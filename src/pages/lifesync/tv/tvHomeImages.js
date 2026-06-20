@@ -12,12 +12,27 @@ const MIN_USABLE_POOL = 4
 // Shape: Map<tabId, string[]>
 const _sessionImages = new Map()
 // Shape: Map<url, { w: number, h: number } | null>
+// Bounded (LRU-ish) so a long-lived tab that probes thousands of covers can't
+// grow this Map without limit. Resolution data is URL-stable, so trimming the
+// oldest entries only costs a re-probe if those exact URLs reappear.
 const _resolutionCache = new Map()
+const MAX_RESOLUTION_CACHE = 600
 
 /** Call this when the user exits TV mode to free memory and force a fresh fetch next time. */
 export function clearTVHomeImagesCache() {
     _sessionImages.clear()
     // Keep _resolutionCache  resolution data is URL-stable across sessions.
+}
+
+/** Insert into the resolution cache, evicting the oldest entries past the cap. */
+function setResolution(url, value) {
+    // Re-insert at the tail so existing entries refresh their recency.
+    if (_resolutionCache.has(url)) _resolutionCache.delete(url)
+    _resolutionCache.set(url, value)
+    while (_resolutionCache.size > MAX_RESOLUTION_CACHE) {
+        const oldest = _resolutionCache.keys().next().value
+        _resolutionCache.delete(oldest)
+    }
 }
 
 // ─── fallback pool ────────────────────────────────────────────────────────────
@@ -100,15 +115,22 @@ export function probeImageResolutions(urls) {
     if (!pending.length) return Promise.resolve()
     return Promise.all(pending.map(url =>
         new Promise(resolve => {
-            const img = new Image()
-            img.onload = () => {
-                _resolutionCache.set(url, { w: img.naturalWidth, h: img.naturalHeight })
+            let img = new Image()
+            const settle = (value) => {
+                if (!img) return
+                setResolution(url, value)
+                // Detach handlers and drop the src so the decoded bitmap and the
+                // element itself become eligible for GC immediately. Without this,
+                // probing thousands of covers over a long session keeps every
+                // Image (and its pixels) alive until the whole module unloads.
+                img.onload = null
+                img.onerror = null
+                img.src = ''
+                img = null
                 resolve()
             }
-            img.onerror = () => {
-                _resolutionCache.set(url, null)
-                resolve()
-            }
+            img.onload = () => settle({ w: img.naturalWidth, h: img.naturalHeight })
+            img.onerror = () => settle(null)
             img.src = url
         })
     ))

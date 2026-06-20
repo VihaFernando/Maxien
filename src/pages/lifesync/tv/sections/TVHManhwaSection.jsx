@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { lifesyncFetch } from '../../../../lib/lifesyncApi'
 import { TVCard, TVCardSkeleton, TVPageHints } from '../TVCard'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
+import { useTVCardSelect } from '../useTVCardSelect'
 
 const COLS = 5
 const SECTION_OPTIONS = [
@@ -138,16 +139,20 @@ export function TVHManhwaSection({ focusPos, onItemSelect, enabled, filterOpen, 
         onRegisterFilter?.({ title: 'H Manhwa Filters', filterConfig, filters, onFilterChange: handleFilterChange })
     }, [filterConfig, filters]) // eslint-disable-line react-hooks/exhaustive-deps
 
+    const detailItems = useMemo(() => items.map(buildHManhwaDetailItem), [items])
+
     const focusedItem = useMemo(() => {
         if (filterOpen) return null
         const idx = focusPos.row * COLS + focusPos.col
-        return buildHManhwaDetailItem(items[idx])
-    }, [filterOpen, focusPos.col, focusPos.row, items])
+        return detailItems[idx] || null
+    }, [filterOpen, focusPos.col, focusPos.row, detailItems])
 
     useEffect(() => {
         if (!enabled) return
         onFocusedItemChange?.(focusedItem)
     }, [enabled, focusedItem, onFocusedItemChange])
+
+    const getSelectHandler = useTVCardSelect(detailItems, onItemSelect)
 
     return (
         <div className="relative">
@@ -160,7 +165,6 @@ export function TVHManhwaSection({ focusPos, onItemSelect, enabled, filterOpen, 
                         const col = i % COLS
                         const focused = !filterOpen && focusPos.row === row && focusPos.col === col
                         const id = manga.id || manga.slug
-                        const detailItem = buildHManhwaDetailItem(manga)
                         const typeLabel = TYPE_OPTIONS.find(o => o.id === manga.type)?.label
                         const subtitle = [typeLabel, manga.status].filter(Boolean).join(' · ') || undefined
                         return (
@@ -172,7 +176,7 @@ export function TVHManhwaSection({ focusPos, onItemSelect, enabled, filterOpen, 
                                     subtitle={subtitle}
                                     ratingBadge={manga.contentRating || 'mature'}
                                     focused={focused}
-                                    onSelect={() => detailItem && onItemSelect(detailItem)}
+                                    onSelect={getSelectHandler(i)}
                                 />
                             </div>
                         )

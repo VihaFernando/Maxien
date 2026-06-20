@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { LifesyncEpisodeThumbnail } from '../../../components/lifesync/EpisodeLoadingSkeletons'
 import useLifeSyncInputSource from '../../../hooks/useLifeSyncInputSource'
 import { tvHintLabel } from '../../../lib/lifeSyncKeyboardGamepad'
@@ -10,7 +11,11 @@ function resolveRatingLabel(contentRating) {
     return null
 }
 
-export function TVCard({ imageUrl, title, badge, ratingBadge, score, subtitle, focused, onSelect, aspectRatio = '2/3' }) {
+// Memoized: section grids re-render on every focus move, but only the two cards
+// whose `focused` flag actually changed need to repaint. All props are primitives
+// except `onSelect`, which callers must keep stable (see section components) for
+// this memo to bite.
+export const TVCard = memo(function TVCard({ imageUrl, title, badge, ratingBadge, score, subtitle, focused, onSelect, aspectRatio = '2/3' }) {
     const ratingLabel = resolveRatingLabel(ratingBadge)
     return (
         <div
@@ -105,7 +110,7 @@ export function TVCard({ imageUrl, title, badge, ratingBadge, score, subtitle, f
             </div>
         </div>
     )
-}
+})
 
 /**
  * Page indicator + prev/next hint chips shown under section grids.

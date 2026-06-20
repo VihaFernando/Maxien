@@ -4,6 +4,7 @@ import { useMangaReadingList } from '../../../../hooks/useMangaReadingList'
 import { useLifeSync } from '../../../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, lifesyncFetch } from '../../../../lib/lifesyncApi'
 import { TVCard, TVCardSkeleton } from '../TVCard'
+import { useTVCardSelect } from '../useTVCardSelect'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
 
 const COLS = 5
@@ -206,16 +207,23 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
         })
     }, [currentFilterConfig, currentFilters, subTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
+    const detailItems = useMemo(
+        () => displayItems.map(entry => buildHistoryDetailItem(entry, subTab)),
+        [displayItems, subTab],
+    )
+
     const focusedItem = useMemo(() => {
         if (filterOpen) return null
         const idx = focusPos.row * COLS + focusPos.col
-        return buildHistoryDetailItem(displayItems[idx], subTab)
-    }, [displayItems, filterOpen, focusPos.col, focusPos.row, subTab])
+        return detailItems[idx] || null
+    }, [detailItems, filterOpen, focusPos.col, focusPos.row])
 
     useEffect(() => {
         if (!enabled) return
         onFocusedItemChange?.(focusedItem)
     }, [enabled, focusedItem, onFocusedItemChange])
+
+    const getSelectHandler = useTVCardSelect(detailItems, onItemSelect)
 
     return (
         <div className="relative">
@@ -227,7 +235,7 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
                         type="button"
                         onClick={() => setSubTab(tab.id)}
                         className={`rounded-xl px-5 py-2.5 text-[15px] font-black transition-all ${
-                            subTab === tab.id ? 'bg-[var(--mx-color-c6ff00)] text-black' : 'bg-white/8 text-white/50'
+                            subTab === tab.id ? 'bg-(--mx-color-c6ff00) text-black' : 'bg-white/8 text-white/50'
                         }`}
                     >
                         {tab.label}
@@ -249,7 +257,6 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
                         const row = Math.floor(i / COLS)
                         const col = i % COLS
                         const focused = !filterOpen && focusPos.row === row && focusPos.col === col
-                        const detailItem = buildHistoryDetailItem(entry, subTab)
 
                         if (subTab === 'anime') {
                             const badge = entry.lastEpisodeNumber != null ? `EP ${entry.lastEpisodeNumber}` : undefined
@@ -262,7 +269,7 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
                                         badge={badge}
                                         subtitle={subtitle}
                                         focused={focused}
-                                        onSelect={() => detailItem && onItemSelect(detailItem)}
+                                        onSelect={getSelectHandler(i)}
                                     />
                                 </div>
                             )
@@ -281,7 +288,7 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
                                     badge={badge}
                                     subtitle={subtitle}
                                     focused={focused}
-                                    onSelect={() => detailItem && onItemSelect(detailItem)}
+                                    onSelect={getSelectHandler(i)}
                                 />
                             </div>
                         )
