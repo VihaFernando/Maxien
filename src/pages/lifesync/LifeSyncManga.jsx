@@ -1265,13 +1265,14 @@ function MangaDetail({
     const chapterEl = currentChapterButtonRef.current;
     if (!listEl || !chapterEl) return;
     didAutoScrollCurrentChapterRef.current = true;
-    requestAnimationFrame(() => {
+    const raf = requestAnimationFrame(() => {
       const top =
         chapterEl.offsetTop -
         listEl.clientHeight / 2 +
         chapterEl.clientHeight / 2;
       listEl.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
     });
+    return () => cancelAnimationFrame(raf);
   }, [chapBusy, displayChapters, highlightedChapterId]);
 
   // D-pad chapter navigation  must be before early returns (rules of hooks)

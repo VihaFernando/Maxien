@@ -35,13 +35,16 @@ export function TVMangaDNASection({ focusPos, onItemSelect, enabled, filterOpen,
 
     // Load genres once
     useEffect(() => {
-        if (!enabled) return
+        if (!enabled) return undefined
+        let cancelled = false
         lifesyncFetch('/api/v1/manga/mangadna/terms?view=full')
             .then(data => {
+                if (cancelled) return
                 const genres = Array.isArray(data?.genres) ? data.genres : []
                 setGenreOptions([{ id: '', label: 'All genres' }, ...genres.map(g => ({ id: g.slug || g.id, label: g.title || g.slug }))])
             })
             .catch(() => {})
+        return () => { cancelled = true }
     }, [enabled])
 
     useEffect(() => {
