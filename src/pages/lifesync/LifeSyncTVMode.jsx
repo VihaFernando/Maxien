@@ -567,7 +567,7 @@ function LifeSyncTVModeInner({ onExit }) {
     const prevTabIdRef = useRef(activeTab?.id)
     if (prevTabIdRef.current !== activeTab?.id) {
         prevTabIdRef.current = activeTab?.id
-        // These are synchronous during render — safe because we're inside a conditional
+        // These are synchronous during render  safe because we're inside a conditional
         // that only runs when activeTabIdx actually changes (same as getDerivedStateFromProps).
         if (focusPos.row !== 0 || focusPos.col !== 0) setFocusPos({ row: 0, col: 0 })
         if (detailItem !== null) setDetailItem(null)
@@ -784,7 +784,7 @@ function LifeSyncTVModeInner({ onExit }) {
 
     return (
         <div className="fixed inset-0 z-9999 flex h-dvh w-full flex-col overflow-hidden bg-[#07070b] text-white" style={{ cursor: 'none' }}>
-            {/* Ambient scene — omitted on low-end devices to avoid GPU compositing */}
+            {/* Ambient scene  omitted on low-end devices to avoid GPU compositing */}
             {!LOW_END && (
                 <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
                     <div className="absolute -left-40 -top-20 h-125 w-125 rounded-full bg-(--mx-color-c6ff00)/5 blur-[200px]" />
@@ -838,7 +838,7 @@ function LifeSyncTVModeInner({ onExit }) {
                     </AnimatePresence>
                 </div>
 
-                {/* Filter panel — rendered at TVMode level so AnimatePresence is stable */}
+                {/* Filter panel  rendered at TVMode level so AnimatePresence is stable */}
                 <AnimatePresence>
                     {filterOpen && filterPanel && (
                         <TVFilterPanel
@@ -889,7 +889,7 @@ function LifeSyncTVModeInner({ onExit }) {
                     )}
                 </AnimatePresence>
 
-                {/* Players/readers — full overlay */}
+                {/* Players/readers  full overlay */}
                 <AnimatePresence>
                     {playerState?.type === 'manga' && (
                         <TVMangaReader

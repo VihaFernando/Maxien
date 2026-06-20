@@ -51,7 +51,7 @@ const XBOX_SECTION_NAV_ITEMS = [
 
 const LIBRARY_MAX = 36
 const STATS_BATCH = 24
-/** Matches xl:grid-cols-6 — full rows per page */
+/** Matches xl:grid-cols-6  full rows per page */
 const GAMEPASS_PAGE_SIZE = 24
 
 /** Game Pass catalog: six tiles per row on wide viewports */
@@ -234,7 +234,7 @@ function ProfileCard({ person, presenceBusy, presence }) {
                     {person?.gamertag && person.gamertag !== display ? (
                         <p className="text-[12px] text-[var(--mx-color-86868b)]">Classic gamertag: {person.gamertag}</p>
                     ) : null}
-                    <p className="mt-0.5 font-mono text-[11px] text-[var(--mx-color-aeaeb2)]">Player ID {person?.xuid ?? '—'}</p>
+                    <p className="mt-0.5 font-mono text-[11px] text-[var(--mx-color-aeaeb2)]">Player ID {person?.xuid ?? ''}</p>
                 </div>
                 <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
                     {showGamerScore ? (
@@ -398,7 +398,7 @@ function LibraryGameTile({ row, selected, onSelect, disabled }) {
                     {row.name}
                 </p>
                 <p className={`mt-0.5 text-[9px] sm:text-[10px] ${hasArt ? 'text-white/80' : 'text-[var(--mx-color-86868b)]'}`}>
-                    {row.lastPlayedLabel ? `Last played ${row.lastPlayedLabel}` : 'Last played —'}
+                    {row.lastPlayedLabel ? `Last played ${row.lastPlayedLabel}` : 'Last played '}
                 </p>
                 <p className={`text-[9px] font-medium sm:text-[10px] ${hasArt ? 'text-white/90' : 'text-[var(--mx-color-424245)]'}`}>
                     {row.playtimeLabel ?? 'Playtime unknown'}

@@ -33,7 +33,7 @@ export const lifeSyncDollyPageTransition = {
     ease: lifeSyncEaseOut,
 }
 
-/** Hub page enter: fade + slide only (no scale — avoids large-layer compositing on big trees). */
+/** Hub page enter: fade + slide only (no scale  avoids large-layer compositing on big trees). */
 export const lifeSyncDollyPageVariants = {
     initial: {
         opacity: 0,
@@ -227,7 +227,7 @@ export const lifeSyncEpisodeBlockPresenceTransition = {
     ease: lifeSyncEaseOut,
 }
 
-/** Card scale-in for grid items — subtle pop with spring feel. */
+/** Card scale-in for grid items  subtle pop with spring feel. */
 export const lifeSyncCardEnterVariants = {
     hidden: { opacity: 0, scale: 0.92, y: 8 },
     show: {
@@ -250,7 +250,7 @@ export const lifeSyncCardGridContainer = {
     },
 }
 
-/** Slide-up + fade from below — used for hero text, drawer panels, stat blocks. */
+/** Slide-up + fade from below  used for hero text, drawer panels, stat blocks. */
 export const lifeSyncSlideUpVariants = {
     hidden: { opacity: 0, y: 22 },
     show: {
@@ -260,13 +260,13 @@ export const lifeSyncSlideUpVariants = {
     },
 }
 
-/** Hero image crossfade — slower, cinematic feel. */
+/** Hero image crossfade  slower, cinematic feel. */
 export const lifeSyncHeroCrossfadeTransition = {
     duration: 0.72,
     ease: [0.22, 1, 0.36, 1],
 }
 
-/** Page-level spring enter — used when switching top-level routes. */
+/** Page-level spring enter  used when switching top-level routes. */
 export const lifeSyncSpringPageTransition = {
     type: 'spring',
     stiffness: 240,
@@ -279,7 +279,7 @@ export const lifeSyncSpringPageVariants = {
     exit: { opacity: 0, y: -8, scale: 0.998 },
 }
 
-/** Stat counter block — used in history/library stats row. */
+/** Stat counter block  used in history/library stats row. */
 export const lifeSyncStatBlockContainer = {
     hidden: { opacity: 0 },
     show: {
@@ -298,7 +298,7 @@ export const lifeSyncStatBlockItem = {
     },
 }
 
-/** Enhanced page transition with scale effect — premium feel. */
+/** Enhanced page transition with scale effect  premium feel. */
 export const lifeSyncPremiumPageTransition = {
     type: 'spring',
     stiffness: 260,
@@ -328,7 +328,7 @@ export const lifeSyncImageFadeInVariants = {
     },
 }
 
-/** Stagger for manga/hentai thumbnails — faster for denser grids. */
+/** Stagger for manga/hentai thumbnails  faster for denser grids. */
 export const lifeSyncImageGridContainer = {
     hidden: { opacity: 0 },
     show: {
@@ -349,7 +349,7 @@ export const lifeSyncImageGridItem = {
     },
 }
 
-/** Calendar cell stagger — very fast (0.005s) since 42 cells render at once. */
+/** Calendar cell stagger  very fast (0.005s) since 42 cells render at once. */
 export const lifeSyncCalendarGridContainer = {
     hidden: { opacity: 0 },
     show: {
@@ -367,7 +367,7 @@ export const lifeSyncCalendarCellItem = {
     },
 }
 
-/** Schedule day tab transition — pill slides with spring. */
+/** Schedule day tab transition  pill slides with spring. */
 export const lifeSyncTabPillSpring = {
     type: 'spring',
     stiffness: 420,
@@ -381,7 +381,7 @@ export const lifeSyncDrawerSpring = {
     damping: 32,
 }
 
-/** Shimmer keyframe helper — returns inline style for a shimmer animation. */
+/** Shimmer keyframe helper  returns inline style for a shimmer animation. */
 export const lifeSyncShimmerStyle = {
     background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%)',
     backgroundSize: '200% 100%',

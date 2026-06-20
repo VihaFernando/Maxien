@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useLifeSync } from '../../context/LifeSyncContext'
@@ -11,17 +12,20 @@ import { MediaPageHeader } from '../../components/lifesync/MediaPageChrome'
 import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
 import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
+import { useNewMangaToRead } from '../../hooks/useNewMangaToRead'
+import NewMangaToReadPanel from '../../components/lifesync/NewMangaToReadPanel'
 import { mangaImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 import { LifesyncEpisodeThumbnail } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import {
     MotionDiv,
     lifeSyncEaseOut,
     lifeSyncPageTransition,
+    lifeSyncDetailOverlayFadeTransition,
 } from '../../lib/lifesyncMotion'
 
 const MANGA_BASE = '/dashboard/lifesync/anime/manga'
 const MANGA_LIBRARY_PATH = `${MANGA_BASE}/library`
-const PAGE_SIZE = 25
+const PAGE_SIZE = 24
 
 const SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
@@ -109,6 +113,66 @@ const IconAlert = ({ className = 'h-4 w-4' }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
     </svg>
 )
+const IconFilter = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4.5h18l-7 8v6l-4 2v-8l-7-8z" />
+    </svg>
+)
+const IconChevronDown = ({ className = 'h-3 w-3' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+)
+// Reading-status status icons — one glyph per state so the dropdown reads at a glance.
+const IconBookmark = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+    </svg>
+)
+const IconPause = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 6v12M15 6v12" />
+    </svg>
+)
+const IconClock = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 2" />
+    </svg>
+)
+const IconCheckCircle = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M8.5 12.5l2.5 2.5 4.5-5" />
+    </svg>
+)
+const IconDrop = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M9 9l6 6M15 9l-6 6" />
+    </svg>
+)
+const IconReread = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+)
+const IconDot = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+        <circle cx="12" cy="12" r="4" />
+    </svg>
+)
+
+// Per-status visual identity: icon + accent color used by the status dropdown,
+// its trigger, and the menu rows. Colors stay readable on dark surfaces.
+const STATUS_META = {
+    reading: { icon: IconBookmark, dot: 'bg-primary', text: 'text-primary', soft: 'bg-primary/12' },
+    on_hold: { icon: IconPause, dot: 'bg-amber-400', text: 'text-amber-400', soft: 'bg-amber-400/12' },
+    plan_to_read: { icon: IconClock, dot: 'bg-sky-400', text: 'text-sky-400', soft: 'bg-sky-400/12' },
+    completed: { icon: IconCheckCircle, dot: 'bg-emerald-400', text: 'text-emerald-400', soft: 'bg-emerald-400/12' },
+    dropped: { icon: IconDrop, dot: 'bg-rose-400', text: 'text-rose-400', soft: 'bg-rose-400/12' },
+    re_reading: { icon: IconReread, dot: 'bg-violet-400', text: 'text-violet-400', soft: 'bg-violet-400/12' },
+}
+function statusMeta(status) {
+    return STATUS_META[status] || { icon: IconDot, dot: 'bg-(--color-border-strong)', text: 'text-(--color-text-secondary)', soft: 'bg-(--color-surface-muted)' }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function sourceLabel(source) {
@@ -132,8 +196,8 @@ function relativeTouch(iso) {
     } catch { return '' }
 }
 function formatDateLabel(iso) {
-    if (!iso) return '—'
-    try { return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) } catch { return '—' }
+    if (!iso) return ''
+    try { return new Date(iso).toLocaleDateString(undefined, { dateStyle: 'medium' }) } catch { return '' }
 }
 function statusLabel(status) {
     return STATUS_OPTIONS.find((o) => o.id === status)?.label || (status ? status : 'No status')
@@ -156,8 +220,8 @@ function chapterSnapshot(entry) {
         return { currentLabel: `Ch ${fmtChapter(cur)}`, latestLabel: `Ch ${fmtChapter(latest)}`, percent: Math.round(clampPct((cur / latest) * 100) * 10) / 10 }
     }
     return {
-        currentLabel: entry?.lastChapterLabel || '—',
-        latestLabel: entry?.remoteLatestChapterLabel || (entry?.needsSync ? 'Sync needed' : '—'),
+        currentLabel: entry?.lastChapterLabel || '',
+        latestLabel: entry?.remoteLatestChapterLabel || (entry?.needsSync ? 'Sync needed' : ''),
         percent: clampPct(Number(entry?.caughtUp && !entry?.hasNewChapter ? 100 : entry?.lastReadPercent || 0)),
     }
 }
@@ -173,7 +237,7 @@ function latestChapterDate(entry) {
 function isSyncTerminal(s) { const v = String(s || '').toLowerCase(); return v === 'completed' || v === 'completed_with_errors' || v === 'failed' }
 function syncStateChip(state) {
     const s = String(state || '').toLowerCase()
-    const map = { queued: 'bg-[--color-surface-muted] text-(--color-text-secondary)', syncing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', done: 'bg-primary/10 text-primary', error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', skipped: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' }
+    const map = { queued: 'bg-(--color-surface-muted) text-(--color-text-secondary)', syncing: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300', done: 'bg-primary/10 text-primary', error: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300', skipped: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' }
     const label = { queued: 'Queued', syncing: 'Syncing', done: 'Done', error: 'Error', skipped: 'Skip' }
     return { cls: map[s] || map.queued, label: label[s] || '' }
 }
@@ -205,32 +269,236 @@ function SkeletonCard() {
     )
 }
 
-// ─── Status select ────────────────────────────────────────────────────────────
-function StatusSelect({ value, onChange, disabled, className = '' }) {
+// ─── Status menu ──────────────────────────────────────────────────────────────
+// Icon-triggered reading-status control. Click the status glyph → an animated
+// popover lists every status with its own icon + accent colour and a check on the
+// active one. Replaces the old native <select> so the resting card stays calm and
+// the choice feels tactile. Portaled + anchored so it never clips inside cards.
+const STATUS_MENU_ITEMS = STATUS_OPTIONS.filter((o) => o.id !== 'all')
+
+function StatusMenu({ value, onChange, disabled, tone = 'surface' }) {
+    const [open, setOpen] = useState(false)
+    const [coords, setCoords] = useState(null)
+    const btnRef = useRef(null)
+    const meta = statusMeta(value)
+    const Glyph = meta.icon
+    const label = value ? statusLabel(value) : 'Set status'
+
+    const place = useCallback(() => {
+        const el = btnRef.current
+        if (!el) return
+        const r = el.getBoundingClientRect()
+        const menuW = 184
+        const menuH = 322
+        // Prefer below-right; flip up / left near the viewport edges.
+        const below = r.bottom + menuH + 8 <= window.innerHeight || r.top - menuH - 8 < 0
+        const left = Math.min(r.left, window.innerWidth - menuW - 8)
+        setCoords({
+            top: below ? r.bottom + 6 : r.top - menuH - 6,
+            left: Math.max(8, left),
+            origin: below ? 'top' : 'bottom',
+        })
+    }, [])
+
+    const toggle = useCallback((e) => {
+        e.stopPropagation(); e.preventDefault()
+        if (disabled) return
+        if (open) { setOpen(false); return }
+        place(); setOpen(true)
+    }, [disabled, open, place])
+
+    useEffect(() => {
+        if (!open) return undefined
+        const close = () => setOpen(false)
+        const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+        window.addEventListener('resize', place)
+        window.addEventListener('scroll', close, true)
+        window.addEventListener('keydown', onKey)
+        return () => {
+            window.removeEventListener('resize', place)
+            window.removeEventListener('scroll', close, true)
+            window.removeEventListener('keydown', onKey)
+        }
+    }, [open, place])
+
+    const pick = useCallback((id) => {
+        setOpen(false)
+        onChange(id || null)
+    }, [onChange])
+
+    const triggerCls = tone === 'overlay'
+        ? `border-white/20 bg-black/55 text-white/90 backdrop-blur-sm hover:border-white/45`
+        : `border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) hover:border-(--color-border-strong) hover:text-(--color-text-primary)`
+
     return (
-        <select
-            value={value || ''} onChange={(e) => onChange(e.target.value || null)} disabled={disabled}
-            className={`rounded-lg border border-(--color-border-soft) bg-(--color-surface) px-2 text-[11px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 disabled:opacity-50 ${className}`}
-        >
-            <option value="">No status</option>
-            {STATUS_OPTIONS.filter((o) => o.id !== 'all').map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-        </select>
+        <>
+            <button
+                ref={btnRef} type="button" onClick={toggle} disabled={disabled}
+                aria-haspopup="listbox" aria-expanded={open} aria-label={`Reading status: ${label}`}
+                className={`group/st flex h-8 items-center gap-1 rounded-xl border pl-1.5 pr-1.5 text-[11px] font-semibold transition active:scale-95 disabled:opacity-50 ${triggerCls} ${open ? 'ring-2 ring-primary/40' : ''}`}
+            >
+                <motion.span
+                    key={value || 'none'}
+                    initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 24 }}
+                    className={value ? meta.text : ''}
+                >
+                    <Glyph className="h-3.5 w-3.5" />
+                </motion.span>
+                <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ type: 'spring', stiffness: 400, damping: 26 }} className="opacity-60">
+                    <IconChevronDown className="h-2.5 w-2.5" />
+                </motion.span>
+            </button>
+
+            {createPortal(
+                <AnimatePresence>
+                    {open && coords && (
+                        <>
+                            <motion.div
+                                className="fixed inset-0 z-9998"
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                onClick={(e) => { e.stopPropagation(); setOpen(false) }}
+                            />
+                            <motion.div
+                                role="listbox"
+                                className="fixed z-9999 w-46 overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) p-1.5 backdrop-blur-xl"
+                                style={{ top: coords.top, left: coords.left, transformOrigin: coords.origin }}
+                                initial={{ opacity: 0, scale: 0.92, y: coords.origin === 'top' ? -6 : 6 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.94, y: coords.origin === 'top' ? -6 : 6 }}
+                                transition={{ type: 'spring', stiffness: 480, damping: 32 }}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {STATUS_MENU_ITEMS.map((o, i) => {
+                                    const m = statusMeta(o.id)
+                                    const Ico = m.icon
+                                    const active = value === o.id
+                                    return (
+                                        <motion.button
+                                            key={o.id} type="button" role="option" aria-selected={active}
+                                            onClick={() => pick(o.id)}
+                                            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: i * 0.025, type: 'tween', duration: 0.18, ease: lifeSyncEaseOut }}
+                                            whileHover={{ x: 2 }}
+                                            className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[12.5px] font-semibold transition-colors ${active ? `${m.soft} ${m.text}` : 'text-(--color-text-secondary) hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)'}`}
+                                        >
+                                            <span className={active ? m.text : 'text-(--color-text-secondary)'}><Ico className="h-4 w-4" /></span>
+                                            <span className="flex-1 truncate">{o.label}</span>
+                                            <AnimatePresence>
+                                                {active && (
+                                                    <motion.span initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0, opacity: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 22 }}>
+                                                        <IconCheck className="h-3 w-3" />
+                                                    </motion.span>
+                                                )}
+                                            </AnimatePresence>
+                                        </motion.button>
+                                    )
+                                })}
+                                {value && (
+                                    <>
+                                        <div className="my-1 h-px bg-(--color-border-soft)" />
+                                        <motion.button
+                                            type="button" onClick={() => pick(null)}
+                                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: STATUS_MENU_ITEMS.length * 0.025 }}
+                                            whileHover={{ x: 2 }}
+                                            className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-[12.5px] font-semibold text-(--color-text-secondary) transition-colors hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)"
+                                        >
+                                            <span className="text-(--color-text-secondary)"><IconX className="h-3.5 w-3.5" /></span>
+                                            <span className="flex-1 truncate">Clear status</span>
+                                        </motion.button>
+                                    </>
+                                )}
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>,
+                document.body,
+            )}
+        </>
+    )
+}
+
+// ─── Filter drawer ────────────────────────────────────────────────────────────
+// A labeled segmented chip group used inside the filter drawer. Tactile, larger
+// hit targets than native selects, and keeps everything inline (no nested menus).
+function FilterGroup({ label, options, value, onChange }) {
+    return (
+        <div>
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-(--color-text-secondary)">{label}</p>
+            <div className="flex flex-wrap gap-1.5">
+                {options.map((o) => {
+                    const active = value === o.id
+                    return (
+                        <button
+                            key={o.id} type="button" onClick={() => onChange(o.id)}
+                            className={`rounded-xl border px-3 py-1.5 text-[12px] font-semibold transition ${active
+                                ? 'border-primary bg-primary text-black'
+                                : 'border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) hover:border-(--color-border-strong) hover:text-(--color-text-primary)'}`}
+                        >
+                            {o.label}
+                        </button>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
+function LibraryFilterDrawer({ open, onClose, count, onReset, children }) {
+    useEffect(() => {
+        if (!open) return undefined
+        const onKey = (e) => { if (e.key === 'Escape') onClose?.() }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [open, onClose])
+
+    return createPortal(
+        <AnimatePresence>
+            {open && (
+                <MotionDiv className="fixed inset-0 z-9997 flex justify-end" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={lifeSyncDetailOverlayFadeTransition}>
+                    <MotionDiv className="absolute inset-0 bg-black/60 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+                    <MotionDiv
+                        className="relative flex h-dvh w-full max-w-sm flex-col bg-(--color-surface)"
+                        initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                        transition={{ type: 'spring', stiffness: 360, damping: 36 }}
+                    >
+                        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-(--color-border-soft) px-5 py-4">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <h2 className="truncate text-[15px] font-black text-(--color-text-primary)">Filter & sort</h2>
+                                {count > 0 && (
+                                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-black tabular-nums text-(--color-ink-strong)">{count}</span>
+                                )}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                {count > 0 && onReset && (
+                                    <button type="button" onClick={onReset} className="rounded-lg border border-(--color-border-soft) px-2.5 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)">Reset</button>
+                                )}
+                                <button type="button" onClick={onClose} aria-label="Close filters" className="flex h-8 w-8 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)">
+                                    <IconX className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5">{children}</div>
+                    </MotionDiv>
+                </MotionDiv>
+            )}
+        </AnimatePresence>,
+        document.body,
     )
 }
 
 // ─── Detail drawer ────────────────────────────────────────────────────────────
-function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
-    if (!entry) return null
-    const snap = chapterSnapshot(entry)
-    const heroUrl = entry.backgroundImageUrl || entry.coverUrl || ''
-    const releaseDate = latestChapterDate(entry)
-
+function DetailDrawer({ entry, onClose, onContinue }) {
     useEffect(() => {
         const fn = (e) => { if (e.key === 'Escape') onClose() }
         window.addEventListener('keydown', fn)
         return () => window.removeEventListener('keydown', fn)
     }, [onClose])
 
+    if (!entry) return null
+    const snap = chapterSnapshot(entry)
+    const heroUrl = entry.backgroundImageUrl || entry.coverUrl || ''
+    const releaseDate = latestChapterDate(entry)
     const title = decodeHtmlEntities(entry.title) || 'Untitled'
 
     return (
@@ -240,38 +508,39 @@ function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
             onClick={onClose}
         >
             <MotionDiv
-                className="relative w-full max-w-lg overflow-hidden rounded-t-3xl sm:rounded-3xl bg-(--color-surface) shadow-2xl"
+                className="relative w-full max-w-lg overflow-hidden rounded-t-3xl sm:rounded-3xl bg-(--color-surface)"
                 initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 340, damping: 32 }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* ── Hero banner ── */}
-                <div className="relative h-44 sm:h-48 overflow-hidden">
+                <div className="relative h-48 sm:h-52 overflow-hidden">
                     {/* Blurred backdrop */}
                     {heroUrl && (
                         <img
                             src={heroUrl}
                             alt=""
-                            className="absolute inset-0 h-full w-full object-cover opacity-35 blur-2xl scale-105 pointer-events-none select-none"
+                            className="absolute inset-0 h-full w-full object-cover opacity-40 blur-2xl scale-110 pointer-events-none select-none"
                         />
                     )}
-                    {/* Amber radial glow */}
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(251,191,36,0.18),transparent_70%)] pointer-events-none" />
-                    {/* Amber hairline at top */}
-                    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-amber-400/60 to-transparent pointer-events-none" />
-                    {/* Dark gradient overlay */}
-                    <div className="absolute inset-0 bg-linear-to-t from-(--color-surface) via-(--color-surface)/70 to-transparent pointer-events-none" />
+                    {/* Lime radial glow — ties the hero to the brand accent */}
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(198,255,0,0.14),transparent_70%)] pointer-events-none" />
+                    {/* Accent hairline at top */}
+                    <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/55 to-transparent pointer-events-none" />
+                    {/* Dark gradient overlay so the cover + title read */}
+                    <div className="absolute inset-0 bg-linear-to-t from-(--color-surface) via-(--color-surface)/75 to-transparent pointer-events-none" />
                     {/* Close button */}
                     <button
                         type="button"
                         onClick={onClose}
-                        className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/80 hover:text-white transition backdrop-blur-sm"
+                        aria-label="Close"
+                        className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white/80 hover:text-white transition backdrop-blur-sm active:scale-95"
                     >
                         <IconX className="h-4 w-4" />
                     </button>
                     {/* Cover + title row overlaid on hero */}
-                    <div className="absolute bottom-0 inset-x-0 flex gap-4 px-5 pb-6 pt-12 items-end">
-                        <div className="relative w-20 shrink-0 overflow-hidden rounded-2xl shadow-xl ring-1 ring-black/20 aspect-2/3 bg-(--color-surface-muted)">
+                    <div className="absolute bottom-0 inset-x-0 flex gap-4 px-5 pb-5 pt-12 items-end">
+                        <div className="relative w-24 shrink-0 overflow-hidden rounded-2xl ring-1 ring-white/10 aspect-2/3 bg-(--color-surface-muted)">
                             {entry.coverUrl && (
                                 <LifesyncEpisodeThumbnail
                                     src={entry.coverUrl}
@@ -282,125 +551,100 @@ function DetailDrawer({ entry, onClose, onContinue, browseTranslatedLang }) {
                             )}
                         </div>
                         <div className="min-w-0 flex-1 pb-1">
-                            <h2 className="line-clamp-2 text-[19px] font-black leading-snug text-white drop-shadow-lg">{title}</h2>
-                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <h2 className="line-clamp-3 text-[20px] font-black leading-tight text-white">{title}</h2>
+                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                 {entry.source && (
-                                    <span className="rounded-lg bg-amber-500/20 px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider text-amber-400">
+                                    <span className="rounded-md bg-primary/20 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-primary">
                                         {[entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean).map(sourceLabel).join(' + ')}
                                     </span>
                                 )}
                                 {entry.readingStatus && (
-                                    <span className="rounded-lg bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-white/70">
+                                    <span className="rounded-md bg-white/12 px-2 py-0.5 text-[9px] font-semibold text-white/75">
                                         {statusLabel(entry.readingStatus)}
                                     </span>
                                 )}
+                                {entry.updatedAt && (
+                                    <span className="text-[10px] text-white/55">· {relativeTouch(entry.updatedAt)}</span>
+                                )}
                             </div>
-                            {entry.updatedAt && (
-                                <p className="mt-1.5 text-[11px] text-white/60">{relativeTouch(entry.updatedAt)}</p>
-                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* ── Scrollable body ── */}
-                <div className="max-h-[min(70vh,480px)] overflow-y-auto">
-                    {/* Stats row */}
-                    <div className="grid grid-cols-3 gap-3 px-5 py-5 border-b border-(--color-border-soft)">
+                <div className="max-h-[min(70vh,480px)] overflow-y-auto px-5 py-5 space-y-5">
+                    {/* New chapter callout — promoted to the top, it's the reason to act */}
+                    {entry.hasNewChapter && (
+                        <div className="flex items-center gap-2.5 rounded-2xl border border-primary/35 bg-primary/10 px-4 py-3">
+                            <span className="relative flex h-2.5 w-2.5 shrink-0">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
+                                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+                            </span>
+                            <span className="text-[13px] font-bold text-(--color-text-primary)">New chapter available to read</span>
+                        </div>
+                    )}
+
+                    {/* Reading progress — one unified block, current → latest with inline bar */}
+                    <div>
+                        <div className="mb-2 flex items-end justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-(--color-text-secondary)">Reading progress</p>
+                                <p className="mt-0.5 truncate text-[15px] font-black text-(--color-text-primary)">
+                                    {snap.currentLabel || '—'}
+                                    {snap.latestLabel && <span className="text-(--color-text-secondary)"> / {snap.latestLabel}</span>}
+                                </p>
+                            </div>
+                            <p className="shrink-0 text-[22px] font-black tabular-nums leading-none text-primary">{snap.percent}%</p>
+                        </div>
+                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-(--color-surface-muted)">
+                            <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${snap.percent}%` }} />
+                        </div>
+                    </div>
+
+                    {/* Metadata — compact inline rows, not a spreadsheet grid */}
+                    <div className="divide-y divide-(--color-border-soft) rounded-2xl bg-(--color-surface-muted)/60">
                         {[
-                            { label: 'Current', value: snap.currentLabel },
-                            { label: 'Latest', value: snap.latestLabel },
-                            { label: 'Progress', value: `${snap.percent}%` },
-                        ].map(({ label, value }) => (
-                            <div key={label} className="rounded-2xl bg-(--color-surface-muted) px-3 py-3 text-center">
-                                <p className="text-[20px] font-black text-(--color-text-primary)">{value}</p>
-                                <p className="text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary) mt-1">{label}</p>
+                            { label: 'Source', value: [entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean).map(sourceLabel).join(' + ') },
+                            { label: 'Status', value: entry.readingStatus ? statusLabel(entry.readingStatus) : '' },
+                            { label: 'Last read', value: entry.lastChapterLabel },
+                            { label: 'Latest chapter', value: entry.remoteLatestChapterLabel },
+                            { label: 'Last release', value: releaseDate ? formatDateLabel(releaseDate) : '' },
+                        ].filter((r) => r.value).map((r) => (
+                            <div key={r.label} className="flex items-center justify-between gap-4 px-4 py-2.5">
+                                <span className="shrink-0 text-[12px] text-(--color-text-secondary)">{r.label}</span>
+                                <span className="truncate text-right text-[12.5px] font-semibold text-(--color-text-primary)">{r.value}</span>
                             </div>
                         ))}
                     </div>
 
-                    {/* Progress bar */}
-                    <div className="px-5 py-4 border-b border-(--color-border-soft)">
-                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
-                            <div className="h-full rounded-full bg-primary shadow-[0_0_12px_rgba(198,255,0,0.4)] transition-all" style={{ width: `${snap.percent}%` }} />
-                        </div>
-                    </div>
-
-                    {/* Details grid */}
-                    <div className="px-5 py-4 border-b border-(--color-border-soft)">
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-                            {entry.source && (
-                                <>
-                                    <p className="text-[11px] text-(--color-text-secondary)">Source</p>
-                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">
-                                        {[entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean).map(sourceLabel).join(' + ')}
-                                    </p>
-                                </>
-                            )}
-                            {entry.readingStatus && (
-                                <>
-                                    <p className="text-[11px] text-(--color-text-secondary)">Status</p>
-                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{statusLabel(entry.readingStatus)}</p>
-                                </>
-                            )}
-                            {entry.lastChapterLabel && (
-                                <>
-                                    <p className="text-[11px] text-(--color-text-secondary)">Last read</p>
-                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{entry.lastChapterLabel}</p>
-                                </>
-                            )}
-                            {entry.remoteLatestChapterLabel && (
-                                <>
-                                    <p className="text-[11px] text-(--color-text-secondary)">Latest chapter</p>
-                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{entry.remoteLatestChapterLabel}</p>
-                                </>
-                            )}
-                            {releaseDate && (
-                                <>
-                                    <p className="text-[11px] text-(--color-text-secondary)">Last release</p>
-                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{formatDateLabel(releaseDate)}</p>
-                                </>
-                            )}
-                            {entry.lastReadPercent != null && (
-                                <>
-                                    <p className="text-[11px] text-(--color-text-secondary)">Read %</p>
-                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{entry.lastReadPercent}%</p>
-                                </>
-                            )}
-                            {entry.tags?.length > 0 && (
-                                <>
-                                    <p className="text-[11px] text-(--color-text-secondary)">Tags</p>
-                                    <p className="text-[12px] font-semibold text-(--color-text-primary)">{entry.tags.join(', ')}</p>
-                                </>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* New chapter badge */}
-                    {entry.hasNewChapter && (
-                        <div className="rounded-2xl border border-amber-500/40 bg-amber-500/15 px-4 py-3 mx-5 my-4 flex items-center gap-2">
-                            <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-amber-400" />
-                            <span className="text-[13px] font-semibold text-amber-500 dark:text-amber-400">New chapter available</span>
+                    {/* Tags as chips */}
+                    {entry.tags?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {entry.tags.map((t) => (
+                                <span key={t} className="rounded-full bg-(--color-surface-muted) px-2.5 py-1 text-[11px] font-medium text-(--color-text-secondary)">{t}</span>
+                            ))}
                         </div>
                     )}
                 </div>
 
                 {/* ── Action footer ── */}
-                <div className="px-5 py-4 border-t border-(--color-border-soft) space-y-2.5">
+                <div className="flex gap-2.5 border-t border-(--color-border-soft) px-5 py-4">
                     <MotionDiv
+                        className="flex-1"
                         whileTap={{ scale: 0.97 }}
                         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
                     >
                         <button
                             type="button"
                             onClick={() => onContinue(entry)}
-                            className="flex w-full min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-black text-black transition hover:brightness-110 shadow-[0_6px_20px_-6px_rgba(198,255,0,0.4)]"
+                            className="flex w-full min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-black text-black transition hover:brightness-105"
                         >
-                            <IconBook className="h-4 w-4" /> Continue reading
+                            <IconBook className="h-4 w-4" /> {entry.hasNewChapter ? 'Read new chapter' : 'Continue reading'}
                         </button>
                     </MotionDiv>
                     <Link
                         to={MANGA_BASE}
-                        className="flex min-h-11 items-center justify-center rounded-2xl border border-(--color-border-soft) px-5 text-[13px] font-semibold text-(--color-text-secondary) transition hover:border-(--color-border-strong) hover:bg-(--color-surface-muted)"
+                        className="flex min-h-12 shrink-0 items-center justify-center rounded-2xl border border-(--color-border-soft) px-5 text-[13px] font-semibold text-(--color-text-secondary) transition hover:border-(--color-border-strong) hover:bg-(--color-surface-muted)"
                     >
                         Browse
                     </Link>
@@ -415,7 +659,7 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel }) {
     if (!isOpen) return null
     return (
         <MotionDiv className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel}>
-            <MotionDiv className="w-full max-w-sm rounded-3xl bg-(--color-surface) p-5 shadow-2xl" initial={{ scale: 0.94, y: 14 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.94, y: 14 }} transition={{ type: 'spring', stiffness: 300, damping: 28 }} onClick={(e) => e.stopPropagation()}>
+            <MotionDiv className="w-full max-w-sm rounded-3xl bg-(--color-surface) p-5" initial={{ scale: 0.94, y: 14 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.94, y: 14 }} transition={{ type: 'spring', stiffness: 300, damping: 28 }} onClick={(e) => e.stopPropagation()}>
                 <div className="mb-3 flex justify-center">
                     <span className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30">
                         <IconAlert className="h-5 w-5" />
@@ -454,7 +698,7 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
 
             {/* Cover */}
             <button type="button" onClick={() => onOpenDetail(entry)}
-                className="relative h-[54px] w-[38px] shrink-0 overflow-hidden rounded-lg bg-(--color-surface-muted) shadow-sm transition group-hover:shadow-md">
+                className="relative h-[54px] w-[38px] shrink-0 overflow-hidden rounded-lg bg-(--color-surface-muted) transition">
                 {entry.coverUrl ? (
                     <LifesyncEpisodeThumbnail src={entry.coverUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover transition duration-300 group-hover:scale-105" imgProps={mangaImageProps(entry.coverUrl)} />
                 ) : (
@@ -482,7 +726,7 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
 
             {/* Actions */}
             <div className="flex shrink-0 items-center gap-1.5 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-                <StatusSelect value={entry.readingStatus} onChange={(v) => onStatusChange(entry, v)} disabled={busy} className="h-8 min-w-[84px]" />
+                <StatusMenu value={entry.readingStatus} onChange={(v) => onStatusChange(entry, v)} disabled={busy} />
                 <button type="button" onClick={() => onRequestRemove(entry)} disabled={removeBusy}
                     className="flex h-8 w-8 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-red-50 hover:text-red-500 disabled:opacity-30 dark:hover:bg-red-900/20"
                     aria-label="Remove">
@@ -499,68 +743,86 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
 }
 
 // ─── Grid card ────────────────────────────────────────────────────────────────
+// The poster IS the card: edge-to-edge cover, no footer strip, no outer border.
+// Metadata and actions ride as overlays on the artwork and surface on hover —
+// content advances, chrome recedes.
 function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, selected, onToggleSelect, onStatusChange, onRequestRemove, onOpenDetail }) {
     const snap = chapterSnapshot(entry)
     const title = decodeHtmlEntities(entry.title) || 'Untitled'
     const chip = syncState ? syncStateChip(syncState) : null
     const { to, state } = resumeTarget(entry, browseTranslatedLang)
+    const src = sourceLabel(entry.source)
 
     return (
         <motion.div
             layout initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }}
             transition={{ type: 'tween', duration: 0.18, ease: lifeSyncEaseOut }}
-            className="group relative flex flex-col overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm transition-shadow hover:shadow-md"
+            className={`group relative aspect-2/3 overflow-hidden rounded-2xl bg-(--color-surface-muted) ring-1 transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] hover:-translate-y-1 active:scale-[0.98] motion-reduce:transition-none motion-reduce:hover:translate-y-0 ${selected ? 'ring-2 ring-primary' : 'ring-(--color-border-soft) hover:ring-primary/55'}`}
         >
-            {/* Cover */}
-            <button type="button" onClick={() => onOpenDetail(entry)} className="relative block w-full aspect-2/3 overflow-hidden bg-(--color-surface-muted)">
+            {/* Cover (opens detail) */}
+            <button type="button" onClick={() => onOpenDetail(entry)} className="absolute inset-0 block h-full w-full text-left" aria-label={title}>
                 {entry.coverUrl ? (
-                    <LifesyncEpisodeThumbnail src={entry.coverUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-[1.04]" imgProps={mangaImageProps(entry.coverUrl)} />
+                    <LifesyncEpisodeThumbnail src={entry.coverUrl} className="absolute inset-0 h-full w-full" imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-105" imgProps={mangaImageProps(entry.coverUrl)} />
                 ) : (
                     <div className="flex h-full items-center justify-center text-(--color-border-strong)"><IconBook className="h-8 w-8" /></div>
                 )}
-                <div className="absolute inset-0 bg-linear-to-t from-black/75 via-black/10 to-transparent" />
-
-                {/* Select */}
-                <button type="button" onClick={(e) => { e.stopPropagation(); onToggleSelect(entry) }}
-                    className={`absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-md border transition ${selected ? 'border-primary bg-primary text-(--color-ink-strong)' : 'border-white/60 bg-black/30 text-transparent hover:border-white'}`}>
-                    {selected && <IconCheck className="h-2.5 w-2.5" />}
-                </button>
-
-                {entry.hasNewChapter && (
-                    <span className="absolute right-2 top-2 z-10 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-(--color-ink-strong)">New</span>
-                )}
-                {chip && (
-                    <span className={`absolute left-2 top-8 z-10 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${chip.cls}`}>{chip.label}</span>
-                )}
-
-                {/* Remove on hover */}
-                <button type="button" onClick={(e) => { e.stopPropagation(); onRequestRemove(entry) }} disabled={removeBusy}
-                    className="absolute right-2 bottom-10 z-10 flex h-6 w-6 items-center justify-center rounded-lg bg-black/50 text-white/70 opacity-0 backdrop-blur-sm transition group-hover:opacity-100 hover:bg-red-600/80 hover:text-white disabled:opacity-30">
-                    {removeBusy ? <span className="text-[9px]">…</span> : <IconX className="h-3 w-3" />}
-                </button>
-
-                {/* Progress + title */}
-                <div className="absolute bottom-0 left-0 right-0">
-                    {snap.percent > 0 && (
-                        <div className="h-[3px] bg-black/20">
-                            <div className="h-full bg-primary" style={{ width: `${snap.percent}%` }} />
-                        </div>
-                    )}
-                    <div className="p-2.5">
-                        <h3 className="line-clamp-2 text-[12px] font-bold leading-snug text-white drop-shadow">{title}</h3>
-                    </div>
-                </div>
+                {/* Base gradient — always present so the title is legible */}
+                <div className="absolute inset-x-0 bottom-0 h-3/5 bg-linear-to-t from-black/90 via-black/45 to-transparent" />
+                {/* Hover scrim — deepens on hover to let actions read */}
+                <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/25" />
             </button>
 
-            {/* Footer */}
-            <div className="flex items-center gap-1.5 border-t border-(--color-border-soft) px-2.5 py-2">
-                <div className="min-w-0 flex-1">
-                    <p className="truncate text-[9px] text-(--color-text-secondary)">{snap.currentLabel}</p>
+            {/* ── Top overlays ── */}
+            {/* Select — hidden until hover or when selected/any-selected context */}
+            <button type="button" onClick={(e) => { e.stopPropagation(); onToggleSelect(entry) }}
+                aria-label={selected ? 'Deselect' : 'Select'}
+                className={`absolute left-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-lg border backdrop-blur-sm transition active:scale-90 ${selected
+                    ? 'border-primary bg-primary text-(--color-ink-strong) opacity-100'
+                    : 'border-white/50 bg-black/40 text-transparent opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:border-white'}`}>
+                <IconCheck className="h-3 w-3" />
+            </button>
+
+            <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1">
+                {entry.hasNewChapter && (
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">New</span>
+                )}
+                {chip && (
+                    <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${chip.cls}`}>{chip.label}</span>
+                )}
+                {/* Remove — hover only */}
+                <button type="button" onClick={(e) => { e.stopPropagation(); onRequestRemove(entry) }} disabled={removeBusy}
+                    aria-label="Remove from library"
+                    className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/45 text-white/70 opacity-0 backdrop-blur-sm transition active:scale-90 group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-red-600/85 hover:text-white disabled:opacity-30">
+                    {removeBusy ? <span className="text-[9px]">…</span> : <IconX className="h-3 w-3" />}
+                </button>
+            </div>
+
+            {/* ── Bottom content ── */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-2.5">
+                {/* Source + chapter line */}
+                <div className="mb-1 flex items-center gap-1.5">
+                    <span className="rounded bg-white/15 px-1.5 py-px text-[8px] font-black uppercase tracking-wide text-white/80 backdrop-blur-sm">{src}</span>
+                    {snap.currentLabel && <span className="truncate text-[10px] font-semibold text-white/85">{snap.currentLabel}</span>}
                 </div>
-                <StatusSelect value={entry.readingStatus} onChange={(v) => onStatusChange(entry, v)} disabled={busy} className="h-6 min-w-[60px] text-[9px]" />
-                <Link to={to} state={state} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95" aria-label="Continue reading">
-                    <IconBook className="h-3 w-3" />
-                </Link>
+                <h3 className="line-clamp-2 text-[12.5px] font-bold leading-tight text-white">{title}</h3>
+
+                {/* Progress bar */}
+                {snap.percent > 0 && (
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/20">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${snap.percent}%` }} />
+                    </div>
+                )}
+
+                {/* Action row — Read is always visible (touch-reachable, not hover-gated).
+                    The status menu is an icon trigger that opens a portaled popover, so it
+                    stays compact at rest and never clips against the card edge. */}
+                <div className="pointer-events-auto mt-2 flex items-center gap-1.5">
+                    <Link to={to} state={state} onClick={(e) => e.stopPropagation()}
+                        className="flex h-8 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary text-[11px] font-black text-black transition hover:brightness-95 active:scale-[0.97]">
+                        <IconBook className="h-3 w-3" /> Read
+                    </Link>
+                    <StatusMenu value={entry.readingStatus} onChange={(v) => onStatusChange(entry, v)} disabled={busy} tone="overlay" />
+                </div>
             </div>
         </motion.div>
     )
@@ -633,6 +895,7 @@ export default function LifeSyncMangaLibrary() {
     const [selectedKeys, setSelectedKeys] = useState(() => new Set())
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, entry: null })
     const [detailEntry, setDetailEntry] = useState(null)
+    const [filtersOpen, setFiltersOpen] = useState(false)
 
     const sourceOptions = useMemo(
         () => hManhwaEnabled ? SOURCE_OPTIONS : SOURCE_OPTIONS.filter((o) => o.id !== 'mangadistrict' && o.id !== 'mangadna'),
@@ -653,6 +916,10 @@ export default function LifeSyncMangaLibrary() {
         if (page > total) setPage(total)
     }, [page, pageInfo?.totalPages])
 
+    // Post-sync "new chapters to read" deck  derived from the full list (not the
+    // paginated/filtered view), persisted dismissals in localStorage via the hook.
+    const { newItems, dismissOne, dismissAll } = useNewMangaToRead(listEntries)
+
     const selectableEntries = useMemo(() => {
         const m = new Map()
         for (const e of visibleEntries) { const k = entryKey(e); if (k && k !== ':') m.set(k, e) }
@@ -669,6 +936,10 @@ export default function LifeSyncMangaLibrary() {
 
     const selectedEntries = useMemo(() => selectableEntries.filter((e) => selectedKeys.has(entryKey(e))), [selectedKeys, selectableEntries])
     const hiddenCount = Math.max(0, listEntries.length - visibleEntries.length)
+    const activeFilterCount = (sourceFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0) + (updateStateFilter !== 'all' ? 1 : 0) + (sortBy !== 'updatedAt' ? 1 : 0) + (sortOrder !== 'desc' ? 1 : 0)
+    const resetFilters = useCallback(() => {
+        setSourceFilter('all'); setStatusFilter('all'); setUpdateStateFilter('all'); setSortBy('updatedAt'); setSortOrder('desc')
+    }, [])
     const syncRunning = syncJob != null && (syncJob.status === 'queued' || syncJob.status === 'running')
     const syncPercent = (() => { const t = Number(syncJob?.total || 0); const p = Number(syncJob?.processed || 0); return t > 0 ? Math.min(100, Math.round((p / t) * 100)) : (syncJob?.percent ?? 0) })()
 
@@ -744,6 +1015,17 @@ export default function LifeSyncMangaLibrary() {
         await onRemove(deleteConfirm.entry)
         setDeleteConfirm({ isOpen: false, entry: null })
     }, [deleteConfirm.entry, onRemove])
+
+    // Opening a "new chapter" card jumps straight to the latest chapter and drops
+    // it from the deck for good (until a genuinely newer chapter lands).
+    const onReadNew = useCallback((entry) => {
+        if (!entry) return
+        dismissOne(entry)
+        const { to, state } = resumeTarget(entry, browseTranslatedLang)
+        navigate(to, { state: state || undefined })
+    }, [browseTranslatedLang, dismissOne, navigate])
+    const onDismissNew = useCallback((entry) => dismissOne(entry), [dismissOne])
+    const onDismissAllNew = useCallback(() => dismissAll(newItems), [dismissAll, newItems])
 
     const onOpenDetail = useCallback((entry) => setDetailEntry(entry || null), [])
     const onCloseDetail = useCallback(() => setDetailEntry(null), [])
@@ -823,7 +1105,7 @@ export default function LifeSyncMangaLibrary() {
     }), [detailEntry, focusedCardIndex, layout, navigate, onCloseDetail, onOpenDetail, pageInfo?.hasMore, visibleEntries])
 
     useLifeSyncGamepadInput({
-        enabled: controllerSupportEnabled && !detailEntry && !deleteConfirm.isOpen,
+        enabled: controllerSupportEnabled && !detailEntry && !deleteConfirm.isOpen && !filtersOpen,
         handlers: libGamepadHandlers,
         repeatableButtons: [
             XBOX_GAMEPAD_BUTTONS.DPAD_LEFT,
@@ -856,7 +1138,7 @@ export default function LifeSyncMangaLibrary() {
                 accent="library"
                 kicker="LifeSync · Shelf"
                 title="Manga Library"
-                subtitle="Your synced reading shelf — progress, statuses, and new-chapter alerts."
+                subtitle="Your synced reading shelf  progress, statuses, and new-chapter alerts."
                 icon={
                     <Link to={MANGA_BASE} aria-label="Back to manga" className="flex h-full w-full items-center justify-center transition-transform hover:-translate-x-0.5">
                         <IconChevronLeft className="h-4.5 w-4.5" />
@@ -875,39 +1157,95 @@ export default function LifeSyncMangaLibrary() {
                                 { btns: ['A'], label: 'Open detail' },
                             ]}
                         />
-                        <Link to={MANGA_BASE} className="flex h-9 items-center justify-center rounded-full bg-primary px-5 text-[12px] font-black text-black shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)] transition-all hover:-translate-y-px hover:brightness-95">
+                        <Link to={MANGA_BASE} className="flex h-9 items-center justify-center rounded-full bg-primary px-5 text-[12px] font-black text-black transition-all hover:-translate-y-px hover:brightness-95">
                             Browse
                         </Link>
                     </>
                 }
             />
 
-            {/* ── Stats ── */}
-            <div className="grid grid-cols-3 gap-2.5">
-                {[
-                    { label: 'Total', value: initialLoading ? '—' : visibleEntries.length },
-                    { label: 'New chapters', value: initialLoading ? '—' : visibleSummary.withNewChapter, accent: true },
-                    { label: 'Needs sync', value: initialLoading ? '—' : visibleSummary.needsSync, warn: true },
-                ].map((s) => (
-                    <div key={s.label} className={`relative overflow-hidden rounded-2xl px-3 py-3.5 text-center shadow-sm transition-transform hover:-translate-y-0.5 ${s.accent ? 'bg-primary/10 ring-1 ring-primary/25' : 'border border-(--color-border-soft) bg-(--color-surface)'}`}>
-                        {s.accent && <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-linear-to-r from-transparent via-primary/70 to-transparent" aria-hidden />}
-                        <p className={`text-[24px] font-black tabular-nums leading-none tracking-tight ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{s.value}</p>
-                        <p className="mt-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-(--color-text-secondary)">{s.label}</p>
-                    </div>
-                ))}
-            </div>
+            {/* ── Shelf summary (inline pills, not metric cards) ── */}
+            {!initialLoading && (
+                <div className="flex flex-wrap items-center gap-2 text-[12px]">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 font-semibold text-(--color-text-secondary)">
+                        <span className="tabular-nums font-black text-(--color-text-primary)">{pageInfo?.total ?? visibleEntries.length}</span> titles
+                    </span>
+                    {visibleSummary.withNewChapter > 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-bold text-primary">
+                            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                            {visibleSummary.withNewChapter} new
+                        </span>
+                    )}
+                    {visibleSummary.needsSync > 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 font-bold text-amber-400">
+                            {visibleSummary.needsSync} need sync
+                        </span>
+                    )}
+                    {hiddenCount > 0 && (
+                        <span className="inline-flex items-center rounded-full px-1 py-1 font-medium text-(--color-text-secondary)">{hiddenCount} hidden by preferences</span>
+                    )}
+                </div>
+            )}
 
-            {/* ── Sync bar ── */}
-            <div className="flex flex-wrap items-center gap-2">
-                <select value={syncScope} onChange={(e) => setSyncScope(e.target.value)} disabled={syncBusy || syncRunning || !Number(pageInfo?.total || 0)}
-                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-semibold text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition disabled:opacity-50">
-                    {SYNC_SCOPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-                <button type="button" onClick={() => void onSync()} disabled={syncBusy || syncRunning || !Number(pageInfo?.total || 0)}
-                    className="flex h-9 items-center gap-2 rounded-xl bg-primary px-4 text-[12px] font-bold text-black transition hover:brightness-95 disabled:opacity-50">
-                    <IconSync className={syncBusy || syncRunning ? 'animate-spin' : ''} />
-                    {syncBusy ? 'Starting…' : syncRunning ? `Syncing ${Math.round(syncPercent)}%` : 'Sync latest'}
+            {/* ── New chapters to read (post-sync deck) ── */}
+            <AnimatePresence>
+                {newItems.length > 0 && (
+                    <NewMangaToReadPanel
+                        items={newItems}
+                        onRead={onReadNew}
+                        onDismiss={onDismissNew}
+                        onDismissAll={onDismissAllNew}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* ── Command bar: search · filters · view · sync ── */}
+            <div className="sticky top-2 z-30 flex flex-wrap items-center gap-2 rounded-2xl border border-(--color-border-soft) bg-(--color-surface)/85 px-2 py-2 backdrop-blur-md">
+                {/* Search */}
+                <div className="relative min-w-0 flex-1 basis-44">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)"><IconSearch /></span>
+                    <input ref={searchRef} type="search" value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="Search your shelf…"
+                        className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none focus:ring-2 focus:ring-primary/15 transition" />
+                </div>
+
+                {/* Filters */}
+                <button type="button" onClick={() => setFiltersOpen(true)}
+                    className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-bold transition ${activeFilterCount > 0
+                        ? 'border-primary/50 bg-primary/10 text-primary'
+                        : 'border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) hover:border-(--color-border-strong) hover:text-(--color-text-primary)'}`}>
+                    <IconFilter />
+                    <span className="hidden sm:inline">Filters</span>
+                    {activeFilterCount > 0 && (
+                        <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-black tabular-nums text-(--color-ink-strong)">{activeFilterCount}</span>
+                    )}
                 </button>
+
+                {/* View toggle */}
+                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                    <button type="button" onClick={() => { setLayout('list'); try { localStorage.setItem('lifesync.mangaLibrary.layout', 'list') } catch { /* ignore */ } }}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary)' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        aria-label="List view"><IconList /></button>
+                    <button type="button" onClick={() => { setLayout('grid'); try { localStorage.setItem('lifesync.mangaLibrary.layout', 'grid') } catch { /* ignore */ } }}
+                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary)' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        aria-label="Grid view"><IconGrid /></button>
+                </div>
+
+                <span className="mx-0.5 hidden h-6 w-px bg-(--color-border-soft) sm:block" aria-hidden />
+
+                {/* Sync (split: scope select + action) */}
+                <div className="flex h-9 items-center overflow-hidden rounded-xl bg-primary">
+                    <button type="button" onClick={() => void onSync()} disabled={syncBusy || syncRunning || !Number(pageInfo?.total || 0)}
+                        className="flex h-full items-center gap-1.5 px-3 text-[12px] font-bold text-black transition hover:brightness-95 disabled:opacity-50">
+                        <IconSync className={syncBusy || syncRunning ? 'animate-spin' : ''} />
+                        <span className="hidden sm:inline">{syncBusy ? 'Starting…' : syncRunning ? `${Math.round(syncPercent)}%` : 'Sync'}</span>
+                    </button>
+                    <select value={syncScope} onChange={(e) => setSyncScope(e.target.value)} disabled={syncBusy || syncRunning || !Number(pageInfo?.total || 0)} aria-label="Sync scope"
+                        className="h-full border-l border-black/15 bg-primary px-1.5 text-[11px] font-bold text-black focus:outline-none disabled:opacity-50">
+                        {SYNC_SCOPE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                    </select>
+                </div>
+
+                {/* Refresh */}
                 <button type="button" onClick={() => void refreshAll()} disabled={refreshing}
                     className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
                     aria-label="Reload">
@@ -932,59 +1270,14 @@ export default function LifeSyncMangaLibrary() {
             )}
             {syncError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{syncError}</div>}
 
-            {/* ── Controls ── */}
-            <div className="flex flex-wrap gap-2">
-                {/* Search */}
-                <div className="relative min-w-0 flex-1 basis-48">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)"><IconSearch /></span>
-                    <input ref={searchRef} type="search" value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="Search titles…"
-                        className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 transition" />
-                </div>
-
-                {/* Source */}
-                <select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}
-                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
-                    {sourceOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-
-                {/* Status */}
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
-                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
-                    {STATUS_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-
-                {/* Update state */}
-                <select value={updateStateFilter} onChange={(e) => setUpdateStateFilter(e.target.value)}
-                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
-                    {UPDATE_STATE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-
-                {/* Sort */}
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-                    className="h-9 rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 text-[12px] font-medium text-(--color-text-secondary) focus:border-primary/60 focus:outline-none transition">
-                    {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-
-                {/* Sort order */}
-                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
-                    {[{ id: 'desc', label: '↓' }, { id: 'asc', label: '↑' }].map((o) => (
-                        <button key={o.id} type="button" onClick={() => setSortOrder(o.id)}
-                            className={`flex h-8 w-8 items-center justify-center rounded-lg text-[12px] font-bold transition ${sortOrder === o.id ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
-                            {o.label}
-                        </button>
-                    ))}
-                </div>
-
-                {/* Layout toggle */}
-                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
-                    <button type="button" onClick={() => { setLayout('list'); try { localStorage.setItem('lifesync.mangaLibrary.layout', 'list') } catch { /* ignore */ } }}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
-                        aria-label="List view"><IconList /></button>
-                    <button type="button" onClick={() => { setLayout('grid'); try { localStorage.setItem('lifesync.mangaLibrary.layout', 'grid') } catch { /* ignore */ } }}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
-                        aria-label="Grid view"><IconGrid /></button>
-                </div>
-            </div>
+            {/* ── Filter & sort drawer ── */}
+            <LibraryFilterDrawer open={filtersOpen} onClose={() => setFiltersOpen(false)} count={activeFilterCount} onReset={resetFilters}>
+                <FilterGroup label="Source" options={sourceOptions} value={sourceFilter} onChange={setSourceFilter} />
+                <FilterGroup label="Status" options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+                <FilterGroup label="Updates" options={UPDATE_STATE_OPTIONS} value={updateStateFilter} onChange={setUpdateStateFilter} />
+                <FilterGroup label="Sort by" options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} />
+                <FilterGroup label="Order" options={[{ id: 'desc', label: 'Newest first' }, { id: 'asc', label: 'Oldest first' }]} value={sortOrder} onChange={setSortOrder} />
+            </LibraryFilterDrawer>
 
             {/* Bulk action bar */}
             {selectedEntries.length > 0 && (
@@ -1030,18 +1323,30 @@ export default function LifeSyncMangaLibrary() {
                 <MotionDiv className="rounded-2xl border border-red-200 bg-red-50 px-6 py-10 text-center dark:border-red-800 dark:bg-red-950/20" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                     <p className="text-[16px] font-semibold text-red-900 dark:text-red-300">Failed to load library</p>
                     <p className="mt-2 text-[13px] text-red-700 dark:text-red-400">{error}</p>
-                    <button type="button" onClick={() => void refreshList({ forceInitial: true })} className="mt-4 rounded-xl border border-red-200 px-4 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100">Retry</button>
+                    <button type="button" onClick={() => void refreshList({ forceInitial: true })} className="mt-4 rounded-xl border border-red-200 px-4 py-2 text-[12px] font-semibold text-red-700 transition hover:bg-red-100 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10">Retry</button>
                 </MotionDiv>
             ) : listEntries.length === 0 ? (
                 <MotionDiv className="rounded-2xl border border-dashed border-(--color-border-soft) bg-(--color-surface) px-6 py-16 text-center" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={lifeSyncPageTransition}>
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--color-surface-muted)">
                         <IconBook className="h-5 w-5 text-(--color-text-secondary)" />
                     </div>
-                    <p className="text-[16px] font-bold text-(--color-text-primary)">{query || sourceFilter !== 'all' || statusFilter !== 'all' || updateStateFilter !== 'all' ? 'No matches' : 'Your shelf is empty'}</p>
-                    <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-(--color-text-secondary)">Open any chapter in the reader to track progress here.</p>
-                    <Link to={MANGA_BASE} className="mt-6 inline-flex min-h-[42px] items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
-                        <IconBook className="h-3.5 w-3.5" /> Browse manga
-                    </Link>
+                    {query || activeFilterCount > 0 ? (
+                        <>
+                            <p className="text-[16px] font-bold text-(--color-text-primary)">No matches</p>
+                            <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-(--color-text-secondary)">No titles match your search or filters.</p>
+                            <button type="button" onClick={() => { setQueryInput(''); resetFilters() }} className="mt-6 inline-flex min-h-10.5 items-center justify-center gap-2 rounded-2xl border border-(--color-border-soft) px-5 text-[13px] font-bold text-(--color-text-primary) transition hover:bg-(--color-surface-muted)">
+                                Clear search & filters
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <p className="text-[16px] font-bold text-(--color-text-primary)">Your shelf is empty</p>
+                            <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-(--color-text-secondary)">Open any chapter in the reader to track progress here.</p>
+                            <Link to={MANGA_BASE} className="mt-6 inline-flex min-h-10.5 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
+                                <IconBook className="h-3.5 w-3.5" /> Browse manga
+                            </Link>
+                        </>
+                    )}
                 </MotionDiv>
             ) : visibleEntries.length === 0 ? (
                 <MotionDiv className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-12 text-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -1050,16 +1355,12 @@ export default function LifeSyncMangaLibrary() {
                 </MotionDiv>
             ) : (
                 <>
-                    {/* Count + select row */}
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-[11px] text-(--color-text-secondary)">
-                            {visibleEntries.length} of {pageInfo.total} · Page {pageInfo.page}/{pageInfo.totalPages}
-                            {hiddenCount > 0 && <span className="ml-2 text-(--color-text-secondary)">({hiddenCount} hidden)</span>}
+                    {/* Select row */}
+                    <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-medium text-(--color-text-secondary)">
+                            {pageInfo.totalPages > 1 ? <>Showing {visibleEntries.length} · page {pageInfo.page} of {pageInfo.totalPages}</> : <>{visibleEntries.length} title{visibleEntries.length === 1 ? '' : 's'}</>}
                         </p>
-                        <div className="flex gap-1.5">
-                            <button type="button" onClick={onSelectAll} className="rounded-lg border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">Select all</button>
-                            <button type="button" onClick={onClearSelection} className="rounded-lg border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted)">Clear</button>
-                        </div>
+                        <button type="button" onClick={onSelectAll} className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)">Select all</button>
                     </div>
 
                     {/* List */}
@@ -1101,23 +1402,25 @@ export default function LifeSyncMangaLibrary() {
                     )}
 
                     {/* Pagination */}
-                    <div className="flex items-center justify-between rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-4 py-2.5">
-                        <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageInfo.page <= 1 || refreshing}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
-                            <IconChevronLeft />
-                        </button>
-                        <p className="text-[12px] font-semibold text-(--color-text-primary)">Page {pageInfo.page} of {pageInfo.totalPages}</p>
-                        <button type="button" onClick={() => setPage((p) => p + 1)} disabled={!pageInfo.hasMore || refreshing}
-                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
-                            <IconChevronRight />
-                        </button>
-                    </div>
+                    {pageInfo.totalPages > 1 && (
+                        <div className="flex items-center justify-between rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-4 py-2.5">
+                            <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageInfo.page <= 1 || refreshing}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
+                                <IconChevronLeft />
+                            </button>
+                            <p className="text-[12px] font-semibold text-(--color-text-primary)">Page {pageInfo.page} of {pageInfo.totalPages}</p>
+                            <button type="button" onClick={() => setPage((p) => p + 1)} disabled={!pageInfo.hasMore || refreshing}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
+                                <IconChevronRight />
+                            </button>
+                        </div>
+                    )}
                 </>
             )}
 
             {/* ── Modals ── */}
             <AnimatePresence>
-                {detailEntry && <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} browseTranslatedLang={browseTranslatedLang} />}
+                {detailEntry && <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} />}
             </AnimatePresence>
             <AnimatePresence>
                 {deleteConfirm.isOpen && (

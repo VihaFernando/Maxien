@@ -434,7 +434,7 @@ export default function Calendar() {
                         </span>
                     </div>
 
-                    {/* Mobile dots — blue for tasks, indigo for Google events */}
+                    {/* Mobile dots  blue for tasks, indigo for Google events */}
                     <div className="flex sm:hidden justify-center gap-1 mt-1 flex-wrap px-1">
                         {dayTasks.slice(0, 2).map(task => (
                             <div key={`dot-${task.id}`} className="w-1.5 h-1.5 rounded-full bg-blue-500" />
@@ -445,7 +445,7 @@ export default function Calendar() {
                         {allItems.length > 4 && <div className="w-1.5 h-1.5 rounded-full bg-gray-400" />}
                     </div>
 
-                    {/* Desktop/Tablet pills — tasks first, then Google events, max 3 total */}
+                    {/* Desktop/Tablet pills  tasks first, then Google events, max 3 total */}
                     <div className="hidden sm:block space-y-1 overflow-hidden">
                         {allItems.slice(0, 3).map(item => item.type === 'task' ? (
                             <div

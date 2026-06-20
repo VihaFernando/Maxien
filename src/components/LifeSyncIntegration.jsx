@@ -295,7 +295,7 @@ function ConnectedView({ lifeSyncUser, prefs, busy, error, setError, message, se
                         </div>
                     </li>
 
-                    {/* Xbox (gamertag via OpenXBL — same as main app Settings) */}
+                    {/* Xbox (gamertag via OpenXBL  same as main app Settings) */}
                     <li className="px-5 sm:px-6 py-4">
                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
                             <div className="flex min-w-0 items-start gap-3">
@@ -517,7 +517,7 @@ export default function LifeSyncIntegration({ embedded = false }) {
 
     return (
         <div className={embedded ? "" : "mb-5 sm:mb-6"}>
-            {/* Connection card — matches GitHub integration row */}
+            {/* Connection card  matches GitHub integration row */}
             <div className={`rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-4 shadow-sm sm:rounded-[24px] sm:p-5 ${embedded ? "mb-5" : "mb-5 sm:mb-6"}`}>
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3.5 flex-1 min-w-0">
@@ -611,10 +611,10 @@ export default function LifeSyncIntegration({ embedded = false }) {
                                         <p className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">Connect LifeSync</p>
                                         <p className="mt-1 text-[12px] text-[var(--mx-color-86868b)] leading-relaxed">
                                             <span className="font-mono text-[11px] text-[var(--mx-color-1d1d1f)]">
-                                                {maxienUser?.email || '—'}
+                                                {maxienUser?.email || ''}
                                             </span>
                                             <span className="block mt-2 text-[11px] leading-relaxed">
-                                                Prefer <strong className="font-semibold">Connect</strong> — it signs
+                                                Prefer <strong className="font-semibold">Connect</strong>  it signs
                                                 you in with your Maxien session (or creates a LifeSync user if needed).
                                                 Use a password here only if the server is not configured for
                                                 passwordless linking or you want a separate LifeSync password.

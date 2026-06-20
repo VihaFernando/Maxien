@@ -12,7 +12,7 @@ function watchPath(animeId, episode) {
     return `${ANIME_HUB_PATH}/watch/${encodeURIComponent(String(animeId))}/${ep}`
 }
 
-/** Hub rail — anime watch resume strip. */
+/** Hub rail  anime watch resume strip. */
 export function LifeSyncHubAnimeWatching({ entries, loading, className = '' }) {
     if (!loading && entries.length === 0) return null
 

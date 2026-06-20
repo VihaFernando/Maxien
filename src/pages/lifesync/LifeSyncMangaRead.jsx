@@ -25,7 +25,7 @@ const ZOOM_MAX                      = 200
 const ZOOM_MIN_FS                   = 20
 const ZOOM_MAX_FS                   = 80
 
-// Detect Xbox One / low-RAM / data-saver — evaluated once at module load
+// Detect Xbox One / low-RAM / data-saver  evaluated once at module load
 const LOW_END = (() => {
     try {
         if (/Xbox/i.test(navigator.userAgent)) return true
@@ -316,7 +316,7 @@ export default function LifeSyncMangaRead() {
     const latestProgress     = useRef({ manga: null, chapter: null, percent: 0 })
     const lastFlushedSig     = useRef('')
 
-    // ── progress helpers (all stable — deps are refs or module-level fns) ──
+    // ── progress helpers (all stable  deps are refs or module-level fns) ──
 
     const buildPayload = useCallback((row) => {
         const m = row?.manga
@@ -402,7 +402,7 @@ export default function LifeSyncMangaRead() {
         }, PROGRESS_REMOTE_DEBOUNCE_MS)
     }, [flushQueued, flushReading, isLifeSyncConnected, scheduleProgressFlushService])
 
-    // ── scroll progress (hot path — minimise allocations) ──
+    // ── scroll progress (hot path  minimise allocations) ──
 
     const updateScrollProgress = useCallback(() => {
         if (zoomChanging.current) return
@@ -412,7 +412,7 @@ export default function LifeSyncMangaRead() {
         const max = scrollHeight - clientHeight
         const p = max <= 0 ? 1 : Math.min(1, Math.max(0, scrollTop / max))
         readProgressRef.current = p
-        // Only commit to state when change ≥ 0.5% (or at extremes) — cuts ~95% of re-renders
+        // Only commit to state when change ≥ 0.5% (or at extremes)  cuts ~95% of re-renders
         const prev = lastCommittedProg.current
         if (p === 0 || p === 1 || Math.abs(p - prev) >= 0.005) {
             lastCommittedProg.current = p
@@ -617,7 +617,7 @@ export default function LifeSyncMangaRead() {
         return () => cancelAnimationFrame(raf)
     }, [chapter?.id, loadingPages, manga?.id, manga?.source, resumeChapterId, resumePercent, scheduleProgressUpdate, source, urls.length])
 
-    // Keep latestProgress ref in sync (for flush callbacks — ref update only, no render)
+    // Keep latestProgress ref in sync (for flush callbacks  ref update only, no render)
     useEffect(() => {
         if (!manga?.id || !chapter?.id) return
         let pct = normalizeReadPercent(readProgress * 100)
@@ -805,7 +805,7 @@ export default function LifeSyncMangaRead() {
                             <p className="truncate text-[10px] text-white/60">{formatChapterLabel(chapter)}</p>
                         </div>
 
-                        {/* Zoom slider — hidden on small screens */}
+                        {/* Zoom slider  hidden on small screens */}
                         <div className="hidden md:flex items-center gap-2">
                             <label className="text-[10px] font-semibold text-white/60 tabular-nums" htmlFor="manga-zoom">
                                 Zoom {Math.round(zoomScale * 100)}%
@@ -941,7 +941,7 @@ export default function LifeSyncMangaRead() {
                     <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-white/50">
                         {!fullscreen ? (
                             <span>
-                                {urls.length > 0 ? `${urls.length} page${urls.length === 1 ? '' : 's'}` : loadingPages ? '…' : '—'}
+                                {urls.length > 0 ? `${urls.length} page${urls.length === 1 ? '' : 's'}` : loadingPages ? '…' : ''}
                             </span>
                         ) : (
                             <div className="inline-flex items-center gap-1.5 text-white/80">

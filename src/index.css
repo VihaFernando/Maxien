@@ -69,6 +69,17 @@ html[data-maxien-theme='dark'] body {
   color: var(--color-text-primary);
 }
 
+@keyframes mx-chart-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .sub-urgency-critical {
   background-color: var(--mx-color-fef2f2);
   border: 1px solid var(--mx-color-fecaca);
@@ -913,7 +924,7 @@ iframe {
   }
 }
 
-/* Profile / LifeSync "Reduce animations" — strip decorative CSS motion (Framer handled via MotionConfig). */
+/* Profile / LifeSync "Reduce animations"  strip decorative CSS motion (Framer handled via MotionConfig). */
 html.maxien-reduce-motion .lifesync-dot-bounce,
 html.maxien-reduce-motion .lifesync-dot-bounce-delay-1,
 html.maxien-reduce-motion .lifesync-dot-bounce-delay-2 {
@@ -1183,7 +1194,7 @@ html.maxien-reduce-motion .animate-ping {
   margin-bottom: 0.22em;
 }
 
-/* Video subtitle (WebVTT ::cue) styling — smaller text, raised above controls */
+/* Video subtitle (WebVTT ::cue) styling  smaller text, raised above controls */
 ::cue {
   font-size: 0.9em;
   font-family: inherit;

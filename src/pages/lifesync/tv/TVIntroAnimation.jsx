@@ -353,7 +353,7 @@ export function TVIntroAnimation({ onComplete }) {
                     transition={{ delay: 1.95, duration: 1.5, ease: 'easeOut', times: [0, 0.26, 1] }}
                     style={{ transformOrigin: '800px 450px' }}
                 />
-                {/* Shockwave ring 4 — outermost ghost */}
+                {/* Shockwave ring 4  outermost ghost */}
                 <M.circle cx="800" cy="450" r="44" fill="none" stroke="rgba(198,255,0,0.1)" strokeWidth="1"
                     initial={{ scale: 0, opacity: 0 }}
                     animate={{ scale: [0, 9, 2], opacity: [0, 0.3, 0] }}
@@ -368,7 +368,7 @@ export function TVIntroAnimation({ onComplete }) {
                 {/* Mark + Wordmark row */}
                 <div className="flex items-center" style={{ gap: 22 }}>
 
-                    {/* Animated mark — icon with two orbiting dots */}
+                    {/* Animated mark  icon with two orbiting dots */}
                     <M.div
                         className="relative flex items-center justify-center"
                         style={{ width: 82, height: 82 }}
@@ -405,7 +405,7 @@ export function TVIntroAnimation({ onComplete }) {
                         />
                     </M.div>
 
-                    {/* Wordmark — per-character reveal */}
+                    {/* Wordmark  per-character reveal */}
                     <div className="flex items-baseline" style={{ perspective: 600 }}>
                         {lifeSyncChars.map((char, i) => {
                             const isSync = i >= 4
@@ -430,7 +430,7 @@ export function TVIntroAnimation({ onComplete }) {
                     </div>
                 </div>
 
-                {/* TV MODE tag — redesigned architectural badge */}
+                {/* TV MODE tag  redesigned architectural badge */}
                 <M.div
                     className="relative overflow-hidden"
                     initial={{ opacity: 0, scaleX: 0.4, y: 8 }}

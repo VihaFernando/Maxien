@@ -13,7 +13,7 @@ const CC_STORAGE_KEY = 'mx-player-cc'
 function readStoredVolume() {
     try {
         const n = Number(localStorage.getItem(VOLUME_STORAGE_KEY))
-        // Never restore a silent/near-silent volume — a stored 0 would make
+        // Never restore a silent/near-silent volume  a stored 0 would make
         // every video start inaudible while the UI looks normal.
         return Number.isFinite(n) && n >= 0.05 && n <= 1 ? n : null
     } catch {
@@ -126,7 +126,7 @@ export default function AdvancedVideoPlayer({
     const [showQualityMenu, setShowQualityMenu] = useState(false)
     const [buffering, setBuffering] = useState(false)
     const [showRemaining, setShowRemaining] = useState(false)
-    // { forSrc, message } — only displayed while forSrc matches the active source,
+    // { forSrc, message }  only displayed while forSrc matches the active source,
     // so it auto-clears on episode/quality change without an effect
     const [mediaError, setMediaError] = useState(null)
     const [retryNonce, setRetryNonce] = useState(0)
@@ -229,7 +229,7 @@ export default function AdvancedVideoPlayer({
     const trackKey = (textTracks || []).map(t => t.src).join('|')
     // CORS mode is required for cross-origin WebVTT <track> elements, but it
     // breaks direct CDN sources that don't send Access-Control-Allow-Origin
-    // (e.g. hentai mp4 mirrors) — only request it when subtitles are present.
+    // (e.g. hentai mp4 mirrors)  only request it when subtitles are present.
     const needsCrossOrigin = (textTracks || []).length > 0
 
     // Sync subtitle visibility to native text track mode
@@ -261,7 +261,7 @@ export default function AdvancedVideoPlayer({
         if (storedVol != null) v.volume = storedVol
 
         // The <video> element is recreated per episode (key={src}) and reloaded
-        // per quality change, both of which reset playbackRate to 1 — reapply
+        // per quality change, both of which reset playbackRate to 1  reapply
         // the user's speed so the UI and actual rate never drift apart.
         v.playbackRate = speedRef.current
 
@@ -310,7 +310,7 @@ export default function AdvancedVideoPlayer({
                         hls = new Hls({
                             enableWorker: true,
                             lowLatencyMode: false,
-                            // Buffer only a window around the playhead — a seek to the
+                            // Buffer only a window around the playhead  a seek to the
                             // middle fetches just the segments it needs instead of
                             // downloading the whole stream, and memory behind the
                             // playhead is released.
@@ -372,7 +372,7 @@ export default function AdvancedVideoPlayer({
             v.removeAttribute('src')
             v.load()
         }
-    // trackKey intentionally excluded — subtitle track changes must NOT reload the stream
+    // trackKey intentionally excluded  subtitle track changes must NOT reload the stream
     }, [activeSrc, retryNonce])
 
     // Switch to a specific quality variant, remembering the current position
@@ -412,14 +412,14 @@ export default function AdvancedVideoPlayer({
             onError?.(err)
         }
         const onDur = () => setDuration(v.duration || 0)
-        // `stalled` intentionally NOT used — Chrome fires it spuriously during
+        // `stalled` intentionally NOT used  Chrome fires it spuriously during
         // perfectly fine playback, which left the spinner stuck on screen.
         const onWaiting = () => { if (!v.paused) markBuffering() }
         const onPlayable = () => clearBuffering()
         const onSeeked = () => clearBuffering()
         const onProgress = () => {
             if (v.buffered.length === 0) return
-            // Report the range containing the playhead — after a seek, the last
+            // Report the range containing the playhead  after a seek, the last
             // range can be far behind/ahead and made the buffer bar misleading.
             const t = v.currentTime
             for (let i = 0; i < v.buffered.length; i++) {
@@ -484,7 +484,7 @@ export default function AdvancedVideoPlayer({
 
     // Playhead watchdog: if the video claims to be playing but currentTime
     // stops advancing, escalate through recovery steps instead of staying
-    // frozen — (1) nudge the playhead past a buffer hole, (2) restart the
+    // frozen  (1) nudge the playhead past a buffer hole, (2) restart the
     // loader (hls) or reload the element (mp4) at the same position.
     useEffect(() => {
         const id = setInterval(() => {
@@ -621,7 +621,7 @@ export default function AdvancedVideoPlayer({
         if (val > 0 && v.muted) v.muted = false
     }, [])
 
-    // Volume change from keys/gamepad — also flashes the transient volume HUD
+    // Volume change from keys/gamepad  also flashes the transient volume HUD
     const nudgeVolume = useCallback((delta) => {
         const v = videoRef.current
         if (!v) return
@@ -826,7 +826,7 @@ export default function AdvancedVideoPlayer({
     }, [duration])
 
     // Drag-to-seek: live UI preview while dragging, commit the actual seek on
-    // release — committing every pointermove caused seek-thrashing on HLS.
+    // release  committing every pointermove caused seek-thrashing on HLS.
     const onSeekPointerDown = useCallback((e) => {
         isSeekingRef.current = true
         const t = barTimeFromEvent(e)
@@ -1089,7 +1089,7 @@ export default function AdvancedVideoPlayer({
                         />
                     </div>
 
-                    {/* Bottom row — wraps on narrow widths; secondary cluster full-width on xs */}
+                    {/* Bottom row  wraps on narrow widths; secondary cluster full-width on xs */}
                     <div className="flex w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-1.5">
                         {/* Play / Pause */}
                         <button type="button" onClick={togglePlay} className={`${iconBtn} text-white hover:text-(--mx-color-c6ff00)`}>
@@ -1142,7 +1142,7 @@ export default function AdvancedVideoPlayer({
                             </div>
                         </div>
 
-                        {/* Time — click toggles remaining time */}
+                        {/* Time  click toggles remaining time */}
                         <button
                             type="button"
                             onClick={() => setShowRemaining(r => !r)}
@@ -1156,10 +1156,10 @@ export default function AdvancedVideoPlayer({
                             {fmtTime(duration)}
                         </button>
 
-                        {/* Spacer — desktop only */}
+                        {/* Spacer  desktop only */}
                         <div className="hidden min-w-0 flex-1 sm:block" />
 
-                        {/* Quality + Speed + CC + PiP + FS — full-width row on xs so controls do not overflow */}
+                        {/* Quality + Speed + CC + PiP + FS  full-width row on xs so controls do not overflow */}
                         <div className="flex w-full min-w-0 shrink-0 items-center justify-end gap-0.5 sm:ml-auto sm:w-auto">
                             {hasQualities && (
                                 <div className="relative" data-player-menu>
@@ -1301,8 +1301,8 @@ function ShortcutHint() {
     return (
         <div className="pointer-events-none absolute left-2 top-[max(0.75rem,env(safe-area-inset-top,0px))] z-30 max-w-[calc(100%-1rem)] rounded-xl border border-white/8 bg-black/60 px-2 py-2 text-[9px] leading-snug text-white/60 backdrop-blur-md animate-[fadeOut_0.5s_3.5s_forwards] sm:left-3 sm:max-w-sm sm:px-3 sm:text-[10px]">
             <p className="mb-0.5 font-semibold text-white/80">Keyboard shortcuts</p>
-            <p className="wrap-anywhere">Space/K — play/pause · ←→/J/L — seek {SKIP_SEC}s · Shift+←→ — 30s</p>
-            <p className="wrap-anywhere">↑↓ — volume · M — mute · F — fullscreen · P — PiP · C — subtitles · {'<>'} — speed · 0–9 — jump</p>
+            <p className="wrap-anywhere">Space/K  play/pause · ←→/J/L  seek {SKIP_SEC}s · Shift+←→  30s</p>
+            <p className="wrap-anywhere">↑↓  volume · M  mute · F  fullscreen · P  PiP · C  subtitles · {'<>'}  speed · 0–9  jump</p>
         </div>
     )
 }

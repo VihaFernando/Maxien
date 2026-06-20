@@ -33,7 +33,7 @@ import {
  *   navigateState?: object,
  * }
  *
- * onOpenPlayer: ({ type, ...playerProps }) => void  — opens TV reader/player
+ * onOpenPlayer: ({ type, ...playerProps }) => void   opens TV reader/player
  * onClose: () => void
  */
 export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
@@ -84,7 +84,7 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
                     )
                     if (!cancelRef.current) setDetail(data || null)
                 }
-            } catch { /* ignore — fall back to item data */ }
+            } catch { /* ignore  fall back to item data */ }
             finally { if (!cancelRef.current) setDetailLoading(false) }
         }
         void load()
@@ -526,7 +526,7 @@ export function TVDetailSheet({ item, onClose, onOpenPlayer }) {
                     </button>
                 </div>
 
-                {/* Input hint — follows active device (controller or keyboard) */}
+                {/* Input hint  follows active device (controller or keyboard) */}
                 <div className="absolute right-5 top-5 flex items-center gap-2 rounded-xl bg-black/50 px-3 py-2 text-[11px] text-white/50 backdrop-blur-sm">
                     <span className="flex h-5 min-w-5 items-center justify-center rounded bg-green-600 px-1 text-[9px] font-black text-white">{tvHintLabel('A', inputSource)}</span> Confirm
                     <span className="ml-1 flex h-5 min-w-5 items-center justify-center rounded bg-red-600 px-1 text-[9px] font-black text-white">{tvHintLabel('B', inputSource)}</span> Back

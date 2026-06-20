@@ -23,7 +23,7 @@ export function engagementNotificationsSupported() {
 }
 
 /**
- * Pools of nudges — one category is picked at random when a notification fires.
+ * Pools of nudges  one category is picked at random when a notification fires.
  * URLs match `BrowserRouter` routes under `/dashboard`.
  */
 export const ENGAGEMENT_NOTIFICATION_POOL = [
@@ -42,7 +42,7 @@ export const ENGAGEMENT_NOTIFICATION_POOL = [
   {
     category: 'anime',
     title: 'Resume watching',
-    body: 'Catch up on anime you started — your history is one tap away.',
+    body: 'Catch up on anime you started  your history is one tap away.',
     url: '/dashboard/lifesync/anime',
   },
   {
@@ -54,7 +54,7 @@ export const ENGAGEMENT_NOTIFICATION_POOL = [
   {
     category: 'deals',
     title: 'Game deals',
-    body: 'Peek at your Steam wishlist — a sale might be live.',
+    body: 'Peek at your Steam wishlist  a sale might be live.',
     url: '/dashboard/lifesync/games/wishlist',
   },
   {

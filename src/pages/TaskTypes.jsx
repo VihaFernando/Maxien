@@ -105,7 +105,7 @@ export default function TaskTypes() {
 
                 if (error) {
                     setTypes(prev => [{ id: Date.now(), ...payload, created_at: new Date().toISOString() }, ...prev])
-                    setMessage("Saved locally — server insert failed.")
+                    setMessage("Saved locally  server insert failed.")
                 } else {
                     setTypes(prev => [data, ...prev])
                     setMessage("Task type created.")
@@ -156,7 +156,7 @@ export default function TaskTypes() {
     const getTaskCount = () => {
         // This would require counting from tasks table
         // For now, we show a placeholder
-        return "—"
+        return ""
     }
 
     return (

@@ -45,7 +45,6 @@ import {
   MotionDiv,
 } from "../../lib/lifesyncMotion";
 import {
-  buildDexChapterLangSelectOptions,
   compareChapters,
   DEX_TRANSLATION_LANG_OPTIONS,
   formatChapterLabel,
@@ -89,6 +88,138 @@ function mangaDetailPreviewFromCard(manga, source) {
 function clampPage(n) {
   const v = Number.parseInt(String(n || "1"), 10);
   return Number.isFinite(v) && v > 0 ? v : 1;
+}
+
+/**
+ * Right-side filter slide-over. Keeps the browse grid as the focus instead of
+ * pushing it down with an inline expanding panel. The panel body (all the
+ * source-specific filter inputs) is passed as children unchanged  only the
+ * container moves. Backdrop click / Esc / close button all dismiss.
+ */
+function FilterDrawer({ open, onClose, title, count, onReset, children }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <MotionDiv
+          className="fixed inset-0 z-[9997] flex justify-end"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={lifeSyncDetailOverlayFadeTransition}
+        >
+          <MotionDiv
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+          <MotionDiv
+            className="relative flex h-dvh w-full max-w-md flex-col bg-(--color-surface) shadow-2xl"
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 360, damping: 36 }}
+          >
+            {/* Header */}
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-(--color-border-soft) px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate text-[15px] font-black text-(--color-text-primary)">
+                  {title}
+                </h2>
+                {count > 0 && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--color-primary) px-1.5 text-[11px] font-black tabular-nums text-(--color-ink-strong)">
+                    {count}
+                  </span>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {count > 0 && onReset && (
+                  <button
+                    type="button"
+                    onClick={onReset}
+                    className="rounded-lg border border-(--color-border-soft) px-2.5 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close filters"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {/* Scrollable body */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+              {children}
+            </div>
+          </MotionDiv>
+        </MotionDiv>
+      )}
+    </AnimatePresence>,
+    document.body,
+  );
+}
+
+/**
+ * Unified browse pager footer  one polished control shared by every source
+ * (Roliascan / Manga District / MangaDNA). Replaces three near-identical inline
+ * Prev/Next rows. Chevron icon buttons + centered page label, matching the
+ * Manga Library footer pager for a consistent reading shelf rhythm.
+ */
+function MangaPagerFooter({ page, lastPage, total, busy, onPrev, onNext }) {
+  const cur = Math.max(1, Number(page) || 1);
+  const last = Math.max(1, Number(lastPage) || 1);
+  if (last <= 1 && cur <= 1) return null;
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-4 py-2.5">
+      <button
+        type="button"
+        disabled={busy || cur <= 1}
+        onClick={onPrev}
+        aria-label="Previous page"
+        className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary) disabled:opacity-40"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      <p className="min-w-0 text-center text-[12px] font-semibold text-(--color-text-primary)">
+        Page {cur} of {last}
+        {Number(total) > 0 && (
+          <span className="ml-1.5 font-medium text-(--color-text-secondary) tabular-nums">
+            · {Number(total).toLocaleString()} titles
+          </span>
+        )}
+      </p>
+      <button
+        type="button"
+        disabled={busy || cur >= last}
+        onClick={onNext}
+        aria-label="Next page"
+        className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary) disabled:opacity-40"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        </svg>
+      </button>
+    </div>
+  );
 }
 
 function mangaTagLabel(tag) {
@@ -143,7 +274,7 @@ const ORIGINAL_LANG_OPTIONS = [
   { value: "en", label: "English" },
 ];
 
-/** Manga District — `publication-genre/{slug}/` (type row). */
+/** Manga District  `publication-genre/{slug}/` (type row). */
 const MD_TYPE_OPTIONS = [
   { slug: "webtoons", label: "Webtoons" },
   { slug: "manhwa", label: "Manhwa" },
@@ -304,7 +435,7 @@ function buildMangaDistrictListQuery(
   return q.toString();
 }
 
-/** Roliascan personal list — aligned with `client/src/pages/MangaPage.jsx` READING_STATUSES. */
+/** Roliascan personal list  aligned with `client/src/pages/MangaPage.jsx` READING_STATUSES. */
 const MANGADEX_READING_STATUSES = [
   { value: "reading", label: "Reading" },
   { value: "on_hold", label: "On Hold" },
@@ -324,14 +455,8 @@ const MANGADEX_LIBRARY_STATUS_TABS = [
   { value: "re_reading", label: "Re-reading" },
 ];
 
-function dexBrowseLastPage(total) {
-  if (total <= 0) return 1;
-  const fromTotal = Math.max(1, Math.ceil(total / DEX_PAGE_SIZE));
-  const maxByOffset = Math.floor(DEX_MAX_OFFSET / DEX_PAGE_SIZE) + 1;
-  return Math.min(fromTotal, maxByOffset);
-}
 
-/** Roliascan API `contentRating` — order preserved for stable query strings. */
+/** Roliascan API `contentRating`  order preserved for stable query strings. */
 const MD_CONTENT_RATING_ORDER = [
   "safe",
   "suggestive",
@@ -435,18 +560,18 @@ function DexContentRatingSection({ selectedIds, nsfwEnabled, onToggle }) {
     (o) => !o.nsfwOnly || nsfwEnabled,
   );
   return (
-    <section className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/80 bg-gradient-to-br from-[var(--color-surface)]/90 to-[var(--mx-color-faf8ff)]/80 p-3.5 sm:p-4">
+    <section className="rounded-2xl border border-(--color-border-soft)/80 bg-linear-to-br from-(--color-surface)/90 to-(--color-surface-soft)/80 p-3.5 sm:p-4">
       <div className="mb-3">
-        <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--mx-color-5b5670)]">
+        <h3 className="text-[11px] font-bold uppercase tracking-[0.12em] text-(--color-text-secondary)">
           Content rating
         </h3>
-        <p className="mt-1 text-[10px] leading-relaxed text-[var(--mx-color-86868b)]">
+        <p className="mt-1 text-[10px] leading-relaxed text-(--color-text-secondary)">
           Roliascan catalog filter (see{" "}
           <a
             href="https://roliascan.com/"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-medium text-[var(--mx-color-6d28d9)] underline decoration-[var(--mx-color-c4b5fd)] underline-offset-2 hover:text-[var(--mx-color-5b21b6)]"
+            className="font-medium text-violet-600 underline decoration-violet-300 underline-offset-2 hover:text-violet-800"
           >
             API docs
           </a>
@@ -461,21 +586,21 @@ function DexContentRatingSection({ selectedIds, nsfwEnabled, onToggle }) {
               <label
                 className={`flex cursor-pointer gap-3 rounded-xl border px-3 py-2.5 transition-colors ${
                   on
-                    ? "border-[var(--mx-color-c6ff00)]/70 bg-[var(--mx-color-c6ff00)]/12 ring-1 ring-[var(--mx-color-c6ff00)]/35"
-                    : "border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)]/80 hover:border-[var(--mx-color-d2d2d7)]"
+                    ? "border-(--color-primary)/70 bg-(--color-primary)/12 ring-1 ring-(--color-primary)/35"
+                    : "border-(--color-border-soft) bg-(--color-surface)/80 hover:border-(--color-border-strong)"
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={on}
                   onChange={() => onToggle(opt.id)}
-                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] focus:ring-[var(--mx-color-c6ff00)]"
+                  className="mt-0.5 h-4 w-4 shrink-0 rounded border-(--color-border-strong) text-(--color-text-primary) focus:ring-(--color-primary)"
                 />
                 <span className="min-w-0">
-                  <span className="block text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">
+                  <span className="block text-[12px] font-semibold text-(--color-text-primary)">
                     {opt.label}
                   </span>
-                  <span className="mt-0.5 block text-[10px] leading-snug text-[var(--mx-color-86868b)]">
+                  <span className="mt-0.5 block text-[10px] leading-snug text-(--color-text-secondary)">
                     {opt.description}
                   </span>
                 </span>
@@ -490,10 +615,10 @@ function DexContentRatingSection({ selectedIds, nsfwEnabled, onToggle }) {
 
 function DexTagChip({ tag, selected, excluded, onToggle }) {
   const cls = excluded
-    ? "bg-red-50 text-red-700 ring-1 ring-red-200"
+    ? "bg-red-100 text-red-700 ring-1 ring-red-200 dark:bg-red-900/25 dark:text-red-300 dark:ring-red-500/30"
     : selected
-      ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)] hover:text-[var(--mx-color-1d1d1f)]";
+      ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)";
   return (
     <button
       type="button"
@@ -503,7 +628,7 @@ function DexTagChip({ tag, selected, excluded, onToggle }) {
         onToggle(tag.id, true);
       }}
       className={`flex min-w-0 max-w-[min(100%,13rem)] items-center gap-0.5 rounded-full px-2.5 py-0.5 text-left text-[10px] font-medium transition-colors ${cls}`}
-      title={`${tag.name} — tap include · right-click exclude`}
+      title={`${tag.name}  tap include · right-click exclude`}
     >
       <span className="shrink-0">{excluded ? "−" : selected ? "✓" : ""}</span>
       <span className="min-w-0 truncate">{tag.name}</span>
@@ -562,14 +687,14 @@ function DexGenreFilter({
 
   const body = (
     <div
-      className={`${embedded ? "" : "border-t border-[var(--mx-color-f0f0f0)]"} min-w-0 max-w-full`}
+      className={`${embedded ? "" : "border-t border-(--color-border-soft)"} min-w-0 max-w-full`}
     >
       <div
         className={`${embedded ? "px-0 py-0" : "px-4 py-4"} min-w-0 max-w-full space-y-4`}
       >
         <div className="flex flex-wrap gap-4">
           <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
               Status
             </p>
             <div className="flex flex-wrap gap-1">
@@ -580,8 +705,8 @@ function DexGenreFilter({
                   onClick={() => onStatusChange(s)}
                   className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
                     statusFilter?.includes(s)
-                      ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                      ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                   }`}
                 >
                   {s}
@@ -590,7 +715,7 @@ function DexGenreFilter({
             </div>
           </div>
           <div className="space-y-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
               Demographic
             </p>
             <div className="flex flex-wrap gap-1">
@@ -601,8 +726,8 @@ function DexGenreFilter({
                   onClick={() => onDemographicChange(d)}
                   className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
                     demographicFilter?.includes(d)
-                      ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                      ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                   }`}
                 >
                   {d}
@@ -611,24 +736,24 @@ function DexGenreFilter({
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap gap-3 border-t border-[var(--mx-color-f0f0f0)] pt-3">
-          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+        <div className="flex flex-wrap gap-3 border-t border-(--color-border-soft) pt-3">
+          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
             Include tags
             <select
               value={includedTagsMode}
               onChange={(e) => onIncludedTagsMode(e.target.value)}
-              className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1.5 text-[11px] text-[var(--mx-color-1d1d1f)]"
+              className="rounded-lg border border-(--color-border-soft) bg-(--color-surface-muted) px-2 py-1.5 text-[11px] text-(--color-text-primary)"
             >
               <option value="AND">All (AND)</option>
               <option value="OR">Any (OR)</option>
             </select>
           </label>
-          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
             Exclude tags
             <select
               value={excludedTagsMode}
               onChange={(e) => onExcludedTagsMode(e.target.value)}
-              className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2 py-1.5 text-[11px] text-[var(--mx-color-1d1d1f)]"
+              className="rounded-lg border border-(--color-border-soft) bg-(--color-surface-muted) px-2 py-1.5 text-[11px] text-(--color-text-primary)"
             >
               <option value="OR">Any (OR)</option>
               <option value="AND">All (AND)</option>
@@ -641,15 +766,15 @@ function DexGenreFilter({
             value={tagSearch}
             onChange={(e) => setTagSearch(e.target.value)}
             placeholder="Filter tag list…"
-            className="w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] placeholder:text-[var(--mx-color-86868b)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+            className="w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
           />
-          <p className="text-[10px] text-[var(--mx-color-86868b)]">
+          <p className="text-[10px] text-(--color-text-secondary)">
             Tap = include · right-click = exclude
           </p>
         </div>
         {TAG_GROUP_ORDER.filter((g) => filteredGrouped[g]).map((group) => (
           <div key={group} className="space-y-1.5">
-            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
               {group}
             </h4>
             <div className="flex min-w-0 max-w-full flex-wrap gap-1">
@@ -674,7 +799,7 @@ function DexGenreFilter({
 
   return (
     <div
-      className={`min-w-0 w-full max-w-full overflow-hidden ${embedded ? "" : "rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm"}`}
+      className={`min-w-0 w-full max-w-full overflow-hidden ${embedded ? "" : "rounded-[18px] border border-(--color-border-strong)/50 bg-(--color-surface) shadow-sm"}`}
     >
       {embedded ? (
         body
@@ -683,17 +808,17 @@ function DexGenreFilter({
           <button
             type="button"
             onClick={() => setExpanded((p) => !p)}
-            className="flex w-full min-w-0 items-center justify-between gap-2 px-4 py-3 text-left text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-fafafa)] transition-colors"
+            className="flex w-full min-w-0 items-center justify-between gap-2 px-4 py-3 text-left text-[13px] font-semibold text-(--color-text-primary) hover:bg-(--color-surface-soft) transition-colors"
           >
             <span className="inline-flex min-w-0 flex-1 items-center gap-2">
               <span className="min-w-0 truncate">Filters &amp; genres</span>
               {activeCount > 0 && (
-                <span className="shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]/30 px-2 py-0.5 text-[10px] font-bold text-[var(--mx-color-1d1d1f)]">
+                <span className="shrink-0 rounded-full bg-(--color-primary)/30 px-2 py-0.5 text-[10px] font-bold text-(--color-text-primary)">
                   {activeCount}
                 </span>
               )}
             </span>
-            <span className="shrink-0 text-[var(--mx-color-86868b)] text-[11px]">
+            <span className="shrink-0 text-(--color-text-secondary) text-[11px]">
               {expanded ? "Hide" : "Show"}
             </span>
           </button>
@@ -705,7 +830,7 @@ function DexGenreFilter({
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={mangaFilterExpandTransition}
-                className="w-full min-w-0 max-w-full overflow-hidden border-t border-[var(--mx-color-f0f0f0)]"
+                className="w-full min-w-0 max-w-full overflow-hidden border-t border-(--color-border-soft)"
               >
                 {body}
               </MotionDiv>
@@ -727,12 +852,12 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
   const overlayBadges = (
     <>
       {manga.status && (
-        <span className="absolute left-2 top-2 z-[2] rounded-lg bg-[var(--color-surface)]/90 px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--mx-color-1d1d1f)]">
+        <span className="absolute left-2 top-2 z-[2] rounded-lg bg-(--color-surface)/90 px-2 py-0.5 text-[10px] font-medium capitalize text-(--color-text-primary)">
           {manga.status}
         </span>
       )}
       {manga.contentRating && manga.contentRating !== "safe" && (
-        <span className="absolute right-2 top-2 z-[2] rounded-lg bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-amber-700">
+        <span className="absolute right-2 top-2 z-[2] rounded-lg bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-bold uppercase text-black shadow-sm backdrop-blur-sm">
           {manga.contentRating}
         </span>
       )}
@@ -775,7 +900,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
                   {overlayBadges}
                 </LifesyncEpisodeThumbnail>
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
+                <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
                   {overlayBadges}
                   <svg
                     className="w-10 h-10"
@@ -803,7 +928,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
               {overlayBadges}
             </LifesyncEpisodeThumbnail>
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
+            <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
               {overlayBadges}
               <svg
                 className="w-10 h-10"
@@ -821,11 +946,11 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
             </div>
           )}
           <div
-            className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/75 via-black/10 to-transparent"
+            className="pointer-events-none absolute inset-0 z-[1] bg-linear-to-t from-black/75 via-black/10 to-transparent"
             aria-hidden
           />
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-0.5 bg-gradient-to-r from-transparent via-[var(--mx-color-c6ff00)] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-0.5 bg-linear-to-r from-transparent via-(--color-primary) to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
             aria-hidden
           />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
@@ -839,12 +964,12 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
             ) : null}
             <div className="mt-1.5 flex flex-wrap gap-1">
               {manga.year && (
-                <span className="rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
+                <span className="rounded bg-(--color-surface)/20 px-1.5 py-0.5 text-[10px] text-white backdrop-blur-sm">
                   {manga.year}
                 </span>
               )}
               {showRating && (
-                <span className="flex items-center gap-0.5 rounded bg-[var(--color-surface)]/20 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                <span className="flex items-center gap-0.5 rounded bg-(--color-surface)/20 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                   <svg
                     className="h-2.5 w-2.5 fill-amber-300 text-amber-300"
                     viewBox="0 0 20 20"
@@ -860,7 +985,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
                 return (
                   <span
                     key={mangaTagKey(tag, i, `${manga.id}-`)}
-                    className="rounded bg-[var(--mx-color-c6ff00)]/25 px-1.5 py-0.5 text-[10px] font-medium text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--color-border-strong)]/30"
+                    className="rounded bg-(--color-primary)/25 px-1.5 py-0.5 text-[10px] font-medium text-(--color-text-primary) ring-1 ring-(--color-border-strong)/30"
                   >
                     {label}
                   </span>
@@ -870,7 +995,7 @@ const MangaCard = memo(function MangaCard({ manga, onClick }) {
           </div>
           {/* Hover affordance */}
           <div className="absolute inset-0 z-[2] flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
-            <div className="flex h-11 w-11 scale-90 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.8)] transition-transform duration-300 group-hover:scale-100">
+            <div className="flex h-11 w-11 scale-90 items-center justify-center rounded-full bg-(--color-primary) text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.8)] transition-transform duration-300 group-hover:scale-100">
               <svg
                 className="h-4 w-4"
                 fill="currentColor"
@@ -905,9 +1030,7 @@ function MangaDetail({
   const [descExpanded, setDescExpanded] = useState(false);
   const [dexStats, setDexStats] = useState(null);
   const [isDexFollowing, setIsDexFollowing] = useState(null);
-  const [dexFollowBusy, setDexFollowBusy] = useState(false);
   const [dexReadingStatus, setDexReadingStatus] = useState(null);
-  const [dexReadingStatusBusy, setDexReadingStatusBusy] = useState(false);
   const [chapterLang, setChapterLang] = useState(() =>
     browseTranslatedLang === "all" ? "all" : browseTranslatedLang,
   );
@@ -979,7 +1102,7 @@ function MangaDetail({
   }, [isLifeSyncConnected, manga?.id, manga?.source, source]);
 
   // Roliascan: full detail arrives via parent enrichment (`/roliascan/info`) merged into
-  // the `manga` prop after mount, so sync on every `manga` change — not just id changes.
+  // the `manga` prop after mount, so sync on every `manga` change  not just id changes.
   useEffect(() => {
     if (!manga?.id) return;
     if ((manga.source || source) !== "roliascan") return;
@@ -1129,13 +1252,6 @@ function MangaDetail({
     [chaptersInSeriesOrder],
   );
 
-  const chapterLangOptions = useMemo(() => {
-    if (!manga) return DEX_TRANSLATION_LANG_OPTIONS;
-    const dm = detail || manga;
-    return buildDexChapterLangSelectOptions(
-      dm.availableTranslatedLanguages || manga.availableTranslatedLanguages,
-    );
-  }, [detail, manga]);
 
   useEffect(() => {
     if (didAutoScrollCurrentChapterRef.current) return;
@@ -1158,7 +1274,7 @@ function MangaDetail({
     });
   }, [chapBusy, displayChapters, highlightedChapterId]);
 
-  // D-pad chapter navigation — must be before early returns (rules of hooks)
+  // D-pad chapter navigation  must be before early returns (rules of hooks)
   const [focusedChIndex, setFocusedChIndex] = useState(-1);
   const mangaDetailControllerEnabled = useControllerSupportEnabled();
 
@@ -1216,7 +1332,7 @@ function MangaDetail({
 
   const src = manga.source || source;
   // For mangadistrict: merge detail (DB metadata) over manga (card preview).
-  // detail.coverUrl always wins — it's the fresh scraper URL from DB.
+  // detail.coverUrl always wins  it's the fresh scraper URL from DB.
   const d =
     src === "mangadistrict" && detail
       ? { ...manga, ...detail, id: detail.id || manga.id }
@@ -1278,11 +1394,11 @@ function MangaDetail({
         transition={lifeSyncDetailBackdropFadeTransition}
       />
 
-      {/* Panel — match anime / hentai detail sheet motion */}
+      {/* Panel  match anime / hentai detail sheet motion */}
       <MotionDiv
         layout="size"
         layoutRoot
-        className="lifesync-manga-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-[var(--color-surface)] shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
+        className="lifesync-manga-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-(--color-surface) shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         initial={lifeSyncDetailSheetEnterInitial}
         animate={lifeSyncDetailSheetEnterAnimate}
@@ -1343,7 +1459,7 @@ function MangaDetail({
               <MotionDiv
                 layoutId={coverLayoutId}
                 transition={lifeSyncSharedLayoutTransitionProps}
-                className="w-full overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)] shadow-lg ring-1 ring-black/10"
+                className="w-full overflow-hidden rounded-xl bg-(--color-surface-muted) shadow-lg ring-1 ring-black/10"
                 style={{ aspectRatio: "2/3" }}
               >
                 {coverImg ? (
@@ -1356,7 +1472,7 @@ function MangaDetail({
                 ) : (
                   <div className="flex h-full min-h-[7.5rem] w-full items-center justify-center">
                     <svg
-                      className="h-10 w-10 text-[var(--mx-color-86868b)]"
+                      className="h-10 w-10 text-(--color-text-secondary)"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -1373,13 +1489,13 @@ function MangaDetail({
               </MotionDiv>
             </div>
             <div className="min-w-0 flex-1 flex flex-col justify-end pb-1">
-              <h2 className="text-[18px] sm:text-[22px] font-bold text-[var(--mx-color-1d1d1f)] leading-tight line-clamp-3">
+              <h2 className="text-[18px] sm:text-[22px] font-bold text-(--color-text-primary) leading-tight line-clamp-3">
                 {d.title || manga.title}
               </h2>
               {metaBusy && src === "mangadistrict" ? (
                 <div className="mt-1.5 h-3 w-32 rounded bg-white/30 animate-pulse" />
               ) : d.author ? (
-                <p className="mt-1.5 text-[12px] text-[var(--mx-color-86868b)] flex items-center gap-1.5">
+                <p className="mt-1.5 text-[12px] text-(--color-text-secondary) flex items-center gap-1.5">
                   <svg
                     className="w-3 h-3 shrink-0"
                     fill="none"
@@ -1399,26 +1515,26 @@ function MangaDetail({
               <div className="flex flex-wrap items-center gap-2 mt-2">
                 {metaBusy && src === "mangadistrict" ? (
                   <>
-                    <span className="h-5 w-16 rounded-full bg-[var(--mx-color-c6ff00)]/20 animate-pulse" />
-                    <span className="h-5 w-12 rounded-full bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                    <span className="h-5 w-16 rounded-full bg-(--color-primary)/20 animate-pulse" />
+                    <span className="h-5 w-12 rounded-full bg-(--color-surface-muted) animate-pulse" />
                   </>
                 ) : (
                   <>
                     {d.status && (
-                      <span className="inline-flex items-center gap-1 bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-1d1d1f)] text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
+                      <span className="inline-flex items-center gap-1 bg-(--color-primary)/20 text-(--color-text-primary) text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize">
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${d.status === "completed" || d.status === "cancelled" ? "bg-[var(--mx-color-86868b)]" : "bg-[var(--mx-color-c6ff00)]"}`}
+                          className={`w-1.5 h-1.5 rounded-full ${d.status === "completed" || d.status === "cancelled" ? "bg-(--color-text-secondary)" : "bg-(--color-primary)"}`}
                         />
                         {d.status}
                       </span>
                     )}
                     {d.year && (
-                      <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-surface-muted) px-2 py-0.5 rounded-full">
                         {d.year}
                       </span>
                     )}
                     {showRating && (
-                      <span className="inline-flex items-center gap-0.5 bg-amber-50 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                      <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold px-2 py-0.5 rounded-full dark:bg-amber-500/15 dark:text-amber-300">
                         <svg
                           className="w-2.5 h-2.5 fill-amber-500"
                           viewBox="0 0 20 20"
@@ -1429,95 +1545,23 @@ function MangaDetail({
                       </span>
                     )}
                     {d.contentRating && d.contentRating !== "safe" && (
-                      <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase">
+                      <span className="text-[10px] font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase dark:bg-amber-500/15 dark:text-amber-300">
                         {d.contentRating}
                       </span>
                     )}
                   </>
                 )}
                 {chaptersInSeriesOrder.length > 0 && (
-                  <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-surface-muted) px-2 py-0.5 rounded-full">
                     {chaptersInSeriesOrder.length} ch.
                   </span>
                 )}
                 {dexStats?.follows != null && dexStats.follows > 0 && (
-                  <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-surface-muted) px-2 py-0.5 rounded-full">
                     {dexStats.follows.toLocaleString()} follows
                   </span>
                 )}
               </div>
-              {false && roliascanConnected && (
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end">
-                  <div className="flex flex-wrap gap-2 shrink-0">
-                    {isDexFollowing == null ? (
-                      <span className="text-[10px] text-[var(--mx-color-86868b)]">
-                        Checking follow state…
-                      </span>
-                    ) : isDexFollowing ? (
-                      <button
-                        type="button"
-                        disabled={dexFollowBusy}
-                        onClick={async () => {
-                          setDexFollowBusy(true);
-                          try {
-                            setIsDexFollowing(false);
-                          } catch {
-                            /* ignore */
-                          } finally {
-                            setDexFollowBusy(false);
-                          }
-                        }}
-                        className="text-[11px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-600 px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] hover:border-red-100 hover:bg-red-50 transition-colors disabled:opacity-50"
-                      >
-                        {dexFollowBusy ? "…" : "Unfollow on Roliascan"}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={dexFollowBusy}
-                        onClick={async () => {
-                          setDexFollowBusy(true);
-                          try {
-                            setIsDexFollowing(true);
-                          } catch {
-                            /* ignore */
-                          } finally {
-                            setDexFollowBusy(false);
-                          }
-                        }}
-                        className="text-[11px] font-semibold text-white bg-[var(--mx-color-ff6740)] hover:bg-[var(--mx-color-e55a36)] px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
-                      >
-                        {dexFollowBusy ? "…" : "Follow on Roliascan"}
-                      </button>
-                    )}
-                  </div>
-                  <label className="flex min-w-0 flex-col gap-0.5 sm:max-w-[14rem]">
-                    <select
-                      value={dexReadingStatus || ""}
-                      disabled={dexReadingStatusBusy}
-                      onChange={async (e) => {
-                        const val = e.target.value || null;
-                        setDexReadingStatusBusy(true);
-                        try {
-                          setDexReadingStatus(val);
-                        } catch {
-                          /* ignore */
-                        } finally {
-                          setDexReadingStatusBusy(false);
-                        }
-                      }}
-                      className="rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-1.5 text-[11px] font-medium text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none disabled:opacity-50"
-                    >
-                      <option value="">No status</option>
-                      {MANGADEX_READING_STATUSES.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -1537,7 +1581,7 @@ function MangaDetail({
                 {[60, 80, 50, 70, 55].map((w, i) => (
                   <span
                     key={i}
-                    className="h-6 rounded-lg bg-[var(--mx-color-f5f5f7)] animate-pulse"
+                    className="h-6 rounded-lg bg-(--color-surface-muted) animate-pulse"
                     style={{ width: w }}
                   />
                 ))}
@@ -1550,7 +1594,7 @@ function MangaDetail({
                   return (
                     <span
                       key={mangaTagKey(t, i, `${mergedManga.id}-`)}
-                      className="bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] text-[var(--mx-color-1d1d1f)] text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors cursor-default"
+                      className="bg-(--color-surface-muted) hover:bg-(--color-surface-muted) text-(--color-text-primary) text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors cursor-default"
                     >
                       {label}
                     </span>
@@ -1562,9 +1606,9 @@ function MangaDetail({
             {/* Description */}
             {metaBusy && src === "mangadistrict" ? (
               <div className="space-y-2">
-                <div className="h-3 w-full rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
-                <div className="h-3 w-5/6 rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
-                <div className="h-3 w-4/6 rounded bg-[var(--mx-color-f5f5f7)] animate-pulse" />
+                <div className="h-3 w-full rounded bg-(--color-surface-muted) animate-pulse" />
+                <div className="h-3 w-5/6 rounded bg-(--color-surface-muted) animate-pulse" />
+                <div className="h-3 w-4/6 rounded bg-(--color-surface-muted) animate-pulse" />
               </div>
             ) : cleanDesc ? (
               <div>
@@ -1577,7 +1621,7 @@ function MangaDetail({
                   <button
                     type="button"
                     onClick={() => setDescExpanded((v) => !v)}
-                    className="mt-1 text-[11px] font-semibold text-[var(--mx-color-c6ff00)] hover:underline"
+                    className="mt-1 text-[11px] font-semibold text-(--color-primary) hover:underline"
                   >
                     {descExpanded ? "Show less" : "Read more"}
                   </button>
@@ -1589,22 +1633,9 @@ function MangaDetail({
             <div>
               <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <h3 className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)]">
+                  <h3 className="text-[13px] font-bold text-(--color-text-primary)">
                     Chapters
                   </h3>
-                  {false && (
-                    <select
-                      value={chapterLang}
-                      onChange={(e) => setChapterLang(e.target.value)}
-                      className="max-w-[200px] rounded-lg px-2 py-1 text-[11px] font-medium text-[var(--mx-color-1d1d1f)]"
-                    >
-                      {chapterLangOptions.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
-                  )}
                   <div
                     className="flex rounded-lg p-0.5"
                     role="group"
@@ -1615,8 +1646,8 @@ function MangaDetail({
                       onClick={() => setChapterOrder("asc")}
                       className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
                         chapterOrder === "asc"
-                          ? "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] shadow-sm"
-                          : "text-[var(--mx-color-86868b)]"
+                          ? "bg-(--color-surface) text-(--color-text-primary) shadow-sm"
+                          : "text-(--color-text-secondary)"
                       }`}
                     >
                       First → last
@@ -1626,29 +1657,19 @@ function MangaDetail({
                       onClick={() => setChapterOrder("desc")}
                       className={`rounded-md px-2.5 py-1 text-[10px] font-semibold transition-colors ${
                         chapterOrder === "desc"
-                          ? "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] shadow-sm"
-                          : "text-[var(--mx-color-86868b)] "
+                          ? "bg-(--color-surface) text-(--color-text-primary) shadow-sm"
+                          : "text-(--color-text-secondary) "
                       }`}
                     >
                       Last → first
                     </button>
                   </div>
-                  {false && mergedManga.id && (
-                    <a
-                      href={`https://roliascan.com/title/${mergedManga.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
-                    >
-                      Open on Roliascan
-                    </a>
-                  )}
                   {src === "roliascan" && roliascanTitleUrl && (
                     <a
                       href={roliascanTitleUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
+                      className="shrink-0 text-[11px] font-semibold text-orange-500 hover:underline"
                     >
                       Open on Roliascan
                     </a>
@@ -1658,7 +1679,7 @@ function MangaDetail({
                       href={`https://mangadna.com/manga/${encodeURIComponent(String(mergedManga.id))}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 text-[11px] font-semibold text-[var(--mx-color-ff6740)] hover:underline"
+                      className="shrink-0 text-[11px] font-semibold text-orange-500 hover:underline"
                     >
                       Open on MangaDNA
                     </a>
@@ -1676,7 +1697,7 @@ function MangaDetail({
                           ],
                         )
                       }
-                      className="flex items-center gap-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm transition-all hover:bg-[var(--mx-color-f5f5f7)]"
+                      className="flex items-center gap-1.5 rounded-lg border border-(--color-border-soft) bg-(--color-surface) px-3 py-1.5 text-[11px] font-semibold text-(--color-text-primary) shadow-sm transition-all hover:bg-(--color-surface-muted)"
                     >
                       Latest chapter
                     </button>
@@ -1685,7 +1706,7 @@ function MangaDetail({
                       onClick={() =>
                         onStartRead(mergedManga, chaptersInSeriesOrder[0])
                       }
-                      className="flex items-center gap-1.5 rounded-lg bg-[var(--mx-color-c6ff00)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
+                      className="flex items-center gap-1.5 rounded-lg bg-(--color-primary) px-3 py-1.5 text-[11px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95"
                     >
                       <svg
                         className="h-3 w-3"
@@ -1702,8 +1723,8 @@ function MangaDetail({
               {chapBusy ? (
                 <LifesyncMangaChapterListSkeleton rows={8} dark={isDarkTheme} />
               ) : chaptersInSeriesOrder.length === 0 ? (
-                <div className="rounded-xl bg-[var(--mx-color-f5f5f7)] px-4 py-6 text-center">
-                  <p className="text-[12px] text-[var(--mx-color-86868b)]">
+                <div className="rounded-xl bg-(--color-surface-muted) px-4 py-6 text-center">
+                  <p className="text-[12px] text-(--color-text-secondary)">
                     {src === "mangadistrict" || src === "roliascan" || src === "mangadna"
                       ? "No chapters in listing."
                       : "No chapters for this language filter."}
@@ -1729,47 +1750,40 @@ function MangaDetail({
                             aria-current={isCurrentChapter ? "true" : undefined}
                             className={`group flex w-full items-center gap-3 rounded-lg px-3.5 py-2.5 text-left transition-colors ${
                               isFocusedCh
-                                ? "bg-[var(--mx-color-c6ff00)]/25 ring-2 ring-[var(--mx-color-c6ff00)]/70"
+                                ? "bg-(--color-primary)/25 ring-2 ring-(--color-primary)/70"
                                 : isCurrentChapter
-                                  ? "bg-[var(--mx-color-c6ff00)]/18 ring-1 ring-[var(--mx-color-c6ff00)]/45"
-                                  : "hover:bg-[var(--mx-color-f5f5f7)]"
+                                  ? "bg-(--color-primary)/18 ring-1 ring-(--color-primary)/45"
+                                  : "hover:bg-(--color-surface-muted)"
                             }`}
                           >
                             <span
                               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold transition-colors ${
                                 isCurrentChapter
-                                  ? "bg-[var(--mx-color-c6ff00)]/32 text-[var(--mx-color-1d1d1f)]"
-                                  : "text-[var(--mx-color-86868b)] group-hover:bg-[var(--mx-color-c6ff00)]/20 group-hover:text-[var(--mx-color-1d1d1f)]"
+                                  ? "bg-(--color-primary)/32 text-(--color-text-primary)"
+                                  : "text-(--color-text-secondary) group-hover:bg-(--color-primary)/20 group-hover:text-(--color-text-primary)"
                               }`}
                             >
-                              {chapterSeriesIndex(ch) || "—"}
+                              {chapterSeriesIndex(ch) || ""}
                             </span>
                             <span className="flex-1 min-w-0">
                               <span className="flex items-center gap-2 min-w-0">
-                                <span className="block text-[12px] font-medium text-[var(--mx-color-1d1d1f)] truncate">
+                                <span className="block text-[12px] font-medium text-(--color-text-primary) truncate">
                                   {formatChapterLabel(ch)}
                                 </span>
                                 {isCurrentChapter && (
-                                  <span className="shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]/28 px-1.5 py-0.5 text-[9px] font-semibold text-[var(--mx-color-1a1628)]">
+                                  <span className="shrink-0 rounded-full bg-(--color-primary)/28 px-1.5 py-0.5 text-[9px] font-semibold text-(--color-ink-strong)">
                                     Current
                                   </span>
                                 )}
-                                {false &&
-                                  chapterLang === "all" &&
-                                  ch.translatedLanguage && (
-                                    <span className="shrink-0 text-[9px] font-semibold uppercase text-[var(--mx-color-86868b)] bg-[var(--mx-color-ebebed)] px-1.5 py-0.5 rounded">
-                                      {ch.translatedLanguage}
-                                    </span>
-                                  )}
                               </span>
                               {ch.scanlationGroup && (
-                                <span className="block text-[10px] text-[var(--mx-color-86868b)] truncate">
+                                <span className="block text-[10px] text-(--color-text-secondary) truncate">
                                   {ch.scanlationGroup}
                                 </span>
                               )}
                             </span>
                             <svg
-                              className="w-3.5 h-3.5 shrink-0 text-[var(--mx-color-d2d2d7)] group-hover:text-[var(--mx-color-c6ff00)] transition-colors"
+                              className="w-3.5 h-3.5 shrink-0 text-(--color-border-strong) group-hover:text-(--color-primary) transition-colors"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -2204,22 +2218,7 @@ export default function LifeSyncManga() {
         tg: [...roliascanIncludeTags].sort(),
         te: [...roliascanExcludeTags].sort(),
       }),
-    [
-      roliascanArtistsInput,
-      roliascanAuthorsInput,
-      roliascanCommittedSearch,
-      roliascanExcludeDemographics,
-      roliascanExcludeGenres,
-      roliascanFolder,
-      roliascanIncludeDemographics,
-      roliascanIncludeGenres,
-      roliascanMinchap,
-      roliascanOrderDir,
-      roliascanOrderKey,
-      roliascanStatuses,
-      roliascanYearFrom,
-      roliascanYearTo,
-    ],
+    [roliascanArtistsInput, roliascanAuthorsInput, roliascanCommittedSearch, roliascanExcludeDemographics, roliascanExcludeGenres, roliascanExcludeTags, roliascanFolder, roliascanIncludeDemographics, roliascanIncludeGenres, roliascanIncludeTags, roliascanMinchap, roliascanOrderDir, roliascanOrderKey, roliascanStatuses, roliascanYearFrom, roliascanYearTo],
   );
   const [roliascanListSigBound, setRoliascanListSigBound] =
     useState(roliascanFilterSig);
@@ -2811,7 +2810,7 @@ export default function LifeSyncManga() {
     loadDexLibrary,
   ]);
 
-  // Manga District latest — single effect + generation guard so order-by / section / page changes never apply stale responses
+  // Manga District latest  single effect + generation guard so order-by / section / page changes never apply stale responses
   useEffect(() => {
     if (!isLifeSyncConnected || lifeSyncLoading) return;
     if (!hManhwaEnabled || source !== "mangadistrict") return;
@@ -2890,7 +2889,7 @@ export default function LifeSyncManga() {
     };
   }, [isLifeSyncConnected, hManhwaEnabled, lifeSyncLoading, source, mdFilter]);
 
-  // MangaDNA terms (genres + sort options) — load once when source becomes mangadna
+  // MangaDNA terms (genres + sort options)  load once when source becomes mangadna
   useEffect(() => {
     if (!isLifeSyncConnected || lifeSyncLoading || source !== "mangadna") return;
     if (dnaTermsLoaded) return;
@@ -3104,17 +3103,6 @@ export default function LifeSyncManga() {
     source,
   ]);
 
-  function handleDexSearch(e) {
-    e.preventDefault();
-    if (!searchQ.trim()) return;
-    const q = searchQ.trim();
-    setCommittedSearchQuery(q);
-    setDexSearchPage(1);
-    const qs = new URLSearchParams(location.search || "");
-    qs.set("q", q);
-    navigate(`${basePath}/${route.src}/search/page/1?${qs.toString()}`);
-  }
-
   function handleRoliascanSearch(e) {
     e.preventDefault();
     const keyword = roliascanSearchQ.trim();
@@ -3236,42 +3224,6 @@ export default function LifeSyncManga() {
     mdLastPage,
     Math.max(1, parseInt(String(mdLatest?.currentPage ?? mdPage), 10) || 1),
   );
-  const dexPopularLast = dexBrowseLastPage(popularTotal);
-  const dexRecentLast = dexBrowseLastPage(recentTotal);
-  const dexSearchLast = dexBrowseLastPage(searchTotal);
-
-  const toggleDexIncludeTag = useCallback((id) => {
-    setExcludedTags((prev) => prev.filter((x) => x !== id));
-    setIncludedTags((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  }, []);
-
-  const toggleDexExcludeTag = useCallback((id) => {
-    setIncludedTags((prev) => prev.filter((x) => x !== id));
-    setExcludedTags((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
-    );
-  }, []);
-
-  const toggleDexStatus = useCallback((s) => {
-    setStatusFilter((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
-    );
-  }, []);
-
-  const toggleDexDemographic = useCallback((d) => {
-    setDemographicFilter((prev) =>
-      prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d],
-    );
-  }, []);
-
-  const toggleOriginalLang = useCallback((code) => {
-    setOriginalLangFilter((prev) =>
-      prev.includes(code) ? prev.filter((x) => x !== code) : [...prev, code],
-    );
-  }, []);
-
   const toggleRoliascanGenre = useCallback((value, mode = "include") => {
     const token = String(value || "").trim();
     if (!token) return;
@@ -3455,32 +3407,6 @@ export default function LifeSyncManga() {
     setRoliascanCommittedSearch("");
     setRoliascanSearchQ("");
   }, []);
-
-  const dexFilterBarCount = useMemo(() => {
-    let n =
-      includedTags.length +
-      excludedTags.length +
-      statusFilter.length +
-      demographicFilter.length +
-      originalLangFilter.length;
-    if (String(dexYear || "").trim()) n += 1;
-    if (!mangaEnglishReleasesOnly) n += 1;
-    const defaultSig = sortDexContentRatings(DEFAULT_DEX_CONTENT_RATINGS).join(
-      ",",
-    );
-    if (sortDexContentRatings(dexContentRatings).join(",") !== defaultSig)
-      n += 1;
-    return n;
-  }, [
-    includedTags,
-    excludedTags,
-    statusFilter,
-    demographicFilter,
-    originalLangFilter,
-    dexYear,
-    mangaEnglishReleasesOnly,
-    dexContentRatings,
-  ]);
 
   const roliascanFilterBarCount = useMemo(() => {
     let n =
@@ -3726,7 +3652,7 @@ export default function LifeSyncManga() {
       <MediaConnectPrompt
         accent="manga"
         title="Manga hub locked"
-        body="Discover titles, read in the built-in chapter reader, and keep progress synced — connect LifeSync in your profile to get started."
+        body="Discover titles, read in the built-in chapter reader, and keep progress synced  connect LifeSync in your profile to get started."
       />
     );
   }
@@ -3766,7 +3692,7 @@ export default function LifeSyncManga() {
             accent={source === "mangadistrict" || source === "mangadna" ? "hmanhwa" : "manga"}
             kicker="LifeSync · Reading"
             title={source === "mangadistrict" || source === "mangadna" ? "H Manhwa" : "Manga"}
-            subtitle="Browse manga, manhwa, and manhua — open chapters straight into the reader."
+            subtitle="Browse manga, manhwa, and manhua  open chapters straight into the reader."
             icon={
               <svg
                 className="h-5.5 w-5.5"
@@ -3795,18 +3721,12 @@ export default function LifeSyncManga() {
                     { btns: ["A"], label: "Open manga" },
                   ]}
                 />
-                <Link
-                  to="/dashboard/profile?tab=integrations"
-                  className="shrink-0 self-start whitespace-nowrap rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2 text-center text-[12px] font-bold text-[var(--mx-color-1a1628)] shadow-sm transition-all hover:-translate-y-px hover:border-[var(--mx-color-c6ff00)]/60 sm:pt-2"
-                >
-                  Link / Disconnect
-                </Link>
               </>
             }
           />
 
-          {/* Source switcher */}
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {/* Source switcher  inset segmented control */}
+          <div className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 self-start rounded-2xl border border-(--color-border-soft) bg-(--color-surface-muted) p-1">
             {[
               { id: "roliascan", label: "Roliascan" },
               ...(hManhwaEnabled ? [{ id: "mangadna", label: "MangaDNA" }, { id: "mangadistrict", label: "H Manhwa" }] : []),
@@ -3819,10 +3739,11 @@ export default function LifeSyncManga() {
                     `${basePath}/${id}/${defaultTabForSource(id)}/page/1${location.search || ""}`,
                   )
                 }
-                className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                aria-pressed={source === id}
+                className={`rounded-xl px-3.5 py-1.5 text-[12px] font-bold transition-all ${
                   source === id
-                    ? "bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10"
-                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)] hover:text-[var(--mx-color-1d1d1f)]"
+                    ? "bg-(--color-primary) text-(--color-ink-strong) shadow-sm"
+                    : "text-(--color-text-secondary) hover:text-(--color-text-primary)"
                 }`}
               >
                 {label}
@@ -3833,341 +3754,6 @@ export default function LifeSyncManga() {
           {error && (
             <div className="rounded-2xl border border-red-200/60 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">
               {error}
-            </div>
-          )}
-
-          {/* Search & filters toolbar (shared layout across sources) */}
-          {false && (
-            <div className="min-w-0 w-full max-w-full space-y-3">
-              <form
-                onSubmit={handleDexSearch}
-                className="flex min-w-0 w-full max-w-full flex-col flex-wrap items-stretch gap-2 sm:flex-row"
-              >
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  value={searchQ}
-                  onChange={(e) => setSearchQ(e.target.value)}
-                  placeholder="Search Roliascan…"
-                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setDexFiltersOpen((v) => !v)}
-                  aria-expanded={dexFiltersOpen}
-                  className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
-                >
-                  Filters
-                  {dexFilterBarCount > 0 && (
-                    <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
-                      {dexFilterBarCount}
-                    </span>
-                  )}
-                  <svg
-                    className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${dexFiltersOpen ? "-rotate-180" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    strokeWidth="2"
-                    aria-hidden
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M19 9l-7 7-7-7"
-                    />
-                  </svg>
-                </button>
-                {dexFilterBarCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => resetDexFilters()}
-                    className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
-                  >
-                    Reset
-                  </button>
-                )}
-                <button
-                  type="submit"
-                  disabled={searching}
-                  className="w-full sm:w-auto shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
-                >
-                  {searching ? "Searching..." : "Search"}
-                </button>
-              </form>
-              {dexFilterBarCount > 0 && !dexFiltersOpen && (
-                <div className="flex flex-wrap items-center gap-2">
-                  {sortDexContentRatings(dexContentRatings).map((id) => (
-                    <button
-                      key={`cr-${id}`}
-                      type="button"
-                      onClick={() => toggleDexContentRating(id)}
-                      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition "
-                      title="Toggle content rating filter"
-                    >
-                      {id}
-                      <span className="text-[var(--mx-color-86868b)]">×</span>
-                    </button>
-                  ))}
-                  {String(dexYear || "").trim() ? (
-                    <button
-                      type="button"
-                      onClick={() => setDexYear("")}
-                      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition"
-                    >
-                      Year: {String(dexYear).trim()}{" "}
-                      <span className="text-[var(--mx-color-86868b)]">×</span>
-                    </button>
-                  ) : null}
-                  {!mangaEnglishReleasesOnly ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void lifeSyncUpdatePreferences({
-                          mangaEnglishReleasesOnly: true,
-                        }).then(() => setDexTranslatedLang("en"))
-                      }
-                      className="inline-flex items-center gap-2 rounded-full bg-[var(--color-surface)] px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] shadow-sm ring-1 ring-[var(--mx-color-e5e5ea)] transition "
-                    >
-                      Any translation{" "}
-                      <span className="text-[var(--mx-color-86868b)]">×</span>
-                    </button>
-                  ) : null}
-                  {includedTags.length ||
-                  excludedTags.length ||
-                  statusFilter.length ||
-                  demographicFilter.length ||
-                  originalLangFilter.length ? (
-                    <button
-                      type="button"
-                      onClick={() => setDexFiltersOpen(true)}
-                      className="inline-flex items-center gap-2 rounded-full bg-[var(--mx-color-c6ff00)]/25 px-3 py-1.5 text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/35 transition hover:bg-[var(--mx-color-c6ff00)]/30"
-                    >
-                      More filters…
-                    </button>
-                  ) : null}
-                </div>
-              )}
-              <AnimatePresence initial={false}>
-                {dexFiltersOpen && (
-                  <MotionDiv
-                    key="manga-dex-toolbar-filters"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={mangaFilterExpandTransition}
-                    className="w-full min-w-0 max-w-full overflow-hidden"
-                  >
-                    <div className="min-w-0 max-w-full border-t border-[var(--mx-color-f0f0f0)] pt-4">
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
-                            Roliascan filters
-                          </p>
-                          <p className="text-[12px] text-[var(--mx-color-5b5670)]">
-                            Tune discovery without leaving the page.
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {dexFilterBarCount > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => resetDexFilters()}
-                              className="inline-flex items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-86868b)] transition-colors hover:text-[var(--mx-color-1d1d1f)]"
-                            >
-                              Reset
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setDexFiltersOpen(false)}
-                            className="inline-flex items-center justify-center rounded-xl bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
-                          >
-                            Close
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
-                        <div className="md:col-span-2">
-                          <DexContentRatingSection
-                            selectedIds={dexContentRatings}
-                            nsfwEnabled={nsfwEnabled}
-                            onToggle={toggleDexContentRating}
-                          />
-                        </div>
-
-                        <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
-                            Releases &amp; translation
-                          </p>
-                          <div className="flex flex-wrap gap-x-5 gap-y-2 items-center text-[11px] text-[var(--mx-color-86868b)]">
-                            <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={mangaEnglishReleasesOnly}
-                                onChange={(e) => {
-                                  const on = e.target.checked;
-                                  void lifeSyncUpdatePreferences({
-                                    mangaEnglishReleasesOnly: on,
-                                  }).then(() => {
-                                    if (on) setDexTranslatedLang("en");
-                                  });
-                                }}
-                                className="rounded border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-1d1d1f)] focus:ring-[var(--mx-color-c6ff00)]"
-                              />
-                              English releases only
-                            </label>
-                          </div>
-
-                          <div className="mt-3 flex flex-wrap gap-3 items-end">
-                            <label
-                              className={`text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[160px] ${mangaEnglishReleasesOnly ? "opacity-70" : ""}`}
-                              title={
-                                mangaEnglishReleasesOnly
-                                  ? "Turn off in filters or under Profile → Integrations → Viewing preferences to pick another translation language."
-                                  : undefined
-                              }
-                            >
-                              Translation language
-                              <select
-                                value={dexTranslatedLang}
-                                onChange={(e) =>
-                                  setDexTranslatedLang(e.target.value)
-                                }
-                                disabled={mangaEnglishReleasesOnly}
-                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none disabled:cursor-not-allowed"
-                              >
-                                {DEX_TRANSLATION_LANG_OPTIONS.map((o) => (
-                                  <option key={o.value} value={o.value}>
-                                    {o.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 w-28">
-                              Year
-                              <input
-                                type="text"
-                                inputMode="numeric"
-                                value={dexYear}
-                                onChange={(e) =>
-                                  setDexYear(
-                                    e.target.value.replace(/[^\d]/g, ""),
-                                  )
-                                }
-                                placeholder="Any"
-                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] placeholder:text-[var(--mx-color-86868b)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                              />
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
-                            Original language
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {ORIGINAL_LANG_OPTIONS.map((o) => (
-                              <button
-                                key={o.value}
-                                type="button"
-                                onClick={() => toggleOriginalLang(o.value)}
-                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                  originalLangFilter.includes(o.value)
-                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
-                                }`}
-                              >
-                                {o.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="md:col-span-2">
-                          <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                            <button
-                              type="button"
-                              onClick={() => setDexTagsPanelOpen((v) => !v)}
-                              className="flex w-full items-center justify-between gap-2 text-left"
-                            >
-                              <span className="min-w-0">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
-                                  Tags &amp; genres
-                                </p>
-                                <p className="text-[12px] text-[var(--mx-color-5b5670)]">
-                                  {includedTags.length ||
-                                  excludedTags.length ||
-                                  statusFilter.length ||
-                                  demographicFilter.length
-                                    ? `${includedTags.length + excludedTags.length + statusFilter.length + demographicFilter.length} active`
-                                    : "Optional"}
-                                </p>
-                              </span>
-                              <span className="inline-flex shrink-0 items-center gap-2 text-[12px] font-semibold text-[var(--mx-color-1d1d1f)]">
-                                {dexTagsPanelOpen ? "Hide" : "Edit"}
-                                <svg
-                                  className={`h-4 w-4 text-[var(--mx-color-86868b)] transition-transform ${dexTagsPanelOpen ? "-rotate-180" : ""}`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  strokeWidth="2"
-                                  aria-hidden
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M19 9l-7 7-7-7"
-                                  />
-                                </svg>
-                              </span>
-                            </button>
-
-                            <AnimatePresence initial={false}>
-                              {dexTagsPanelOpen && (
-                                <MotionDiv
-                                  key="dex-tags-panel"
-                                  initial={{ height: 0, opacity: 0 }}
-                                  animate={{ height: "auto", opacity: 1 }}
-                                  exit={{ height: 0, opacity: 0 }}
-                                  transition={mangaFilterExpandTransition}
-                                  className="min-w-0 max-w-full overflow-hidden"
-                                >
-                                  <div className="mt-3">
-                                    <DexGenreFilter
-                                      embedded
-                                      tags={dexTags}
-                                      includedTags={includedTags}
-                                      excludedTags={excludedTags}
-                                      onToggleInclude={toggleDexIncludeTag}
-                                      onToggleExclude={toggleDexExcludeTag}
-                                      statusFilter={statusFilter}
-                                      onStatusChange={toggleDexStatus}
-                                      demographicFilter={demographicFilter}
-                                      onDemographicChange={toggleDexDemographic}
-                                      includedTagsMode={includedTagsMode}
-                                      excludedTagsMode={excludedTagsMode}
-                                      onIncludedTagsMode={setIncludedTagsMode}
-                                      onExcludedTagsMode={setExcludedTagsMode}
-                                    />
-                                  </div>
-                                </MotionDiv>
-                              )}
-                            </AnimatePresence>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </MotionDiv>
-                )}
-              </AnimatePresence>
-              {dexAuthStatus && !dexAuthStatus.oauthConfigured && (
-                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2">
-                  Signing in with Roliascan isn’t set up for this site yet. You
-                  can still browse and search public catalogs.
-                </p>
-              )}
             </div>
           )}
 
@@ -4183,22 +3769,22 @@ export default function LifeSyncManga() {
                   value={roliascanSearchQ}
                   onChange={(e) => setRoliascanSearchQ(e.target.value)}
                   placeholder="Search Roliascan…"
-                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-(--color-primary)/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setRoliascanFiltersOpen((v) => !v)}
                   aria-expanded={roliascanFiltersOpen}
-                  className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                  className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2.5 text-[13px] font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-surface-muted)"
                 >
                   Filters
                   {roliascanFilterBarCount > 0 && (
-                    <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    <span className="rounded-full bg-(--color-primary)/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
                       {roliascanFilterBarCount}
                     </span>
                   )}
                   <svg
-                    className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${roliascanFiltersOpen ? "-rotate-180" : ""}`}
+                    className="h-3.5 w-3.5 text-(--color-text-secondary)"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -4208,7 +3794,7 @@ export default function LifeSyncManga() {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M19 9l-7 7-7-7"
+                      d="M3 5h18M6 12h12M10 19h4"
                     />
                   </svg>
                 </button>
@@ -4216,43 +3802,40 @@ export default function LifeSyncManga() {
                   <button
                     type="button"
                     onClick={resetRoliascanFilters}
-                    className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-86868b)] hover:text-[var(--mx-color-1d1d1f)]"
+                    className="inline-flex w-full sm:w-auto shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) px-3 py-2.5 text-[13px] font-semibold text-(--color-text-secondary) hover:text-(--color-text-primary)"
                   >
                     Reset
                   </button>
                 )}
                 <button
                   type="submit"
-                  className="w-full sm:w-auto shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95"
+                  className="w-full sm:w-auto shrink-0 rounded-xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95"
                 >
                   Search
                 </button>
               </form>
 
-              <AnimatePresence initial={false}>
-                {roliascanFiltersOpen && (
-                  <MotionDiv
-                    key="roliascan-toolbar-filters"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={mangaFilterExpandTransition}
-                    className="w-full min-w-0 max-w-full overflow-hidden border-t border-[var(--mx-color-f0f0f0)] pt-4"
-                  >
-                    <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+              <FilterDrawer
+                open={roliascanFiltersOpen}
+                onClose={() => setRoliascanFiltersOpen(false)}
+                title="Roliascan filters"
+                count={roliascanFilterBarCount}
+                onReset={resetRoliascanFilters}
+              >
+                    <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4">
+                      <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Sorting
                         </p>
                         <div className="grid grid-cols-2 gap-2">
-                          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
                             Order
                             <select
                               value={roliascanOrderKey}
                               onChange={(e) =>
                                 setRoliascanOrderKey(e.target.value)
                               }
-                              className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+                              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
                             >
                               {ROLIASCAN_ORDER_OPTIONS.map((option) => (
                                 <option key={option.id} value={option.id}>
@@ -4261,14 +3844,14 @@ export default function LifeSyncManga() {
                               ))}
                             </select>
                           </label>
-                          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
                             Direction
                             <select
                               value={roliascanOrderDir}
                               onChange={(e) =>
                                 setRoliascanOrderDir(e.target.value)
                               }
-                              className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+                              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
                             >
                               <option value="desc">Descending</option>
                               <option value="asc">Ascending</option>
@@ -4276,7 +3859,7 @@ export default function LifeSyncManga() {
                           </label>
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
-                          <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
                             Min chapter
                             <input
                               type="number"
@@ -4284,11 +3867,11 @@ export default function LifeSyncManga() {
                               onChange={(e) =>
                                 setRoliascanMinchap(e.target.value)
                               }
-                              className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
                             />
                           </label>
                           {roliascanYears.length > 0 ? (
-                            <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                            <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
                               Year
                               <select
                                 value={roliascanYearFrom || ""}
@@ -4297,7 +3880,7 @@ export default function LifeSyncManga() {
                                   setRoliascanYearFrom(v);
                                   setRoliascanYearTo(v);
                                 }}
-                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                                className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
                               >
                                 <option value="">Any year</option>
                                 {roliascanYears.map((y) => (
@@ -4309,7 +3892,7 @@ export default function LifeSyncManga() {
                             </label>
                           ) : (
                             <>
-                              <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                              <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
                                 Year from
                                 <input
                                   type="number"
@@ -4317,10 +3900,10 @@ export default function LifeSyncManga() {
                                   onChange={(e) =>
                                     setRoliascanYearFrom(e.target.value)
                                   }
-                                  className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                                  className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
                                 />
                               </label>
-                              <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                              <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
                                 Year to
                                 <input
                                   type="number"
@@ -4328,7 +3911,7 @@ export default function LifeSyncManga() {
                                   onChange={(e) =>
                                     setRoliascanYearTo(e.target.value)
                                   }
-                                  className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                                  className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
                                 />
                               </label>
                             </>
@@ -4336,11 +3919,11 @@ export default function LifeSyncManga() {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                      <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Authors & Artists
                         </p>
-                        <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                        <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
                           Authors (comma separated)
                           <input
                             type="text"
@@ -4349,10 +3932,10 @@ export default function LifeSyncManga() {
                               setRoliascanAuthorsInput(e.target.value)
                             }
                             placeholder="eiichiro oda, ..."
-                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
                           />
                         </label>
-                        <label className="mt-2 text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1">
+                        <label className="mt-2 text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
                           Artists (comma separated)
                           <input
                             type="text"
@@ -4361,13 +3944,13 @@ export default function LifeSyncManga() {
                               setRoliascanArtistsInput(e.target.value)
                             }
                             placeholder="artist slug, ..."
-                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)]"
+                            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
                           />
                         </label>
                       </div>
 
-                      <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Genres
                         </p>
                         <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
@@ -4392,10 +3975,10 @@ export default function LifeSyncManga() {
                                 }}
                                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                   included
-                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                    ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
                                     : excluded
                                       ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                                 }`}
                               >
                                 {title}
@@ -4403,14 +3986,14 @@ export default function LifeSyncManga() {
                             );
                           })}
                         </div>
-                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                        <p className="text-[11px] text-(--color-text-secondary)">
                           Tap cycles include → exclude → clear. Right-click
                           toggles exclude.
                         </p>
                       </div>
 
-                      <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Tags
                         </p>
                         <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
@@ -4433,10 +4016,10 @@ export default function LifeSyncManga() {
                                 }}
                                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                   included
-                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                    ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
                                     : excluded
                                       ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                      : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                                 }`}
                               >
                                 {title}
@@ -4444,14 +4027,14 @@ export default function LifeSyncManga() {
                             );
                           })}
                         </div>
-                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                        <p className="text-[11px] text-(--color-text-secondary)">
                           Tap cycles include → exclude → clear. Right-click
                           toggles exclude.
                         </p>
                       </div>
 
-                      <div className="md:col-span-2 rounded-2xl border border-[var(--mx-color-e8e4ef)]/60 bg-[var(--color-surface)]/70 p-3 sm:p-4 space-y-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Demographics & Status
                         </p>
                         <div className="flex flex-wrap gap-1">
@@ -4478,10 +4061,10 @@ export default function LifeSyncManga() {
                                   }}
                                   className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                     included
-                                      ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
+                                      ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
                                       : excluded
                                         ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                        : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                        : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                                   }`}
                                 >
                                   {title}
@@ -4489,7 +4072,7 @@ export default function LifeSyncManga() {
                               );
                             })}
                         </div>
-                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                        <p className="text-[11px] text-(--color-text-secondary)">
                           Tap cycles include → exclude → clear. Right-click
                           toggles exclude.
                         </p>
@@ -4509,8 +4092,8 @@ export default function LifeSyncManga() {
                                 onClick={() => toggleRoliascanStatus(key)}
                                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                   roliascanStatuses.includes(key)
-                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                    ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                                    : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                                 }`}
                               >
                                 {title}
@@ -4520,9 +4103,7 @@ export default function LifeSyncManga() {
                         </div>
                       </div>
                     </div>
-                  </MotionDiv>
-                )}
-              </AnimatePresence>
+              </FilterDrawer>
             </div>
           )}
 
@@ -4540,22 +4121,22 @@ export default function LifeSyncManga() {
                   value={mdFilter}
                   onChange={(e) => setMdFilter(e.target.value)}
                   placeholder="Search Manga District…"
-                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-(--color-primary)/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setMdFiltersOpen((v) => !v)}
                   aria-expanded={mdFiltersOpen}
-                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2.5 text-[13px] font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-surface-muted)"
                 >
                   Filters
                   {mdFilterBarCount > 0 && (
-                    <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    <span className="rounded-full bg-(--color-primary)/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
                       {mdFilterBarCount}
                     </span>
                   )}
                   <svg
-                    className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${mdFiltersOpen ? "-rotate-180" : ""}`}
+                    className="h-3.5 w-3.5 text-(--color-text-secondary)"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -4565,21 +4146,21 @@ export default function LifeSyncManga() {
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      d="M19 9l-7 7-7-7"
+                      d="M3 5h18M6 12h12M10 19h4"
                     />
                   </svg>
                 </button>
                 <button
                   type="submit"
                   disabled={mdSearchBusy && Boolean(mdFilter.trim())}
-                  className="shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50"
                 >
                   {mdSearchBusy && mdFilter.trim() ? "Searching..." : "Search"}
                 </button>
               </form>
               {!mdFilter.trim() && (
                 <div className="min-w-0 w-full max-w-full space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                     Order by
                   </p>
                   <LifeSyncSectionNav
@@ -4598,19 +4179,15 @@ export default function LifeSyncManga() {
                   />
                 </div>
               )}
-              <AnimatePresence initial={false}>
-                {mdFiltersOpen && (
-                  <MotionDiv
-                    key="manga-md-toolbar-filters"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={mangaFilterExpandTransition}
-                    className="w-full min-w-0 max-w-full overflow-hidden"
-                  >
-                    <div className="min-w-0 max-w-full space-y-4 border-t border-[var(--mx-color-f0f0f0)] pt-3">
+              <FilterDrawer
+                open={mdFiltersOpen}
+                onClose={() => setMdFiltersOpen(false)}
+                title="Manga District filters"
+                count={mdFilterBarCount}
+              >
+                    <div className="min-w-0 max-w-full space-y-4">
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Section
                         </p>
                         <div className="flex flex-wrap gap-1">
@@ -4621,22 +4198,22 @@ export default function LifeSyncManga() {
                               onClick={() => setMdSection(s)}
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
                                 mdSection === s
-                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                               }`}
                             >
                               {s === "latest" ? "All Latest" : s}
                             </button>
                           ))}
                         </div>
-                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                        <p className="text-[11px] text-(--color-text-secondary)">
                           Section applies when no type is selected (latest
                           releases feed). Censored still filters out uncensored
                           rows from listings.
                         </p>
                       </div>
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Type of manga
                         </p>
                         <div className="flex flex-wrap gap-1">
@@ -4651,8 +4228,8 @@ export default function LifeSyncManga() {
                               }
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                 mdTypeSlug === slug
-                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                               }`}
                             >
                               {label}
@@ -4661,7 +4238,7 @@ export default function LifeSyncManga() {
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Order by
                         </p>
                         <div className="flex flex-wrap gap-1">
@@ -4675,8 +4252,8 @@ export default function LifeSyncManga() {
                               }}
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                 mdBrowse === id
-                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                               }`}
                             >
                               {label}
@@ -4685,7 +4262,7 @@ export default function LifeSyncManga() {
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Filters
                         </p>
                         <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
@@ -4700,24 +4277,22 @@ export default function LifeSyncManga() {
                               }
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                 mdFilterGenre === slug
-                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                               }`}
                             >
                               {label}
                             </button>
                           ))}
                         </div>
-                        <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                        <p className="text-[11px] text-(--color-text-secondary)">
                           {
                             "With a type selected, the tag narrows via the site's genre filter. With no type, the tag becomes the main browse path."
                           }
                         </p>
                       </div>
                     </div>
-                  </MotionDiv>
-                )}
-              </AnimatePresence>
+              </FilterDrawer>
             </div>
           )}
 
@@ -4733,42 +4308,42 @@ export default function LifeSyncManga() {
                   value={dnaFilter}
                   onChange={(e) => setDnaFilter(e.target.value)}
                   placeholder="Search MangaDNA…"
-                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-[var(--mx-color-f5f5f7)] border border-[var(--mx-color-e5e5ea)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] rounded-xl text-[13px] text-[var(--mx-color-1d1d1f)] focus:outline-none transition-all"
+                  className="min-w-[min(100%,12rem)] flex-1 px-4 py-2.5 bg-(--color-surface-muted) border border-(--color-border-soft) focus:border-(--color-primary)/60 focus:bg-(--color-surface) rounded-xl text-[13px] text-(--color-text-primary) focus:outline-none transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setDnaFiltersOpen((v) => !v)}
                   aria-expanded={dnaFiltersOpen}
-                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2.5 text-[13px] font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-surface-muted)"
                 >
                   Filters
                   {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0) > 0 && (
-                    <span className="rounded-full bg-[var(--mx-color-c6ff00)]/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    <span className="rounded-full bg-(--color-primary)/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
                       {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0)}
                     </span>
                   )}
                   <svg
-                    className={`h-3.5 w-3.5 text-[var(--mx-color-86868b)] transition-transform duration-300 ease-out ${dnaFiltersOpen ? "-rotate-180" : ""}`}
+                    className="h-3.5 w-3.5 text-(--color-text-secondary)"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
                     strokeWidth="2"
                     aria-hidden
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5h18M6 12h12M10 19h4" />
                   </svg>
                 </button>
                 <button
                   type="submit"
                   disabled={dnaSearchBusy && Boolean(dnaFilter.trim())}
-                  className="shrink-0 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50"
+                  className="shrink-0 rounded-xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50"
                 >
                   {dnaSearchBusy && dnaFilter.trim() ? "Searching..." : "Search"}
                 </button>
               </form>
               {!dnaFilter.trim() && (
                 <div className="min-w-0 w-full max-w-full space-y-1.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                     Sort by
                   </p>
                   <LifeSyncSectionNav
@@ -4785,19 +4360,15 @@ export default function LifeSyncManga() {
                   />
                 </div>
               )}
-              <AnimatePresence initial={false}>
-                {dnaFiltersOpen && (
-                  <MotionDiv
-                    key="manga-dna-toolbar-filters"
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={mangaFilterExpandTransition}
-                    className="w-full min-w-0 max-w-full overflow-hidden"
-                  >
-                    <div className="min-w-0 max-w-full space-y-4 border-t border-[var(--mx-color-f0f0f0)] pt-3">
+              <FilterDrawer
+                open={dnaFiltersOpen}
+                onClose={() => setDnaFiltersOpen(false)}
+                title="MangaDNA filters"
+                count={(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0)}
+              >
+                    <div className="min-w-0 max-w-full space-y-4">
                       <div className="space-y-1.5">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                           Order by
                         </p>
                         <div className="flex flex-wrap gap-1">
@@ -4808,8 +4379,8 @@ export default function LifeSyncManga() {
                               onClick={() => { setDnaOrderBy(id); setDnaPage(1); goToPage(1); }}
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                 dnaOrderBy === id
-                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                               }`}
                             >
                               {label}
@@ -4819,7 +4390,7 @@ export default function LifeSyncManga() {
                       </div>
                       {dnaGenres.length > 0 && (
                         <div className="space-y-1.5">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
                             Genre
                           </p>
                           <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
@@ -4828,8 +4399,8 @@ export default function LifeSyncManga() {
                               onClick={() => { setDnaGenre(""); setDnaPage(1); goToPage(1); }}
                               className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                 !dnaGenre
-                                  ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                  : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                  ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                               }`}
                             >
                               All
@@ -4845,8 +4416,8 @@ export default function LifeSyncManga() {
                                 }}
                                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                   dnaGenre === (g.slug || g.id)
-                                    ? "bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50"
-                                    : "bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]"
+                                    ? "bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50"
+                                    : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
                                 }`}
                               >
                                 {g.title || g.name || g.slug}
@@ -4856,9 +4427,7 @@ export default function LifeSyncManga() {
                         </div>
                       )}
                     </div>
-                  </MotionDiv>
-                )}
-              </AnimatePresence>
+              </FilterDrawer>
             </div>
           )}
 
@@ -4879,7 +4448,7 @@ export default function LifeSyncManga() {
 
           {source === "roliascan" && (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">
+              <p className="text-[10px] font-semibold text-(--color-text-secondary) uppercase tracking-wider">
                 Browse order
               </p>
               <LifeSyncSectionNav
@@ -4906,397 +4475,43 @@ export default function LifeSyncManga() {
             </div>
           )}
 
-          {false && tab === "library" && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">
-                Library
-              </p>
-              <LifeSyncSectionNav
-                size="dense"
-                ariaLabel="Library status"
-                layoutId="lifesync-manga-library-status"
-                items={MANGADEX_LIBRARY_STATUS_TABS.map((st) => ({
-                  id: st.value,
-                  label: st.label,
-                }))}
-                activeId={libraryListStatus}
-                onSelect={(id) => setLibraryListStatus(id)}
-              />
-              {!dexAuthStatus?.connected && (
-                <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                  Link Roliascan under Profile → Integrations to see titles from
-                  your Roliascan reading lists.
-                </p>
-              )}
-            </div>
-          )}
-
-          {false && (tab === "popular" || tab === "recent") && (
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wider">
-                Browse
-              </p>
-              <LifeSyncSectionNav
-                size="dense"
-                ariaLabel="Browse sort"
-                layoutId="lifesync-manga-browse-sort"
-                items={BROWSE_SORT_TABS.map((st) => ({
-                  id: st.id,
-                  label: st.label,
-                }))}
-                activeId={dexBrowseSort}
-                onSelect={(id) => setDexBrowseSort(id)}
-              />
-              {dexBrowseSort === "random" && (
-                <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                  Random uses a fresh slice each load — use Refresh or pick
-                  another sort to page through the full catalog.
-                </p>
-              )}
-            </div>
-          )}
-
-          {false && tab === "search" && committedSearchQuery.trim() && (
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[160px]">
-                Search sort
-                <select
-                  value={dexSearchOrderBy}
-                  onChange={(e) => setDexSearchOrderBy(e.target.value)}
-                  className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                >
-                  {SEARCH_SORT_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-[10px] font-semibold text-[var(--mx-color-86868b)] flex flex-col gap-1 min-w-[120px]">
-                Direction
-                <select
-                  value={dexSearchOrderDir}
-                  onChange={(e) => setDexSearchOrderDir(e.target.value)}
-                  className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
-                >
-                  <option value="desc">Descending</option>
-                  <option value="asc">Ascending</option>
-                </select>
-              </label>
-            </div>
-          )}
-
-          {/* Pagination for MangaDistrict latest */}
+          {/* Unified browse pager  one footer control across all sources */}
           {source === "mangadistrict" && !mdFilter.trim() && mdLatest && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                Page {mdCurPage} of {mdLastPage}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={busy || mdCurPage <= 1}
-                  onClick={() => goToPage(mdCurPage - 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={busy || mdCurPage >= mdLastPage}
-                  onClick={() => goToPage(mdCurPage + 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <MangaPagerFooter
+              page={mdCurPage}
+              lastPage={mdLastPage}
+              busy={busy}
+              onPrev={() => goToPage(mdCurPage - 1)}
+              onNext={() => goToPage(mdCurPage + 1)}
+            />
           )}
 
           {source === "mangadna" && !dnaFilter.trim() && dnaLatest && (
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                Page {dnaCurPage} of {dnaLastPage}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={busy || dnaCurPage <= 1}
-                  onClick={() => goToPage(dnaCurPage - 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={busy || dnaCurPage >= dnaLastPage}
-                  onClick={() => goToPage(dnaCurPage + 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <MangaPagerFooter
+              page={dnaCurPage}
+              lastPage={dnaLastPage}
+              busy={busy}
+              onPrev={() => goToPage(dnaCurPage - 1)}
+              onNext={() => goToPage(dnaCurPage + 1)}
+            />
           )}
 
           {source === "roliascan" && (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                Page {roliascanPage} of {roliascanLastPage}
-                {roliascanTotal > 0 && (
-                  <span className="ml-1">
-                    ({roliascanTotal.toLocaleString()} titles)
-                  </span>
-                )}
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={roliascanLoading || roliascanPage <= 1}
-                  onClick={() => goToPage(roliascanPage - 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={
-                    roliascanLoading || roliascanPage >= roliascanLastPage
-                  }
-                  onClick={() => goToPage(roliascanPage + 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
+            <MangaPagerFooter
+              page={roliascanPage}
+              lastPage={roliascanLastPage}
+              total={roliascanTotal}
+              busy={roliascanLoading}
+              onPrev={() => goToPage(roliascanPage - 1)}
+              onNext={() => goToPage(roliascanPage + 1)}
+            />
           )}
 
-          {false && tab === "popular" && dexBrowseSort !== "random" && (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                Page {dexPopularPage} of {dexPopularLast}
-                {popularTotal > 0 && (
-                  <span className="ml-1">
-                    ({popularTotal.toLocaleString()} titles)
-                  </span>
-                )}
-              </p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  disabled={dexPopularPage <= 1}
-                  onClick={() => goToPage(dexPopularPage - 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <div className="flex items-center gap-1.5">
-                  {(() => {
-                    const cur = dexPopularPage;
-                    const last = dexPopularLast;
-                    const pages = [];
-                    const start = Math.max(1, cur - 2);
-                    const end = Math.min(last, cur + 2);
-                    if (start > 1) pages.push(1, "…");
-                    for (let p = start; p <= end; p += 1) pages.push(p);
-                    if (end < last) pages.push("…", last);
-                    return pages.map((p, idx) =>
-                      typeof p === "number" ? (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => goToPage(p)}
-                          className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
-                            p === cur
-                              ? "border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm"
-                              : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]"
-                          }`}
-                          aria-current={p === cur ? "page" : undefined}
-                        >
-                          {p}
-                        </button>
-                      ) : (
-                        <span
-                          key={`dots-pop-${idx}`}
-                          className="px-1 text-[11px] text-[var(--mx-color-86868b)]"
-                        >
-                          …
-                        </span>
-                      ),
-                    );
-                  })()}
-                </div>
-                <button
-                  type="button"
-                  disabled={dexPopularPage >= dexPopularLast}
-                  onClick={() => goToPage(dexPopularPage + 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
 
-          {false &&
-            tab === "popular" &&
-            dexBrowseSort === "random" &&
-            popularTotal > 0 && (
-              <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                {popularTotal.toLocaleString()} titles match your filters
-                (showing {DEX_PAGE_SIZE} at random).
-              </p>
-            )}
-
-          {false && tab === "recent" && dexBrowseSort !== "random" && (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                Page {dexRecentPage} of {dexRecentLast}
-                {recentTotal > 0 && (
-                  <span className="ml-1">
-                    ({recentTotal.toLocaleString()} titles)
-                  </span>
-                )}
-              </p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  disabled={dexRecentPage <= 1}
-                  onClick={() => goToPage(dexRecentPage - 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <div className="flex items-center gap-1.5">
-                  {(() => {
-                    const cur = dexRecentPage;
-                    const last = dexRecentLast;
-                    const pages = [];
-                    const start = Math.max(1, cur - 2);
-                    const end = Math.min(last, cur + 2);
-                    if (start > 1) pages.push(1, "…");
-                    for (let p = start; p <= end; p += 1) pages.push(p);
-                    if (end < last) pages.push("…", last);
-                    return pages.map((p, idx) =>
-                      typeof p === "number" ? (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => goToPage(p)}
-                          className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
-                            p === cur
-                              ? "border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm"
-                              : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]"
-                          }`}
-                          aria-current={p === cur ? "page" : undefined}
-                        >
-                          {p}
-                        </button>
-                      ) : (
-                        <span
-                          key={`dots-rec-${idx}`}
-                          className="px-1 text-[11px] text-[var(--mx-color-86868b)]"
-                        >
-                          …
-                        </span>
-                      ),
-                    );
-                  })()}
-                </div>
-                <button
-                  type="button"
-                  disabled={dexRecentPage >= dexRecentLast}
-                  onClick={() => goToPage(dexRecentPage + 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-
-          {false &&
-            tab === "recent" &&
-            dexBrowseSort === "random" &&
-            recentTotal > 0 && (
-              <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                {recentTotal.toLocaleString()} titles match your filters
-                (showing {DEX_PAGE_SIZE} at random).
-              </p>
-            )}
-
-          {false && tab === "search" && committedSearchQuery.trim() && (
-            <div className="flex items-center justify-between gap-3 flex-wrap">
-              <p className="text-[11px] text-[var(--mx-color-86868b)]">
-                Page {dexSearchPage} of {dexSearchLast}
-                {searchTotal > 0 && (
-                  <span className="ml-1">
-                    ({searchTotal.toLocaleString()} titles)
-                  </span>
-                )}
-              </p>
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  disabled={searching || dexSearchPage <= 1}
-                  onClick={() => goToPage(dexSearchPage - 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Previous
-                </button>
-                <div className="flex items-center gap-1.5">
-                  {(() => {
-                    const cur = dexSearchPage;
-                    const last = dexSearchLast;
-                    const pages = [];
-                    const start = Math.max(1, cur - 2);
-                    const end = Math.min(last, cur + 2);
-                    if (start > 1) pages.push(1, "…");
-                    for (let p = start; p <= end; p += 1) pages.push(p);
-                    if (end < last) pages.push("…", last);
-                    return pages.map((p, idx) =>
-                      typeof p === "number" ? (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => goToPage(p)}
-                          className={`min-w-8 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold transition-colors ${
-                            p === cur
-                              ? "border-[var(--mx-color-c6ff00)] bg-[var(--mx-color-c6ff00)] text-[var(--mx-color-1a1628)] shadow-sm"
-                              : "bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] border-[var(--mx-color-e5e5ea)] hover:bg-[var(--mx-color-fafafa)]"
-                          }`}
-                          aria-current={p === cur ? "page" : undefined}
-                        >
-                          {p}
-                        </button>
-                      ) : (
-                        <span
-                          key={`dots-s-${idx}`}
-                          className="px-1 text-[11px] text-[var(--mx-color-86868b)]"
-                        >
-                          …
-                        </span>
-                      ),
-                    );
-                  })()}
-                </div>
-                <button
-                  type="button"
-                  disabled={searching || dexSearchPage >= dexSearchLast}
-                  onClick={() => goToPage(dexSearchPage + 1)}
-                  className="text-[11px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-3 py-1.5 rounded-lg border border-[var(--mx-color-e5e5ea)] disabled:opacity-40"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Content grid — only this block animates on source/tab change */}
+          {/* Content grid  only this block animates on source/tab change */}
           <AnimatePresence mode="wait">
             <MotionDiv
-              key={false ? `${source}-${tab}` : source}
+              key={source}
               className="min-w-0 max-w-full space-y-4"
               initial="initial"
               animate="animate"
@@ -5309,7 +4524,7 @@ export default function LifeSyncManga() {
               ) : currentItems.length > 0 ? (
                 useMangaBrowseCardStagger ? (
                   <MotionDiv
-                    className="grid grid-cols-2 gap-4 items-stretch sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+                    className="grid grid-cols-2 gap-3.5 items-stretch sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
                     variants={lifeSyncStaggerContainerDense}
                     initial="hidden"
                     animate="show"
@@ -5320,7 +4535,7 @@ export default function LifeSyncManga() {
                         data-focused-card={
                           focusedCardIndex === i ? "true" : undefined
                         }
-                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2" : ""}`}
+                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-(--color-primary) ring-offset-2" : ""}`}
                         variants={lifeSyncStaggerItemFade}
                       >
                         <MangaCard
@@ -5332,7 +4547,7 @@ export default function LifeSyncManga() {
                   </MotionDiv>
                 ) : (
                   <MotionDiv
-                    className="grid grid-cols-2 gap-4 items-stretch sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
+                    className="grid grid-cols-2 gap-3.5 items-stretch sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={lifeSyncPageTransition}
@@ -5343,7 +4558,7 @@ export default function LifeSyncManga() {
                         data-focused-card={
                           focusedCardIndex === i ? "true" : undefined
                         }
-                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2" : ""}`}
+                        className={`min-h-0${focusedCardIndex === i ? " rounded-[18px] ring-2 ring-(--color-primary) ring-offset-2" : ""}`}
                       >
                         <MangaCard
                           manga={{ ...manga, source: manga.source || source }}
@@ -5353,9 +4568,7 @@ export default function LifeSyncManga() {
                     ))}
                   </MotionDiv>
                 )
-              ) : !busy &&
-                !(false && tab === "following" && dexFollowsBusy) &&
-                !(false && tab === "library" && dexLibraryBusy) ? (
+              ) : !busy ? (
                 <MediaEmptyState
                   accent={source === "mangadistrict" ? "hmanhwa" : "manga"}
                   title="Nothing to show"
@@ -5385,48 +4598,10 @@ export default function LifeSyncManga() {
                                 ? "No Roliascan titles matched your search."
                                 : source === "roliascan"
                                   ? "No Roliascan titles matched this tab and filter set."
-                            : false &&
-                                tab === "search" &&
-                                committedSearchQuery.trim() &&
-                                searching
-                              ? "Searching…"
-                              : false &&
-                                  tab === "search" &&
-                                  committedSearchQuery.trim() &&
-                                  !searching
-                                ? "No titles matched your search."
-                                : false &&
-                                    tab === "library" &&
-                                    dexAuthStatus?.connected
-                                  ? "Nothing in this list on Roliascan yet. Set a status from a title detail panel or read a chapter to sync."
-                                  : false && tab === "library"
-                                    ? "Link Roliascan under Profile → Integrations to browse your Roliascan reading lists."
-                                    : false &&
-                                        tab === "following" &&
-                                        dexAuthStatus?.connected
-                                      ? "No titles in your Roliascan follows, or they are past the first page. Use Refresh or follow series from a detail panel."
-                                      : false && tab === "following"
-                                        ? "Link Roliascan under Profile → Integrations to see titles you follow on Roliascan."
-                                        : "No manga to display."
+                                  : "No manga to display."
                   }
                 />
               ) : null}
-
-              {false &&
-                tab === "following" &&
-                dexFollows.length > 0 &&
-                dexFollows.length < dexFollowsTotal && (
-                  <div className="flex justify-center pt-2">
-                    <button
-                      type="button"
-                      disabled={dexFollowsBusy}
-                      onClick={() => void loadFollows(dexFollows.length)}
-                      className="text-[12px] font-semibold text-[var(--mx-color-1d1d1f)] bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-ebebed)] px-4 py-2 rounded-xl border border-[var(--mx-color-e5e5ea)] transition-colors disabled:opacity-50"
-                    >
-                      {dexFollowsBusy ? "Loading…" : "Load more follows"}
-                    </button>
-                  </div>
-                )}
             </MotionDiv>
           </AnimatePresence>
         </div>

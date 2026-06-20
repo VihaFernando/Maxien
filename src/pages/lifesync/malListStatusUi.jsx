@@ -11,7 +11,7 @@ export const MAL_LIST_STATUS_OPTIONS = [
 ]
 
 /**
- * @param {unknown} res — PATCH `/api/v1/anime/mylist/:id` JSON body
+ * @param {unknown} res  PATCH `/api/v1/anime/mylist/:id` JSON body
  * @returns {Record<string, unknown>}
  */
 export function malListStatusPatchFromResponse(res) {

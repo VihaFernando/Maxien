@@ -74,7 +74,7 @@ export function compareChapters(a, b) {
 export function formatChapterLabel(ch) {
     const vol = ch.volume ? `Vol. ${ch.volume} ` : ''
     const num = ch.chapter != null && ch.chapter !== '' ? ch.chapter : '?'
-    const title = ch.title ? ` — ${ch.title}` : ''
+    const title = ch.title ? `  ${ch.title}` : ''
     return `${vol}Ch. ${num}${title}`
 }
 

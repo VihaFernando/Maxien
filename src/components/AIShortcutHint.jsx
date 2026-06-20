@@ -44,7 +44,7 @@ export default function AIShortcutHint({ onOpen, onOpenSpotlight, onOpenLifeSync
                 id: "tvmode",
                 title: "LifeSync TV Mode",
                 description: onOpenTVMode
-                    ? "Jump into the full-screen TV experience — navigate with keyboard or gamepad."
+                    ? "Jump into the full-screen TV experience  navigate with keyboard or gamepad."
                     : "Enable LifeSync in Settings → Integrations to unlock TV Mode.",
                 actionLabel: onOpenTVMode ? "Launch TV Mode" : "Enable in Preferences",
                 icon: TVModeIcon,

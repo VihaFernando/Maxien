@@ -156,7 +156,7 @@ export default function DashboardHome() {
         const mappedTasks = tasks
             .filter(t => {
                 if (t.status === "Done" || t.status === "Cancelled") return false
-                if (!t.due_at) return true // no due date — not past
+                if (!t.due_at) return true // no due date  not past
                 return new Date(t.due_at) >= startOfToday // today or future only
             })
             .map((task) => ({
@@ -426,7 +426,7 @@ export default function DashboardHome() {
                                         }
                                         <div className="min-w-0">
                                             <p className={`text-[7px] sm:text-[10px] font-semibold uppercase leading-none ${stats.overdue > 0 ? "text-[var(--mx-color-dc2626)]" : "text-[var(--mx-color-16a34a)]"}`}>Overdue</p>
-                                            <p className={`text-[12px] sm:text-[15px] font-bold leading-none mt-0.5 ${stats.overdue > 0 ? "text-[var(--mx-color-dc2626)]" : "text-[var(--mx-color-16a34a)]"}`}>{stats.overdue > 0 ? stats.overdue : "—"}</p>
+                                            <p className={`text-[12px] sm:text-[15px] font-bold leading-none mt-0.5 ${stats.overdue > 0 ? "text-[var(--mx-color-dc2626)]" : "text-[var(--mx-color-16a34a)]"}`}>{stats.overdue > 0 ? stats.overdue : ""}</p>
                                         </div>
                                     </Link>
                                     <Link to="/dashboard/tasks" className={`flex-1 flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-2 rounded-lg hover:opacity-80 transition-opacity cursor-pointer ${stats.highPriority > 0 ? "focus-stat-orange" : "border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)]"}`}>
@@ -489,7 +489,7 @@ export default function DashboardHome() {
                                                                 task.priority === "High" ? "bg-orange-50 text-orange-600" :
                                                                     task.priority === "Medium" ? "bg-blue-50 text-blue-600" :
                                                                         "bg-[var(--color-surface-muted)] text-[var(--color-text-secondary)]"
-                                                                }`}>{task.priority || "—"}</span>
+                                                                }`}>{task.priority || ""}</span>
                                                         ) : (
                                                             <span className="sub-urgency-warning inline-block text-[7px] sm:text-[9px] font-bold px-1 py-0.5 rounded">Due in {item.daysUntil} day{item.daysUntil === 1 ? "" : "s"}</span>
                                                         )}

@@ -12,7 +12,7 @@ import { tvHintLabel } from '../../../lib/lifeSyncKeyboardGamepad'
  * filterConfig: Array of filter row descriptors:
  *   { id: string, label: string, type: 'select' | 'action', options?: {id, label}[], onAction?: () => void }
  *
- * filters: { [id]: value }   — current filter values
+ * filters: { [id]: value }    current filter values
  * onFilterChange: (id, value) => void
  * onClose: () => void
  */
@@ -135,7 +135,7 @@ export function TVFilterPanel({ filterConfig = [], filters = {}, onFilterChange,
 
     return (
         <>
-            {/* Backdrop — tap outside to close, but not while the search keyboard is open */}
+            {/* Backdrop  tap outside to close, but not while the search keyboard is open */}
             <M.div
                 className="absolute inset-0 z-20 bg-black/50"
                 initial={{ opacity: 0 }}

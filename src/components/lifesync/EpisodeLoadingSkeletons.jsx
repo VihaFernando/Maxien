@@ -35,7 +35,7 @@ export function DetailWatchGridSkeleton({ count = 6, dark = false }) {
   )
 }
 
-/** Manga detail modal — chapter list rows (matches `MangaDetail` list layout). */
+/** Manga detail modal  chapter list rows (matches `MangaDetail` list layout). */
 export function LifesyncMangaChapterListSkeleton({ rows = 8, dark = false }) {
   const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
   const shellClass = dark
@@ -71,7 +71,7 @@ export function LifesyncMangaChapterListSkeleton({ rows = 8, dark = false }) {
   )
 }
 
-/** Hentai Ocean detail — episode picker grid (16:9 cards). */
+/** Hentai Ocean detail  episode picker grid (16:9 cards). */
 export function LifesyncHentaiEpisodeGridSkeleton({ count = 6, dark = false }) {
   const n = Math.min(12, Math.max(1, count))
   const shimmer = dark ? 'lifesync-skeleton-shimmer-dark lifesync-shimmer-gloss-dark' : 'lifesync-skeleton-shimmer-light lifesync-shimmer-gloss-light'
@@ -198,7 +198,7 @@ export function LifesyncPortraitCardSkeleton({ className = '' }) {
   )
 }
 
-/** Manga browse grid — matches `LifeSyncManga` main grid. */
+/** Manga browse grid  matches `LifeSyncManga` main grid. */
 export function LifesyncMangaBrowseGridSkeleton({ count = 12 }) {
   return (
     <div
@@ -600,7 +600,7 @@ export function LifesyncMediaLibraryPageSkeleton({ gridCount = 8, showSpotlight 
   )
 }
 
-/** Anime browse lists (`LifeSyncAnime` seasonal / ranking / search) — poster + title overlay strip. */
+/** Anime browse lists (`LifeSyncAnime` seasonal / ranking / search)  poster + title overlay strip. */
 export function LifesyncAnimeCatalogGridSkeleton({ count = 12 }) {
   const n = Math.min(18, Math.max(6, count))
   return (

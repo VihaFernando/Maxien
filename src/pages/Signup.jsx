@@ -44,7 +44,7 @@ export default function Signup() {
                     setSuccess("Success! Your Maxien and LifeSync accounts are ready.")
                 } catch (lsErr) {
                     setSuccess(
-                        "Maxien account created. LifeSync setup failed—you can link it when you sign in with the same email and password."
+                        "Maxien account created. LifeSync setup failedyou can link it when you sign in with the same email and password."
                     )
                     try {
                         sessionStorage.setItem(

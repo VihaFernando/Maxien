@@ -48,7 +48,7 @@ export function TVModeProvider({ children }) {
             if (document.fullscreenElement || !tvActive) return
             // Fullscreen was lost while TV mode is active.
             if (intentionalExitRef.current) {
-                // This was our own exitTV() call — accept it.
+                // This was our own exitTV() call  accept it.
                 intentionalExitRef.current = false
                 setTvActive(false)
             } else {

@@ -17,7 +17,7 @@ const _resolutionCache = new Map()
 /** Call this when the user exits TV mode to free memory and force a fresh fetch next time. */
 export function clearTVHomeImagesCache() {
     _sessionImages.clear()
-    // Keep _resolutionCache — resolution data is URL-stable across sessions.
+    // Keep _resolutionCache  resolution data is URL-stable across sessions.
 }
 
 // ─── fallback pool ────────────────────────────────────────────────────────────
@@ -116,9 +116,9 @@ export function probeImageResolutions(urls) {
 
 /**
  * Return the cached resolution for a URL.
- * • `undefined`  — never probed (not in cache)
- * • `null`       — probed and failed (CORS / 404 / etc.)
- * • `{w, h}`     — successful probe
+ * • `undefined`   never probed (not in cache)
+ * • `null`        probed and failed (CORS / 404 / etc.)
+ * • `{w, h}`      successful probe
  */
 export function getImageResolution(url) {
     if (!_resolutionCache.has(url)) return undefined
@@ -218,7 +218,7 @@ export function useTVHomeImages(tabIds, historyImages = []) {
             if (_sessionImages.has(id)) return false          // already in session
             if (fetchingRef.current.has(id)) return false     // in-flight
             if (lsFresh && lsCache.images?.[id]?.length >= MIN_USABLE_POOL) {
-                // localStorage is fresh — promote to session store and skip fetch
+                // localStorage is fresh  promote to session store and skip fetch
                 _sessionImages.set(id, lsCache.images[id])
                 return false
             }
@@ -271,7 +271,7 @@ export function useTVHomeImages(tabIds, historyImages = []) {
 // ─── collage image selection ──────────────────────────────────────────────────
 
 /**
- * Seeded shuffle — same seed + same pool → same order every render.
+ * Seeded shuffle  same seed + same pool → same order every render.
  * Returns exactly `count` items, cycling if the pool is smaller.
  */
 export function pickCollageImages(images, tabId, seed, count = 12) {

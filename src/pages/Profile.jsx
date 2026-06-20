@@ -1070,61 +1070,7 @@ export default function Profile() {
                                                 />
                                             </button>
                                         </div>
-                                        {controllerSupportEnabled ? (
-                                            <div className="mt-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => void enterTV()}
-                                                    className="flex w-full items-center justify-between gap-3 rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-3 text-left transition hover:brightness-95 active:scale-[0.99]"
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-black/15">
-                                                            <svg className="h-4 w-4 text-black" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden>
-                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-                                                            </svg>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[13px] font-black text-black">Launch TV mode</p>
-                                                            <p className="text-[11px] font-medium text-black/60">Open the fullscreen TV interface</p>
-                                                        </div>
-                                                    </div>
-                                                    <svg className="h-4 w-4 text-black/50" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" aria-hidden>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        ) : null}
-                                        {controllerSupportEnabled ? (
-                                            <div className="mt-4 rounded-xl border border-[var(--color-border-soft)] bg-[var(--color-surface-muted)] p-3 sm:p-4">
-                                                <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
-                                                    Controller input layout
-                                                </p>
-                                                <div className="mt-3 grid gap-3 md:grid-cols-2">
-                                                    {CONTROLLER_INPUT_LAYOUT.map((section) => (
-                                                        <div
-                                                            key={section.title}
-                                                            className="rounded-lg border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-3"
-                                                        >
-                                                            <p className="text-[12px] font-semibold text-[var(--color-text-primary)]">
-                                                                {section.title}
-                                                            </p>
-                                                            <dl className="mt-2 space-y-1.5">
-                                                                {section.rows.map((row) => (
-                                                                    <div key={`${section.title}-${row.button}`} className="flex items-center justify-between gap-3 text-[11px]">
-                                                                        <dt className="font-semibold text-[var(--color-text-secondary)]">
-                                                                            {row.button}
-                                                                        </dt>
-                                                                        <dd className="text-right text-[var(--color-text-secondary)]">
-                                                                            {row.action}
-                                                                        </dd>
-                                                                    </div>
-                                                                ))}
-                                                            </dl>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ) : null}
+                                        
 
                                         <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--color-border-soft)] pt-6">
                                             <div className="min-w-0">
@@ -1197,7 +1143,7 @@ export default function Profile() {
                                                 )}
                                                 {engagementNotificationsSupported() && Notification.permission === "denied" && (
                                                     <p className="mt-2 text-[12px] text-amber-700">
-                                                        Notifications are blocked for this site — change it in browser or OS
+                                                        Notifications are blocked for this site  change it in browser or OS
                                                         settings to turn this on.
                                                     </p>
                                                 )}

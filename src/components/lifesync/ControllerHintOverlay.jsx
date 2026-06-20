@@ -122,8 +122,8 @@ function HintRow({ btns, label }) {
  * Props:
  *   hints: Array of { btns: string[], label: string }
  *   position: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right'  (default: 'bottom-left')
- *   dark: boolean — use dark background (for use inside dark popups)
- *   cols: number — number of columns for hint grid (default: 1)
+ *   dark: boolean  use dark background (for use inside dark popups)
+ *   cols: number  number of columns for hint grid (default: 1)
  *   className: extra className
  */
 export function ControllerHintOverlay({

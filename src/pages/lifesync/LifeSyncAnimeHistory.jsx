@@ -23,7 +23,7 @@ const ANIME_HISTORY_PATH = `${ANIME_BASE}/history`
 function cleanAnimeTitle(raw) {
     if (!raw) return ''
     return String(raw)
-        .replace(/\s*[-–—]\s*AniNeko\s*$/i, '')
+        .replace(/\s*[-–]\s*AniNeko\s*$/i, '')
         .replace(/\s+Anime\s+Info\s*$/i, '')
         .trim()
 }
@@ -220,7 +220,7 @@ function DetailDrawer({ entry, onClose, onContinue, onRemove, removeBusy }) {
                     <div className="grid grid-cols-3 gap-3 px-5 py-5 border-b border-(--color-border-soft)">
                         {[
                             { label: 'Current', value: `Ep ${current}` },
-                            { label: 'Total', value: total != null ? `Ep ${total}` : '—' },
+                            { label: 'Total', value: total != null ? `Ep ${total}` : '' },
                             { label: 'Progress', value: `${pct ?? 0}%` },
                         ].map(({ label, value }) => (
                             <div key={label} className="rounded-2xl bg-(--color-surface-muted) px-3 py-3 text-center">
@@ -560,7 +560,7 @@ export default function LifeSyncAnimeHistory() {
                         variants={lifeSyncStatBlockItem}
                         className={`rounded-2xl px-3 py-3 text-center ${s.accent ? 'bg-primary/10 ring-1 ring-primary/20' : 'bg-(--color-surface) border border-(--color-border-soft)'}`}
                     >
-                        <p className={`text-[22px] font-black tabular-nums leading-none ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{loading ? '—' : s.value}</p>
+                        <p className={`text-[22px] font-black tabular-nums leading-none ${s.accent ? 'text-primary' : 'text-(--color-text-primary)'}`}>{loading ? '' : s.value}</p>
                         <p className="mt-1 text-[9px] font-bold uppercase tracking-widest text-(--color-text-secondary)">{s.label}</p>
                     </MotionDiv>
                 ))}
@@ -651,7 +651,7 @@ export default function LifeSyncAnimeHistory() {
                         <IconPlay className="h-5 w-5 text-(--color-text-secondary)" />
                     </MotionDiv>
                     <p className="text-[16px] font-bold text-(--color-text-primary)">Nothing here yet</p>
-                    <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-(--color-text-secondary)">Start watching an episode — your progress saves automatically.</p>
+                    <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-(--color-text-secondary)">Start watching an episode  your progress saves automatically.</p>
                     <Link to={`${ANIME_BASE}/home/page/1`} className="mt-6 inline-flex min-h-10.5 items-center justify-center gap-2 rounded-2xl bg-primary px-5 text-[13px] font-bold text-(--color-ink-strong) transition hover:brightness-95">
                         <IconPlay className="h-3.5 w-3.5" /> Browse anime
                     </Link>

@@ -360,7 +360,7 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                                                                 {user ? getDisplayName(user) : member.user_id}
                                                             </p>
                                                             <p className="mt-1 truncate text-[11px] text-[var(--mx-color-64748b)] sm:text-sm">
-                                                                {user?.email || "—"}
+                                                                {user?.email || ""}
                                                             </p>
                                                             <p className="mt-1 text-[11px] text-[var(--mx-color-64748b)] sm:text-sm">
                                                                 {customRoles.length > 0

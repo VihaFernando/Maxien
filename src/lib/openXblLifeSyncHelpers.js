@@ -484,7 +484,7 @@ export function extractMinutesPlayedMapFromStats(data) {
 }
 
 /**
- * True only for real unlock times — Xbox / .NET often sends DateTime.MinValue for locked rows,
+ * True only for real unlock times  Xbox / .NET often sends DateTime.MinValue for locked rows,
  * which is a non-empty string and was incorrectly treated as "unlocked".
  */
 export function isPlausibleAchievementUnlockInstant(raw) {
@@ -612,7 +612,7 @@ export function isAchievementUnlocked(a) {
 }
 
 /**
- * OpenXBL `GET /v2/presence/{xuid}` — user-facing lines (see OpenXBL docs).
+ * OpenXBL `GET /v2/presence/{xuid}`  user-facing lines (see OpenXBL docs).
  * @returns {{ status: string, game: string|null, detail: string|null }|null}
  */
 export function summarizeOpenXblPresence(data) {

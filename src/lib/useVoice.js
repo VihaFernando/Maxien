@@ -86,7 +86,7 @@ export function useVoice() {
     const [isListening, setIsListening] = useState(false)
     const [isSpeaking, setIsSpeaking] = useState(false)
     const [interimText, setInterimText] = useState("")
-    // transcript: { text: string, id: number } — id changes each new result
+    // transcript: { text: string, id: number }  id changes each new result
     const [transcript, setTranscript] = useState(null)
     const [voiceEnabled, setVoiceEnabled] = useState(() => {
         try { return localStorage.getItem("maxien_voice_enabled") !== "false" } catch { return true }
@@ -326,7 +326,7 @@ export function useVoice() {
         isListening,
         isSpeaking,
         interimText,
-        transcript,              // { text, id } — watch this to handle new transcripts
+        transcript,              // { text, id }  watch this to handle new transcripts
         voiceEnabled,
         setVoiceEnabled,
         availableVoices,         // array of SpeechSynthesisVoice

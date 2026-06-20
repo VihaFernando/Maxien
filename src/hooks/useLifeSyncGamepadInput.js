@@ -105,7 +105,7 @@ export default function useLifeSyncGamepadInput({
 
         rafId = window.requestAnimationFrame(tick)
 
-        // Keyboard bridge — active only while TV mode enables it (see
+        // Keyboard bridge  active only while TV mode enables it (see
         // lifeSyncKeyboardGamepad.js). Mapped keys fire the same handlers as
         // their gamepad buttons; native key auto-repeat drives repeats so it
         // only applies to repeatable (D-pad) buttons.

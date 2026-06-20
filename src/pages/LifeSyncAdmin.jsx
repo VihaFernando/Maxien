@@ -1,9 +1,29 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useLifeSync } from '../context/LifeSyncContext'
 import { getLifesyncToken, lifesyncFetch } from '../lib/lifesyncApi'
 import { isLifeSyncAdmin } from '../lib/lifeSyncRoles'
 import { LifeSyncSectionNav } from '../components/lifesync/LifeSyncSectionNav'
+import { LineChart, RangeToggle, Sparkline } from '../components/lifesync/AdminCharts'
+
+const CHART_COLORS = {
+    signups: 'var(--mx-color-c6ff00)',
+    anime: '#0080FF',
+    manga: '#FF9500',
+}
+
+function sum(arr) {
+    return Array.isArray(arr) ? arr.reduce((a, b) => a + (Number(b) || 0), 0) : 0
+}
+
+function deltaPct(series) {
+    if (!Array.isArray(series) || series.length < 2) return null
+    const half = Math.floor(series.length / 2)
+    const prev = sum(series.slice(0, half))
+    const curr = sum(series.slice(half))
+    if (prev === 0) return curr > 0 ? 100 : 0
+    return Math.round(((curr - prev) / prev) * 100)
+}
 
 const ADMIN_TABS = [
     { id: 'overview', label: 'Overview', title: 'Growth, usage, and quick snapshot' },
@@ -45,9 +65,66 @@ function MetricCard({ label, value, hint }) {
     return (
         <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 shadow-sm">
             <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">{label}</p>
-            <p className="mt-1.5 text-[22px] font-bold tabular-nums text-apple-text">{value ?? '—'}</p>
+            <p className="mt-1.5 text-[22px] font-bold tabular-nums text-apple-text">{value ?? ''}</p>
             {hint ? <p className="mt-1 text-[10px] leading-snug text-apple-subtext">{hint}</p> : null}
         </div>
+    )
+}
+
+function StatCard({ label, value, hint, spark, sparkColor, delta }) {
+    const deltaUp = typeof delta === 'number' && delta > 0
+    const deltaDown = typeof delta === 'number' && delta < 0
+    return (
+        <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-2">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">{label}</p>
+                {typeof delta === 'number' ? (
+                    <span
+                        className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                            deltaUp
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : deltaDown
+                                  ? 'bg-rose-100 text-rose-800'
+                                  : 'bg-apple-bg text-apple-subtext'
+                        }`}
+                        title="Change vs the previous half of the selected range"
+                    >
+                        {deltaUp ? '▲' : deltaDown ? '▼' : '•'} {Math.abs(delta)}%
+                    </span>
+                ) : null}
+            </div>
+            <div className="mt-1.5 flex items-end justify-between gap-2">
+                <p className="text-[22px] font-bold tabular-nums text-apple-text">{value ?? '—'}</p>
+                {Array.isArray(spark) && spark.length > 1 ? (
+                    <Sparkline data={spark} color={sparkColor || 'var(--color-primary)'} ariaLabel={`${label} trend`} />
+                ) : null}
+            </div>
+            {hint ? <p className="mt-1 text-[10px] leading-snug text-apple-subtext">{hint}</p> : null}
+        </div>
+    )
+}
+
+function ChartCard({ title, subtitle, action, busy, error, empty, children }) {
+    return (
+        <Panel>
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <SectionIntro title={title}>{subtitle}</SectionIntro>
+                {action}
+            </div>
+            {error ? (
+                <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">{error}</p>
+            ) : null}
+            {busy ? (
+                <div className="h-60 animate-pulse rounded-xl bg-apple-bg" aria-label="Loading chart" />
+            ) : empty ? (
+                <div className="flex h-60 flex-col items-center justify-center rounded-xl border border-dashed border-[var(--mx-color-e5e5ea)] text-center">
+                    <p className="text-[13px] font-semibold text-apple-text">No data in this range yet</p>
+                    <p className="mt-1 text-[12px] text-apple-subtext">Activity will appear here as users engage.</p>
+                </div>
+            ) : (
+                children
+            )}
+        </Panel>
     )
 }
 
@@ -75,7 +152,7 @@ function formatUptime(totalSeconds) {
 }
 
 function formatBoolean(value) {
-    if (typeof value !== 'boolean') return '—'
+    if (typeof value !== 'boolean') return ''
     return value ? 'true' : 'false'
 }
 
@@ -170,6 +247,15 @@ export default function LifeSyncAdmin() {
     const [v1Health, setV1Health] = useState(null)
     const [v1HealthError, setV1HealthError] = useState('')
 
+    const [series, setSeries] = useState(null)
+    const [seriesBusy, setSeriesBusy] = useState(false)
+    const [seriesError, setSeriesError] = useState('')
+    const [seriesRange, setSeriesRange] = useState(30)
+
+    const [liveOn, setLiveOn] = useState(false)
+    const [liveSamples, setLiveSamples] = useState([]) // { t, rssMb, heapMb, pingMs }
+    const liveTimerRef = useRef(null)
+
     const [slugCheckId, setSlugCheckId] = useState('')
     const [slugCheckBusy, setSlugCheckBusy] = useState(false)
     const [slugCheckResult, setSlugCheckResult] = useState(null)
@@ -260,6 +346,21 @@ export default function LifeSyncAdmin() {
             setActivityManga(null)
         } finally {
             setActivityBusy(false)
+        }
+    }, [])
+
+    const loadSeries = useCallback(async (range) => {
+        if (V1_ADMIN_MODE) return
+        setSeriesBusy(true)
+        setSeriesError('')
+        try {
+            const data = await lifesyncFetch(`/api/v1/admin/metrics/series?range=${range}`, { method: 'GET' })
+            setSeries(data)
+        } catch (e) {
+            setSeriesError(e?.message || 'Could not load growth series.')
+            setSeries(null)
+        } finally {
+            setSeriesBusy(false)
         }
     }, [])
 
@@ -478,6 +579,58 @@ export default function LifeSyncAdmin() {
         loadActivity()
     }, [allowed, tab, loadActivity])
 
+    useEffect(() => {
+        if (V1_ADMIN_MODE) return
+        if (!allowed || tab !== 'overview') return
+        loadSeries(seriesRange)
+    }, [allowed, tab, seriesRange, loadSeries])
+
+    // Live system monitor: poll on a 10s interval and keep a rolling window.
+    // One light /health call per tick (ping + checks); memory is refreshed from
+    // /overview only once every 6 ticks (~1 min) since RSS/heap drift slowly. This
+    // keeps well under the admin rate limit (120 req / 15 min) for long sessions.
+    useEffect(() => {
+        if (!liveOn || !allowed) return undefined
+        let cancelled = false
+        let n = 0
+        const tick = async () => {
+            try {
+                const h = await lifesyncFetch('/api/v1/admin/health', { method: 'GET' })
+                if (cancelled) return
+                setHealth(h)
+                let mem = null
+                if (n % 6 === 0) {
+                    mem = await lifesyncFetch('/api/v1/admin/overview', { method: 'GET' }).catch(() => null)
+                    if (cancelled) return
+                    if (mem) setOverview(mem)
+                }
+                n += 1
+                setLiveSamples((prev) => {
+                    const lastMem = prev[prev.length - 1]
+                    const next = [
+                        ...prev,
+                        {
+                            t: Date.now(),
+                            rssMb: mem?.system?.memoryRssMb ?? lastMem?.rssMb ?? null,
+                            heapMb: mem?.system?.memoryHeapUsedMb ?? lastMem?.heapMb ?? null,
+                            pingMs: h?.dbPingMs ?? null,
+                        },
+                    ]
+                    return next.slice(-40)
+                })
+            } catch {
+                /* keep last samples; transient errors are fine */
+            }
+        }
+        tick()
+        liveTimerRef.current = window.setInterval(tick, 10000)
+        return () => {
+            cancelled = true
+            if (liveTimerRef.current) window.clearInterval(liveTimerRef.current)
+            liveTimerRef.current = null
+        }
+    }, [liveOn, allowed])
+
     const tabMeta = ADMIN_TABS.find((t) => t.id === tab) || ADMIN_TABS[0]
 
     if (lifeSyncLoading) {
@@ -540,9 +693,9 @@ export default function LifeSyncAdmin() {
                     ) : null}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
-                    <MetricCard label="Service" value={v1Health?.service || '—'} />
-                    <MetricCard label="Runtime" value={v1Health?.runtime || '—'} />
-                    <MetricCard label="Health" value={v1Health?.ok ? 'OK' : '—'} />
+                    <MetricCard label="Service" value={v1Health?.service || ''} />
+                    <MetricCard label="Runtime" value={v1Health?.runtime || ''} />
+                    <MetricCard label="Health" value={v1Health?.ok ? 'OK' : ''} />
                 </div>
                 <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 shadow-sm">
                     <p className="text-[12px] text-apple-subtext">
@@ -556,6 +709,22 @@ export default function LifeSyncAdmin() {
     const m = overview?.metrics
     const s = overview?.system
     const recent = Array.isArray(overview?.recentSignups) ? overview.recentSignups : []
+    const sLabels = Array.isArray(series?.labels) ? series.labels : []
+    const sSignups = Array.isArray(series?.series?.signups) ? series.series.signups : []
+    const sAnime = Array.isArray(series?.series?.animeProgress) ? series.series.animeProgress : []
+    const sManga = Array.isArray(series?.series?.mangaProgress) ? series.series.mangaProgress : []
+    const seriesEmpty = !seriesBusy && sLabels.length > 0 && sum(sSignups) + sum(sAnime) + sum(sManga) === 0
+    const growthSeries = [
+        { key: 'signups', name: 'Signups', color: CHART_COLORS.signups, values: sSignups },
+    ]
+    const engagementSeries = [
+        { key: 'anime', name: 'Anime updates', color: CHART_COLORS.anime, values: sAnime },
+        { key: 'manga', name: 'Manga updates', color: CHART_COLORS.manga, values: sManga },
+    ]
+    const liveRss = liveSamples.map((x) => x.rssMb).filter((v) => v != null)
+    const liveHeap = liveSamples.map((x) => x.heapMb).filter((v) => v != null)
+    const livePing = liveSamples.map((x) => x.pingMs).filter((v) => v != null)
+    const lastLive = liveSamples[liveSamples.length - 1] || null
     const animeRows = Array.isArray(activityAnime?.rows) ? activityAnime.rows : []
     const mangaRows = Array.isArray(activityManga?.rows) ? activityManga.rows : []
     const auditAnimeSample = Array.isArray(auditSummary?.progressOrphans?.anime?.sample)
@@ -590,7 +759,7 @@ export default function LifeSyncAdmin() {
                         <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">Operator</p>
                         <h1 className="mt-1 text-[24px] font-bold tracking-tight text-apple-text">LifeSync admin</h1>
                         <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-apple-subtext">
-                            Monitor the API host, integrations, and user activity. Use the tabs to focus each area —
+                            Monitor the API host, integrations, and user activity. Use the tabs to focus each area 
                             nothing here shows OAuth tokens or passwords.
                         </p>
                     </div>
@@ -642,7 +811,7 @@ export default function LifeSyncAdmin() {
                 </div>
             )}
 
-            {/* ——— Overview ——— */}
+            {/*  Overview  */}
             {tab === 'overview' && (
                 <div className="space-y-8">
                     <Panel>
@@ -655,7 +824,7 @@ export default function LifeSyncAdmin() {
                                     Server time
                                 </p>
                                 <p className="mt-1 font-mono text-[14px] text-apple-text">
-                                    {overview?.serverTime || '—'}
+                                    {overview?.serverTime || ''}
                                 </p>
                                 <button
                                     type="button"
@@ -669,16 +838,16 @@ export default function LifeSyncAdmin() {
                             <dl className="space-y-2 text-[12px] text-apple-text">
                                 <div className="flex justify-between gap-2 border-b border-[var(--mx-color-f0f0f0)] py-1">
                                     <dt className="text-apple-subtext">Node</dt>
-                                    <dd className="font-mono">{s?.nodeVersion ?? '—'}</dd>
+                                    <dd className="font-mono">{s?.nodeVersion ?? ''}</dd>
                                 </div>
                                 <div className="flex justify-between gap-2 border-b border-[var(--mx-color-f0f0f0)] py-1">
                                     <dt className="text-apple-subtext">API uptime</dt>
-                                    <dd>{s?.uptimeSeconds != null ? formatUptime(s.uptimeSeconds) : '—'}</dd>
+                                    <dd>{s?.uptimeSeconds != null ? formatUptime(s.uptimeSeconds) : ''}</dd>
                                 </div>
                                 <div className="flex justify-between gap-2 py-1">
                                     <dt className="text-apple-subtext">Memory RSS / heap</dt>
                                     <dd className="tabular-nums">
-                                        {s?.memoryRssMb ?? '—'} MB / {s?.memoryHeapUsedMb ?? '—'} MB
+                                        {s?.memoryRssMb ?? ''} MB / {s?.memoryHeapUsedMb ?? ''} MB
                                     </dd>
                                 </div>
                             </dl>
@@ -696,12 +865,65 @@ export default function LifeSyncAdmin() {
                     </Panel>
 
                     <div>
-                        <SectionIntro title="Growth">New accounts and total users on this LifeSync database.</SectionIntro>
-                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                            <MetricCard label="New users (7 days)" value={m?.newUsersLast7Days} hint="createdAt" />
-                            <MetricCard label="New users (30 days)" value={m?.newUsersLast30Days} />
-                            <MetricCard label="Total users" value={m?.userCount} />
+                        <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+                            <SectionIntro title="Growth & engagement">
+                                New accounts and reading/watching activity over the selected window. Deltas compare the
+                                latest half of the range with the previous half.
+                            </SectionIntro>
+                            <RangeToggle value={seriesRange} onChange={setSeriesRange} disabled={seriesBusy} />
                         </div>
+                        {seriesError ? (
+                            <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                                {seriesError}
+                            </p>
+                        ) : null}
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <StatCard
+                                label={`New signups (${seriesRange}d)`}
+                                value={sum(sSignups)}
+                                spark={sSignups}
+                                sparkColor={CHART_COLORS.signups}
+                                delta={deltaPct(sSignups)}
+                            />
+                            <StatCard
+                                label={`Anime updates (${seriesRange}d)`}
+                                value={sum(sAnime)}
+                                spark={sAnime}
+                                sparkColor={CHART_COLORS.anime}
+                                delta={deltaPct(sAnime)}
+                            />
+                            <StatCard
+                                label={`Manga updates (${seriesRange}d)`}
+                                value={sum(sManga)}
+                                spark={sManga}
+                                sparkColor={CHART_COLORS.manga}
+                                delta={deltaPct(sManga)}
+                            />
+                            <StatCard
+                                label="Total users"
+                                value={m?.userCount}
+                                hint={`${m?.newUsersLast7Days ?? 0} new in last 7 days`}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="grid gap-6 lg:grid-cols-2">
+                        <ChartCard
+                            title="Signups over time"
+                            subtitle="Daily new LifeSync accounts."
+                            busy={seriesBusy}
+                            empty={seriesEmpty}
+                        >
+                            <LineChart labels={sLabels} series={growthSeries} />
+                        </ChartCard>
+                        <ChartCard
+                            title="Content engagement"
+                            subtitle="Daily anime watch and manga reading progress events."
+                            busy={seriesBusy}
+                            empty={seriesEmpty}
+                        >
+                            <LineChart labels={sLabels} series={engagementSeries} />
+                        </ChartCard>
                     </div>
 
                     <div>
@@ -726,9 +948,77 @@ export default function LifeSyncAdmin() {
                 </div>
             )}
 
-            {/* ——— Health & ops ——— */}
+            {/*  Health & ops  */}
             {tab === 'health' && (
                 <div className="space-y-8">
+                    <Panel>
+                        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                            <SectionIntro title="Live system monitor">
+                                Polls health and resource usage every 5s while enabled. Pause to stop network traffic.
+                            </SectionIntro>
+                            <div className="flex items-center gap-2">
+                                {liveOn ? (
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+                                        <span className="relative flex h-1.5 w-1.5">
+                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+                                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                        </span>
+                                        Live
+                                    </span>
+                                ) : null}
+                                <button
+                                    type="button"
+                                    onClick={() => setLiveOn((v) => !v)}
+                                    aria-pressed={liveOn}
+                                    className={`rounded-xl px-4 py-2 text-[12px] font-semibold shadow-sm transition-colors ${
+                                        liveOn
+                                            ? 'border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] text-apple-text hover:bg-apple-bg'
+                                            : 'bg-primary text-apple-text'
+                                    }`}
+                                >
+                                    {liveOn ? 'Pause' : 'Start monitor'}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-3">
+                            <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">Memory RSS</p>
+                                <div className="mt-1.5 flex items-end justify-between gap-2">
+                                    <p className="text-[22px] font-bold tabular-nums text-apple-text">
+                                        {lastLive?.rssMb ?? s?.memoryRssMb ?? '—'}
+                                        <span className="ml-1 text-[12px] font-medium text-apple-subtext">MB</span>
+                                    </p>
+                                    <Sparkline data={liveRss} color={CHART_COLORS.anime} ariaLabel="Memory RSS trend" />
+                                </div>
+                            </div>
+                            <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">Heap used</p>
+                                <div className="mt-1.5 flex items-end justify-between gap-2">
+                                    <p className="text-[22px] font-bold tabular-nums text-apple-text">
+                                        {lastLive?.heapMb ?? s?.memoryHeapUsedMb ?? '—'}
+                                        <span className="ml-1 text-[12px] font-medium text-apple-subtext">MB</span>
+                                    </p>
+                                    <Sparkline data={liveHeap} color={CHART_COLORS.signups} ariaLabel="Heap used trend" />
+                                </div>
+                            </div>
+                            <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg p-4">
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">DB ping</p>
+                                <div className="mt-1.5 flex items-end justify-between gap-2">
+                                    <p className="text-[22px] font-bold tabular-nums text-apple-text">
+                                        {lastLive?.pingMs ?? health?.dbPingMs ?? '—'}
+                                        <span className="ml-1 text-[12px] font-medium text-apple-subtext">ms</span>
+                                    </p>
+                                    <Sparkline data={livePing} color={CHART_COLORS.manga} ariaLabel="DB ping trend" />
+                                </div>
+                            </div>
+                        </div>
+                        {!liveOn && liveSamples.length === 0 ? (
+                            <p className="mt-3 text-[12px] text-apple-subtext">
+                                Start the monitor to collect a rolling ~6-minute window of live samples.
+                            </p>
+                        ) : null}
+                    </Panel>
+
                     <Panel>
                         <SectionIntro title="Process status">
                             Server snapshot from the last refresh, including uptime and resource usage.
@@ -736,15 +1026,15 @@ export default function LifeSyncAdmin() {
                         <dl className="grid gap-3 text-[12px] sm:grid-cols-2">
                             <div>
                                 <dt className="text-apple-subtext">Server time</dt>
-                                <dd className="mt-0.5 font-mono text-[11px]">{overview?.serverTime ?? '—'}</dd>
+                                <dd className="mt-0.5 font-mono text-[11px]">{overview?.serverTime ?? ''}</dd>
                             </div>
                             <div>
                                 <dt className="text-apple-subtext">PID</dt>
-                                <dd className="mt-0.5 font-mono">{s?.pid ?? '—'}</dd>
+                                <dd className="mt-0.5 font-mono">{s?.pid ?? ''}</dd>
                             </div>
                             <div>
                                 <dt className="text-apple-subtext">Uptime</dt>
-                                <dd className="mt-0.5">{s?.uptimeSeconds != null ? formatUptime(s.uptimeSeconds) : '—'}</dd>
+                                <dd className="mt-0.5">{s?.uptimeSeconds != null ? formatUptime(s.uptimeSeconds) : ''}</dd>
                             </div>
                             <div>
                                 <dt className="text-apple-subtext">Mongo connected</dt>
@@ -753,7 +1043,7 @@ export default function LifeSyncAdmin() {
                             <div>
                                 <dt className="text-apple-subtext">RSS / heap</dt>
                                 <dd className="mt-0.5 tabular-nums">
-                                    {s?.memoryRssMb ?? '—'} MB / {s?.memoryHeapUsedMb ?? '—'} MB
+                                    {s?.memoryRssMb ?? ''} MB / {s?.memoryHeapUsedMb ?? ''} MB
                                 </dd>
                             </div>
                         </dl>
@@ -764,7 +1054,7 @@ export default function LifeSyncAdmin() {
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                             <div>
                                 <p className="font-mono text-[28px] font-bold tabular-nums text-apple-text">
-                                    {health?.dbPingMs != null ? `${health.dbPingMs} ms` : '—'}
+                                    {health?.dbPingMs != null ? `${health.dbPingMs} ms` : ''}
                                 </p>
                                 <p className="mt-1 text-[12px] text-apple-subtext">
                                     Mongo connected <span className="font-mono">{formatBoolean(health?.mongoConnected)}</span>
@@ -857,21 +1147,21 @@ export default function LifeSyncAdmin() {
                             <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Newest</p>
                                 <p className="mt-1 font-mono text-apple-text">
-                                    {animeDb?.newest?.aninekoSlug || '—'}
+                                    {animeDb?.newest?.aninekoSlug || ''}
                                 </p>
-                                <p className="mt-1 text-apple-subtext">{animeDb?.newest?.title || '—'}</p>
+                                <p className="mt-1 text-apple-subtext">{animeDb?.newest?.title || ''}</p>
                                 <p className="mt-1 font-mono text-[11px] text-apple-subtext">
-                                    {animeDb?.newest?.fetchedAt || '—'}
+                                    {animeDb?.newest?.fetchedAt || ''}
                                 </p>
                             </div>
                             <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Oldest</p>
                                 <p className="mt-1 font-mono text-apple-text">
-                                    {animeDb?.oldest?.aninekoSlug || '—'}
+                                    {animeDb?.oldest?.aninekoSlug || ''}
                                 </p>
-                                <p className="mt-1 text-apple-subtext">{animeDb?.oldest?.title || '—'}</p>
+                                <p className="mt-1 text-apple-subtext">{animeDb?.oldest?.title || ''}</p>
                                 <p className="mt-1 font-mono text-[11px] text-apple-subtext">
-                                    {animeDb?.oldest?.fetchedAt || '—'}
+                                    {animeDb?.oldest?.fetchedAt || ''}
                                 </p>
                             </div>
                         </div>
@@ -905,10 +1195,10 @@ export default function LifeSyncAdmin() {
                             <div className="mt-4 rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3 text-[12px]">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Cache</p>
                                 <p className="mt-1 text-apple-text">{slugCheckResult.db?.found ? 'Found' : 'Not found'}</p>
-                                <p className="mt-1 font-mono text-[11px] text-apple-subtext">{slugCheckResult.db?.aninekoSlug || '—'}</p>
-                                <p className="mt-1 text-apple-subtext">{slugCheckResult.db?.title || '—'}</p>
+                                <p className="mt-1 font-mono text-[11px] text-apple-subtext">{slugCheckResult.db?.aninekoSlug || ''}</p>
+                                <p className="mt-1 text-apple-subtext">{slugCheckResult.db?.title || ''}</p>
                                 <p className="mt-1 text-apple-subtext">Streams: {slugCheckResult.db?.hasStreams ? 'yes' : 'no'}</p>
-                                <p className="mt-1 text-apple-subtext">Episodes: {slugCheckResult.db?.epCount ?? '—'}</p>
+                                <p className="mt-1 text-apple-subtext">Episodes: {slugCheckResult.db?.epCount ?? ''}</p>
                             </div>
                         ) : null}
                     </Panel>
@@ -940,8 +1230,8 @@ export default function LifeSyncAdmin() {
                         {hydrateResult && !hydrateResult.error ? (
                             <div className="mt-4 rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3 text-[12px]">
                                 <p className="mt-1 text-apple-text">{hydrateResult.ok ? 'Hydrated successfully' : 'No data returned'}</p>
-                                <p className="mt-1 text-apple-subtext">{hydrateResult.title || '—'}</p>
-                                <p className="mt-1 text-apple-subtext">Episodes: {hydrateResult.episodeCount ?? '—'}</p>
+                                <p className="mt-1 text-apple-subtext">{hydrateResult.title || ''}</p>
+                                <p className="mt-1 text-apple-subtext">Episodes: {hydrateResult.episodeCount ?? ''}</p>
                             </div>
                         ) : null}
                     </Panel>
@@ -1012,7 +1302,7 @@ export default function LifeSyncAdmin() {
                             <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Anime progress orphans</p>
                                 <p className="mt-1 text-apple-text">
-                                    Missing: {auditSummary?.progressOrphans?.anime?.missingCount ?? '—'}
+                                    Missing: {auditSummary?.progressOrphans?.anime?.missingCount ?? ''}
                                 </p>
                                 <p className="mt-1 text-[11px] text-apple-subtext">
                                     Sampled: {auditSummary?.progressOrphans?.anime?.sampled ? 'yes' : 'no'}
@@ -1026,7 +1316,7 @@ export default function LifeSyncAdmin() {
                             <div className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-apple-bg px-3 py-3">
                                 <p className="text-[10px] font-bold uppercase tracking-wide text-apple-subtext">Manga progress orphans</p>
                                 <p className="mt-1 text-apple-text">
-                                    Missing: {auditSummary?.progressOrphans?.manga?.missingCount ?? '—'}
+                                    Missing: {auditSummary?.progressOrphans?.manga?.missingCount ?? ''}
                                 </p>
                                 <p className="mt-1 text-[11px] text-apple-subtext">
                                     Sampled: {auditSummary?.progressOrphans?.manga?.sampled ? 'yes' : 'no'}
@@ -1049,30 +1339,30 @@ export default function LifeSyncAdmin() {
                         <dl className="mt-5 grid gap-3 text-[13px] sm:grid-cols-2">
                             <div>
                                 <dt className="text-apple-subtext">Environment</dt>
-                                <dd className="font-medium text-apple-text">{s?.nodeEnv ?? '—'}</dd>
+                                <dd className="font-medium text-apple-text">{s?.nodeEnv ?? ''}</dd>
                             </div>
                             <div>
                                 <dt className="text-apple-subtext">Listen port</dt>
-                                <dd className="font-mono font-medium text-apple-text">{s?.apiPort ?? '—'}</dd>
+                                <dd className="font-mono font-medium text-apple-text">{s?.apiPort ?? ''}</dd>
                             </div>
                             <div>
                                 <dt className="text-apple-subtext">Database name</dt>
-                                <dd className="font-mono text-[12px] text-apple-text">{s?.databaseName ?? '—'}</dd>
+                                <dd className="font-mono text-[12px] text-apple-text">{s?.databaseName ?? ''}</dd>
                             </div>
                             <div className="sm:col-span-2">
                                 <dt className="text-apple-subtext">Client origin (CORS)</dt>
-                                <dd className="break-all font-mono text-[12px] text-apple-text">{s?.clientOrigin ?? '—'}</dd>
+                                <dd className="break-all font-mono text-[12px] text-apple-text">{s?.clientOrigin ?? ''}</dd>
                             </div>
                             <div>
                                 <dt className="text-apple-subtext">Admin allowlist slots</dt>
-                                <dd className="font-medium text-apple-text">{s?.adminAllowlistSlots ?? '—'}</dd>
+                                <dd className="font-medium text-apple-text">{s?.adminAllowlistSlots ?? ''}</dd>
                             </div>
                         </dl>
                     </Panel>
                 </div>
             )}
 
-            {/* ——— Activity ——— */}
+            {/*  Activity  */}
             {tab === 'activity' && (
                 <div className="space-y-8">
                     {activityError ? (
@@ -1123,13 +1413,13 @@ export default function LifeSyncAdmin() {
                                         animeRows.map((row, i) => (
                                             <tr key={`${row.userId}-${row.animeId}-${i}`} className="hover:bg-apple-bg/60">
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px] text-apple-subtext">
-                                                    {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
+                                                    {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : ''}
                                                 </td>
                                                 <td className="max-w-40 truncate px-3 py-2 font-mono text-[11px] text-apple-subtext">
-                                                    {row.userId || '—'}
+                                                    {row.userId || ''}
                                                 </td>
-                                                <td className="px-3 py-2 font-mono text-[11px]">{row.animeId || '—'}</td>
-                                                <td className="px-3 py-2 tabular-nums">{row.lastEpisodeNumber ?? '—'}</td>
+                                                <td className="px-3 py-2 font-mono text-[11px]">{row.animeId || ''}</td>
+                                                <td className="px-3 py-2 tabular-nums">{row.lastEpisodeNumber ?? ''}</td>
                                                 <td className="px-2 py-2">
                                                     <button
                                                         type="button"
@@ -1158,20 +1448,20 @@ export default function LifeSyncAdmin() {
                                 animeRows.map((row, i) => (
                                     <article key={`${row.userId}-${row.animeId}-${i}`} className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-[var(--color-surface)] p-3">
                                         <p className="font-mono text-[11px] text-apple-subtext">
-                                            {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
+                                            {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : ''}
                                         </p>
                                         <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">User id</p>
-                                                <p className="truncate font-mono text-apple-text">{row.userId || '—'}</p>
+                                                <p className="truncate font-mono text-apple-text">{row.userId || ''}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Anime</p>
-                                                <p className="font-mono text-apple-text">{row.animeId || '—'}</p>
+                                                <p className="font-mono text-apple-text">{row.animeId || ''}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Episode</p>
-                                                <p className="tabular-nums text-apple-text">{row.lastEpisodeNumber ?? '—'}</p>
+                                                <p className="tabular-nums text-apple-text">{row.lastEpisodeNumber ?? ''}</p>
                                             </div>
                                         </div>
                                         <button
@@ -1220,19 +1510,19 @@ export default function LifeSyncAdmin() {
                                         mangaRows.map((row, i) => (
                                             <tr key={`${row.userId}-${row.mangaId}-${i}`} className="hover:bg-apple-bg/60">
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px] text-apple-subtext">
-                                                    {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
+                                                    {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : ''}
                                                 </td>
                                                 <td className="max-w-40 truncate px-3 py-2 font-mono text-[11px] text-apple-subtext">
-                                                    {row.userId || '—'}
+                                                    {row.userId || ''}
                                                 </td>
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px]">
-                                                    {row.source || '—'}
+                                                    {row.source || ''}
                                                 </td>
                                                 <td className="max-w-50 truncate px-3 py-2" title={row.title}>
-                                                    {row.title || row.mangaId || '—'}
+                                                    {row.title || row.mangaId || ''}
                                                 </td>
                                                 <td className="max-w-25 truncate px-3 py-2 text-apple-subtext">
-                                                    {row.lastChapterLabel || '—'}
+                                                    {row.lastChapterLabel || ''}
                                                 </td>
                                                 <td className="px-2 py-2">
                                                     <button
@@ -1262,24 +1552,24 @@ export default function LifeSyncAdmin() {
                                 mangaRows.map((row, i) => (
                                     <article key={`${row.userId}-${row.mangaId}-${i}`} className="rounded-xl border border-[var(--mx-color-f0f0f0)] bg-[var(--color-surface)] p-3">
                                         <p className="font-mono text-[11px] text-apple-subtext">
-                                            {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : '—'}
+                                            {row.updatedAt ? row.updatedAt.slice(0, 16).replace('T', ' ') : ''}
                                         </p>
                                         <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">User id</p>
-                                                <p className="truncate font-mono text-apple-text">{row.userId || '—'}</p>
+                                                <p className="truncate font-mono text-apple-text">{row.userId || ''}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Source</p>
-                                                <p className="font-mono text-apple-text">{row.source || '—'}</p>
+                                                <p className="font-mono text-apple-text">{row.source || ''}</p>
                                             </div>
                                             <div className="col-span-2">
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Title</p>
-                                                <p className="text-apple-text">{row.title || row.mangaId || '—'}</p>
+                                                <p className="text-apple-text">{row.title || row.mangaId || ''}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Chapter</p>
-                                                <p className="text-apple-text">{row.lastChapterLabel || '—'}</p>
+                                                <p className="text-apple-text">{row.lastChapterLabel || ''}</p>
                                             </div>
                                         </div>
                                         <button
@@ -1297,7 +1587,7 @@ export default function LifeSyncAdmin() {
                 </div>
             )}
 
-            {/* ——— Users ——— */}
+            {/*  Users  */}
             {tab === 'users' && (
                 <div className="space-y-8">
                     <Panel>
@@ -1474,10 +1764,10 @@ export default function LifeSyncAdmin() {
                                         recent.map((row) => (
                                             <tr key={row.id} className="hover:bg-apple-bg/60">
                                                 <td className="max-w-35 truncate px-3 py-2 font-mono text-[11px]">{row.id}</td>
-                                                <td className="px-3 py-2">{row.email || row.emailMasked || '—'}</td>
-                                                <td className="max-w-30 truncate px-3 py-2">{row.name || '—'}</td>
+                                                <td className="px-3 py-2">{row.email || row.emailMasked || ''}</td>
+                                                <td className="max-w-30 truncate px-3 py-2">{row.name || ''}</td>
                                                 <td className="whitespace-nowrap px-3 py-2 font-mono text-[11px] text-apple-subtext">
-                                                    {row.createdAt ? row.createdAt.slice(0, 10) : '—'}
+                                                    {row.createdAt ? row.createdAt.slice(0, 10) : ''}
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     <div className="flex flex-wrap gap-1">
@@ -1512,15 +1802,15 @@ export default function LifeSyncAdmin() {
                                         <div className="mt-2 grid grid-cols-2 gap-2 text-[12px]">
                                             <div className="col-span-2">
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Email</p>
-                                                <p className="text-apple-text">{row.email || row.emailMasked || '—'}</p>
+                                                <p className="text-apple-text">{row.email || row.emailMasked || ''}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Name</p>
-                                                <p className="truncate text-apple-text">{row.name || '—'}</p>
+                                                <p className="truncate text-apple-text">{row.name || ''}</p>
                                             </div>
                                             <div>
                                                 <p className="text-[10px] uppercase tracking-wide text-apple-subtext">Joined</p>
-                                                <p className="font-mono text-apple-text">{row.createdAt ? row.createdAt.slice(0, 10) : '—'}</p>
+                                                <p className="font-mono text-apple-text">{row.createdAt ? row.createdAt.slice(0, 10) : ''}</p>
                                             </div>
                                         </div>
                                         <div className="mt-2 flex flex-wrap gap-1">
@@ -1564,15 +1854,15 @@ function UserSummaryCard({ user }) {
             </div>
             <div>
                 <dt className="text-apple-subtext">Email</dt>
-                <dd className="mt-0.5">{user.email || user.emailMasked || '—'}</dd>
+                <dd className="mt-0.5">{user.email || user.emailMasked || ''}</dd>
             </div>
             <div>
                 <dt className="text-apple-subtext">Name</dt>
-                <dd className="mt-0.5">{user.name || '—'}</dd>
+                <dd className="mt-0.5">{user.name || ''}</dd>
             </div>
             <div>
                 <dt className="text-apple-subtext">Created</dt>
-                <dd className="mt-0.5 font-mono text-[11px]">{user.createdAt || '—'}</dd>
+                <dd className="mt-0.5 font-mono text-[11px]">{user.createdAt || ''}</dd>
             </div>
             <div className="sm:col-span-2">
                 <dt className="text-apple-subtext">Integrations</dt>

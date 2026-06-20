@@ -1,5 +1,5 @@
 /**
- * Shared page chrome for LifeSync hub routes — matches CategoryHub (soft lavender base + pastel orbs).
+ * Shared page chrome for LifeSync hub routes  matches CategoryHub (soft lavender base + pastel orbs).
  * Framer `MotionConfig` lives in `LifeSyncMotionRoot` (reduced-motion preference applies to portaled modals too).
  */
 import { useEffect, useMemo, useState } from 'react'

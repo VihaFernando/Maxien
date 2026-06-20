@@ -45,12 +45,12 @@ export function TVCard({ imageUrl, title, badge, ratingBadge, score, subtitle, f
                     </div>
                 )}
 
-                {/* Gradient overlay for legibility — deepens slightly when focused */}
+                {/* Gradient overlay for legibility  deepens slightly when focused */}
                 <div className={`pointer-events-none absolute inset-0 bg-linear-to-t transition-opacity duration-200 ${
                     focused ? 'from-black/70 via-black/5 to-transparent' : 'from-black/80 via-black/10 to-transparent'
                 }`} />
 
-                {/* Badge (episode / chapter label) — top-right */}
+                {/* Badge (episode / chapter label)  top-right */}
                 {badge && (
                     <span className={`absolute right-2 top-2 rounded-lg px-2.5 py-1 text-[12px] font-black tabular-nums ring-1 transition-colors ${
                         focused
@@ -61,21 +61,21 @@ export function TVCard({ imageUrl, title, badge, ratingBadge, score, subtitle, f
                     </span>
                 )}
 
-                {/* Score pill — top-left, only when no badge or when there's room */}
+                {/* Score pill  top-left, only when no badge or when there's room */}
                 {score && !badge && (
                     <span className="absolute left-2 top-2 rounded-lg bg-black/65 px-2 py-0.5 text-[11px] font-black tabular-nums text-amber-300 ring-1 ring-white/12">
                         ★ {score}
                     </span>
                 )}
 
-                {/* Rating badge — bottom-left */}
+                {/* Rating badge  bottom-left */}
                 {ratingLabel && (
                     <span className="absolute bottom-2 left-2 rounded-md bg-black/65 px-1.5 py-0.5 text-[11px] font-black tracking-wide text-amber-300 ring-1 ring-white/12">
                         {ratingLabel}
                     </span>
                 )}
 
-                {/* Score badge — bottom-right (when badge is occupying top-right) */}
+                {/* Score badge  bottom-right (when badge is occupying top-right) */}
                 {score && badge && (
                     <span className="absolute bottom-2 right-2 rounded-md bg-black/65 px-1.5 py-0.5 text-[11px] font-black tabular-nums text-amber-300 ring-1 ring-white/12">
                         ★ {score}

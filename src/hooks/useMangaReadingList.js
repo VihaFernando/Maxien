@@ -53,7 +53,7 @@ function summarizeEntries(entries) {
         statuses: { reading: 0, on_hold: 0, plan_to_read: 0, dropped: 0, completed: 0, re_reading: 0 },
     }
     for (const entry of entries) {
-        // A merged entry may carry mirrorSources — count all sources it spans.
+        // A merged entry may carry mirrorSources  count all sources it spans.
         const sources = [entry?.source, ...(Array.isArray(entry?.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean)
         for (const src of sources) {
             if (summary.sources[src] != null) summary.sources[src] += 1

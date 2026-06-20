@@ -9,7 +9,7 @@ function sourceLabel(source) {
     return source || 'Manga'
 }
 
-/** Full-width horizontal “shelf” for the Manga page — not a generic grid. */
+/** Full-width horizontal “shelf” for the Manga page  not a generic grid. */
 export function MangaReadingShelf({
     entries,
     loading,
@@ -30,7 +30,7 @@ export function MangaReadingShelf({
         ? `${entries.length} title${entries.length === 1 ? '' : 's'} on your shelf`
         : loading
           ? 'Loading your shelf…'
-          : 'Pick a manga below — progress saves automatically'
+          : 'Pick a manga below  progress saves automatically'
 
     const compactSubtitle = (() => {
         let s = statusLine
@@ -180,7 +180,7 @@ export function MangaReadingShelf({
                                 </div>
                                 <div className="mt-2 px-4 sm:px-5 flex items-center justify-between">
                                     <p className="text-[10px] text-[var(--mx-color-86868b)]">
-                                        Suggestions — pick one to start tracking
+                                        Suggestions  pick one to start tracking
                                     </p>
                                     <button
                                         type="button"
@@ -240,7 +240,7 @@ export function MangaReadingShelf({
 
                         {nsfwHiddenCount > 0 && (
                             <p className="mb-3 text-[10px] text-[var(--mx-color-86868b)]">
-                                NSFW is off — {nsfwHiddenCount} saved title{nsfwHiddenCount === 1 ? '' : 's'} hidden.
+                                NSFW is off  {nsfwHiddenCount} saved title{nsfwHiddenCount === 1 ? '' : 's'} hidden.
                             </p>
                         )}
 
@@ -349,7 +349,7 @@ function hubMangaResumeTarget(entry) {
 const hubRailFocusRing =
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white'
 
-/** Hub rail — manga resume strip (matches anime rail structure). */
+/** Hub rail  manga resume strip (matches anime rail structure). */
 export function LifeSyncHubMangaReading({ entries, loading, className = '' }) {
     if (!loading && entries.length === 0) return null
 

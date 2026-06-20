@@ -47,10 +47,6 @@ function hentaiSeriesPosterLayoutId(seriesKey) {
     return `lifesync-hentai-poster-${k}`
 }
 const SERIES_PER_PAGE = 24
-const hentaiFilterExpandTransition = {
-    height: { duration: 0.3 },
-    opacity: { duration: 0.22 },
-}
 
 /** Stable pseudo-shuffle for recommendation order (pure, no Math.random in render). */
 function seriesMixOrderKey(seriesKey) {
@@ -331,21 +327,21 @@ function StreamPlayerPopup({
     }, [allSeries, series, seriesGenresMap])
 
     const popupRootClass = isDarkTheme
-        ? 'bg-[var(--mx-color-020202)] text-white'
-        : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)]'
+        ? 'bg-black text-white'
+        : 'bg-(--color-surface-muted) text-(--color-text-primary)'
     const popupHeaderClass = isDarkTheme
-        ? 'border-b border-[var(--color-border-strong)]/10 bg-black/40'
-        : 'border-b border-[var(--mx-color-d2d2d7)]/70 bg-[var(--color-surface)]/90'
+        ? 'border-b border-(--color-border-strong)/10 bg-black/40'
+        : 'border-b border-(--color-border-strong)/70 bg-(--color-surface)/90'
     const popupPanelClass = isDarkTheme
-        ? 'border border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.04]'
-        : 'border border-[var(--mx-color-d2d2d7)]/70 bg-[var(--color-surface)]'
+        ? 'border border-(--color-border-strong)/10 bg-(--color-surface)/[0.04]'
+        : 'border border-(--color-border-strong)/70 bg-(--color-surface)'
     const popupSoftPanelClass = isDarkTheme
-        ? 'border border-[var(--color-border-strong)]/10 bg-black/35'
-        : 'border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f8f8fb)]'
-    const popupMutedTextClass = isDarkTheme ? 'text-white/60' : 'text-[var(--mx-color-86868b)]'
-    const popupSubtleTextClass = isDarkTheme ? 'text-white/45' : 'text-[var(--mx-color-86868b)]'
-    const popupTitleTextClass = isDarkTheme ? 'text-white' : 'text-[var(--mx-color-1d1d1f)]'
-    const popupAccentTextClass = isDarkTheme ? 'text-[var(--mx-color-c6ff00)]' : 'text-[var(--mx-color-1d1d1f)]'
+        ? 'border border-(--color-border-strong)/10 bg-black/35'
+        : 'border border-(--color-border-soft) bg-(--color-surface-soft)'
+    const popupMutedTextClass = isDarkTheme ? 'text-white/60' : 'text-(--color-text-secondary)'
+    const popupSubtleTextClass = isDarkTheme ? 'text-white/45' : 'text-(--color-text-secondary)'
+    const popupTitleTextClass = isDarkTheme ? 'text-white' : 'text-(--color-text-primary)'
+    const popupAccentTextClass = isDarkTheme ? 'text-(--color-primary)' : 'text-(--color-text-primary)'
 
     useEffect(() => {
         const el = playingRef.current
@@ -442,14 +438,14 @@ function StreamPlayerPopup({
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
                 {isDarkTheme ? (
                     <>
-                        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[var(--mx-color-c6ff00)]/12 blur-[120px]" />
-                        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[var(--mx-color-37c9ff)]/8 blur-[135px]" />
+                        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-(--color-primary)/12 blur-[120px]" />
+                        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-sky-400/8 blur-[135px]" />
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.08)_0%,rgba(2,2,2,0)_48%)]" />
                     </>
                 ) : (
                     <>
-                        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[var(--mx-color-c6ff00)]/18 blur-[120px]" />
-                        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-[var(--mx-color-37c9ff)]/10 blur-[135px]" />
+                        <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-(--color-primary)/18 blur-[120px]" />
+                        <div className="absolute right-0 top-1/3 h-80 w-80 rounded-full bg-sky-400/10 blur-[135px]" />
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0)_58%)]" />
                     </>
                 )}
@@ -464,8 +460,8 @@ function StreamPlayerPopup({
                         onClick={onClose}
                         className={`inline-flex min-w-0 shrink items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                             isDarkTheme
-                                ? 'border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 text-white/85 hover:border-[var(--color-border-strong)]/30 hover:bg-[var(--color-surface)]/10 hover:text-white'
-                                : 'border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)]'
+                                ? 'border-(--color-border-strong)/15 bg-(--color-surface)/5 text-white/85 hover:border-(--color-border-strong)/30 hover:bg-(--color-surface)/10 hover:text-white'
+                                : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text-primary) hover:bg-(--color-surface-muted)'
                         }`}
                     >
                         <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -481,8 +477,8 @@ function StreamPlayerPopup({
                     {progressLabel && (
                         <span className={`hidden rounded-full border px-2.5 py-1 text-[10px] font-semibold tabular-nums sm:inline-flex ${
                             isDarkTheme
-                                ? 'border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.06] text-white/75'
-                                : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-5b5670)]'
+                                ? 'border-(--color-border-strong)/10 bg-(--color-surface)/[0.06] text-white/75'
+                                : 'border-(--color-border-strong) bg-(--color-surface-muted) text-(--color-text-secondary)'
                         }`}>
                             {progressLabel}
                         </span>
@@ -495,8 +491,8 @@ function StreamPlayerPopup({
                             title="Open on source site"
                             className={`inline-flex min-w-0 max-w-[min(100%,11rem)] shrink items-center justify-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[10px] font-medium transition-colors sm:max-w-none sm:px-3 sm:text-[11px] ${
                                 isDarkTheme
-                                    ? 'border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 text-white/70 hover:border-[var(--mx-color-c6ff00)]/45 hover:text-[var(--mx-color-c6ff00)]'
-                                    : 'border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] text-[var(--mx-color-5b5670)] hover:border-[var(--mx-color-c6ff00)]/60 hover:text-[var(--mx-color-1d1d1f)]'
+                                    ? 'border-(--color-border-strong)/15 bg-(--color-surface)/5 text-white/70 hover:border-(--color-primary)/45 hover:text-(--color-primary)'
+                                    : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text-secondary) hover:border-(--color-primary)/60 hover:text-(--color-text-primary)'
                             }`}
                         >
                             <span className="truncate sm:whitespace-nowrap">Open source</span>
@@ -513,8 +509,8 @@ function StreamPlayerPopup({
                     <section className="min-w-0 space-y-4 lg:flex lg:h-full lg:flex-col lg:gap-4 lg:space-y-0">
                         <div className={`relative w-full min-w-0 shrink-0 overflow-hidden rounded-2xl border shadow-[0_28px_80px_rgba(0,0,0,0.5)] ${
                             isDarkTheme
-                                ? 'border-[var(--color-border-strong)]/15 bg-black'
-                                : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-111)]'
+                                ? 'border-(--color-border-strong)/15 bg-black'
+                                : 'border-(--color-border-strong) bg-(--color-surface-muted)'
                         }`}>
                             <div ref={streamIframeContainerRef} className="relative aspect-video w-full">
                                 <div className="absolute inset-0">
@@ -548,7 +544,7 @@ function StreamPlayerPopup({
                                             referrerPolicy="no-referrer-when-downgrade"
                                         />
                                     ) : (
-                                        <div className="flex h-full w-full items-center justify-center bg-[var(--mx-color-111)]">
+                                        <div className="flex h-full w-full items-center justify-center bg-(--color-surface-muted)">
                                             <p className={`text-[14px] ${isDarkTheme ? 'text-white/35' : 'text-white/75'}`}>No stream available.</p>
                                         </div>
                                     )}
@@ -562,28 +558,28 @@ function StreamPlayerPopup({
                                     <h1 className={`wrap-anywhere text-[17px] font-bold leading-snug tracking-tight sm:text-[21px] ${popupTitleTextClass}`}>{stream.title}</h1>
                                     <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
                                         {series && (
-                                            <span className={`inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] ${isDarkTheme ? 'border-[var(--color-border-strong)]/10 bg-black/35 text-white/65' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-5b5670)]'}`}>
-                                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]" aria-hidden />
+                                            <span className={`inline-flex min-w-0 max-w-full items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] ${isDarkTheme ? 'border-(--color-border-strong)/10 bg-black/35 text-white/65' : 'border-(--color-border-strong) bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>
+                                                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--color-primary)" aria-hidden />
                                                 <span className="min-w-0 truncate">{series.title}</span>
                                             </span>
                                         )}
                                         {progressLabel && (
-                                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold tabular-nums ${isDarkTheme ? 'border-[var(--color-border-strong)]/10 bg-black/35 text-white/62' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-5b5670)]'}`}>
+                                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold tabular-nums ${isDarkTheme ? 'border-(--color-border-strong)/10 bg-black/35 text-white/62' : 'border-(--color-border-strong) bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>
                                                 Episode {progressLabel}
                                             </span>
                                         )}
                                         {activeEpisode?.pubDate && (
-                                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] ${isDarkTheme ? 'border-[var(--color-border-strong)]/10 bg-black/35 text-white/55' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)]'}`}>
+                                            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] ${isDarkTheme ? 'border-(--color-border-strong)/10 bg-black/35 text-white/55' : 'border-(--color-border-strong) bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>
                                                 {formatEpisodeDate(activeEpisode.pubDate) || activeEpisode.pubDate}
                                             </span>
                                         )}
                                         {canSelectQuality && (
-                                            <label className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${isDarkTheme ? 'border-[var(--color-border-strong)]/12 bg-black/35' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)]'}`}>
-                                                <span className={`text-[10px] font-semibold uppercase tracking-wide ${isDarkTheme ? 'text-white/55' : 'text-[var(--mx-color-86868b)]'}`}>Quality</span>
+                                            <label className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${isDarkTheme ? 'border-(--color-border-strong)/12 bg-black/35' : 'border-(--color-border-strong) bg-(--color-surface-muted)'}`}>
+                                                <span className={`text-[10px] font-semibold uppercase tracking-wide ${isDarkTheme ? 'text-white/55' : 'text-(--color-text-secondary)'}`}>Quality</span>
                                                 <select
                                                     value={stream.activeQuality || qualityOptions[0]?.id || ''}
                                                     onChange={e => onSelectQuality?.(e.target.value)}
-                                                    className={`rounded bg-transparent text-[10px] font-semibold outline-none ${isDarkTheme ? 'text-white' : 'text-[var(--mx-color-1d1d1f)]'}`}
+                                                    className={`rounded bg-transparent text-[10px] font-semibold outline-none ${isDarkTheme ? 'text-white' : 'text-(--color-text-primary)'}`}
                                                 >
                                                     {qualityOptions.map(opt => (
                                                         <option key={opt.id} value={opt.id} className="text-black">
@@ -603,8 +599,8 @@ function StreamPlayerPopup({
                                         onClick={() => prevEp && onChangeEpisode(episodeIndex - 1)}
                                         className={`inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors disabled:opacity-25 sm:min-w-[118px] ${
                                             isDarkTheme
-                                                ? 'border-[var(--color-border-strong)]/15 bg-[var(--color-surface)]/5 text-white/80 hover:bg-[var(--color-surface)]/10'
-                                                : 'border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-f5f5f7)]'
+                                                ? 'border-(--color-border-strong)/15 bg-(--color-surface)/5 text-white/80 hover:bg-(--color-surface)/10'
+                                                : 'border-(--color-border-strong) bg-(--color-surface) text-(--color-text-primary) hover:bg-(--color-surface-muted)'
                                         }`}
                                     >
                                         <svg className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
@@ -614,10 +610,10 @@ function StreamPlayerPopup({
                                         type="button"
                                         disabled={!nextEp}
                                         onClick={() => nextEp && onChangeEpisode(episodeIndex + 1)}
-                                        className={`inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--mx-color-c6ff00)]/45 px-3 text-[12px] font-semibold transition-colors disabled:opacity-25 sm:min-w-[118px] ${
+                                        className={`inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-full border border-(--color-primary)/45 px-3 text-[12px] font-semibold transition-colors disabled:opacity-25 sm:min-w-[118px] ${
                                             isDarkTheme
-                                                ? 'bg-[var(--mx-color-c6ff00)]/18 text-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-c6ff00)]/28'
-                                                : 'bg-[var(--mx-color-c6ff00)]/45 text-[var(--mx-color-1d1d1f)] hover:bg-[var(--mx-color-c6ff00)]/65'
+                                                ? 'bg-(--color-primary)/18 text-(--color-primary) hover:bg-(--color-primary)/28'
+                                                : 'bg-(--color-primary)/45 text-(--color-text-primary) hover:bg-(--color-primary)/65'
                                         }`}
                                     >
                                         <span className="truncate">Next</span>
@@ -643,7 +639,7 @@ function StreamPlayerPopup({
                                         <p className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${popupSubtleTextClass}`}>Episode Queue</p>
                                         <p className={`mt-0.5 line-clamp-2 text-[13px] font-semibold leading-snug ${popupTitleTextClass}`}>{series?.title}</p>
                                     </div>
-                                    <span className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium tabular-nums ${isDarkTheme ? 'border-[var(--color-border-strong)]/10 bg-[var(--color-surface)]/[0.06] text-white/55' : 'border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)]'}`}>{episodes.length}</span>
+                                    <span className={`shrink-0 rounded-md border px-2 py-1 text-[10px] font-medium tabular-nums ${isDarkTheme ? 'border-(--color-border-strong)/10 bg-(--color-surface)/[0.06] text-white/55' : 'border-(--color-border-strong) bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>{episodes.length}</span>
                                 </div>
 
                                 <div className={`max-h-[42dvh] overflow-y-auto pr-1 lg:min-h-0 lg:max-h-none lg:flex-1 ${hideScroll}`}>
@@ -661,13 +657,13 @@ function StreamPlayerPopup({
                                                         onClick={() => onChangeEpisode(i)}
                                                         className={`group flex w-full min-w-0 items-center gap-2.5 rounded-xl border px-2 py-2 text-left transition-all ${
                                                             isCurrent
-                                                                ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-c6ff00)]/14'
+                                                                ? 'border-(--color-primary)/50 bg-(--color-primary)/14'
                                                                 : isDarkTheme
-                                                                  ? 'border-[var(--color-border-strong)]/10 bg-black/30 hover:border-[var(--color-border-strong)]/20 hover:bg-[var(--color-surface)]/[0.06]'
-                                                                  : 'border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] hover:border-[var(--mx-color-d2d2d7)] hover:bg-[var(--color-surface)]'
+                                                                  ? 'border-(--color-border-strong)/10 bg-black/30 hover:border-(--color-border-strong)/20 hover:bg-(--color-surface)/[0.06]'
+                                                                  : 'border-(--color-border-soft) bg-(--color-surface-muted) hover:border-(--color-border-strong) hover:bg-(--color-surface)'
                                                         }`}
                                                     >
-                                                        <div className={`relative h-12 w-[4.4rem] shrink-0 overflow-hidden rounded-lg ${isDarkTheme ? 'bg-black/45' : 'bg-[var(--mx-color-e5e5ea)]'}`}>
+                                                        <div className={`relative h-12 w-[4.4rem] shrink-0 overflow-hidden rounded-lg ${isDarkTheme ? 'bg-black/45' : 'bg-(--color-border-soft)'}`}>
                                                             {queueThumb ? (
                                                                 <LifesyncEpisodeThumbnail
                                                                     src={queueThumb}
@@ -676,12 +672,12 @@ function StreamPlayerPopup({
                                                                     imgClassName="h-full w-full object-cover"
                                                                 />
                                                             ) : (
-                                                                <div className={`flex h-full w-full items-center justify-center ${isDarkTheme ? 'text-white/20' : 'text-[var(--mx-color-86868b)]'}`}>
+                                                                <div className={`flex h-full w-full items-center justify-center ${isDarkTheme ? 'text-white/20' : 'text-(--color-text-secondary)'}`}>
                                                                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                                                 </div>
                                                             )}
                                                             {isCurrent && (
-                                                                <span className="absolute left-1 top-1 z-[2] rounded bg-[var(--mx-color-c6ff00)]/90 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
+                                                                <span className="absolute left-1 top-1 z-[2] rounded bg-(--color-primary)/90 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wide text-black">
                                                                     Live
                                                                 </span>
                                                             )}
@@ -720,11 +716,11 @@ function StreamPlayerPopup({
                                                     onClick={() => onPlayFromSeries?.(rec, 0)}
                                                     className={`flex w-full gap-3 rounded-xl border p-2 text-left transition-colors ${
                                                         isDarkTheme
-                                                            ? 'border-transparent bg-black/25 hover:border-[var(--color-border-strong)]/10 hover:bg-[var(--color-surface)]/[0.06]'
-                                                            : 'border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f8f8fb)] hover:border-[var(--mx-color-d2d2d7)] hover:bg-[var(--color-surface)]'
+                                                            ? 'border-transparent bg-black/25 hover:border-(--color-border-strong)/10 hover:bg-(--color-surface)/[0.06]'
+                                                            : 'border-(--color-border-soft) bg-(--color-surface-soft) hover:border-(--color-border-strong) hover:bg-(--color-surface)'
                                                     }`}
                                                 >
-                                                    <div className={`relative h-[4.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-lg ${isDarkTheme ? 'bg-black/30' : 'bg-[var(--mx-color-e5e5ea)]'}`}>
+                                                    <div className={`relative h-[4.5rem] w-[5.5rem] shrink-0 overflow-hidden rounded-lg ${isDarkTheme ? 'bg-black/30' : 'bg-(--color-border-soft)'}`}>
                                                         {sugThumb ? (
                                                             <LifesyncEpisodeThumbnail
                                                                 src={sugThumb}
@@ -733,12 +729,12 @@ function StreamPlayerPopup({
                                                                 imgClassName="h-full w-full object-cover"
                                                             />
                                                         ) : (
-                                                            <div className={`flex h-full w-full items-center justify-center ${isDarkTheme ? 'text-white/12' : 'text-[var(--mx-color-86868b)]'}`}>
+                                                            <div className={`flex h-full w-full items-center justify-center ${isDarkTheme ? 'text-white/12' : 'text-(--color-text-secondary)'}`}>
                                                                 <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                                             </div>
                                                         )}
                                                         {rec.episodeCount > 1 && (
-                                                            <span className={`absolute bottom-1 right-1 rounded px-1 py-px text-[8px] font-bold ${isDarkTheme ? 'bg-black/75 text-white' : 'bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-d2d2d7)]'}`}>
+                                                            <span className={`absolute bottom-1 right-1 rounded px-1 py-px text-[8px] font-bold ${isDarkTheme ? 'bg-black/75 text-white' : 'bg-(--color-surface)/95 text-(--color-text-primary) ring-1 ring-(--color-border-strong)'}`}>
                                                                 {rec.episodeCount} ep
                                                             </span>
                                                         )}
@@ -910,7 +906,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
             <MotionDiv
                 layout="size"
                 layoutRoot
-                className="lifesync-hentai-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-[var(--color-surface)] shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
+                className="lifesync-hentai-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-(--color-surface) shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-4xl sm:rounded-2xl"
                 onClick={e => e.stopPropagation()}
                 initial={lifeSyncDetailSheetEnterInitial}
                 animate={lifeSyncDetailSheetEnterAnimate}
@@ -950,29 +946,29 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                             <MotionDiv
                                 layoutId={posterLayoutId}
                                 transition={lifeSyncSharedLayoutTransitionProps}
-                                className="w-full overflow-hidden rounded-xl bg-[var(--mx-color-f5f5f7)] shadow-lg ring-1 ring-black/10"
+                                className="w-full overflow-hidden rounded-xl bg-(--color-surface-muted) shadow-lg ring-1 ring-black/10"
                                 style={{ aspectRatio: '2/3' }}
                             >
                                 {coverImg ? (
                                     <FadeInImg src={coverImg} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     <div className="flex h-full min-h-[6.5rem] w-full items-center justify-center">
-                                        <svg className="w-10 h-10 text-[var(--mx-color-86868b)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" /></svg>
+                                        <svg className="w-10 h-10 text-(--color-text-secondary)" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" /></svg>
                                     </div>
                                 )}
                             </MotionDiv>
                         </div>
                         <div className="flex min-w-0 w-full flex-1 flex-col justify-end pb-1">
-                            <h2 className="wrap-anywhere text-[17px] font-bold leading-tight text-[var(--mx-color-1d1d1f)] line-clamp-4 sm:text-[22px] sm:line-clamp-3">
+                            <h2 className="wrap-anywhere text-[17px] font-bold leading-tight text-(--color-text-primary) line-clamp-4 sm:text-[22px] sm:line-clamp-3">
                                 {detail?.title || series.title}
                             </h2>
                             <div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                                <span className="inline-flex items-center gap-1 bg-[var(--mx-color-c6ff00)]/20 text-[var(--mx-color-1d1d1f)] text-[10px] font-semibold px-2 py-0.5 rounded-full">
+                                <span className="inline-flex items-center gap-1 bg-(--color-primary)/20 text-(--color-text-primary) text-[10px] font-semibold px-2 py-0.5 rounded-full">
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
                                     {episodes.length === 1 ? '1 episode' : `${episodes.length} episodes`}
                                 </span>
                                 {detail?.releaseDate && (
-                                    <span className="text-[10px] font-medium text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2 py-0.5 rounded-full">{detail.releaseDate}</span>
+                                    <span className="text-[10px] font-medium text-(--color-text-secondary) bg-(--color-surface-muted) px-2 py-0.5 rounded-full">{detail.releaseDate}</span>
                                 )}
                             </div>
                             {genres.length > 0 && (
@@ -986,7 +982,7 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                                                 genreTagClick?.(g)
                                                 onClose()
                                             }}
-                                            className="bg-[var(--mx-color-c6ff00)]/10 text-[var(--mx-color-1d1d1f)] text-[10px] font-medium px-2 py-0.5 rounded-full hover:bg-[var(--mx-color-c6ff00)]/25 transition-colors cursor-pointer"
+                                            className="bg-(--color-primary)/10 text-(--color-text-primary) text-[10px] font-medium px-2 py-0.5 rounded-full hover:bg-(--color-primary)/25 transition-colors cursor-pointer"
                                         >
                                             {g}
                                         </button>
@@ -1007,16 +1003,16 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                     >
                     {/* Description */}
                     {(detailBusy || description) && (
-                        <div className="px-5 sm:px-6 py-3 border-b border-[var(--mx-color-f0f0f0)]">
+                        <div className="px-5 sm:px-6 py-3 border-b border-(--color-border-soft)">
                             {detailBusy && !description ? (
                                 <LifesyncTextLinesSkeleton lines={4} dark={isDarkTheme} />
                             ) : (
                                 <>
-                                    <p className={`text-[12px] leading-relaxed text-[var(--mx-color-424245)] ${descExpanded ? '' : 'line-clamp-3'}`}>
+                                    <p className={`text-[12px] leading-relaxed text-(--color-text-secondary) ${descExpanded ? '' : 'line-clamp-3'}`}>
                                         {description}
                                     </p>
                                     {description.length > 200 && (
-                                        <button type="button" onClick={() => setDescExpanded(v => !v)} className="mt-1 text-[11px] font-semibold text-[var(--mx-color-c6ff00)] hover:underline">
+                                        <button type="button" onClick={() => setDescExpanded(v => !v)} className="mt-1 text-[11px] font-semibold text-(--color-primary) hover:underline">
                                             {descExpanded ? 'Show less' : 'Show more'}
                                         </button>
                                     )}
@@ -1025,15 +1021,15 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                         </div>
                     )}
 
-                    {/* Episode grid — 16:9 thumbs */}
+                    {/* Episode grid  16:9 thumbs */}
                     <div className="px-5 sm:px-6 py-4">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--mx-color-86868b)] mb-3">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-(--color-text-secondary) mb-3">
                             {detailBusy
                                 ? 'Episodes'
                                 : episodes.length === 1
                                   ? 'Episode'
                                   : `${episodes.length} Episodes`}{' '}
-                            — tap to watch
+                             tap to watch
                         </p>
                         {detailBusy ? (
                             <LifesyncHentaiEpisodeGridSkeleton count={episodeSkeletonCount} dark={isDarkTheme} />
@@ -1049,9 +1045,9 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                                     type="button"
                                     data-focused-ep={focusedEpIndex === i ? 'true' : undefined}
                                     onClick={() => onPlayEpisode(playbackSeries, ep, i)}
-                                    className={`group text-left overflow-hidden rounded-[14px] border bg-[var(--color-surface)] shadow-sm hover:shadow-md transition-all ${focusedEpIndex === i ? 'border-[var(--mx-color-c6ff00)] ring-2 ring-[var(--mx-color-c6ff00)]/60' : 'border-[var(--mx-color-d2d2d7)]/50 hover:border-[var(--mx-color-c6ff00)]/40'}`}
+                                    className={`group text-left overflow-hidden rounded-[14px] border bg-(--color-surface) shadow-sm hover:shadow-md transition-all ${focusedEpIndex === i ? 'border-(--color-primary) ring-2 ring-(--color-primary)/60' : 'border-(--color-border-strong)/50 hover:border-(--color-primary)/40'}`}
                                 >
-                                    <div className="relative aspect-video w-full overflow-hidden bg-[var(--mx-color-1d1d1f)]">
+                                    <div className="relative aspect-video w-full overflow-hidden bg-(--color-text-primary)">
                                         {epThumbSrc ? (
                                             <LifesyncEpisodeThumbnail
                                                 src={epThumbSrc}
@@ -1063,15 +1059,15 @@ function SeriesDetailPopup({ series, source, onClose, onPlayEpisode, genreTagCli
                                                 <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5"><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15.91 11.672a.375.375 0 010 .656l-5.603 3.113a.375.375 0 01-.557-.328V8.887c0-.286.307-.466.557-.327l5.603 3.112z" /></svg>
                                             </div>
                                         )}
-                                        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-1/2 bg-gradient-to-t from-black/75 via-black/25 to-transparent" aria-hidden />
+                                        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-1/2 bg-linear-to-t from-black/75 via-black/25 to-transparent" aria-hidden />
                                         {ep.episodeNum > 0 && (
-                                            <span className="absolute left-2 top-2 z-[2] rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm ring-1 ring-[var(--color-border-strong)]/10">
+                                            <span className="absolute left-2 top-2 z-[2] rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm ring-1 ring-(--color-border-strong)/10">
                                                 E{ep.episodeNum}
                                             </span>
                                         )}
                                         <div className="absolute inset-0 z-[2] flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100 bg-black/25">
-                                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] shadow-lg ring-2 ring-black/20">
-                                                <svg className="ml-0.5 h-4 w-4 text-[var(--mx-color-1d1d1f)]" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+                                            <span className="flex h-11 w-11 items-center justify-center rounded-full bg-(--color-primary) shadow-lg ring-2 ring-black/20">
+                                                <svg className="ml-0.5 h-4 w-4 text-(--color-text-primary)" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
                                             </span>
                                         </div>
                                         <div className="absolute inset-x-0 bottom-0 z-[2] px-2.5 pb-2 pt-6">
@@ -1117,38 +1113,38 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                                 imgClassName="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]"
                             >
                                 {series.episodeCount != null && (
-                                    <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
+                                    <span className="absolute right-2 top-2 z-[2] bg-(--color-surface)/95 text-(--color-text-primary) text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-(--color-border-soft)">
                                         {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
                                     </span>
                                 )}
                                 {!series.episodeCount && series.episodes?.length && (
-                                    <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
+                                    <span className="absolute right-2 top-2 z-[2] bg-(--color-surface)/95 text-(--color-text-primary) text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-(--color-border-soft)">
                                         {series.episodes.length === 1 ? '1 ep' : `${series.episodes.length} ep`}
                                     </span>
                                 )}
-                                <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                <div className="pointer-events-none absolute inset-0 z-[1] bg-linear-to-t from-black/55 via-transparent to-transparent" />
                                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
                                     <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow">{series.title}</p>
                                 </div>
                             </LifesyncEpisodeThumbnail>
                         ) : (
                             <>
-                                <div className="flex h-full w-full items-center justify-center text-[var(--mx-color-86868b)]">
+                                <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
                                     <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="1.5">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h1.5C5.496 19.5 6 18.996 6 18.375m-2.625 0V5.625m0 12.75v-12.75" />
                                     </svg>
                                 </div>
                                 {series.episodeCount != null && (
-                                    <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
+                                    <span className="absolute right-2 top-2 z-[2] bg-(--color-surface)/95 text-(--color-text-primary) text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-(--color-border-soft)">
                                         {series.episodeCount === 1 ? '1 ep' : `${series.episodeCount} ep`}
                                     </span>
                                 )}
                                 {!series.episodeCount && series.episodes?.length && (
-                                    <span className="absolute right-2 top-2 z-[2] bg-[var(--color-surface)]/95 text-[var(--mx-color-1d1d1f)] text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-[var(--mx-color-e5e5ea)]">
+                                    <span className="absolute right-2 top-2 z-[2] bg-(--color-surface)/95 text-(--color-text-primary) text-[10px] font-bold px-2 py-0.5 rounded-lg ring-1 ring-(--color-border-soft)">
                                         {series.episodes.length === 1 ? '1 ep' : `${series.episodes.length} ep`}
                                     </span>
                                 )}
-                                <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+                                <div className="pointer-events-none absolute inset-0 z-[1] bg-linear-to-t from-black/55 via-transparent to-transparent" />
                                 <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] p-3">
                                     <p className="text-[13px] font-semibold text-white line-clamp-2 drop-shadow">{series.title}</p>
                                 </div>
@@ -1157,17 +1153,94 @@ const SeriesCard = memo(function SeriesCard({ series, onOpenDetail }) {
                     </MotionDiv>
                     {/* Hover affordance */}
                     <div className="absolute inset-0 z-[2] flex items-center justify-center opacity-0 transition-all duration-300 group-hover:opacity-100">
-                        <div className="flex h-11 w-11 scale-90 items-center justify-center rounded-full bg-[var(--mx-color-c6ff00)] text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.8)] transition-transform duration-300 group-hover:scale-100">
+                        <div className="flex h-11 w-11 scale-90 items-center justify-center rounded-full bg-(--color-primary) text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.8)] transition-transform duration-300 group-hover:scale-100">
                             <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden><path d="M8 5v14l11-7z" /></svg>
                         </div>
                     </div>
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-0.5 bg-gradient-to-r from-transparent via-fuchsia-400 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-0.5 bg-linear-to-r from-transparent via-fuchsia-400 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
                 </div>
             </div>
             </button>
         </MotionDiv>
     )
 })
+
+/**
+ * Right-side filter slide-over — keeps the browse grid as the focus instead of
+ * pushing it down with an inline expanding panel. Body passed as children
+ * unchanged; backdrop click / Esc / close button all dismiss.
+ */
+function FilterDrawer({ open, onClose, title, count, onReset, children }) {
+    useEffect(() => {
+        if (!open) return undefined
+        const onKey = e => { if (e.key === 'Escape') onClose?.() }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [open, onClose])
+
+    return createPortal(
+        <AnimatePresence>
+            {open && (
+                <MotionDiv
+                    className="fixed inset-0 z-[9997] flex justify-end"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={lifeSyncDetailOverlayFadeTransition}
+                >
+                    <MotionDiv
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={onClose}
+                    />
+                    <MotionDiv
+                        className="relative flex h-dvh w-full max-w-md flex-col bg-(--color-surface) shadow-2xl"
+                        initial={{ x: '100%' }}
+                        animate={{ x: 0 }}
+                        exit={{ x: '100%' }}
+                        transition={{ type: 'spring', stiffness: 360, damping: 36 }}
+                    >
+                        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-(--color-border-soft) px-5 py-4">
+                            <div className="flex min-w-0 items-center gap-2">
+                                <h2 className="truncate text-[15px] font-black text-(--color-text-primary)">{title}</h2>
+                                {count > 0 && (
+                                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-(--color-primary) px-1.5 text-[11px] font-black tabular-nums text-(--color-ink-strong)">
+                                        {count}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                                {count > 0 && onReset && (
+                                    <button
+                                        type="button"
+                                        onClick={onReset}
+                                        className="rounded-lg border border-(--color-border-soft) px-2.5 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)"
+                                    >
+                                        Clear
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={onClose}
+                                    aria-label="Close filters"
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)"
+                                >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5" aria-hidden>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+                    </MotionDiv>
+                </MotionDiv>
+            )}
+        </AnimatePresence>,
+        document.body,
+    )
+}
 
 /* ─── Main Component ───────────────────────────────────────────────────── */
 
@@ -1608,7 +1681,7 @@ export default function LifeSyncHentai() {
             <MediaConnectPrompt
                 accent="hentai"
                 title="Hentai hub locked"
-                body="Adults-only catalog and in-app streaming — connect LifeSync first, then enable NSFW in preferences if you use this hub."
+                body="Adults-only catalog and in-app streaming  connect LifeSync first, then enable NSFW in preferences if you use this hub."
             />
         )
     }
@@ -1708,7 +1781,7 @@ export default function LifeSyncHentai() {
                         <button
                             onClick={() => load(page, debouncedSearch, true)}
                             disabled={busy}
-                            className="shrink-0 self-start whitespace-nowrap rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-2 text-[12px] font-bold text-[var(--mx-color-1d1d1f)] shadow-sm transition-all hover:-translate-y-px hover:border-fuchsia-400/50 disabled:opacity-50"
+                            className="shrink-0 self-start whitespace-nowrap rounded-full border border-(--color-border-soft) bg-(--color-surface) px-4 py-2 text-[12px] font-bold text-(--color-text-primary) shadow-sm transition-all hover:-translate-y-px hover:border-fuchsia-400/50 disabled:opacity-50"
                         >
                             {busy ? 'Syncing…' : 'Sync catalog'}
                         </button>
@@ -1733,54 +1806,37 @@ export default function LifeSyncHentai() {
                     <button
                         type="button"
                         onClick={() => setFiltersExpanded(p => !p)}
-                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1d1d1f)] transition-colors hover:bg-[var(--mx-color-ebebed)]"
+                        className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-4 py-2.5 text-[13px] font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-surface-muted)"
                     >
                         Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
                     </button>
-                    <button type="submit" disabled={busy} className="rounded-xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm ring-1 ring-[var(--mx-color-1a1628)]/10 transition-all hover:brightness-95 disabled:opacity-50">
+                    <button type="submit" disabled={busy} className="rounded-xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50">
                         Search
                     </button>
                 </div>
             </form>
 
-            <AnimatePresence initial={false}>
-                {filtersExpanded && (
-                    <MotionDiv
-                        key="hentai-filter-panel"
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={hentaiFilterExpandTransition}
-                        className="overflow-hidden"
-                    >
-                        <div className="rounded-[18px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm">
-                            <div className="space-y-4 px-4 py-4">
-                                <div className="flex items-center justify-between gap-2">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Filters &amp; Genres</p>
-                                    {activeFilterCount > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                handleWatchGenreChange('')
-                                                handleWatchYearChange('')
-                                            }}
-                                            className="text-[10px] font-semibold text-[var(--mx-color-86868b)] transition-colors hover:text-[var(--mx-color-1d1d1f)]"
-                                        >
-                                            Clear
-                                        </button>
-                                    )}
-                                </div>
-
+            <FilterDrawer
+                open={filtersExpanded}
+                onClose={() => setFiltersExpanded(false)}
+                title="Filters & Genres"
+                count={activeFilterCount}
+                onReset={() => {
+                    handleWatchGenreChange('')
+                    handleWatchYearChange('')
+                }}
+            >
+                            <div className="space-y-4">
                             <div className="space-y-1.5">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Genre</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Genre</p>
                                     <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
                                         <button
                                             type="button"
                                             onClick={() => handleWatchGenreChange('')}
                                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                 !watchGenre
-                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
                                             }`}
                                         >
                                             All genres
@@ -1792,8 +1848,8 @@ export default function LifeSyncHentai() {
                                                 onClick={() => handleWatchGenreChange(opt.id)}
                                                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                     watchGenre === String(opt.id)
-                                                        ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                        : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                        ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                                        : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
                                                 }`}
                                             >
                                                 {opt.label}
@@ -1803,15 +1859,15 @@ export default function LifeSyncHentai() {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Sort order</p>
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Sort order</p>
                                     <div className="flex flex-wrap gap-1.5">
                                         <button
                                             type="button"
                                             onClick={() => setSortOrder('trending')}
                                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                 sortOrder === 'trending'
-                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
                                             }`}
                                         >
                                             Trending
@@ -1821,8 +1877,8 @@ export default function LifeSyncHentai() {
                                             onClick={() => setSortOrder('latest')}
                                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                 sortOrder === 'latest'
-                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
                                             }`}
                                         >
                                             Latest
@@ -1832,8 +1888,8 @@ export default function LifeSyncHentai() {
                                             onClick={() => setSortOrder('random')}
                                             className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
                                                 sortOrder === 'random'
-                                                    ? 'bg-[var(--mx-color-c6ff00)]/25 text-[var(--mx-color-1d1d1f)] ring-1 ring-[var(--mx-color-c6ff00)]/50'
-                                                    : 'bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-86868b)] hover:bg-[var(--mx-color-ebebed)]'
+                                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
                                             }`}
                                         >
                                             Random
@@ -1843,11 +1899,11 @@ export default function LifeSyncHentai() {
 
                                 <div className="w-full max-w-[14rem]">
                                     <label className="flex flex-col gap-1">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mx-color-86868b)]">Year</span>
+                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Year</span>
                                         <select
                                             value={watchYear}
                                             onChange={e => handleWatchYearChange(e.target.value)}
-                                            className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-f5f5f7)] px-3 py-2 text-[12px] text-[var(--mx-color-1d1d1f)] focus:border-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] focus:outline-none"
+                                            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
                                         >
                                             <option value="">All years</option>
                                             {watchYearOptions.map(opt => (
@@ -1857,14 +1913,11 @@ export default function LifeSyncHentai() {
                                     </label>
                                 </div>
                             </div>
-                        </div>
-                    </MotionDiv>
-                )}
-            </AnimatePresence>
+            </FilterDrawer>
 
             {/* Stats */}
             {(catalog?.totalSeries != null || catalog?.totalEpisodes != null) && (
-                <p className="text-[11px] text-[var(--mx-color-86868b)]">
+                <p className="text-[11px] text-(--color-text-secondary)">
                     {catalog.totalSeries != null && <span>{catalog.totalSeries} series</span>}
                     {catalog.totalEpisodes != null && <span> · {catalog.totalEpisodes} episodes</span>}
                     {catalog?.totalUpcoming != null && <span> · {catalog.totalUpcoming} upcoming</span>}
@@ -1879,7 +1932,7 @@ export default function LifeSyncHentai() {
                 <LifesyncHentaiCatalogGridSkeleton count={12} />
             ) : useFlatOnly ? (
                 <>
-                    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                    <div className="grid gap-3.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                         {filteredFlat.map((item, i) => {
                             const wrappedSeries = {
                                 seriesKey: item.slug,
@@ -1889,7 +1942,7 @@ export default function LifeSyncHentai() {
                                 episodes: [item],
                             }
                             return (
-                                <div key={item.slug || item.watchUrl || i} data-focused-card={focusedCardIndex === i ? 'true' : undefined} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}>
+                                <div key={item.slug || item.watchUrl || i} data-focused-card={focusedCardIndex === i ? 'true' : undefined} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-(--color-primary) ring-offset-2' : ''}>
                                     <SeriesCard series={wrappedSeries} onOpenDetail={setSelectedSeries} />
                                 </div>
                             )
@@ -1901,23 +1954,23 @@ export default function LifeSyncHentai() {
                 </>
             ) : seriesList.length > 0 ? (
                 <>
-                    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                    <div className="grid gap-3.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                         {seriesList.map((s, i) => (
-                            <div key={s.seriesKey || i} data-focused-card={focusedCardIndex === i ? 'true' : undefined} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-[var(--mx-color-c6ff00)] ring-offset-2' : ''}>
+                            <div key={s.seriesKey || i} data-focused-card={focusedCardIndex === i ? 'true' : undefined} className={focusedCardIndex === i ? 'rounded-[20px] ring-2 ring-(--color-primary) ring-offset-2' : ''}>
                                 <SeriesCard series={s} onOpenDetail={ser => setSelectedSeries(ser)} />
                             </div>
                         ))}
                     </div>
                     <div className="flex items-center justify-center">
-                        <div className="flex items-center gap-2 rounded-full border border-[var(--color-border-soft)] bg-[var(--color-surface)] p-1.5 shadow-sm">
-                            <button disabled={page <= 1 || busy} onClick={() => goPage(page - 1)} className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--mx-color-1d1d1f)] transition-all hover:bg-[var(--mx-color-f5f5f7)] disabled:opacity-30">
+                        <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1.5 shadow-sm">
+                            <button disabled={page <= 1 || busy} onClick={() => goPage(page - 1)} className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
                                 ← Prev
                             </button>
-                            <span className="px-2 text-[12px] font-black tabular-nums text-[var(--mx-color-86868b)]">
+                            <span className="px-2 text-[12px] font-black tabular-nums text-(--color-text-secondary)">
                                 Page {page}
                                 {catalog?.hasMore === false && catalog?.totalSeries != null ? ` · ${catalog.totalSeries} total` : ''}
                             </span>
-                            <button disabled={busy || catalog?.hasMore === false} onClick={() => goPage(page + 1)} className="rounded-full px-4 py-1.5 text-[12px] font-bold text-[var(--mx-color-1d1d1f)] transition-all hover:bg-[var(--mx-color-f5f5f7)] disabled:opacity-30">
+                            <button disabled={busy || catalog?.hasMore === false} onClick={() => goPage(page + 1)} className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
                                 Next →
                             </button>
                         </div>

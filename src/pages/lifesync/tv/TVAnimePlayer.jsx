@@ -32,7 +32,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
     const [stream, setStream] = useState(null)
     const [audioType, setAudioType] = useState('sub')
     const [subtitlesOn, setSubtitlesOn] = useState(true)
-    // { forUrl: string, url: string } — quality resets automatically when video URL changes
+    // { forUrl: string, url: string }  quality resets automatically when video URL changes
     const [qualitySelection, setQualitySelection] = useState({ forUrl: '', url: '' })
     // Derive effective quality: only apply if it was set for the current video URL
     const qualityUrl = qualitySelection.forUrl === stream?.videoUrl ? qualitySelection.url : ''
@@ -394,7 +394,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                             style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 40%, transparent 70%)' }}
                         />
 
-                        {/* Card — anchored bottom-right */}
+                        {/* Card  anchored bottom-right */}
                         <div className="absolute bottom-10 right-10 flex w-[min(100vw-5rem,26rem)] flex-col overflow-hidden rounded-3xl border border-white/10 bg-black/80 shadow-[0_8px_64px_rgba(0,0,0,0.8)] backdrop-blur-2xl">
 
                             {/* Accent bar that depletes as countdown progresses */}

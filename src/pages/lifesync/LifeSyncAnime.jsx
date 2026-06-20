@@ -955,7 +955,7 @@ function DetailWatchSection({
   );
 
   const dubAvailabilityLabel = useMemo(() => {
-    if (!streamEps.length) return "Dub: —";
+    if (!streamEps.length) return "Dub: ";
     let hasSignal = false,
       anyDub = false;
     for (const ep of streamEps) {
@@ -1721,7 +1721,7 @@ export default function LifeSyncAnime() {
   const searchInputRef = useRef(null);
   const controllerSupportEnabled = useControllerSupportEnabled();
 
-  // Layout — seeded from server pref, persisted on toggle
+  // Layout  seeded from server pref, persisted on toggle
   const [layout, setLayoutState] = useState(() => getAnimeLibraryLayout(null));
   const layoutSaveTimer = useRef(null);
 
@@ -2335,7 +2335,7 @@ export default function LifeSyncAnime() {
       <MediaConnectPrompt
         accent="anime"
         title="Anime hub locked"
-        body="Browse featured anime, ongoing series, and latest updates — connect LifeSync in your profile to get started."
+        body="Browse featured anime, ongoing series, and latest updates  connect LifeSync in your profile to get started."
       />
     );
   }
@@ -2590,7 +2590,7 @@ export default function LifeSyncAnime() {
                     </div>
                   ) : (
                     <>
-                      {/* Hero — first 5 featured items */}
+                      {/* Hero  first 5 featured items */}
                       {homeData?.featured?.length > 0 && (
                         <HeroBanner
                           items={homeData.featured.slice(0, 5)}

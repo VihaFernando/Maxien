@@ -1,6 +1,6 @@
 import { MotionDiv } from '../../lib/lifesyncMotion'
 
-/** Bottom pill for finished series — avoids ambiguous “fin” copy. */
+/** Bottom pill for finished series  avoids ambiguous “fin” copy. */
 export function SeriesCompleteBadge({ className = '' }) {
     return (
         <div

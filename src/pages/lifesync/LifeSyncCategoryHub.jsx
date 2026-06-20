@@ -42,7 +42,7 @@ const MotionLink = motion.create(Link)
 const SC = 'https://cdn.akamai.steamstatic.com/steam/apps'
 
 const focusRing =
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mx-color-a78bfa)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--mx-color-faf8ff)]'
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-(--color-surface)'
 
 function dayStamp(d = new Date()) {
     try { return d.toISOString().slice(0, 10) } catch { return '' }
@@ -219,19 +219,19 @@ function Thumb({ src }) {
     )
 }
 
-/** Collage tiles with light “editorial” scrim — readable text, no dark panel backgrounds. */
+/** Collage tiles with light “editorial” scrim  readable text, no dark panel backgrounds. */
 function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badgeClass, gradient, className = '' }) {
     const [images] = useState(() => shuffle(pool).slice(0, cols * rows))
 
     return (
         <MotionLink
             to={to}
-            className={`group relative block overflow-hidden rounded-[22px] bg-[var(--color-surface)] shadow-[0_10px_34px_-18px_rgba(21, 20, 24,0.35)] ring-1 ring-slate-200/80 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-26px_rgba(21, 20, 24,0.35)] sm:rounded-[26px] ${focusRing} ${className}`}
+            className={`group relative block overflow-hidden rounded-[22px] bg-(--color-surface) shadow-[0_10px_34px_-18px_rgba(21, 20, 24,0.35)] ring-1 ring-(--color-border-soft) transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_-26px_rgba(21, 20, 24,0.35)] sm:rounded-[26px] ${focusRing} ${className}`}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.99 }}
             transition={{ type: 'spring', stiffness: 420, damping: 28 }}
         >
-            {/* No white wash — keep artwork crisp */}
+            {/* No white wash  keep artwork crisp */}
             <div className="absolute inset-0 bg-black/0" />
             <div
                 className="absolute inset-[10px] grid gap-1 rounded-[18px] p-1 transition-transform duration-700 ease-out group-hover:scale-[1.02] sm:inset-[12px] sm:gap-1.5 sm:rounded-[20px] sm:duration-[900ms]"
@@ -248,16 +248,16 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
             </div>
             {/* Very subtle tint only (avoid “haze”) */}
             <div className={`pointer-events-none absolute inset-0 opacity-25 transition-opacity duration-300 ${gradient}`} />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/85 via-black/40 to-black/0 transition-opacity duration-300 sm:h-44" />
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-linear-to-t from-black/85 via-black/40 to-black/0 transition-opacity duration-300 sm:h-44" />
             {/* Accent hairline sweeps in on hover */}
-            <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--mx-color-c6ff00)]/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-linear-to-r from-transparent via-(--color-primary)/70 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
 
             {/* Content */}
             <div className="relative z-10 flex h-full min-h-[inherit] flex-col justify-end p-4 sm:p-5">
                 <div className="flex items-end justify-between gap-3">
                     <div className="min-w-0">
                         {badge ? (
-                            <span className={`mb-1 inline-flex w-fit items-center rounded-full bg-[var(--color-surface)]/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-sm ring-1 ring-[var(--color-border-strong)]/20 backdrop-blur-sm ${badgeClass || ''}`}>
+                            <span className={`mb-1 inline-flex w-fit items-center rounded-full bg-(--color-surface)/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-sm ring-1 ring-(--color-border-strong)/20 backdrop-blur-sm ${badgeClass || ''}`}>
                                 {badge}
                             </span>
                         ) : null}
@@ -269,7 +269,7 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
                         </p>
                     </div>
 
-                    <span className="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface)]/15 text-white shadow-sm ring-1 ring-[var(--color-border-strong)]/20 backdrop-blur transition-all duration-300 group-hover:bg-[var(--mx-color-c6ff00)] group-hover:text-black group-hover:shadow-[0_8px_24px_-8px_rgba(198,255,0,0.6)]">
+                    <span className="shrink-0 inline-flex h-10 w-10 items-center justify-center rounded-full bg-(--color-surface)/15 text-white shadow-sm ring-1 ring-(--color-border-strong)/20 backdrop-blur transition-all duration-300 group-hover:bg-(--color-primary) group-hover:text-black group-hover:shadow-[0_8px_24px_-8px_rgba(198,255,0,0.6)]">
                         <FaArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-rotate-45" aria-hidden />
                     </span>
                 </div>
@@ -278,19 +278,19 @@ function BentoCard({ to, pool, cols = 3, rows = 3, title, subtitle, badge, badge
     )
 }
 
-/** Full-width row for small screens — 44px+ tap targets, thumb grid, clear hierarchy. */
+/** Full-width row for small screens  44px+ tap targets, thumb grid, clear hierarchy. */
 function MobileExploreRow({ to, pool, title, subtitle, badge, badgeClass }) {
     const [thumbs] = useState(() => shuffle(pool).slice(0, 4))
 
     return (
         <MotionLink
             to={to}
-            className={`group flex min-h-[104px] items-center gap-3 rounded-2xl border border-slate-200/90 bg-[var(--color-surface)] p-3 shadow-sm ring-1 ring-slate-100/80 transition hover:bg-slate-50/60 active:scale-[0.99] sm:min-h-[104px] sm:gap-4 sm:p-4 ${focusRing}`}
+            className={`group flex min-h-[104px] items-center gap-3 rounded-2xl border border-(--color-border-soft) bg-(--color-surface) p-3 shadow-sm ring-1 ring-(--color-border-soft) transition hover:bg-(--color-surface-soft) active:scale-[0.99] sm:min-h-[104px] sm:gap-4 sm:p-4 ${focusRing}`}
             whileTap={{ scale: 0.99 }}
             whileHover={{ y: -2 }}
             transition={{ type: 'spring', stiffness: 480, damping: 32 }}
         >
-            <div className="grid h-[80px] w-[80px] shrink-0 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-100 to-indigo-50 p-0.5 ring-1 ring-slate-200/80 sm:h-[84px] sm:w-[84px]">
+            <div className="grid h-[80px] w-[80px] shrink-0 grid-cols-2 grid-rows-2 gap-0.5 overflow-hidden rounded-2xl bg-linear-to-br from-(--color-surface-muted) to-(--color-surface-soft) p-0.5 ring-1 ring-(--color-border-soft) sm:h-[84px] sm:w-[84px]">
                 {thumbs.map((src, i) => (
                     <div key={i} className="min-h-0 min-w-0 overflow-hidden rounded-md">
                         <Thumb src={src} />
@@ -303,10 +303,10 @@ function MobileExploreRow({ to, pool, title, subtitle, badge, badgeClass }) {
                         {badge}
                     </span>
                 ) : null}
-                <h3 className="text-[15px] font-black leading-tight tracking-tight text-slate-900 sm:text-[17px]">{title}</h3>
-                <p className="mt-0.5 text-[11px] leading-snug text-[var(--mx-color-64748b)] line-clamp-2 sm:mt-1 sm:text-[12px]">{subtitle}</p>
+                <h3 className="text-[15px] font-black leading-tight tracking-tight text-(--color-text-primary) sm:text-[17px]">{title}</h3>
+                <p className="mt-0.5 text-[11px] leading-snug text-(--color-text-secondary) line-clamp-2 sm:mt-1 sm:text-[12px]">{subtitle}</p>
             </div>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-2xl bg-[var(--mx-color-c6ff00)]/25 text-slate-900 shadow-sm ring-1 ring-[var(--mx-color-c6ff00)]/40 transition-all duration-300 group-hover:bg-[var(--mx-color-c6ff00)] group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)] sm:h-12 sm:w-12">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-2xl bg-(--color-primary)/25 text-(--color-text-primary) shadow-sm ring-1 ring-(--color-primary)/40 transition-all duration-300 group-hover:bg-(--color-primary) group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)] sm:h-12 sm:w-12">
                 <FaChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 sm:h-[18px] sm:w-[18px]" aria-hidden />
             </div>
         </MotionLink>
@@ -323,27 +323,27 @@ function AnimeExploreLaneCard({ tile, compact = false, className = '' }) {
     return (
         <MotionLink
             to={tile?.to || '#'}
-            className={`group block overflow-hidden rounded-[22px] border border-slate-200/85 p-3.5 shadow-[0_14px_34px_-24px_rgba(21, 20, 24,0.36)] ring-1 ring-[var(--color-border-strong)]/70 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_56px_-30px_rgba(21, 20, 24,0.42)] sm:p-4 ${focusRing} ${className}`}
+            className={`group block overflow-hidden rounded-[22px] border border-(--color-border-soft) p-3.5 shadow-[0_14px_34px_-24px_rgba(21, 20, 24,0.36)] ring-1 ring-(--color-border-strong)/70 transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_56px_-30px_rgba(21, 20, 24,0.42)] sm:p-4 ${focusRing} ${className}`}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.995 }}
             transition={{ type: 'spring', stiffness: 420, damping: 30 }}
         >
             <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                    <h3 className="truncate text-[18px] font-black tracking-tight text-slate-900 sm:text-[20px]">
+                    <h3 className="truncate text-[18px] font-black tracking-tight text-(--color-text-primary) sm:text-[20px]">
                         {tile?.title || 'Destination'}
                     </h3>
-                    <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-slate-600 sm:text-[13px]">
+                    <p className="mt-1 line-clamp-2 text-[12px] leading-relaxed text-(--color-text-secondary) sm:text-[13px]">
                         {tile?.subtitle || ''}
                     </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                     {tile?.badge ? (
-                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] ${tile.badgeClass || 'bg-slate-100 text-slate-700'}`}>
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.16em] ${tile.badgeClass || 'bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>
                             {tile.badge}
                         </span>
                     ) : null}
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm transition-all duration-300 group-hover:bg-[var(--mx-color-c6ff00)] group-hover:text-black group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)]">
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-(--color-ink-strong) text-white shadow-sm transition-all duration-300 group-hover:bg-(--color-primary) group-hover:text-black group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)]">
                         <FaArrowRight className="h-3.5 w-3.5 transition-transform duration-300 group-hover:-rotate-45" aria-hidden />
                     </span>
                 </div>
@@ -351,7 +351,7 @@ function AnimeExploreLaneCard({ tile, compact = false, className = '' }) {
 
             <div className={`mt-3 grid gap-2 ${compact ? 'grid-cols-4' : 'grid-cols-6'}`}>
                 {posters.map((src, i) => (
-                    <div key={`${tile?.id || 't'}-poster-${i}`} className="overflow-hidden rounded-xl border border-slate-200/80 bg-slate-100 shadow-sm">
+                    <div key={`${tile?.id || 't'}-poster-${i}`} className="overflow-hidden rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) shadow-sm">
                         <LifesyncEpisodeThumbnail
                             src={src}
                             className={compact ? 'aspect-[2/3] w-full' : 'h-[156px] w-full xl:h-[182px]'}
@@ -373,16 +373,16 @@ function GameHubFastTravelTile({ to, icon, title, subtitle }) {
             to={to}
             className={`group relative overflow-hidden rounded-2xl px-3.5 py-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:px-4 sm:py-4 ${focusRing}`}
         >
-            <div className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-gradient-to-r from-transparent via-[var(--mx-color-c6ff00)]/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
+            <div className="pointer-events-none absolute inset-x-4 bottom-0 h-px bg-linear-to-r from-transparent via-(--color-primary)/60 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" aria-hidden />
             <div className="relative flex items-start gap-3">
-                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white ring-1 ring-slate-200/80 transition-all duration-300 group-hover:bg-[var(--mx-color-c6ff00)] group-hover:text-black group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)]">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-(--color-ink-strong) text-white ring-1 ring-(--color-border-soft) transition-all duration-300 group-hover:bg-(--color-primary) group-hover:text-black group-hover:shadow-[0_8px_20px_-8px_rgba(198,255,0,0.7)]">
                     <IconComponent className="h-4.5 w-4.5" aria-hidden />
                 </span>
                 <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-black tracking-tight text-slate-900">{title}</span>
-                    <span className="mt-1 block text-[11px] leading-snug text-slate-600">{subtitle}</span>
+                    <span className="block text-[13px] font-black tracking-tight text-(--color-text-primary)">{title}</span>
+                    <span className="mt-1 block text-[11px] leading-snug text-(--color-text-secondary)">{subtitle}</span>
                 </span>
-                <FaChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-500 transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-slate-900" aria-hidden />
+                <FaChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-(--color-text-secondary) transition-all duration-300 group-hover:translate-x-0.5 group-hover:text-(--color-text-primary)" aria-hidden />
             </div>
         </Link>
     )
@@ -392,16 +392,16 @@ function HubConnectPrompt({ title, body, embedded = false }) {
     const inner = (
         <div className="flex min-h-[50vh] items-center justify-center px-2 py-10 sm:py-14">
             <MotionDiv
-                className="w-full max-w-md rounded-[22px] bg-[var(--color-surface)] px-6 py-9 text-center shadow-sm sm:px-8 sm:py-10"
+                className="w-full max-w-md rounded-[22px] bg-(--color-surface) px-6 py-9 text-center shadow-sm sm:px-8 sm:py-10"
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             >
-                <p className="text-[16px] font-bold text-[var(--mx-color-1d1d1f)] sm:text-[17px]">{title}</p>
-                <p className="mt-2 text-[13px] leading-relaxed text-[var(--mx-color-86868b)]">{body}</p>
+                <p className="text-[16px] font-bold text-(--color-text-primary) sm:text-[17px]">{title}</p>
+                <p className="mt-2 text-[13px] leading-relaxed text-(--color-text-secondary)">{body}</p>
                 <Link
                     to="/dashboard/profile?tab=integrations"
-                    className={`mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm transition-all hover:brightness-95 sm:w-auto sm:min-w-[200px] ${focusRing}`}
+                    className={`mt-6 inline-flex min-h-[44px] w-full items-center justify-center rounded-xl bg-(--color-primary) px-5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-95 sm:w-auto sm:min-w-[200px] ${focusRing}`}
                 >
                     Open integrations
                 </Link>
@@ -416,9 +416,9 @@ function SectionLabel({ id, children }) {
     return (
         <h2
             id={id}
-            className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--mx-color-5b5670)] sm:text-xs"
+            className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-(--color-text-secondary) sm:text-xs"
         >
-            <span className="h-px w-6 rounded-full bg-gradient-to-r from-[var(--mx-color-c6ff00)] to-[var(--mx-color-a78bfa)] sm:w-8" aria-hidden />
+            <span className="h-px w-6 rounded-full bg-linear-to-r from-(--color-primary) to-violet-400 sm:w-8" aria-hidden />
             {children}
         </h2>
     )
@@ -858,7 +858,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             rows: 3,
             title: 'Anime',
             subtitle: 'Browse featured titles, ongoing series, and search anime.',
-            gradient: 'bg-gradient-to-t from-[var(--mx-color-e0f2fe)] via-[var(--color-surface)]/70 to-transparent',
+            gradient: 'bg-linear-to-t from-sky-500/15 via-(--color-surface)/70 to-transparent',
             hero: true,
         })
     }
@@ -871,7 +871,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             rows: 2,
             title: 'Manga',
             subtitle: 'Roliascan and Manga District browse, chapters, and reader.',
-            gradient: 'bg-gradient-to-t from-[var(--mx-color-fff8eb)] via-[var(--color-surface)]/65 to-transparent',
+            gradient: 'bg-linear-to-t from-amber-500/15 via-(--color-surface)/65 to-transparent',
             hero: !animePluginOn && tiles.length === 0,
         })
     }
@@ -885,8 +885,8 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             title: 'H manhwa',
             subtitle: 'Manga District in a separate destination.',
             badge: '18+',
-            badgeClass: 'bg-rose-100 text-rose-800',
-            gradient: 'bg-gradient-to-t from-[var(--mx-color-ffe4e6)] via-[var(--color-surface)]/60 to-transparent',
+            badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200',
+            gradient: 'bg-linear-to-t from-rose-500/15 via-(--color-surface)/60 to-transparent',
             hero: !animePluginOn && tiles.length === 0,
         })
     }
@@ -900,8 +900,8 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             title: 'Hentai',
             subtitle: 'Adults-only catalog with its own controls.',
             badge: '18+',
-            badgeClass: 'bg-rose-100 text-rose-800',
-            gradient: 'bg-gradient-to-t from-[var(--mx-color-ffe4e6)] via-[var(--color-surface)]/60 to-transparent',
+            badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200',
+            gradient: 'bg-linear-to-t from-rose-500/15 via-(--color-surface)/60 to-transparent',
             hero: !animePluginOn && !mangaPluginOn,
         })
     }
@@ -926,16 +926,16 @@ function AnimeHubExploreSection({ tiles }) {
                 <div>
                     <h2
                         id="lifesync-anime-explore-label"
-                        className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 sm:text-xs"
+                        className="text-[11px] font-black uppercase tracking-[0.2em] text-(--color-text-secondary) sm:text-xs"
                     >
                         Explore
                     </h2>
-                    <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-slate-600 sm:text-[13px]">
+                    <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-(--color-text-secondary) sm:text-[13px]">
                         <span className="lg:hidden">Jump into anime, manga, H manhwa, or 18+ from the cards below.</span>
                         <span className="hidden lg:inline">Primary lane on the left, with adaptive destination cards on the right for faster routing.</span>
                     </p>
                 </div>
-                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-[var(--mx-color-c6ff00)]/25 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black ring-1 ring-[var(--mx-color-c6ff00)]/40 sm:mt-0">
+                <span className="mt-1 inline-flex w-fit items-center rounded-full bg-(--color-primary)/25 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-black ring-1 ring-(--color-primary)/40 sm:mt-0">
                     {tiles.length} destinations
                 </span>
             </div>
@@ -990,10 +990,10 @@ function AnimeHubBroadcastWeekSection({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
         >
-            <div className="rounded-[28px] border border-slate-200/80 p-3.5 shadow-[0_24px_60px_-30px_rgba(30,27,75,0.2)] backdrop-blur-md sm:p-5 lg:p-6">
+            <div className="rounded-[28px] border border-(--color-border-soft) p-3.5 shadow-[0_24px_60px_-30px_rgba(30,27,75,0.2)] backdrop-blur-md sm:p-5 lg:p-6">
                 {weekError ? (
                     <motion.div
-                        className="mb-4 rounded-2xl border border-red-200 bg-red-50/85 px-4 py-3 text-[12px] font-medium text-red-700 xl:mb-6"
+                        className="mb-4 rounded-2xl border border-red-200 bg-red-50/85 px-4 py-3 text-[12px] font-medium text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300 xl:mb-6"
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                     >
@@ -1011,46 +1011,46 @@ function AnimeHubBroadcastWeekSection({
                 ) : null}
 
                 <div className="flex flex-col gap-6 xl:grid xl:grid-cols-12 xl:items-start xl:gap-8">
-                    <div className="space-y-4 rounded-2xl p-4 ring-1 ring-slate-200/60 xl:col-span-4 xl:pr-2 xl:ring-0">
+                    <div className="space-y-4 rounded-2xl p-4 ring-1 ring-(--color-border-soft) xl:col-span-4 xl:pr-2 xl:ring-0">
                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">This week</p>
-                            <h2 className="mt-0.5 text-[19px] font-black leading-tight tracking-tight text-slate-900 sm:mt-1 sm:text-[22px]">Broadcast</h2>
-                            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600 sm:text-[13px]">
+                            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-(--color-text-secondary)">This week</p>
+                            <h2 className="mt-0.5 text-[19px] font-black leading-tight tracking-tight text-(--color-text-primary) sm:mt-1 sm:text-[22px]">Broadcast</h2>
+                            <p className="mt-1.5 text-[11px] leading-relaxed text-(--color-text-secondary) sm:text-[13px]">
                                 {weekBusy
                                     ? 'Loading your calendar…'
                                     : 'A quick look at the next 7 days. Pinned shows appear first.'}
                             </p>
                         </div>
                         <dl className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3 py-2.5 sm:px-3.5 sm:py-3">
-                                <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Episodes</dt>
-                                <dd className="mt-0.5 text-[20px] font-black tabular-nums text-slate-900 sm:mt-1 sm:text-[22px]">{scheduledCount}</dd>
+                            <div className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface-soft) px-3 py-2.5 sm:px-3.5 sm:py-3">
+                                <dt className="text-[10px] font-bold uppercase tracking-wider text-(--color-text-secondary)">Episodes</dt>
+                                <dd className="mt-0.5 text-[20px] font-black tabular-nums text-(--color-text-primary) sm:mt-1 sm:text-[22px]">{scheduledCount}</dd>
                             </div>
-                            <div className="rounded-2xl border border-slate-200/80 bg-slate-50/80 px-3 py-2.5 sm:px-3.5 sm:py-3">
-                                <dt className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Pinned</dt>
-                                <dd className="mt-0.5 text-[20px] font-black tabular-nums text-slate-900 sm:mt-1 sm:text-[22px]">{pinnedCount}</dd>
+                            <div className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface-soft) px-3 py-2.5 sm:px-3.5 sm:py-3">
+                                <dt className="text-[10px] font-bold uppercase tracking-wider text-(--color-text-secondary)">Pinned</dt>
+                                <dd className="mt-0.5 text-[20px] font-black tabular-nums text-(--color-text-primary) sm:mt-1 sm:text-[22px]">{pinnedCount}</dd>
                             </div>
                         </dl>
                         <Link
                             to={ANIME_HUB_PATHS.calendar}
-                            className={`inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-[var(--mx-color-c6ff00)] px-4 py-2.5 text-[13px] font-semibold text-[var(--mx-color-1a1628)] shadow-sm transition-all hover:brightness-95 ${focusRing}`}
+                            className={`inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-95 ${focusRing}`}
                         >
                             Open full calendar
                             <FaChevronRight className="h-3.5 w-3.5" aria-hidden />
                         </Link>
                     </div>
 
-                    <div className="min-w-0 border-t border-slate-200/70 pt-5 xl:col-span-8 xl:border-l xl:border-slate-200/70 xl:border-t-0 xl:pl-8 xl:pt-0">
+                    <div className="min-w-0 border-t border-(--color-border-soft) pt-5 xl:col-span-8 xl:border-l xl:border-(--color-border-soft) xl:border-t-0 xl:pl-8 xl:pt-0">
                         <div className="mb-4 flex flex-col gap-2 sm:mb-5 sm:flex-row sm:items-end sm:justify-between">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Daily lineup</p>
-                                <p className="mt-0.5 text-[11px] leading-snug text-slate-600 sm:text-[12px]">
+                                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-(--color-text-secondary)">Daily lineup</p>
+                                <p className="mt-0.5 text-[11px] leading-snug text-(--color-text-secondary) sm:text-[12px]">
                                     Pick a day to preview. Tap a day to open it in Calendar.
                                 </p>
                             </div>
                             <Link
                                 to={`${ANIME_HUB_PATHS.calendar}?date=${encodeURIComponent(selectedKey)}`}
-                                className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-[var(--color-surface)] px-3.5 text-[11px] font-bold text-slate-900 shadow-sm ring-1 ring-slate-200/80 transition hover:bg-slate-50 ${focusRing}`}
+                                className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-(--color-surface) px-3.5 text-[11px] font-bold text-(--color-text-primary) shadow-sm ring-1 ring-(--color-border-soft) transition hover:bg-(--color-surface-soft) ${focusRing}`}
                             >
                                 View day
                             </Link>
@@ -1072,16 +1072,16 @@ function AnimeHubBroadcastWeekSection({
                                         onClick={() => setSelectedKey(k)}
                                         className={`
                                             shrink-0 rounded-2xl px-3 py-2 text-left shadow-sm transition
-                                            ${isSel ? 'bg-slate-900 text-white' : 'text-slate-900 hover:bg-slate-50'}
+                                            ${isSel ? 'bg-(--color-ink-strong) text-white' : 'text-(--color-text-primary) hover:bg-(--color-surface-soft)'}
                                             ${focusRing}
                                         `}
                                         aria-pressed={isSel}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <span className={`text-[10px] font-black uppercase tracking-[0.16em] ${isSel ? 'text-white/75' : 'text-slate-500'}`}>
+                                            <span className={`text-[10px] font-black uppercase tracking-[0.16em] ${isSel ? 'text-white/75' : 'text-(--color-text-secondary)'}`}>
                                                 {isToday ? 'Today' : dow}
                                             </span>
-                                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tabular-nums ${isSel ? 'bg-[var(--color-surface)]/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tabular-nums ${isSel ? 'bg-(--color-surface)/15 text-white' : 'bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>
                                                 {pinned ? <FaStar className="h-2.5 w-2.5" aria-hidden /> : <FaCalendarAlt className="h-2.5 w-2.5" aria-hidden />}
                                                 {list.length}
                                             </span>
@@ -1096,14 +1096,14 @@ function AnimeHubBroadcastWeekSection({
                         <div className="mt-4 rounded-2x p-3 sm:p-4">
                             <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                                 <div>
-                                    <p className="text-[11px] font-black tracking-tight text-slate-900">
+                                    <p className="text-[11px] font-black tracking-tight text-(--color-text-primary)">
                                         {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                                     </p>
-                                    <p className="text-[11px] text-slate-600">Pinned episodes are shown first.</p>
+                                    <p className="text-[11px] text-(--color-text-secondary)">Pinned episodes are shown first.</p>
                                 </div>
                                 <Link
                                     to={`${ANIME_HUB_PATHS.calendar}?date=${encodeURIComponent(selectedKey)}`}
-                                    className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-[var(--mx-color-c6ff00)] px-3.5 text-[11px] font-bold text-black shadow-sm transition hover:brightness-95 ${focusRing}`}
+                                    className={`inline-flex min-h-[40px] w-fit items-center justify-center rounded-xl bg-(--color-primary) px-3.5 text-[11px] font-bold text-black shadow-sm transition hover:brightness-95 ${focusRing}`}
                                 >
                                     Open in calendar
                                 </Link>
@@ -1111,9 +1111,9 @@ function AnimeHubBroadcastWeekSection({
 
                             {weekCardsLoading ? (
                                 <div className="space-y-2">
-                                    <div className="h-12 rounded-xl bg-slate-100 animate-pulse" />
-                                    <div className="h-12 rounded-xl bg-slate-100 animate-pulse" />
-                                    <div className="h-12 rounded-xl bg-slate-100 animate-pulse" />
+                                    <div className="h-12 rounded-xl bg-(--color-surface-muted) animate-pulse" />
+                                    <div className="h-12 rounded-xl bg-(--color-surface-muted) animate-pulse" />
+                                    <div className="h-12 rounded-xl bg-(--color-surface-muted) animate-pulse" />
                                 </div>
                             ) : selectedItems.length ? (
                                 <ul className="space-y-2">
@@ -1122,34 +1122,34 @@ function AnimeHubBroadcastWeekSection({
                                             key={`${selectedKey}-${it?.animeId}-${it?.episodeNumber}-${i}`}
                                             className={`
                                                 flex items-center gap-3 rounded-xl border px-3 py-2
-                                                ${it?.isPinned ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-f7fee7)]/70' : 'border-slate-200/80 bg-slate-50/80'}
+                                                ${it?.isPinned ? 'border-(--color-primary)/50 bg-(--color-primary)/10/70' : 'border-(--color-border-soft) bg-(--color-surface-soft)'}
                                             `}
                                         >
-                                            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200/80">
+                                            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted) ring-1 ring-(--color-border-soft)">
                                                 {it?.imageUrl ? <img src={it.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : null}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <p className="truncate text-[12px] font-bold text-slate-900">{it?.title || 'Anime'}</p>
-                                                <p className="mt-0.5 font-mono text-[10px] font-semibold tabular-nums text-slate-500">
+                                                <p className="truncate text-[12px] font-bold text-(--color-text-primary)">{it?.title || 'Anime'}</p>
+                                                <p className="mt-0.5 font-mono text-[10px] font-semibold tabular-nums text-(--color-text-secondary)">
                                                     EP {it?.episodeNumber || '?'}
                                                 </p>
                                             </div>
                                             {it?.isPinned ? (
-                                                <span className="shrink-0 rounded-full bg-slate-900 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-white">
+                                                <span className="shrink-0 rounded-full bg-(--color-ink-strong) px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-white">
                                                     Pinned
                                                 </span>
                                             ) : null}
                                         </li>
                                     ))}
                                     {selectedItems.length > 6 ? (
-                                        <li className="px-1 text-[11px] font-medium text-slate-600">
-                                            +{selectedItems.length - 6} more — open calendar to see all
+                                        <li className="px-1 text-[11px] font-medium text-(--color-text-secondary)">
+                                            +{selectedItems.length - 6} more  open calendar to see all
                                         </li>
                                     ) : null}
                                 </ul>
                             ) : (
-                                <div className="flex min-h-[7rem] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-3 py-6">
-                                    <p className="text-center text-[12px] font-medium text-slate-600">Nothing scheduled</p>
+                                <div className="flex min-h-[7rem] items-center justify-center rounded-xl border border-dashed border-(--color-border-soft) bg-(--color-surface-soft) px-3 py-6">
+                                    <p className="text-center text-[12px] font-medium text-(--color-text-secondary)">Nothing scheduled</p>
                                 </div>
                             )}
                         </div>
@@ -1174,29 +1174,29 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
         <motion.article
             role="listitem"
             className={`
-                flex gap-3 rounded-2xl border border-slate-200/90 p-3 shadow-sm
-                xl:h-full xl:min-h-[min(280px,42vh)] xl:flex-col xl:gap-0 xl:rounded-none xl:border-0 xl:border-r xl:border-slate-200/90 xl:bg-transparent xl:p-0 xl:shadow-none
+                flex gap-3 rounded-2xl border border-(--color-border-soft) p-3 shadow-sm
+                xl:h-full xl:min-h-[min(280px,42vh)] xl:flex-col xl:gap-0 xl:rounded-none xl:border-0 xl:border-r xl:border-(--color-border-soft) xl:bg-transparent xl:p-0 xl:shadow-none
                 xl:last:border-r-0
-                ${isToday ? 'ring-2 ring-[var(--mx-color-c6ff00)]/45 ring-offset-2 ring-offset-white xl:ring-0 xl:ring-offset-0 xl:bg-[var(--mx-color-f7fee7)]/40' : ''}
+                ${isToday ? 'ring-2 ring-(--color-primary)/45 ring-offset-2 ring-offset-white xl:ring-0 xl:ring-offset-0 xl:bg-(--color-primary)/10/40' : ''}
             `}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.32, delay: 0.04 * index }}
             whileHover={{ y: 0 }}
         >
-            {/* Day label — narrow column on mobile, band on desktop */}
+            {/* Day label  narrow column on mobile, band on desktop */}
             <Link
                 to={`${ANIME_HUB_PATHS.calendar}?date=${encodeURIComponent(key)}`}
                 className={`
                     group flex w-[4.25rem] shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-center
                     xl:w-full xl:flex-row xl:justify-between xl:rounded-none xl:px-2.5 xl:py-2.5
-                    ${isToday ? 'bg-[var(--mx-color-c6ff00)] text-slate-900' : 'bg-slate-100 text-slate-700 xl:bg-[var(--color-surface)] xl:text-slate-800'}
+                    ${isToday ? 'bg-(--color-primary) text-(--color-text-primary)' : 'bg-(--color-surface-muted) text-(--color-text-secondary) xl:bg-(--color-surface) xl:text-(--color-text-primary)'}
                     ${focusRing}
                 `}
                 aria-label={`Open calendar for ${label} ${dnum}`}
             >
                 <div>
-                    <p className={`text-[9px] font-black uppercase tracking-[0.12em] ${isToday ? 'text-slate-800' : 'text-slate-500 xl:text-slate-500'}`}>
+                    <p className={`text-[9px] font-black uppercase tracking-[0.12em] ${isToday ? 'text-(--color-text-primary)' : 'text-(--color-text-secondary) xl:text-(--color-text-secondary)'}`}>
                         {isToday ? 'Today' : label}
                     </p>
                     <p className="mt-0.5 text-[17px] font-black tabular-nums leading-none tracking-tight sm:text-[19px]">
@@ -1209,11 +1209,11 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                         xl:mt-0 xl:px-2 xl:py-1 xl:text-[9px]
                         ${pinned.length
                         ? isToday
-                            ? 'bg-slate-900/10 text-slate-900'
-                            : 'bg-[var(--mx-color-c6ff00)]/35 text-slate-900 xl:bg-[var(--mx-color-c6ff00)]/25 xl:text-slate-800'
+                            ? 'bg-(--color-ink-strong)/10 text-(--color-text-primary)'
+                            : 'bg-(--color-primary)/35 text-(--color-text-primary) xl:bg-(--color-primary)/25 xl:text-(--color-text-primary)'
                         : isToday
-                            ? 'bg-slate-900/10 text-slate-800'
-                            : 'bg-[var(--color-surface)]/80 text-slate-600 xl:bg-slate-100 xl:text-slate-700'}
+                            ? 'bg-(--color-ink-strong)/10 text-(--color-text-primary)'
+                            : 'bg-(--color-surface)/80 text-(--color-text-secondary) xl:bg-(--color-surface-muted) xl:text-(--color-text-secondary)'}
                     `}
                 >
                     {pinned.length ? <FaStar className="h-2 w-2 xl:h-2.5 xl:w-2.5" aria-hidden /> : <FaCalendarAlt className="h-2 w-2 xl:h-2.5 xl:w-2.5" aria-hidden />}
@@ -1221,12 +1221,12 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                 </span>
             </Link>
 
-            <div className="min-w-0 flex-1 xl:border-t-0 xl:bg-[var(--color-surface)] xl:p-2.5">
+            <div className="min-w-0 flex-1 xl:border-t-0 xl:bg-(--color-surface) xl:p-2.5">
                 {loading ? (
                     <div className="space-y-2">
-                        <div className="h-11 rounded-xl bg-slate-100 animate-pulse" />
-                        <div className="h-11 rounded-xl bg-slate-100 animate-pulse" />
-                        <div className="hidden h-11 rounded-xl bg-slate-100 animate-pulse xl:block" />
+                        <div className="h-11 rounded-xl bg-(--color-surface-muted) animate-pulse" />
+                        <div className="h-11 rounded-xl bg-(--color-surface-muted) animate-pulse" />
+                        <div className="hidden h-11 rounded-xl bg-(--color-surface-muted) animate-pulse xl:block" />
                     </div>
                 ) : show.length ? (
                     <ul className="space-y-2">
@@ -1235,36 +1235,36 @@ function BroadcastDayRailCard({ day, items, index, loading }) {
                                 key={`${key}-${it?.animeId}-${it?.episodeNumber}-${i}`}
                                 className={`
                                     flex items-center gap-2 rounded-xl border px-2 py-2
-                                    ${it?.isPinned ? 'border-[var(--mx-color-c6ff00)]/50 bg-[var(--mx-color-f7fee7)]/80' : 'border-slate-200/80 bg-slate-50/80'}
+                                    ${it?.isPinned ? 'border-(--color-primary)/50 bg-(--color-primary)/10/80' : 'border-(--color-border-soft) bg-(--color-surface-soft)'}
                                 `}
                             >
-                                <div className="h-9 w-8 shrink-0 overflow-hidden rounded-lg bg-slate-200 ring-1 ring-slate-200/80">
+                                <div className="h-9 w-8 shrink-0 overflow-hidden rounded-lg bg-(--color-surface-muted) ring-1 ring-(--color-border-soft)">
                                     {it?.imageUrl ? <img src={it.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" /> : null}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="truncate text-[11px] font-bold leading-tight text-slate-900">
+                                    <p className="truncate text-[11px] font-bold leading-tight text-(--color-text-primary)">
                                         {it?.title || 'Anime'}
                                     </p>
-                                    <p className="mt-0.5 font-mono text-[9px] font-semibold tabular-nums text-slate-500">
+                                    <p className="mt-0.5 font-mono text-[9px] font-semibold tabular-nums text-(--color-text-secondary)">
                                         EP {it?.episodeNumber || '?'}
                                     </p>
                                 </div>
                                 {it?.isPinned ? (
-                                    <span className="shrink-0 rounded-md bg-slate-900 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
+                                    <span className="shrink-0 rounded-md bg-(--color-ink-strong) px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">
                                         Pin
                                     </span>
                                 ) : null}
                             </li>
                         ))}
                         {list.length > show.length ? (
-                            <li className="px-0.5 text-[10px] font-medium text-slate-500">
+                            <li className="px-0.5 text-[10px] font-medium text-(--color-text-secondary)">
                                 +{list.length - show.length} more in calendar
                             </li>
                         ) : null}
                     </ul>
                 ) : (
-                    <div className="flex min-h-[5.5rem] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/60 px-2 py-3">
-                        <p className="text-center text-[10px] font-medium text-slate-500">Quiet day</p>
+                    <div className="flex min-h-[5.5rem] items-center justify-center rounded-xl border border-dashed border-(--color-border-soft) bg-(--color-surface-soft) px-2 py-3">
+                        <p className="text-center text-[10px] font-medium text-(--color-text-secondary)">Quiet day</p>
                     </div>
                 )}
             </div>
@@ -1476,41 +1476,41 @@ export function LifeSyncAnimeHub() {
     return (
         <div className="relative lifesync-category-borderless">
             <header className="relative mb-6 sm:mb-8">
-                <div className="relative overflow-hidden rounded-[28px] p-5 text-slate-900 shadow-[0_28px_60px_-32px_rgba(21, 20, 24,0.18)] backdrop-blur-md sm:p-6 lg:p-7">
-                    <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[var(--mx-color-c6ff00)]/25 blur-3xl" aria-hidden />
+                <div className="relative overflow-hidden rounded-[28px] p-5 text-(--color-text-primary) shadow-[0_28px_60px_-32px_rgba(21, 20, 24,0.18)] backdrop-blur-md sm:p-6 lg:p-7">
+                    <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-(--color-primary)/25 blur-3xl" aria-hidden />
                     <div className="pointer-events-none absolute -left-10 bottom-0 h-40 w-40 rounded-full bg-sky-300/30 blur-3xl" aria-hidden />
                     <div className="pointer-events-none absolute left-1/2 top-0 h-32 w-72 -translate-x-1/2 rounded-full bg-violet-300/20 blur-3xl" aria-hidden />
-                    <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-[var(--mx-color-c6ff00)]/60 to-transparent" aria-hidden />
+                    <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-linear-to-r from-transparent via-(--color-primary)/60 to-transparent" aria-hidden />
 
                     <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex min-w-0 items-start gap-4">
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--mx-color-c6ff00)] text-black shadow-lg shadow-[var(--mx-color-c6ff00)]/35 sm:h-14 sm:w-14">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--color-primary) text-black shadow-lg shadow-(--color-primary)/35 sm:h-14 sm:w-14">
                                 <FaFilm className="h-6 w-6 sm:h-7 sm:w-7" />
                             </div>
                             <div className="min-w-0 pt-0.5">
-                                <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-slate-500">
-                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--mx-color-c6ff00)]" aria-hidden />
+                                <p className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.24em] text-(--color-text-secondary)">
+                                    <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-(--color-primary)" aria-hidden />
                                     LifeSync · Media
                                 </p>
                                 <h1 className="mt-1 text-[26px] font-black leading-tight tracking-tight sm:text-[32px] lg:text-[36px]">Anime &amp; media</h1>
-                                <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-slate-600 sm:text-[14px]">
+                                <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-(--color-text-secondary) sm:text-[14px]">
                                     <span className="lg:hidden">Browse, resume, and scan this week’s airings in one place.</span>
                                     <span className="hidden lg:inline">
-                                        Seasonal charts, your shelf, and a seven-day broadcast strip — built for quick jumps and catch-up.
+                                        Seasonal charts, your shelf, and a seven-day broadcast strip  built for quick jumps and catch-up.
                                     </span>
                                 </p>
                                 <div className="mt-3 flex flex-wrap gap-2">
                                     {animePluginOn && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-800 ring-1 ring-sky-200/80">Anime</span>
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-800 ring-1 ring-sky-200/80 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-500/25">Anime</span>
                                     )}
                                     {mangaPluginOn && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 ring-1 ring-amber-200/80">Manga</span>
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800 ring-1 ring-amber-200/80 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/25">Manga</span>
                                     )}
                                     {hManhwaVisible && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-rose-800 ring-1 ring-rose-200/80">H Manhwa</span>
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-rose-800 ring-1 ring-rose-200/80 dark:bg-rose-500/15 dark:text-rose-300 dark:ring-rose-500/25">H Manhwa</span>
                                     )}
                                     {hentaiVisible && (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-fuchsia-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-fuchsia-800 ring-1 ring-fuchsia-200/80">18+</span>
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-fuchsia-100/80 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-fuchsia-800 ring-1 ring-fuchsia-200/80 dark:bg-fuchsia-500/15 dark:text-fuchsia-300 dark:ring-fuchsia-500/25">18+</span>
                                     )}
                                 </div>
                             </div>
@@ -1527,11 +1527,11 @@ export function LifeSyncAnimeHub() {
                         transition={{ duration: 0.42, delay: 0.06, type: 'spring', stiffness: 220, damping: 26 }}
                     >
                         <section className="rounded-[28px] shadow-[0_26px_60px_-30px_rgba(21, 20, 24,0.24)] backdrop-blur-md sm:p-5 lg:p-6">
-                            <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                            <div className="mb-4 flex flex-col gap-3 border-b border-(--color-border-soft) pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                                 <div className="min-w-0">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Continue</p>
-                                    <h2 className="mt-1 text-[20px] font-black leading-tight tracking-tight text-slate-900 sm:text-[22px]">Resume deck</h2>
-                                    <p className="mt-1 text-[12px] text-slate-600">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-(--color-text-secondary)">Continue</p>
+                                    <h2 className="mt-1 text-[20px] font-black leading-tight tracking-tight text-(--color-text-primary) sm:text-[22px]">Resume deck</h2>
+                                    <p className="mt-1 text-[12px] text-(--color-text-secondary)">
                                         <span className="lg:hidden">Mobile-first quick resume. Switch lanes and jump back in.</span>
                                         <span className="hidden lg:inline">Pick up streams and chapters without hunting through menus.</span>
                                     </p>
@@ -1546,14 +1546,14 @@ export function LifeSyncAnimeHub() {
                                             ]}
                                         />
                                     )}
-                                    <span className="w-fit rounded-full bg-[var(--mx-color-c6ff00)]/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-black ring-1 ring-[var(--mx-color-c6ff00)]/50">
+                                    <span className="w-fit rounded-full bg-(--color-primary)/30 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-black ring-1 ring-(--color-primary)/50">
                                         Live sync
                                     </span>
                                 </div>
                             </div>
 
                             {resumeMobileTabs.length > 1 ? (
-                                <div className="mb-4 rounded-2xl border border-slate-200/80 bg-slate-50/70 p-1.5 lg:hidden">
+                                <div className="mb-4 rounded-2xl border border-(--color-border-soft) bg-(--color-surface-soft) p-1.5 lg:hidden">
                                     <div className="grid grid-cols-2 gap-1.5">
                                         {resumeMobileTabs.map((tab) => {
                                             const active = tab.id === activeResumeMobileTab
@@ -1564,12 +1564,12 @@ export function LifeSyncAnimeHub() {
                                                     onClick={() => setResumeMobileTab(tab.id)}
                                                     className={`flex min-h-[44px] items-center justify-between rounded-xl px-3 py-2 text-[12px] font-semibold transition ${
                                                         active
-                                                            ? 'bg-slate-900 text-white shadow-[0_10px_22px_-16px_rgba(21, 20, 24,0.8)]'
-                                                            : 'bg-[var(--color-surface)] text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50'
+                                                            ? 'bg-(--color-ink-strong) text-white shadow-[0_10px_22px_-16px_rgba(21, 20, 24,0.8)]'
+                                                            : 'bg-(--color-surface) text-(--color-text-secondary) ring-1 ring-(--color-border-soft) hover:bg-(--color-surface-soft)'
                                                     }`}
                                                 >
                                                     <span>{tab.label}</span>
-                                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${active ? 'bg-[var(--color-surface)]/15 text-white' : 'bg-slate-100 text-slate-700'}`}>
+                                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${active ? 'bg-(--color-surface)/15 text-white' : 'bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>
                                                         {tab.loading ? '…' : tab.count}
                                                     </span>
                                                 </button>
@@ -1614,7 +1614,7 @@ export function LifeSyncAnimeHub() {
                             <div
                                 className={
                                     animePluginOn && mangaPluginOn
-                                        ? 'hidden lg:grid gap-6 lg:grid-cols-2 lg:gap-0 lg:divide-x lg:divide-slate-100'
+                                        ? 'hidden lg:grid gap-6 lg:grid-cols-2 lg:gap-0 lg:divide-x lg:divide-(--color-border-soft)'
                                         : 'hidden lg:block'
                                 }
                             >
@@ -1651,7 +1651,7 @@ export function LifeSyncAnimeHub() {
 
                             {!hasProgressRails && !animeWatchLoading && !mangaReadingLoading ? (
                                 <motion.p
-                                    className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-5 text-center text-[12px] font-medium leading-relaxed text-slate-600 sm:px-6 sm:py-6 sm:text-[13px]"
+                                    className="mt-5 rounded-2xl border border-dashed border-(--color-border-soft) bg-(--color-surface-soft) px-4 py-5 text-center text-[12px] font-medium leading-relaxed text-(--color-text-secondary) sm:px-6 sm:py-6 sm:text-[13px]"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ duration: 0.42, delay: 0.2 }}

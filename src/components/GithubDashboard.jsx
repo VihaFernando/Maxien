@@ -412,7 +412,7 @@ export default function GithubDashboard() {
                     {/* Main grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
 
-                        {/* LEFT — Repositories + Issues */}
+                        {/* LEFT  Repositories + Issues */}
                         {ghRepos.length > 0 && (
                             <div className="lg:col-span-5 flex flex-col gap-5 sm:gap-6 lg:h-full">
                                 <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden flex flex-col">
@@ -480,7 +480,7 @@ export default function GithubDashboard() {
                                     </div>
                                 </div>
 
-                                {/* Open Issues — left column */}
+                                {/* Open Issues  left column */}
                                 <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden lg:flex-1 lg:flex lg:flex-col">
                                     <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-[var(--mx-color-f0f0f0)] flex flex-col sm:flex-row sm:items-center gap-3">
                                         <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -551,7 +551,7 @@ export default function GithubDashboard() {
                             </div>
                         )}
 
-                        {/* RIGHT — Commits only */}
+                        {/* RIGHT  Commits only */}
                         <div className={`flex flex-col gap-5 sm:gap-6 ${ghRepos.length > 0 ? "lg:col-span-7" : "lg:col-span-12"}`}>
 
                             {/* Recent Commits */}

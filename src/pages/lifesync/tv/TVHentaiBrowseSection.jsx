@@ -71,7 +71,7 @@ export function TVHentaiBrowseSection({ focusPos, onItemSelect, enabled }) {
                             imageUrl: series.posterUrl,
                             badge: epCount ? `${epCount} episodes` : undefined,
                             chips: ['18+'],
-                            // Navigate to hentai page — TV mode will exit and open normal hentai page
+                            // Navigate to hentai page  TV mode will exit and open normal hentai page
                             navigateTo: '/dashboard/lifesync/anime/hentai',
                             navigateState: { openSeries: series },
                         })}

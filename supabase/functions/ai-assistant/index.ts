@@ -115,9 +115,9 @@ You MUST respond with ONLY a valid JSON object matching this exact schema. No ot
     "start_date": "YYYY-MM-DD or empty"
   },
   "update_filter": {
-    "task_title": "partial title to find the task — use when user specifies a task name",
-    "project_name": "partial name to find the project — use when user specifies a project name",
-    "due_date": "'today', 'tomorrow', 'next week', or YYYY-MM-DD — use when user refers to tasks/projects by time instead of name (e.g., 'tomorrow task', 'today's projects', 'tasks due next week')"
+    "task_title": "partial title to find the task  use when user specifies a task name",
+    "project_name": "partial name to find the project  use when user specifies a project name",
+    "due_date": "'today', 'tomorrow', 'next week', or YYYY-MM-DD  use when user refers to tasks/projects by time instead of name (e.g., 'tomorrow task', 'today's projects', 'tasks due next week')"
   },
   "query_filter": {
     "due_date": "'today', 'tomorrow', 'this week', 'next week', 'overdue', or YYYY-MM-DD for single day queries",
@@ -191,7 +191,7 @@ RULES:
 
     if (!rawContent) throw new Error("Groq returned an empty response")
 
-    // Parse JSON — strip markdown code fences if present
+    // Parse JSON  strip markdown code fences if present
     const cleaned = rawContent.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim()
     return JSON.parse(cleaned) as GeminiResult
 }
@@ -650,7 +650,7 @@ async function executeAction(
                         minute: "2-digit",
                         hour12: true
                     })
-                    dueDateStr = `${dateStr} — ${timeStr}`
+                    dueDateStr = `${dateStr}  ${timeStr}`
                 }
                 return {
                     type: "task",
@@ -742,7 +742,7 @@ serve(async (req) => {
             if (!rawKey) return new Response(JSON.stringify({ error: "API key cannot be empty" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } })
             if (!rawKey.startsWith("gsk_")) return new Response(JSON.stringify({ error: "That doesn't look like a valid Groq API key (should start with gsk_)" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } })
 
-            // Quick connectivity test before saving (list models — zero quota cost)
+            // Quick connectivity test before saving (list models  zero quota cost)
             const testRes = await fetch(
                 "https://api.groq.com/openai/v1/models",
                 { headers: { "Authorization": `Bearer ${rawKey}` } }

@@ -271,7 +271,7 @@ export default function Tasks() {
                 const { data, error } = await supabase.from("tasks").insert([payload]).select().single()
                 if (error) {
                     setTasks(prev => [{ ...payload, id: Date.now() }, ...prev])
-                    setMessage("Saved locally — server insert failed.")
+                    setMessage("Saved locally  server insert failed.")
                 } else {
                     setTasks(prev => [data, ...prev])
                     setMessage("Task created.")
@@ -903,7 +903,7 @@ export default function Tasks() {
                                     {selectedTask.type_id && (
                                         <div className="flex items-center justify-between border-b border-[var(--mx-color-f1f5f9)] px-3 py-2.5">
                                             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Type</span>
-                                            {(() => { const t = types.find(x => x.id === selectedTask.type_id); return t ? <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: t.color || "var(--mx-color-c6ff00)", color: "var(--mx-color-1d1d1f)" }}>{t.name}</span> : <span className="text-[12px] text-[var(--mx-color-64748b)]">—</span> })()}
+                                            {(() => { const t = types.find(x => x.id === selectedTask.type_id); return t ? <span className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style={{ backgroundColor: t.color || "var(--mx-color-c6ff00)", color: "var(--mx-color-1d1d1f)" }}>{t.name}</span> : <span className="text-[12px] text-[var(--mx-color-64748b)]"></span> })()}
                                         </div>
                                     )}
                                     {selectedTask.project_id && (
@@ -911,7 +911,7 @@ export default function Tasks() {
                                             <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">Project</span>
                                             <span className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--mx-color-111827)]">
                                                 <FaFolder className="h-3.5 w-3.5 text-[var(--mx-color-c6ff00)]" />
-                                                {projects.find(p => p.id === selectedTask.project_id)?.name || "—"}
+                                                {projects.find(p => p.id === selectedTask.project_id)?.name || ""}
                                             </span>
                                         </div>
                                     )}

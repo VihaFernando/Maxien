@@ -687,7 +687,7 @@ export default function AIAssistant() {
                 </div>
             )}
 
-            {/* ── No key — Setup state ── */}
+            {/* ── No key  Setup state ── */}
             {!hasKey ? (
                 <div className="flex-1 flex items-center justify-center">
                     <div className="w-full max-w-lg bg-[var(--color-surface)] rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden">
@@ -812,7 +812,7 @@ export default function AIAssistant() {
                         <div className="px-4 sm:px-5 py-2.5 bg-sky-500/10 border-b border-sky-500/25 flex items-center gap-2.5 flex-shrink-0">
                             <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse flex-shrink-0"></span>
                             <p className="text-[11px] text-sky-400 font-medium flex-1">
-                                Waiting for your selection — type a number or the name
+                                Waiting for your selection  type a number or the name
                             </p>
                             <button
                                 onClick={() => setPendingClarification(null)}

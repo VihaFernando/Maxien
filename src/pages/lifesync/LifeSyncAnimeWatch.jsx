@@ -642,7 +642,7 @@ export default function LifeSyncAnimeWatch() {
                                 </p>
                                 <p className="flex items-center gap-1.5 truncate text-[10px] font-semibold text-white/55 sm:text-[11px]">
                                     <span className="inline-block h-1 w-1 shrink-0 animate-pulse rounded-full bg-(--mx-color-c6ff00)" aria-hidden />
-                                    {epObj?.number != null ? `Episode ${epObj.number}` : epObj?.title || '—'}
+                                    {epObj?.number != null ? `Episode ${epObj.number}` : epObj?.title || ''}
                                 </p>
                             </div>
                         </div>
@@ -682,7 +682,7 @@ export default function LifeSyncAnimeWatch() {
                                 <main className="min-w-0 space-y-3 sm:space-y-4">
                                     <div className="lifesync-anime-watch-media overflow-hidden rounded-3xl border border-(--color-border-strong)/12 bg-black">
                                         <div ref={streamIframeContainerRef} className="relative aspect-video w-full">
-                                            {/* Settings trigger button — top right of player */}
+                                            {/* Settings trigger button  top right of player */}
                                             {!stream?.resolving && (stream?.videoUrl || stream?.iframeUrl) && (
                                                 <button
                                                     type="button"
@@ -702,7 +702,7 @@ export default function LifeSyncAnimeWatch() {
                                                 </button>
                                             )}
 
-                                            {/* Settings drawer — slides in from right inside the player */}
+                                            {/* Settings drawer  slides in from right inside the player */}
                                             {settingsOpen && (
                                                 <div
                                                     className="absolute inset-0 z-20 flex items-stretch justify-end overflow-hidden rounded-3xl"
@@ -964,7 +964,7 @@ export default function LifeSyncAnimeWatch() {
                                                 <div className="h-19 w-[3.35rem] shrink-0 rounded-2xl bg-(--color-surface)/6 ring-1 ring-(--color-border-strong)/10 sm:h-21 sm:w-[3.7rem]" />
                                             )}
                                             <div className="min-w-0 flex-1 pt-0.5">
-                                                <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-white/95 sm:text-base">{anime?.title || '—'}</h2>
+                                                <h2 className="line-clamp-2 text-[15px] font-semibold leading-snug text-white/95 sm:text-base">{anime?.title || ''}</h2>
                                                 <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="Episode and source details">
                                                     <li><span className="inline-flex items-center rounded-lg border border-(--color-border-strong)/12 bg-black/35 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white/70 sm:text-[11px]">{epObj?.number != null ? `Ep ${epObj.number}` : `Ep ${episodeIdx + 1}`}</span></li>
                                                     {anime?.status ? <li><span className="inline-flex items-center rounded-lg border border-(--color-border-strong)/12 bg-black/35 px-2 py-0.5 text-[10px] font-semibold capitalize text-white/70 sm:text-[11px]">{String(anime.status).replace(/_/g, ' ')}</span></li> : null}
@@ -1034,7 +1034,7 @@ export default function LifeSyncAnimeWatch() {
                                         <div className="flex items-center justify-between gap-2 border-b border-(--color-border-strong)/10 px-3 py-2.5 sm:py-3">
                                             <p className="text-[11px] font-semibold text-white/85">Episodes</p>
                                             <span className="rounded-full border border-(--color-border-strong)/10 bg-(--color-surface)/5 px-2 py-1 text-[10px] font-semibold text-white/60">
-                                                {episodes.length || '—'}
+                                                {episodes.length || ''}
                                             </span>
                                         </div>
                                         <div className="max-h-[min(70dvh,720px)] overflow-y-auto p-2">
@@ -1077,9 +1077,9 @@ export default function LifeSyncAnimeWatch() {
                                                                                     if (av.sub && av.dub) return 'Sub · Dub'
                                                                                     if (av.dub) return 'Dub'
                                                                                     if (av.sub) return 'Sub'
-                                                                                    return '—'
+                                                                                    return ''
                                                                                 }
-                                                                                return ep.hasDub && ep.hasSub ? 'Sub · Dub' : ep.hasDub ? 'Dub' : ep.hasSub ? 'Sub' : '—'
+                                                                                return ep.hasDub && ep.hasSub ? 'Sub · Dub' : ep.hasDub ? 'Dub' : ep.hasSub ? 'Sub' : ''
                                                                             })()}
                                                                         </p>
                                                                     </div>

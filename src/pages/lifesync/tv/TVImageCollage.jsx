@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { assignImagesByResolution, getImageResolution, probeImageResolutions } from './tvHomeImages'
 
 /**
- * TVImageCollage — mosaic of cover/poster images that fills its container.
+ * TVImageCollage  mosaic of cover/poster images that fills its container.
  *
  * • Layout is chosen deterministically from `seed`, biased toward layouts
  *   whose slot count ≤ the number of real (non-null) images available.
@@ -56,7 +56,7 @@ function sortByResolution(rawImages, layout) {
     const valid = [...new Set(rawImages.filter(Boolean))]
     if (!valid.length) return []
 
-    // Assign by resolution (synchronous — uses cache only)
+    // Assign by resolution (synchronous  uses cache only)
     const count = layout.imageCount
     // Cycle valid images to fill the exact count needed
     const cycled = Array.from({ length: count }, (_, i) => valid[i % valid.length])
@@ -82,7 +82,7 @@ function LayoutWithResolution({ images, layout, className }) {
         })
 
         if (!unprobed.length) {
-            // Everything already in cache — sort synchronously, no state update needed
+            // Everything already in cache  sort synchronously, no state update needed
             return
         }
 
@@ -117,10 +117,10 @@ function Cell({ src, className = '' }) {
 // ─── layouts ──────────────────────────────────────────────────────────────────
 // Each layout is a render function ({ images: string[], className: string }).
 // Static props:
-//   imageCount — exact number of cells (and images needed after cycling)
-//   slotSizes  — parallel 'large'|'medium'|'small' array for assignImagesByResolution
+//   imageCount  exact number of cells (and images needed after cycling)
+//   slotSizes   parallel 'large'|'medium'|'small' array for assignImagesByResolution
 
-/** 1 — Cinema: tall hero left, varied right column */
+/** 1  Cinema: tall hero left, varied right column */
 function LayoutCinema({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-[2fr_1fr_1fr] grid-rows-3 gap-0.5 ${className}`}>
@@ -136,7 +136,7 @@ function LayoutCinema({ images: i, className }) {
 LayoutCinema.imageCount = 6
 LayoutCinema.slotSizes = ['large', 'small', 'small', 'medium', 'small', 'small']
 
-/** 2 — Quad: large top-left block + small grid */
+/** 2  Quad: large top-left block + small grid */
 function LayoutQuad({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-[2fr_1fr_1fr] grid-rows-[2fr_2fr_1fr] gap-0.5 ${className}`}>
@@ -154,7 +154,7 @@ function LayoutQuad({ images: i, className }) {
 LayoutQuad.imageCount = 8
 LayoutQuad.slotSizes = ['large', 'small', 'small', 'small', 'small', 'small', 'small', 'small']
 
-/** 3 — Staircase: 2×2 hero + cascading smalls */
+/** 3  Staircase: 2×2 hero + cascading smalls */
 function LayoutStaircase({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-4 grid-rows-3 gap-0.5 ${className}`}>
@@ -172,7 +172,7 @@ function LayoutStaircase({ images: i, className }) {
 LayoutStaircase.imageCount = 8
 LayoutStaircase.slotSizes = ['large', 'small', 'small', 'medium', 'small', 'small', 'small', 'small']
 
-/** 4 — Diagonal: wide centre with narrow flanks */
+/** 4  Diagonal: wide centre with narrow flanks */
 function LayoutDiagonal({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-[1fr_2fr_1fr] grid-rows-3 gap-0.5 ${className}`}>
@@ -189,7 +189,7 @@ function LayoutDiagonal({ images: i, className }) {
 LayoutDiagonal.imageCount = 7
 LayoutDiagonal.slotSizes = ['small', 'large', 'small', 'small', 'medium', 'medium', 'small']
 
-/** 5 — Panorama: thin top/bottom strips, giant centre */
+/** 5  Panorama: thin top/bottom strips, giant centre */
 function LayoutPanorama({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-4 grid-rows-[1fr_3fr_1fr] gap-0.5 ${className}`}>
@@ -209,7 +209,7 @@ function LayoutPanorama({ images: i, className }) {
 LayoutPanorama.imageCount = 10
 LayoutPanorama.slotSizes = ['small', 'small', 'small', 'small', 'large', 'medium', 'small', 'small', 'small', 'small']
 
-/** 6 — Triptych: two tall pillars, stacked centre */
+/** 6  Triptych: two tall pillars, stacked centre */
 function LayoutTriptych({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-3 grid-rows-3 gap-0.5 ${className}`}>
@@ -224,7 +224,7 @@ function LayoutTriptych({ images: i, className }) {
 LayoutTriptych.imageCount = 5
 LayoutTriptych.slotSizes = ['large', 'small', 'large', 'small', 'small']
 
-/** 7 — Cross-cut: wide band slicing through a 4-col grid */
+/** 7  Cross-cut: wide band slicing through a 4-col grid */
 function LayoutCrossCut({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-4 grid-rows-3 gap-0.5 ${className}`}>
@@ -245,7 +245,7 @@ function LayoutCrossCut({ images: i, className }) {
 LayoutCrossCut.imageCount = 11
 LayoutCrossCut.slotSizes = ['small', 'small', 'small', 'small', 'medium', 'small', 'small', 'small', 'small', 'small', 'small']
 
-/** 8 — Left stack: wide feature left, varied right */
+/** 8  Left stack: wide feature left, varied right */
 function LayoutLeftStack({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-[2fr_1fr_1fr_1fr] grid-rows-3 gap-0.5 ${className}`}>
@@ -264,7 +264,7 @@ function LayoutLeftStack({ images: i, className }) {
 LayoutLeftStack.imageCount = 9
 LayoutLeftStack.slotSizes = ['large', 'small', 'small', 'small', 'small', 'small', 'small', 'medium', 'small']
 
-/** 9 — Mosaic: equal 3×3 */
+/** 9  Mosaic: equal 3×3 */
 function LayoutMosaic({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-3 grid-rows-3 gap-0.5 ${className}`}>
@@ -275,7 +275,7 @@ function LayoutMosaic({ images: i, className }) {
 LayoutMosaic.imageCount = 9
 LayoutMosaic.slotSizes = ['medium', 'medium', 'medium', 'medium', 'medium', 'medium', 'medium', 'medium', 'medium']
 
-/** 10 — Centrepiece: small border ring, large 2×2 centre */
+/** 10  Centrepiece: small border ring, large 2×2 centre */
 function LayoutCentrepiece({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-[1fr_2fr_2fr_1fr] grid-rows-[1fr_2fr_2fr_1fr] gap-0.5 ${className}`}>
@@ -297,7 +297,7 @@ function LayoutCentrepiece({ images: i, className }) {
 LayoutCentrepiece.imageCount = 12
 LayoutCentrepiece.slotSizes = ['small', 'small', 'small', 'small', 'small', 'large', 'small', 'small', 'small', 'small', 'small', 'small']
 
-/** 11 — Right tower: tall hero right, small grid left */
+/** 11  Right tower: tall hero right, small grid left */
 function LayoutRightTower({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-[1fr_1fr_2fr] grid-rows-3 gap-0.5 ${className}`}>
@@ -313,7 +313,7 @@ function LayoutRightTower({ images: i, className }) {
 LayoutRightTower.imageCount = 6
 LayoutRightTower.slotSizes = ['small', 'small', 'large', 'small', 'small', 'medium']
 
-/** 12 — Spotlight: one massive hero top, strip below */
+/** 12  Spotlight: one massive hero top, strip below */
 function LayoutSpotlight({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-4 grid-rows-[3fr_1fr] gap-0.5 ${className}`}>
@@ -328,7 +328,7 @@ function LayoutSpotlight({ images: i, className }) {
 LayoutSpotlight.imageCount = 5
 LayoutSpotlight.slotSizes = ['large', 'medium', 'small', 'small', 'small']
 
-/** 13 — Diptych: two equal halves, each split into 3 rows */
+/** 13  Diptych: two equal halves, each split into 3 rows */
 function LayoutDiptych({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-2 grid-rows-[2fr_1fr_1fr] gap-0.5 ${className}`}>
@@ -344,7 +344,7 @@ function LayoutDiptych({ images: i, className }) {
 LayoutDiptych.imageCount = 6
 LayoutDiptych.slotSizes = ['large', 'large', 'small', 'small', 'small', 'small']
 
-/** 14 — Crown: wide top banner, three equal columns below */
+/** 14  Crown: wide top banner, three equal columns below */
 function LayoutCrown({ images: i, className }) {
     return (
         <div className={`absolute inset-0 grid grid-cols-3 grid-rows-[2fr_1fr_1fr] gap-0.5 ${className}`}>

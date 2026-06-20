@@ -2,12 +2,12 @@
 
 /**
  * Format ISO timestamp to readable local date+time
- * Example: "Feb 21, 2026 — 3:45 PM"
+ * Example: "Feb 21, 2026  3:45 PM"
  * @param {string} timestamp - ISO timestamp string
  * @returns {string} Formatted date and time
  */
 export function formatTimestamp(timestamp) {
-    if (!timestamp) return "—"
+    if (!timestamp) return ""
     try {
         const date = new Date(timestamp)
         const dateStr = date.toLocaleDateString('en-US', {
@@ -20,9 +20,9 @@ export function formatTimestamp(timestamp) {
             minute: '2-digit',
             hour12: true
         })
-        return `${dateStr} — ${timeStr}`
+        return `${dateStr}  ${timeStr}`
     } catch {
-        return "—"
+        return ""
     }
 }
 
@@ -33,7 +33,7 @@ export function formatTimestamp(timestamp) {
  * @returns {string} Formatted date
  */
 export function formatDate(timestamp) {
-    if (!timestamp) return "—"
+    if (!timestamp) return ""
     try {
         const date = new Date(timestamp)
         return date.toLocaleDateString('en-US', {
@@ -42,7 +42,7 @@ export function formatDate(timestamp) {
             year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
         })
     } catch {
-        return "—"
+        return ""
     }
 }
 
@@ -53,7 +53,7 @@ export function formatDate(timestamp) {
  * @returns {string} Formatted time
  */
 export function formatTime(timestamp) {
-    if (!timestamp) return "—"
+    if (!timestamp) return ""
     try {
         const date = new Date(timestamp)
         return date.toLocaleTimeString('en-US', {
@@ -62,7 +62,7 @@ export function formatTime(timestamp) {
             hour12: true
         })
     } catch {
-        return "—"
+        return ""
     }
 }
 
@@ -118,7 +118,7 @@ export function isFuture(timestamp) {
  * @returns {string}
  */
 export function getRelativeTime(timestamp) {
-    if (!timestamp) return "—"
+    if (!timestamp) return ""
     try {
         const date = new Date(timestamp)
         const now = new Date()
@@ -145,6 +145,6 @@ export function getRelativeTime(timestamp) {
             return 'just now'
         }
     } catch {
-        return "—"
+        return ""
     }
 }

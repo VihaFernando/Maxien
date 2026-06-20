@@ -468,7 +468,7 @@ function openXblIsoToReleaseLabel(iso) {
   })
 }
 
-/** OpenXBL marketplace `content.productSummaries[]` row — enough to render cards + a basic detail panel. */
+/** OpenXBL marketplace `content.productSummaries[]` row  enough to render cards + a basic detail panel. */
 export function isOpenXblProductSummary(item) {
   return Boolean(
     item &&
