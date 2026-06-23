@@ -15,9 +15,7 @@ const fmt = (n, currency = "LKR") => {
 const fmtShort = (n) => {
     const num = Number(n)
     if (!Number.isFinite(num)) return "-"
-    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`
-    if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`
-    return num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    return num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 const fmtDate = (d) => {
@@ -68,7 +66,7 @@ const SignOutIcon = () => <Icon d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H
 // ─── Shared input class ───────────────────────────────────────────────────────
 const inputCls = "w-full rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafc)] px-3 py-2 text-[13px] text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50 transition-shadow"
 
-// ─── Donut chart ──────────────────────────────────────────────────────────────
+// ─── Donut chart (ring style — used in Reports) ───────────────────────────────
 function DonutChart({ data, size = 160, strokeWidth = 26, centerLabel }) {
     const r = (size - strokeWidth) / 2
     const circ = 2 * Math.PI * r
@@ -99,7 +97,6 @@ function DonutChart({ data, size = 160, strokeWidth = 26, centerLabel }) {
             </g>
             {centerLabel && (
                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle"
-                    className="text-[11px] font-bold fill-[var(--color-text-primary)]"
                     style={{ fontSize: 11, fontWeight: 700, fill: "var(--color-text-primary)" }}>
                     {centerLabel}
                 </text>
@@ -108,37 +105,149 @@ function DonutChart({ data, size = 160, strokeWidth = 26, centerLabel }) {
     )
 }
 
+// ─── Premium donut chart (Overview Expense Breakdown) ────────────────────────
+function PieChart({ data, size = 280, total: totalProp }) {
+    const [hovered, setHovered] = useState(null)
+    const total = totalProp ?? data.reduce((s, d) => s + d.value, 0)
+    const cx = size / 2, cy = size / 2
+    const R = size / 2 - 14  // outer radius
+    const r = R - 44          // inner radius (ring thickness = 44px)
+    const GAP = 0.025         // gap between segments in radians
+
+    if (total === 0) return (
+        <svg width={size} height={size}>
+            <circle cx={cx} cy={cy} r={(R + r) / 2} fill="none"
+                stroke="var(--mx-color-f5f5f7)" strokeWidth={R - r} />
+            <text x={cx} y={cy - 8} textAnchor="middle" style={{ fontSize: 13, fontWeight: 700, fill: "var(--color-text-secondary)" }}>No data</text>
+        </svg>
+    )
+
+    let startAngle = -Math.PI / 2
+    const arc = (sa, ea, ro, ri) => {
+        const x1 = cx + ro * Math.cos(sa), y1 = cy + ro * Math.sin(sa)
+        const x2 = cx + ro * Math.cos(ea), y2 = cy + ro * Math.sin(ea)
+        const x3 = cx + ri * Math.cos(ea), y3 = cy + ri * Math.sin(ea)
+        const x4 = cx + ri * Math.cos(sa), y4 = cy + ri * Math.sin(sa)
+        const large = ea - sa > Math.PI ? 1 : 0
+        return `M ${x1} ${y1} A ${ro} ${ro} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ri} ${ri} 0 ${large} 0 ${x4} ${y4} Z`
+    }
+
+    const segments = data.map((seg, i) => {
+        const sweep = Math.max((seg.value / total) * 2 * Math.PI - GAP, 0.01)
+        const sa = startAngle + GAP / 2
+        const ea = sa + sweep
+        startAngle += (seg.value / total) * 2 * Math.PI
+        return { ...seg, sa, ea, i }
+    })
+
+    const hovSeg = hovered != null ? segments[hovered] : null
+    const displayValue = hovSeg ? hovSeg.value : total
+    const displayLabel = hovSeg ? hovSeg.name : "Total"
+
+    return (
+        <svg width={size} height={size} style={{ overflow: "visible" }}>
+            {/* Track ring */}
+            <circle cx={cx} cy={cy} r={(R + r) / 2} fill="none"
+                stroke="var(--mx-color-f5f5f7)" strokeWidth={R - r} />
+            {/* Segments */}
+            {segments.map((seg, i) => {
+                const isHov = hovered === i
+                const ro = isHov ? R + 6 : R
+                const ri = isHov ? r - 2 : r
+                return (
+                    <path key={i} d={arc(seg.sa, seg.ea, ro, ri)}
+                        fill={seg.color}
+                        opacity={hovered != null && !isHov ? 0.35 : 1}
+                        style={{ transition: "opacity 0.2s, d 0.15s", cursor: "pointer" }}
+                        onMouseEnter={() => setHovered(i)}
+                        onMouseLeave={() => setHovered(null)}
+                    />
+                )
+            })}
+            {/* Center label */}
+            <text x={cx} y={cy - 11} textAnchor="middle"
+                style={{ fontSize: 11, fontWeight: 600, fill: "var(--color-text-secondary)", letterSpacing: 0.5 }}>
+                {displayLabel}
+            </text>
+            <text x={cx} y={cy + 11} textAnchor="middle"
+                style={{ fontSize: 15, fontWeight: 800, fill: "var(--color-text-primary)" }}>
+                {fmtShort(displayValue)}
+            </text>
+            <text x={cx} y={cy + 27} textAnchor="middle"
+                style={{ fontSize: 10, fontWeight: 500, fill: "var(--color-text-secondary)" }}>
+                LKR
+            </text>
+        </svg>
+    )
+}
+
 // ─── Bar chart ────────────────────────────────────────────────────────────────
-function BarChart({ bars, height = 110 }) {
+function BarChart({ bars, height = 180 }) {
     const max = Math.max(...bars.map(b => b.value), 1)
     return (
-        <div className="flex items-end gap-2" style={{ height }}>
+        <div className="flex items-end gap-4 px-2" style={{ height }}>
             {bars.map((bar, i) => (
-                <div key={i} className="flex flex-col items-center flex-1 gap-1 group">
-                    <span className="text-[9px] font-semibold text-[var(--color-text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity">{fmtShort(bar.value)}</span>
-                    <div className="w-full rounded-t-lg transition-all duration-500 cursor-default"
-                        style={{ height: `${Math.max(6, (bar.value / max) * (height - 32))}px`, background: bar.color || "var(--mx-color-c6ff00)" }}
+                <div key={i} className="flex flex-col items-center flex-1 gap-2 group min-w-0">
+                    <span className="text-[11px] font-bold text-[var(--color-text-secondary)] opacity-0 group-hover:opacity-100 transition-opacity tabular-nums">{fmt(bar.value)}</span>
+                    <div className="w-full rounded-t-xl transition-all duration-500 cursor-default"
+                        style={{ height: `${Math.max(8, (bar.value / max) * (height - 52))}px`, background: bar.color || "var(--mx-color-c6ff00)" }}
                         title={`${bar.label}: ${fmt(bar.value)}`}
                     />
-                    <span className="text-[9px] font-medium text-[var(--color-text-secondary)] truncate w-full text-center leading-tight">{bar.label}</span>
+                    <span className="text-[11px] font-semibold text-[var(--color-text-secondary)] truncate w-full text-center leading-tight">{bar.label}</span>
                 </div>
             ))}
         </div>
     )
 }
 
-// ─── Period modal ─────────────────────────────────────────────────────────────
-function PeriodModal({ current, onSave, onClose }) {
-    const [label, setLabel] = useState(current?.label || "")
-    const [start, setStart] = useState(current?.start_date || today())
-    const [end, setEnd] = useState(current?.end_date || today())
-    const [err, setErr] = useState("")
+// ─── Period helpers ───────────────────────────────────────────────────────────
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+const MONTH_NAMES_FULL = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
 
-    const handleSave = () => {
-        if (!label.trim()) { setErr("Please enter a period name"); return }
-        if (!start || !end) { setErr("Please select start and end dates"); return }
-        if (end < start) { setErr("End date must be after start date"); return }
-        onSave({ label: label.trim(), start_date: start, end_date: end })
+const firstOfMonth = (year, month) => `${year}-${String(month + 1).padStart(2, "0")}-01`
+const lastOfMonth = (year, month) => {
+    const last = new Date(year, month + 1, 0)
+    return `${year}-${String(month + 1).padStart(2, "0")}-${String(last.getDate()).padStart(2, "0")}`
+}
+
+// Given a year+month (0-indexed), return or create the period row in DB
+const ensureMonthPeriod = async (userId, year, month) => {
+    const start_date = firstOfMonth(year, month)
+    const end_date = lastOfMonth(year, month)
+    const label = `${MONTH_NAMES_FULL[month]} ${year}`
+
+    const { data: existing } = await supabase
+        .from("finance_periods")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("start_date", start_date)
+        .eq("end_date", end_date)
+        .maybeSingle()
+
+    if (existing) return existing
+
+    const { data: created } = await supabase
+        .from("finance_periods")
+        .insert({ user_id: userId, label, start_date, end_date, is_active: false })
+        .select()
+        .single()
+    return created
+}
+
+// ─── Period picker (filter only — no DB write on select) ─────────────────────
+function PeriodPicker({ current, onSelect, onClose }) {
+    const now = new Date()
+    const [viewYear, setViewYear] = useState(current ? Number(current.start_date.slice(0, 4)) : now.getFullYear())
+
+    const currentKey = current ? current.start_date.slice(0, 7) : null // "YYYY-MM"
+
+    const isFuture = (year, month) => new Date(year, month, 1) > now
+    const isSelected = (year, month) => currentKey === `${year}-${String(month + 1).padStart(2, "0")}`
+
+    const handlePick = (year, month) => {
+        if (isFuture(year, month)) return
+        onSelect(year, month)
+        onClose()
     }
 
     return (
@@ -148,29 +257,48 @@ function PeriodModal({ current, onSave, onClose }) {
                     <div className="w-8 h-8 rounded-xl bg-[var(--mx-color-c6ff00)]/15 flex items-center justify-center text-[var(--mx-color-c6ff00)]">
                         <CalIcon />
                     </div>
-                    <h3 className="text-[15px] font-bold text-[var(--color-text-primary)]">Financial Period</h3>
-                </div>
-                <div className="space-y-3">
                     <div>
-                        <label className="block text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Period Name</label>
-                        <input className={inputCls} placeholder="e.g. June 2026" value={label} onChange={e => setLabel(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSave()} autoFocus />
+                        <h3 className="text-[15px] font-bold text-[var(--color-text-primary)]">Select Month</h3>
+                        <p className="text-[11px] text-[var(--color-text-secondary)]">Periods always start on the 1st</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Start</label>
-                            <input type="date" value={start} onChange={e => setStart(e.target.value)} className={inputCls} />
-                        </div>
-                        <div>
-                            <label className="block text-[11px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">End</label>
-                            <input type="date" value={end} onChange={e => setEnd(e.target.value)} className={inputCls} />
-                        </div>
-                    </div>
-                    {err && <p className="text-red-500 text-[11px] font-medium">{err}</p>}
                 </div>
-                <div className="flex gap-2 mt-5">
-                    <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-[var(--mx-color-e5e5ea)] text-[13px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--mx-color-f5f5f7)] transition-colors">Cancel</button>
-                    <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl bg-[var(--mx-color-c6ff00)] text-black text-[13px] font-bold hover:opacity-90 transition-opacity">Save Period</button>
+
+                {/* Year nav */}
+                <div className="flex items-center justify-between mb-4">
+                    <button onClick={() => setViewYear(v => v - 1)}
+                        className="p-1.5 rounded-lg hover:bg-[var(--mx-color-f5f5f7)] text-[var(--color-text-secondary)] transition-colors">
+                        <Icon size="w-4 h-4" d="M15 19l-7-7 7-7" />
+                    </button>
+                    <span className="text-[15px] font-bold text-[var(--color-text-primary)]">{viewYear}</span>
+                    <button onClick={() => setViewYear(v => v + 1)}
+                        disabled={viewYear >= now.getFullYear()}
+                        className="p-1.5 rounded-lg hover:bg-[var(--mx-color-f5f5f7)] text-[var(--color-text-secondary)] transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+                        <Icon size="w-4 h-4" d="M9 5l7 7-7 7" />
+                    </button>
                 </div>
+
+                {/* Month grid */}
+                <div className="grid grid-cols-4 gap-2">
+                    {MONTH_NAMES.map((name, i) => {
+                        const future = isFuture(viewYear, i)
+                        const sel = isSelected(viewYear, i)
+                        return (
+                            <button key={i} onClick={() => handlePick(viewYear, i)} disabled={future}
+                                className={`py-3 rounded-xl text-[12px] font-bold transition-all border ${sel
+                                    ? "bg-[var(--mx-color-c6ff00)] text-black border-[var(--mx-color-c6ff00)] shadow-sm"
+                                    : future
+                                        ? "border-transparent text-[var(--color-text-secondary)] opacity-25 cursor-not-allowed"
+                                        : "border-[var(--mx-color-e5e5ea)] text-[var(--color-text-primary)] hover:border-[var(--mx-color-c6ff00)]/60 hover:bg-[var(--mx-color-f5f5f7)]"}`}>
+                                {name}
+                            </button>
+                        )
+                    })}
+                </div>
+
+                <button onClick={onClose}
+                    className="w-full mt-4 py-2.5 rounded-xl border border-[var(--mx-color-e5e5ea)] text-[13px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--mx-color-f5f5f7)] transition-colors">
+                    Cancel
+                </button>
             </div>
         </div>
     )
@@ -290,8 +418,8 @@ function AddPanel({ show, onCancel, onSave, saving, err, children, saveLabel = "
 export default function Finance() {
     const { user } = useAuth()
     const [tab, setTab] = useState("Overview")
-    const [period, setPeriod] = useState(null)
-    const [showPeriodModal, setShowPeriodModal] = useState(false)
+    const [selectedPeriod, setSelectedPeriod] = useState(null)
+    const [showPeriodPicker, setShowPeriodPicker] = useState(false)
     const [incomeTypes, setIncomeTypes] = useState([])
     const [expenseCategories, setExpenseCategories] = useState([])
     const [incomeEntries, setIncomeEntries] = useState([])
@@ -299,48 +427,52 @@ export default function Finance() {
     const [subscriptions, setSubscriptions] = useState([])
     const [loading, setLoading] = useState(true)
 
+    const loadEntriesForPeriod = useCallback(async (periodRow) => {
+        if (!periodRow) { setIncomeEntries([]); setExpenseEntries([]); return }
+        const [incRes, expRes] = await Promise.all([
+            supabase.from("finance_income_entries").select("*").eq("user_id", user.id).eq("period_id", periodRow.id).order("entry_date", { ascending: false }),
+            supabase.from("finance_expense_entries").select("*").eq("user_id", user.id).eq("period_id", periodRow.id).order("entry_date", { ascending: false }),
+        ])
+        setIncomeEntries(incRes.data || [])
+        setExpenseEntries(expRes.data || [])
+    }, [user?.id])
+
     const fetchAll = useCallback(async () => {
         if (!user?.id) return
         setLoading(true)
         try {
-            const [typesRes, catsRes, periodsRes, subsRes] = await Promise.all([
+            const now = new Date()
+            // Auto-create this month's period if it doesn't exist yet
+            const currentMonthPeriod = await ensureMonthPeriod(user.id, now.getFullYear(), now.getMonth())
+
+            const [typesRes, catsRes, subsRes] = await Promise.all([
                 supabase.from("finance_income_types").select("*").eq("user_id", user.id).order("name"),
                 supabase.from("finance_expense_categories").select("*").eq("user_id", user.id).order("name"),
-                supabase.from("finance_periods").select("*").eq("user_id", user.id).eq("is_active", true).order("created_at", { ascending: false }).limit(1),
                 supabase.from("subscriptions").select("*").eq("user_id", user.id),
             ])
             setIncomeTypes(typesRes.data || [])
             setExpenseCategories(catsRes.data || [])
-            const activePeriod = periodsRes.data?.[0] || null
-            setPeriod(activePeriod)
-            if (activePeriod) {
-                const [incRes, expRes] = await Promise.all([
-                    supabase.from("finance_income_entries").select("*").eq("user_id", user.id).eq("period_id", activePeriod.id).order("entry_date", { ascending: false }),
-                    supabase.from("finance_expense_entries").select("*").eq("user_id", user.id).eq("period_id", activePeriod.id).order("entry_date", { ascending: false }),
-                ])
-                setIncomeEntries(incRes.data || [])
-                setExpenseEntries(expRes.data || [])
-            } else {
-                setIncomeEntries([])
-                setExpenseEntries([])
-            }
             setSubscriptions(subsRes.data || [])
+
+            // Default to current month
+            setSelectedPeriod(currentMonthPeriod)
+            await loadEntriesForPeriod(currentMonthPeriod)
         } finally {
             setLoading(false)
         }
-    }, [user?.id])
+    }, [user?.id, loadEntriesForPeriod])
 
     useEffect(() => { fetchAll() }, [fetchAll])
 
-    const handleSavePeriod = async ({ label, start_date, end_date }) => {
+    // Called when user picks a month from PeriodPicker — pure client filter, no DB write
+    const handleSelectPeriod = useCallback(async (year, month) => {
         if (!user?.id) return
-        await supabase.from("finance_periods").update({ is_active: false }).eq("user_id", user.id).eq("is_active", true)
-        const { data } = await supabase.from("finance_periods").insert({ user_id: user.id, label, start_date, end_date, is_active: true }).select().single()
-        setPeriod(data)
-        setIncomeEntries([])
-        setExpenseEntries([])
-        setShowPeriodModal(false)
-    }
+        const period = await ensureMonthPeriod(user.id, year, month)
+        setSelectedPeriod(period)
+        await loadEntriesForPeriod(period)
+    }, [user?.id, loadEntriesForPeriod])
+
+    const refreshEntries = useCallback(() => loadEntriesForPeriod(selectedPeriod), [selectedPeriod, loadEntriesForPeriod])
 
     const totalIncome = useMemo(() => incomeEntries.reduce((s, e) => s + Number(e.amount_lkr), 0), [incomeEntries])
     const totalExpenses = useMemo(() => expenseEntries.reduce((s, e) => s + Number(e.amount_lkr), 0), [expenseEntries])
@@ -371,36 +503,23 @@ export default function Finance() {
     const TABS = ["Overview", "Income", "Expenses", "Reports"]
 
     return (
-        <div className="max-w-5xl mx-auto space-y-5">
+        <div className="max-w-7xl mx-auto space-y-5">
             {/* ── Header ── */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
                     <h1 className="text-[22px] font-black text-[var(--color-text-primary)] tracking-tight">Finance</h1>
                     <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5 font-medium">
-                        {period ? `${period.label} · ${fmtDate(period.start_date)} – ${fmtDate(period.end_date)}` : "No period set — start tracking your money"}
+                        {selectedPeriod
+                            ? `${selectedPeriod.label} · ${fmtDate(selectedPeriod.start_date)} – ${fmtDate(selectedPeriod.end_date)}`
+                            : "Loading…"}
                     </p>
                 </div>
-                <button onClick={() => setShowPeriodModal(true)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all border ${period
-                        ? "border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] text-[var(--color-text-primary)] hover:border-[var(--mx-color-c6ff00)] hover:shadow-sm"
-                        : "bg-[var(--mx-color-c6ff00)] border-[var(--mx-color-c6ff00)] text-black hover:opacity-90 shadow-sm"}`}>
+                <button onClick={() => setShowPeriodPicker(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold transition-all border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] text-[var(--color-text-primary)] hover:border-[var(--mx-color-c6ff00)] hover:shadow-sm">
                     <CalIcon />
-                    {period ? "Change Period" : "Set Financial Period"}
+                    Change Period
                 </button>
             </div>
-
-            {!period && (
-                <div className="rounded-2xl border-2 border-dashed border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafc)] p-12 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-[var(--mx-color-c6ff00)]/10 flex items-center justify-center mx-auto mb-3">
-                        <svg className="w-6 h-6 text-[var(--mx-color-c6ff00)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <p className="text-[15px] font-bold text-[var(--color-text-primary)] mb-1">No financial period set</p>
-                    <p className="text-[13px] text-[var(--color-text-secondary)] mb-5">Define a period (e.g. June 2026) to start tracking.</p>
-                    <button onClick={() => setShowPeriodModal(true)} className="px-6 py-2.5 rounded-xl bg-[var(--mx-color-c6ff00)] text-black font-bold text-[13px] hover:opacity-90 transition-opacity">Set Period</button>
-                </div>
-            )}
 
             {/* ── Tabs ── */}
             <div className="flex gap-0.5 bg-[var(--mx-color-f5f5f7)] rounded-xl p-1 w-fit border border-[var(--mx-color-e5e5ea)]">
@@ -414,12 +533,12 @@ export default function Finance() {
                 ))}
             </div>
 
-            {tab === "Overview" && <OverviewTab period={period} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} incomeEntries={incomeEntries} expenseEntries={expenseEntries} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} />}
-            {tab === "Income" && <IncomeTab user={user} period={period} incomeTypes={incomeTypes} incomeEntries={incomeEntries} onRefresh={fetchAll} />}
-            {tab === "Expenses" && <ExpensesTab user={user} period={period} expenseCategories={expenseCategories} expenseEntries={expenseEntries} subscriptions={subscriptions} onRefresh={fetchAll} />}
-            {tab === "Reports" && <ReportsTab user={user} period={period} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} expenseEntries={expenseEntries} incomeEntries={incomeEntries} />}
+            {tab === "Overview" && <OverviewTab period={selectedPeriod} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} incomeEntries={incomeEntries} expenseEntries={expenseEntries} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} />}
+            {tab === "Income" && <IncomeTab user={user} period={selectedPeriod} incomeTypes={incomeTypes} incomeEntries={incomeEntries} onRefresh={refreshEntries} />}
+            {tab === "Expenses" && <ExpensesTab user={user} period={selectedPeriod} expenseCategories={expenseCategories} expenseEntries={expenseEntries} subscriptions={subscriptions} onRefresh={refreshEntries} />}
+            {tab === "Reports" && <ReportsTab user={user} period={selectedPeriod} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} expenseEntries={expenseEntries} incomeEntries={incomeEntries} />}
 
-            {showPeriodModal && <PeriodModal current={period} onSave={handleSavePeriod} onClose={() => setShowPeriodModal(false)} />}
+            {showPeriodPicker && <PeriodPicker current={selectedPeriod} onSelect={handleSelectPeriod} onClose={() => setShowPeriodPicker(false)} />}
         </div>
     )
 }
@@ -432,7 +551,7 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
         return [...inc, ...exp].sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date)).slice(0, 10)
     }, [incomeEntries, expenseEntries])
 
-    const savingsRate = totalIncome > 0 ? ((netBalance / totalIncome) * 100).toFixed(0) : null
+    const savingsRate = totalIncome > 0 ? ((netBalance / totalIncome) * 100).toFixed(1) : null
 
     return (
         <div className="space-y-4">
@@ -456,75 +575,74 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
                 />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Expense breakdown */}
-                {donutData.length > 0 ? (
-                    <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5">
-                        <h3 className="text-[13px] font-bold text-[var(--color-text-primary)] mb-4">Expense Breakdown</h3>
-                        <div className="flex gap-5 items-center">
-                            <div className="shrink-0">
-                                <DonutChart data={donutData} size={120} strokeWidth={22} centerLabel={`LKR\n${fmtShort(totalExpenses)}`} />
-                            </div>
-                            <div className="flex-1 space-y-2 min-w-0">
-                                {expenseByCategory.map(([name, value], i) => {
-                                    const pct = totalExpenses > 0 ? ((value / totalExpenses) * 100).toFixed(0) : 0
-                                    const budget = expenseCategories.find(c => c.name === name)?.budget_lkr
-                                    const over = budget && value > budget
-                                    return (
-                                        <div key={name}>
-                                            <div className="flex items-center justify-between mb-0.5">
-                                                <div className="flex items-center gap-1.5 min-w-0">
-                                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                                                    <span className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate">{name}</span>
-                                                    {over && <span className="text-[9px] font-bold text-red-500 shrink-0">OVER</span>}
-                                                </div>
-                                                <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                                                    <span className="text-[11px] font-bold text-[var(--color-text-primary)] tabular-nums">LKR {fmtShort(value)}</span>
-                                                    <span className="text-[10px] text-[var(--color-text-secondary)] w-7 text-right">{pct}%</span>
-                                                </div>
+            {/* Expense breakdown — full width */}
+            {donutData.length > 0 ? (
+                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5">
+                    <h3 className="text-[13px] font-bold text-[var(--color-text-primary)] mb-4">Expense Breakdown</h3>
+                    <div className="flex flex-col sm:flex-row gap-8 items-center">
+                        <div className="shrink-0">
+                            <PieChart data={donutData} size={280} total={totalExpenses} />
+                        </div>
+                        <div className="flex-1 space-y-2.5 w-full min-w-0">
+                            {expenseByCategory.map(([name, value], i) => {
+                                const pct = totalExpenses > 0 ? ((value / totalExpenses) * 100).toFixed(1) : 0
+                                const budget = expenseCategories.find(c => c.name === name)?.budget_lkr
+                                const over = budget && value > budget
+                                return (
+                                    <div key={name}>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                                <span className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate">{name}</span>
+                                                {over && <span className="text-[9px] font-bold text-red-500 shrink-0 px-1.5 py-0.5 rounded-full bg-red-50">OVER</span>}
                                             </div>
-                                            <div className="h-1 rounded-full bg-[var(--mx-color-f5f5f7)] overflow-hidden">
-                                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                            <div className="flex items-center gap-3 shrink-0 ml-3">
+                                                {budget && <span className={`text-[10px] font-medium ${over ? "text-red-500" : "text-[var(--color-text-secondary)]"}`}>/ {fmt(budget)}</span>}
+                                                <span className="text-[12px] font-bold text-[var(--color-text-primary)] tabular-nums">{fmt(value)}</span>
+                                                <span className="text-[10px] text-[var(--color-text-secondary)] w-9 text-right">{pct}%</span>
                                             </div>
                                         </div>
-                                    )
-                                })}
-                            </div>
+                                        <div className="h-1.5 rounded-full bg-[var(--mx-color-f5f5f7)] overflow-hidden">
+                                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                        </div>
+                                    </div>
+                                )
+                            })}
                         </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="rounded-2xl border border-dashed border-[var(--mx-color-e5e5ea)] p-8 flex items-center justify-center">
+                    <p className="text-[12px] text-[var(--color-text-secondary)]">No expenses yet this period.</p>
+                </div>
+            )}
+
+            {/* Recent activity — full width */}
+            <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5">
+                <h3 className="text-[13px] font-bold text-[var(--color-text-primary)] mb-3">Recent Activity</h3>
+                {recentEntries.length === 0 ? (
+                    <div className="flex items-center justify-center py-8">
+                        <p className="text-[12px] text-[var(--color-text-secondary)]">No entries yet for this period.</p>
                     </div>
                 ) : (
-                    <div className="rounded-2xl border border-dashed border-[var(--mx-color-e5e5ea)] p-8 flex items-center justify-center">
-                        <p className="text-[12px] text-[var(--color-text-secondary)]">No expenses yet this period.</p>
+                    <div className="space-y-0.5">
+                        {recentEntries.map(e => (
+                            <div key={e.id} className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-[var(--mx-color-f5f5f7)] transition-colors">
+                                <div className={`w-1.5 h-7 rounded-full shrink-0 ${e._kind === "income" ? "bg-emerald-400" : "bg-red-400"}`} />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)] truncate">{e._kind === "income" ? e.income_type_name : e.category_name}</p>
+                                    {e.note && <p className="text-[11px] text-[var(--color-text-secondary)] truncate">{e.note}</p>}
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className={`text-[13px] font-bold tabular-nums ${e._kind === "income" ? "text-emerald-600" : "text-red-500"}`}>
+                                        {e._kind === "income" ? "+" : "−"}{fmt(e.amount_lkr)}
+                                    </p>
+                                    <p className="text-[10px] text-[var(--color-text-secondary)]">{fmtDate(e.entry_date)}</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
-
-                {/* Recent activity */}
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5">
-                    <h3 className="text-[13px] font-bold text-[var(--color-text-primary)] mb-3">Recent Activity</h3>
-                    {recentEntries.length === 0 ? (
-                        <div className="flex items-center justify-center h-28">
-                            <p className="text-[12px] text-[var(--color-text-secondary)]">No entries yet for this period.</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-0.5">
-                            {recentEntries.map(e => (
-                                <div key={e.id} className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-[var(--mx-color-f5f5f7)] transition-colors">
-                                    <div className={`w-1.5 h-6 rounded-full shrink-0 ${e._kind === "income" ? "bg-emerald-400" : "bg-red-400"}`} />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate">{e._kind === "income" ? e.income_type_name : e.category_name}</p>
-                                        {e.note && <p className="text-[10px] text-[var(--color-text-secondary)] truncate">{e.note}</p>}
-                                    </div>
-                                    <div className="text-right shrink-0">
-                                        <p className={`text-[12px] font-bold tabular-nums ${e._kind === "income" ? "text-emerald-600" : "text-red-500"}`}>
-                                            {e._kind === "income" ? "+" : "−"}{fmtShort(e.amount_lkr)}
-                                        </p>
-                                        <p className="text-[10px] text-[var(--color-text-secondary)]">{fmtDate(e.entry_date)}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
             </div>
 
             {/* Income sources bar */}
