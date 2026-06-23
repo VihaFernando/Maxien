@@ -15,6 +15,9 @@ function animeMediaRouteTransitionKey(pathname) {
     const path = pathname === `${ANIME_HUB}/` ? ANIME_HUB : pathname
     if (path === ANIME_HUB) return 'hub'
     if (path.startsWith(`${ANIME_HUB}/manga/library`)) return 'library'
+    if (path.startsWith(`${ANIME_HUB}/manga/home`)) return 'manga-home'
+    if (path.startsWith(`${ANIME_HUB}/hentai/home`)) return 'hentai-home'
+    if (path.startsWith(`${ANIME_HUB}/anime/library`)) return 'anime-library'
     if (path.startsWith(`${ANIME_HUB}/anime`)) return 'anime'
     if (path.startsWith(`${ANIME_HUB}/manga`)) return 'manga'
     if (path.startsWith(`${ANIME_HUB}/hentai`)) return 'hentai'

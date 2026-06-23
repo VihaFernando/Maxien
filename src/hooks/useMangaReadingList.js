@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { lifesyncFetch } from '../lib/lifesyncApi'
+import { lifesyncFetch, getLifesyncDeviceId } from '../lib/lifesyncApi'
 
 const EMPTY_SUMMARY = {
     total: 0,
     withNewChapter: 0,
+    behind: 0,
     needsSync: 0,
     caughtUp: 0,
     seriesEnded: 0,
@@ -45,6 +46,7 @@ function summarizeEntries(entries) {
     const summary = {
         total: entries.length,
         withNewChapter: 0,
+        behind: 0,
         needsSync: 0,
         caughtUp: 0,
         seriesEnded: 0,
@@ -61,6 +63,7 @@ function summarizeEntries(entries) {
         const status = normalizeReadingStatus(entry)
         if (status && summary.statuses[status] != null) summary.statuses[status] += 1
         if (entry?.hasNewChapter) summary.withNewChapter += 1
+        if (entry?.behind) summary.behind += 1
         if (entry?.needsSync) summary.needsSync += 1
         if (entry?.caughtUp) summary.caughtUp += 1
         if (entry?.seriesEnded) summary.seriesEnded += 1
@@ -93,6 +96,8 @@ function toBooleanQuery(value) {
 function buildReadingQuery(filters) {
     const params = new URLSearchParams()
     params.set('view', 'standard')
+    const deviceId = getLifesyncDeviceId()
+    if (deviceId) params.set('deviceId', deviceId)
     const q = String(filters?.q || '').trim()
     if (q) params.set('q', q)
 

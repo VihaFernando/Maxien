@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncCrackGamesVisible, lifesyncFetch } from '../../lib/lifesyncApi'
 import { LifeSyncHubPageShell } from '../../components/lifesync/LifeSyncHubPageShell'
+import WishlistDealAlerts from '../../components/lifesync/WishlistDealAlerts'
 
 function statusChipClass(status) {
     if (status === 'cracked') return 'bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -512,6 +513,8 @@ export default function LifeSyncWishlist() {
                 {message && (
                     <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-[13px] text-green-700">{message}</div>
                 )}
+
+                <WishlistDealAlerts />
 
                 <div className="grid gap-4 xl:grid-cols-12">
                     <aside className="space-y-4 xl:col-span-4">

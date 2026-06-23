@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import AdvancedVideoPlayer from '../../components/lifesync/AdvancedVideoPlayer'
 import { FadeInImg } from '../../components/lifesync/FadeInImg'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
@@ -31,8 +31,10 @@ import {
 import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
 import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import { AnimatePresence, LayoutGroup, lifeSyncDetailBackdropFadeTransition, lifeSyncDetailBodyRevealTransition, lifeSyncDetailOverlayFadeTransition, lifeSyncDetailSheetEnterAnimate, lifeSyncDetailSheetEnterInitial, lifeSyncDetailSheetExitVariant, lifeSyncDetailSheetMainTransition, lifeSyncDollyPageTransition, lifeSyncDollyPageVariants, lifeSyncSharedLayoutTransitionProps, MotionDiv } from '../../lib/lifesyncMotion'
+import { FaArrowLeft } from 'react-icons/fa'
 
 const WATCH_HENTAI_SITE = 'https://watchhentai.net'
+const HENTAI_HOME = '/dashboard/lifesync/anime/hentai/home'
 
 function isIOSDevice() {
     if (typeof navigator === 'undefined') return false
@@ -1246,7 +1248,12 @@ function FilterDrawer({ open, onClose, title, count, onReset, children }) {
 
 export default function LifeSyncHentai() {
     const navigate = useNavigate()
+    const location = useLocation()
     const { isLifeSyncConnected, lifeSyncUser, lifeSyncUpdatePreferences } = useLifeSync()
+    const fromHome = useMemo(() => {
+        const f = location.state?.from
+        return typeof f === 'string' && f === HENTAI_HOME ? f : null
+    }, [location.state])
     const prefs = lifeSyncUser?.preferences
     const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
     const pluginEnabled = isPluginEnabled(prefs, 'pluginHentaiEnabled')
@@ -1767,6 +1774,15 @@ export default function LifeSyncHentai() {
                 }
                 actions={
                     <>
+                        {fromHome && (
+                            <button
+                                type="button"
+                                onClick={() => navigate(fromHome)}
+                                className="inline-flex items-center gap-1.5 rounded-xl bg-(--color-surface) px-3.5 py-2 text-[12px] font-bold text-(--color-text-primary) ring-1 ring-(--color-border-soft) transition hover:brightness-95"
+                            >
+                                <FaArrowLeft className="h-3 w-3" /> Hentai Home
+                            </button>
+                        )}
                         <ControllerHintBar
                             cols={2}
                             hints={[

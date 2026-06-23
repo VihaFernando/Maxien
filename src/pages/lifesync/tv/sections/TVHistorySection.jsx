@@ -5,6 +5,7 @@ import { useLifeSync } from '../../../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, lifesyncFetch } from '../../../../lib/lifesyncApi'
 import { TVCard, TVCardSkeleton } from '../TVCard'
 import { useTVCardSelect } from '../useTVCardSelect'
+import { useTVGridMeta } from '../useTVGridMeta'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
 
 const COLS = 5
@@ -83,7 +84,7 @@ function buildHistoryDetailItem(entry, subTab) {
     }
 }
 
-export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, onRegisterFilter, onFocusedItemChange }) {
+export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, onRegisterFilter, onFocusedItemChange, onGridMetaChange }) {
     const { lifeSyncUser, isLifeSyncConnected } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
     const nsfwEnabled = Boolean(prefs?.nsfwContentEnabled)
@@ -222,6 +223,9 @@ export function TVHistorySection({ focusPos, onItemSelect, enabled, filterOpen, 
         if (!enabled) return
         onFocusedItemChange?.(focusedItem)
     }, [enabled, focusedItem, onFocusedItemChange])
+
+    // History has no pagination, so there is never a "next page" to cross into.
+    useTVGridMeta(enabled, displayItems.length, false, onGridMetaChange)
 
     const getSelectHandler = useTVCardSelect(detailItems, onItemSelect)
 

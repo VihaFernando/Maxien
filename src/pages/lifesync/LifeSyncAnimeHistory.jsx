@@ -340,7 +340,7 @@ function FeedRow({ entry, onOpenDetail, onRemove, removeBusyKey, isLast }) {
                 </button>
                 <Link
                     to={to} state={state}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-black transition hover:brightness-95 active:scale-95"
                     aria-label={`Play episode ${current}`}
                 >
                     <IconPlay className="ml-px h-3.5 w-3.5" />
@@ -433,7 +433,7 @@ function GridCard({ entry, onOpenDetail, onRemove, removeBusyKey }) {
                 </div>
                 <Link
                     to={to} state={state}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95"
+                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary text-black transition hover:brightness-95 active:scale-95"
                     aria-label={`Play episode ${current}`}
                 >
                     <IconPlay className="ml-px h-3 w-3" />

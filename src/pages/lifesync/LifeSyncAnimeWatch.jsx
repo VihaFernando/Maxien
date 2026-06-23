@@ -93,6 +93,7 @@ export default function LifeSyncAnimeWatch() {
     const [audioOverride, setAudioOverride] = useState(null)
     const [mirrorOverrideId, setMirrorOverrideId] = useState('')
     const [audioAvailByEp, setAudioAvailByEp] = useState(() => (/** @type {Record<string, { sub: boolean, dub: boolean }>} */ ({})))
+    const [resolveKey, setResolveKey] = useState(0)
     const audioAvailRef = useRef(audioAvailByEp)
     audioAvailRef.current = audioAvailByEp
 
@@ -146,10 +147,23 @@ export default function LifeSyncAnimeWatch() {
                     ? `&server=${encodeURIComponent(String(mirrorId).trim())}`
                     : ''
 
-            const pack = await lifesyncFetch(
-                `/api/v1/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${mirrorQ}&view=full`,
-                signal ? { signal } : undefined,
-            )
+            // Hard 15s timeout so a hung API never leaves the spinner forever
+            const timeoutAc = new AbortController()
+            const timeoutId = window.setTimeout(() => timeoutAc.abort(), 15_000)
+            const combined = signal
+                ? { signal: AbortSignal.any ? AbortSignal.any([signal, timeoutAc.signal]) : timeoutAc.signal }
+                : { signal: timeoutAc.signal }
+
+            let pack
+            try {
+                pack = await lifesyncFetch(
+                    `/api/v1/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${mirrorQ}&view=full`,
+                    combined,
+                )
+            } finally {
+                window.clearTimeout(timeoutId)
+            }
+
             const apiBase = getLifesyncApiBase()
             const iframeFromPack =
                 typeof pack?.iframeUrl === 'string' && /^https?:\/\//i.test(pack.iframeUrl) ? pack.iframeUrl : null
@@ -172,13 +186,9 @@ export default function LifeSyncAnimeWatch() {
 
             const toAbs = u => (String(u || '').startsWith('http') ? String(u) : `${apiBase}${u}`)
             const sources = Array.isArray(pack?.sources) ? pack.sources : []
-            // Backend marks sources by `type` ('hls' | 'mp4'); prefer HLS (it carries
-            // the quality variants), then MP4. iOS Safari plays HLS natively too.
             const pick = sources.find(s => s?.type === 'hls') || sources.find(s => s?.type === 'mp4') || sources[0]
             const rawUrl = pick?.url ? toAbs(pick.url) : null
 
-            // Prefer the raw stream so the advanced player (subtitles + quality dropdown)
-            // is used; fall back to the embed iframe only when no raw source resolved.
             if (rawUrl) {
                 const rawSubs = Array.isArray(pack?.subtitles) ? pack.subtitles : []
                 const textTracks = rawSubs.map((s, i) => ({
@@ -342,6 +352,13 @@ export default function LifeSyncAnimeWatch() {
         return () => { ac.abort() }
     }, [anime?.title, isLifeSyncConnected, animeId, streamAudioType, titleHintFromState])
 
+    // Capture audioOverride / mirrorOverrideId in refs so the resolve effect
+    // doesn't re-run every time settings change — only explicit retries / ep changes do.
+    const audioOverrideRef = useRef(audioOverride)
+    audioOverrideRef.current = audioOverride
+    const mirrorOverrideIdRef = useRef(mirrorOverrideId)
+    mirrorOverrideIdRef.current = mirrorOverrideId
+
     useEffect(() => {
         if (!isLifeSyncConnected) return
         const epObj = episodes?.[episodeIdx]
@@ -357,8 +374,8 @@ export default function LifeSyncAnimeWatch() {
             try {
                 const resolved = await resolveAnimeStream(
                     epObj,
-                    audioOverride,
-                    mirrorOverrideId ? mirrorOverrideId : undefined,
+                    audioOverrideRef.current,
+                    mirrorOverrideIdRef.current || undefined,
                     ac.signal,
                 )
                 if (ac.signal.aborted) return
@@ -386,7 +403,9 @@ export default function LifeSyncAnimeWatch() {
         })()
 
         return () => { ac.abort() }
-    }, [episodes, episodeIdx, isLifeSyncConnected, resolveAnimeStream, audioOverride, mirrorOverrideId, bumpWatchHistory])
+    // resolveKey lets the retry button and settings-apply manually re-trigger
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [episodes, episodeIdx, isLifeSyncConnected, resolveAnimeStream, bumpWatchHistory, resolveKey])
 
     // Persist "continue watching" progress.
     useEffect(() => {
@@ -439,6 +458,8 @@ export default function LifeSyncAnimeWatch() {
     const hasSubtitleTracks = (stream?.textTracks || []).length > 0
     const qualityList = (stream?.qualities || []).filter(q => q?.url)
     const hasQualities = qualityList.length > 0
+
+    const retryStream = useCallback(() => setResolveKey(k => k + 1), [])
 
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [subtitlesOn, setSubtitlesOn] = useState(true)
@@ -730,7 +751,7 @@ export default function LifeSyncAnimeWatch() {
                                                                 <div className="flex gap-1.5">
                                                                     {['sub', 'dub'].map(opt => (
                                                                         <button key={opt} type="button"
-                                                                            onClick={() => { setAudioOverride(opt); setMirrorOverrideId('') }}
+                                                                            onClick={() => { setAudioOverride(opt); setMirrorOverrideId(''); setResolveKey(k => k + 1); setSettingsOpen(false) }}
                                                                             className={`flex-1 rounded-xl border py-2 text-[11px] font-black uppercase tracking-widest transition-all ${
                                                                                 (audioValue || (streamAudioType === 'dub' ? 'dub' : 'sub')) === opt
                                                                                     ? 'border-(--mx-color-c6ff00)/50 bg-(--mx-color-c6ff00)/14 text-(--mx-color-c6ff00)'
@@ -747,7 +768,7 @@ export default function LifeSyncAnimeWatch() {
                                                                 <p className="text-[11px] text-white/40">No audio tracks reported</p>
                                                             )}
                                                             {showSubDubPicker && audioValue ? (
-                                                                <button type="button" onClick={() => { setAudioOverride(null); setMirrorOverrideId('') }}
+                                                                <button type="button" onClick={() => { setAudioOverride(null); setMirrorOverrideId(''); setResolveKey(k => k + 1); setSettingsOpen(false) }}
                                                                     className="mt-1 w-full rounded-xl border border-white/8 py-1 text-[10px] font-semibold text-white/35 hover:text-white/55 transition-colors">
                                                                     Auto ({streamAudioType === 'dub' ? 'Dub' : 'Sub'})
                                                                 </button>
@@ -798,7 +819,7 @@ export default function LifeSyncAnimeWatch() {
                                                         <WatchSettingsSection label="Mirror" icon="mirror">
                                                             <select
                                                                 value={mirrorOverrideId}
-                                                                onChange={e => setMirrorOverrideId(safeText(e.target.value).trim())}
+                                                                onChange={e => { setMirrorOverrideId(safeText(e.target.value).trim()); setResolveKey(k => k + 1); setSettingsOpen(false) }}
                                                                 disabled={!Array.isArray(stream?.mirrors) || stream.mirrors.length === 0}
                                                                 className="h-9 w-full cursor-pointer rounded-xl border border-white/12 bg-black/50 px-2.5 text-[11px] font-semibold text-white/90 outline-none transition-colors hover:border-(--mx-color-c6ff00)/30 focus:border-(--mx-color-c6ff00)/45 disabled:cursor-not-allowed disabled:opacity-45"
                                                             >
@@ -819,42 +840,23 @@ export default function LifeSyncAnimeWatch() {
                                             <AnimatePresence>
                                                 {stream?.resolving ? (
                                                 <MotionDiv
-                                                    className="absolute inset-0 z-10 flex items-center justify-center bg-black/65 backdrop-blur-md"
+                                                    className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/70 backdrop-blur-sm"
                                                     initial={{ opacity: 0 }}
                                                     animate={{ opacity: 1 }}
                                                     exit={{ opacity: 0 }}
-                                                    transition={{ duration: 0.22 }}
+                                                    transition={{ duration: 0.18 }}
                                                 >
-                                                    <MotionDiv
-                                                        className="w-[min(520px,92vw)] overflow-hidden rounded-3xl border border-white/10 bg-black/80 p-5 shadow-2xl backdrop-blur-xl"
-                                                        initial={{ opacity: 0, y: 18, scale: 0.97 }}
-                                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                        transition={{ type: 'spring', stiffness: 320, damping: 28, delay: 0.05 }}
+                                                    <svg className="h-8 w-8 animate-spin text-(--mx-color-c6ff00)" viewBox="0 0 24 24" fill="none">
+                                                        <path d="M12 2a10 10 0 1010 10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                                                    </svg>
+                                                    <p className="text-[12px] font-semibold text-white/70">Loading stream…</p>
+                                                    <button
+                                                        type="button"
+                                                        onClick={retryStream}
+                                                        className="rounded-xl border border-white/15 bg-white/8 px-4 py-1.5 text-[11px] font-semibold text-white/60 transition-colors hover:border-white/30 hover:text-white"
                                                     >
-                                                        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-(--mx-color-c6ff00)/50 to-transparent" aria-hidden />
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="relative h-10 w-10 shrink-0 rounded-2xl border border-white/10 bg-white/5 p-2.5">
-                                                                <svg className="h-full w-full animate-spin text-(--mx-color-c6ff00)" viewBox="0 0 24 24" fill="none">
-                                                                    <path d="M12 2a10 10 0 1010 10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-                                                                </svg>
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <p className="text-[13px] font-semibold text-white/90">Starting your stream</p>
-                                                                <p className="mt-0.5 text-[12px] text-white/55">
-                                                                    {audioOverride
-                                                                        ? `Audio: ${audioOverride.toUpperCase()}`
-                                                                        : `Audio: Auto (${streamAudioType === 'dub' ? 'Dub' : 'Sub'})`}
-                                                                    {mirrorOverrideId ? ` · Mirror: ${mirrorOverrideId}` : ''}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="mt-4 grid gap-2">
-                                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/8">
-                                                                <div className="h-full w-1/3 animate-[lifesyncbar_1.2s_ease-in-out_infinite] rounded-full bg-(--mx-color-c6ff00)/60" />
-                                                            </div>
-                                                            <p className="text-[11px] text-white/40">If this hangs, try switching Mirror or Audio below.</p>
-                                                        </div>
-                                                    </MotionDiv>
+                                                        Retry
+                                                    </button>
                                                 </MotionDiv>
                                                 ) : null}
                                             </AnimatePresence>

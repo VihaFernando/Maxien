@@ -20,6 +20,8 @@ import {
     FaUserShield,
 } from "react-icons/fa"
 import AIShortcutHint from "../components/AIShortcutHint"
+import NotificationBell from "../components/lifesync/NotificationBell"
+import { FaRss } from "react-icons/fa"
 import { TVModeProvider } from "../context/TVModeContext"
 import { useTVModeContext } from "../hooks/useTVModeContext"
 import { TVModePortal } from "./lifesync/LifeSyncTVMode"
@@ -428,6 +430,9 @@ function DashboardInner() {
                             <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                         </div>
                         <span className="text-[var(--color-text-primary)] font-bold text-[16px] tracking-tight">Maxien</span>
+                        <div className="ml-auto">
+                            <NotificationBell />
+                        </div>
                     </div>
 
                     {renderWorkspaceSwitcher()}
@@ -441,6 +446,7 @@ function DashboardInner() {
                         <div className="mt-3">
                             <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2 px-2">LifeSync</p>
                             <nav className="space-y-0.5">
+                                <SidebarLink to="/dashboard/feed" icon={FaRss} label="Activity" active={isActive("/dashboard/feed")} />
                                 <SidebarLink to="/dashboard/lifesync/games" icon={FaGamepad} label="Games" active={lifeSyncGamesActive} />
                                 {showLifeSyncAnimeLink && (
                                     <SidebarLink to="/dashboard/lifesync/anime" icon={FaFilm} label="Anime" active={lifeSyncAnimeActive} />
@@ -525,6 +531,13 @@ function DashboardInner() {
                             <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2 px-2">LifeSync</p>
                             <nav className="space-y-0.5">
                                 <SidebarLink
+                                    to="/dashboard/feed"
+                                    icon={FaRss}
+                                    label="Activity"
+                                    active={isActive("/dashboard/feed")}
+                                    onClick={() => setSidebarOpen(false)}
+                                />
+                                <SidebarLink
                                     to="/dashboard/lifesync/games"
                                     icon={FaGamepad}
                                     label="Games"
@@ -594,15 +607,18 @@ function DashboardInner() {
                         </div>
                         <span className="text-[var(--color-text-primary)] font-bold text-[15px] tracking-tight">Maxien</span>
                     </div>
-                    <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl transition-colors">
-                        {user?.user_metadata?.picture ? (
-                            <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
-                        ) : (
-                            <div className="w-8 h-8 rounded-full bg-[var(--mx-color-f5f5f7)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-xs ring-1 ring-black/5">
-                                {initials}
-                            </div>
-                        )}
-                    </button>
+                    <div className="flex items-center gap-1">
+                        <NotificationBell />
+                        <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl transition-colors">
+                            {user?.user_metadata?.picture ? (
+                                <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
+                            ) : (
+                                <div className="w-8 h-8 rounded-full bg-[var(--mx-color-f5f5f7)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-xs ring-1 ring-black/5">
+                                    {initials}
+                                </div>
+                            )}
+                        </button>
+                    </div>
                 </header>
                 )}
 

@@ -839,9 +839,9 @@ async function fetchCalendarMonthCached(year, month1) {
 const ANIME_HUB_PATHS = {
     seasonal: '/dashboard/lifesync/anime/anime/home/page/1',
     calendar: '/dashboard/lifesync/anime/anime/calendar',
-    mangaHome: '/dashboard/lifesync/anime/manga',
+    mangaHome: '/dashboard/lifesync/anime/manga/home',
     hManhwaHome: '/dashboard/lifesync/anime/manga/mangadistrict/latest/page/1',
-    hentaiHome: '/dashboard/lifesync/anime/hentai',
+    hentaiHome: '/dashboard/lifesync/anime/hentai/home',
 }
 
 /**
@@ -870,7 +870,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             cols: 2,
             rows: 2,
             title: 'Manga',
-            subtitle: 'Roliascan and Manga District browse, chapters, and reader.',
+            subtitle: 'Featured, popular, and latest across Roliascan, Manga District, and MangaDNA.',
             gradient: 'bg-linear-to-t from-amber-500/15 via-(--color-surface)/65 to-transparent',
             hero: !animePluginOn && tiles.length === 0,
         })
@@ -898,7 +898,7 @@ function buildAnimeExploreTiles({ animePluginOn, mangaPluginOn, hManhwaVisible, 
             cols: 2,
             rows: 2,
             title: 'Hentai',
-            subtitle: 'Adults-only catalog with its own controls.',
+            subtitle: 'Trending and latest releases from WatchHentai.',
             badge: '18+',
             badgeClass: 'bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200',
             gradient: 'bg-linear-to-t from-rose-500/15 via-(--color-surface)/60 to-transparent',
@@ -1033,7 +1033,7 @@ function AnimeHubBroadcastWeekSection({
                         </dl>
                         <Link
                             to={ANIME_HUB_PATHS.calendar}
-                            className={`inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm transition-all hover:brightness-95 ${focusRing}`}
+                            className={`inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-2.5 text-[13px] font-semibold text-black shadow-sm transition-all hover:brightness-95 ${focusRing}`}
                         >
                             Open full calendar
                             <FaChevronRight className="h-3.5 w-3.5" aria-hidden />

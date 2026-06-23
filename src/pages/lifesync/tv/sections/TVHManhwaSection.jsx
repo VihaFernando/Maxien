@@ -3,6 +3,7 @@ import { lifesyncFetch } from '../../../../lib/lifesyncApi'
 import { TVCard, TVCardSkeleton, TVPageHints } from '../TVCard'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
 import { useTVCardSelect } from '../useTVCardSelect'
+import { useTVGridMeta } from '../useTVGridMeta'
 
 const COLS = 5
 const SECTION_OPTIONS = [
@@ -72,7 +73,7 @@ function buildHManhwaDetailItem(manga) {
     }
 }
 
-export function TVHManhwaSection({ focusPos, onItemSelect, enabled, filterOpen, onRegisterFilter, onFocusedItemChange, page, onPageChange }) {
+export function TVHManhwaSection({ focusPos, onItemSelect, enabled, filterOpen, onRegisterFilter, onFocusedItemChange, onGridMetaChange, page, onPageChange }) {
     const [items, setItems] = useState([])
     const [loading, setLoading] = useState(true)
     const [hasMore, setHasMore] = useState(true)
@@ -151,6 +152,8 @@ export function TVHManhwaSection({ focusPos, onItemSelect, enabled, filterOpen, 
         if (!enabled) return
         onFocusedItemChange?.(focusedItem)
     }, [enabled, focusedItem, onFocusedItemChange])
+
+    useTVGridMeta(enabled, items.length, hasMore, onGridMetaChange, loading)
 
     const getSelectHandler = useTVCardSelect(detailItems, onItemSelect)
 

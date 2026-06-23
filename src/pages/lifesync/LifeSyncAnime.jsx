@@ -323,7 +323,7 @@ const AnimeCard = memo(function AnimeCard({ node, ranking, onSelect }) {
             </div>
             {/* Hover play affordance */}
             <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-all duration-250 group-hover:opacity-100">
-              <div className="flex h-11 w-11 scale-75 items-center justify-center rounded-full bg-primary text-(--color-ink-strong) shadow-[0_12px_30px_-8px_rgba(198,255,0,0.9)] transition-transform duration-250 group-hover:scale-100">
+              <div className="flex h-11 w-11 scale-75 items-center justify-center rounded-full bg-primary text-black shadow-[0_12px_30px_-8px_rgba(198,255,0,0.9)] transition-transform duration-250 group-hover:scale-100">
                 <IconPlay />
               </div>
             </div>
@@ -2402,7 +2402,7 @@ export default function LifeSyncAnime() {
                       type="button"
                       onClick={() => setLayout("grid")}
                       title="Grid view"
-                      className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${layout === "grid" ? "bg-primary text-(--color-ink-strong) shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${layout === "grid" ? "bg-primary text-black shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
                     >
                       <IconGrid />
                     </button>
@@ -2410,7 +2410,7 @@ export default function LifeSyncAnime() {
                       type="button"
                       onClick={() => setLayout("list")}
                       title="List view"
-                      className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${layout === "list" ? "bg-primary text-(--color-ink-strong) shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+                      className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${layout === "list" ? "bg-primary text-black shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
                     >
                       <IconList />
                     </button>

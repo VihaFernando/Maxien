@@ -43,11 +43,12 @@ const STATUS_OPTIONS = [
     { id: 're_reading', label: 'Re-reading' },
 ]
 const UPDATE_STATE_OPTIONS = [
-    { id: 'all', label: 'Any update' },
+    { id: 'all', label: 'Everything' },
     { id: 'new', label: 'New chapters' },
-    { id: 'needs_sync', label: 'Needs sync' },
-    { id: 'caught_up', label: 'Caught up' },
-    { id: 'series_ended', label: 'Series ended' },
+    { id: 'behind', label: 'Catching up' },
+    { id: 'needs_sync', label: 'Check for updates' },
+    { id: 'caught_up', label: 'All caught up' },
+    { id: 'series_ended', label: 'Completed series' },
 ]
 const SORT_OPTIONS = [
     { id: 'updatedAt', label: 'Last updated' },
@@ -221,10 +222,30 @@ function chapterSnapshot(entry) {
     }
     return {
         currentLabel: entry?.lastChapterLabel || '',
-        latestLabel: entry?.remoteLatestChapterLabel || (entry?.needsSync ? 'Sync needed' : ''),
+        latestLabel: entry?.remoteLatestChapterLabel || (entry?.needsSync ? 'Checking…' : ''),
         percent: clampPct(Number(entry?.caughtUp && !entry?.hasNewChapter ? 100 : entry?.lastReadPercent || 0)),
     }
 }
+// Friendly, state-aware copy for the "resume" point. Because progress auto-advances to the
+// next chapter once you finish one, the stored position is really "where you'll pick up",
+// not "what you last read" — so we phrase it as "Up next" / "Continue".
+function resumeMeta(entry) {
+    const pct = Number(entry?.lastReadPercent || 0)
+    const chapterLabel = entry?.lastChapterLabel || ''
+    if (entry?.hasNewChapter) {
+        return { rowLabel: 'Up next', rowValue: entry?.remoteLatestChapterLabel || chapterLabel, button: 'Read new chapter', callout: 'New chapter ready for you' }
+    }
+    if (pct >= 100 || (entry?.caughtUp && pct === 0)) {
+        // Finished the latest available chapter — nothing new yet.
+        return { rowLabel: 'Up next', rowValue: chapterLabel || 'All caught up', button: 'Read again', callout: '' }
+    }
+    if (pct > 0 && pct < 97) {
+        return { rowLabel: 'Continue from', rowValue: chapterLabel, button: 'Continue reading', callout: '' }
+    }
+    // Fresh chapter queued at the start (auto-advanced), or never opened.
+    return { rowLabel: 'Up next', rowValue: chapterLabel, button: chapterLabel ? 'Start next chapter' : 'Start reading', callout: '' }
+}
+
 function latestChapterDate(entry) {
     const candidates = [entry?.remoteLatestChapterReleaseAt, entry?.remoteLatestChapterReadableAt, entry?.remoteLatestChapterPublishAt]
     let best = 0, bestIso = ''
@@ -497,6 +518,7 @@ function DetailDrawer({ entry, onClose, onContinue }) {
 
     if (!entry) return null
     const snap = chapterSnapshot(entry)
+    const rm = resumeMeta(entry)
     const heroUrl = entry.backgroundImageUrl || entry.coverUrl || ''
     const releaseDate = latestChapterDate(entry)
     const title = decodeHtmlEntities(entry.title) || 'Untitled'
@@ -580,7 +602,7 @@ function DetailDrawer({ entry, onClose, onContinue }) {
                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
                                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
                             </span>
-                            <span className="text-[13px] font-bold text-(--color-text-primary)">New chapter available to read</span>
+                            <span className="text-[13px] font-bold text-(--color-text-primary)">{rm.callout || 'New chapter ready for you'}</span>
                         </div>
                     )}
 
@@ -606,9 +628,9 @@ function DetailDrawer({ entry, onClose, onContinue }) {
                         {[
                             { label: 'Source', value: [entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean).map(sourceLabel).join(' + ') },
                             { label: 'Status', value: entry.readingStatus ? statusLabel(entry.readingStatus) : '' },
-                            { label: 'Last read', value: entry.lastChapterLabel },
-                            { label: 'Latest chapter', value: entry.remoteLatestChapterLabel },
-                            { label: 'Last release', value: releaseDate ? formatDateLabel(releaseDate) : '' },
+                            { label: rm.rowLabel, value: rm.rowValue },
+                            { label: 'Newest chapter', value: entry.remoteLatestChapterLabel },
+                            { label: 'Released', value: releaseDate ? formatDateLabel(releaseDate) : '' },
                         ].filter((r) => r.value).map((r) => (
                             <div key={r.label} className="flex items-center justify-between gap-4 px-4 py-2.5">
                                 <span className="shrink-0 text-[12px] text-(--color-text-secondary)">{r.label}</span>
@@ -639,7 +661,7 @@ function DetailDrawer({ entry, onClose, onContinue }) {
                             onClick={() => onContinue(entry)}
                             className="flex w-full min-h-12 items-center justify-center gap-2 rounded-2xl bg-primary text-[13px] font-black text-black transition hover:brightness-105"
                         >
-                            <IconBook className="h-4 w-4" /> {entry.hasNewChapter ? 'Read new chapter' : 'Continue reading'}
+                            <IconBook className="h-4 w-4" /> {rm.button}
                         </button>
                     </MotionDiv>
                     <Link
@@ -691,7 +713,7 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
         >
             {/* Select checkbox */}
             <button type="button" onClick={() => onToggleSelect(entry)}
-                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${selected ? 'border-primary bg-primary text-(--color-ink-strong)' : 'border-(--color-border-strong) bg-(--color-surface) hover:border-primary'}`}
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${selected ? 'border-primary bg-primary text-black' : 'border-(--color-border-strong) bg-(--color-surface) hover:border-primary'}`}
                 aria-label={selected ? 'Deselect' : 'Select'}>
                 {selected && <IconCheck className="h-2.5 w-2.5" />}
             </button>
@@ -733,7 +755,7 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
                     {removeBusy ? <span className="text-[10px]">…</span> : <IconX className="h-3.5 w-3.5" />}
                 </button>
                 <Link to={resumeTarget(entry, browseTranslatedLang).to} state={resumeTarget(entry, browseTranslatedLang).state}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-(--color-ink-strong) transition hover:brightness-95 active:scale-95"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-black transition hover:brightness-95 active:scale-95"
                     aria-label="Continue reading">
                     <IconBook className="h-3.5 w-3.5" />
                 </Link>
@@ -777,14 +799,24 @@ function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, s
             <button type="button" onClick={(e) => { e.stopPropagation(); onToggleSelect(entry) }}
                 aria-label={selected ? 'Deselect' : 'Select'}
                 className={`absolute left-2 top-2 z-20 flex h-6 w-6 items-center justify-center rounded-lg border backdrop-blur-sm transition active:scale-90 ${selected
-                    ? 'border-primary bg-primary text-(--color-ink-strong) opacity-100'
+                    ? 'border-primary bg-primary text-black opacity-100'
                     : 'border-white/50 bg-black/40 text-transparent opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:border-white'}`}>
                 <IconCheck className="h-3 w-3" />
             </button>
 
             <div className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1">
                 {entry.hasNewChapter && (
-                    <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">New</span>
+                    <span className="rounded-full bg-primary px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-black">New chapter</span>
+                )}
+                {entry.behind && !entry.hasNewChapter && (
+                    <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">
+                        {entry.chaptersBehind ? `${entry.chaptersBehind} to catch up` : 'Catching up'}
+                    </span>
+                )}
+                {entry.syncedFromOtherDevice && (
+                    <span className="rounded-md bg-sky-500/85 px-1.5 py-0.5 text-[9px] font-bold text-white" title={`Updated on another device${entry.lastDevice ? ` (${entry.lastDevice})` : ''}`}>
+                        Synced ⇄
+                    </span>
                 )}
                 {chip && (
                     <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-bold ${chip.cls}`}>{chip.label}</span>
@@ -1168,17 +1200,22 @@ export default function LifeSyncMangaLibrary() {
             {!initialLoading && (
                 <div className="flex flex-wrap items-center gap-2 text-[12px]">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 font-semibold text-(--color-text-secondary)">
-                        <span className="tabular-nums font-black text-(--color-text-primary)">{pageInfo?.total ?? visibleEntries.length}</span> titles
+                        <span className="tabular-nums font-black text-(--color-text-primary)">{pageInfo?.total ?? visibleEntries.length}</span> in your library
                     </span>
                     {visibleSummary.withNewChapter > 0 && (
                         <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-bold text-primary">
                             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                            {visibleSummary.withNewChapter} new
+                            {visibleSummary.withNewChapter} new to read
+                        </span>
+                    )}
+                    {visibleSummary.behind > 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 font-bold text-amber-400">
+                            {visibleSummary.behind} to catch up
                         </span>
                     )}
                     {visibleSummary.needsSync > 0 && (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 font-bold text-amber-400">
-                            {visibleSummary.needsSync} need sync
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-(--color-border-soft) bg-(--color-surface) px-3 py-1 font-semibold text-(--color-text-secondary)">
+                            {visibleSummary.needsSync} to check
                         </span>
                     )}
                     {hiddenCount > 0 && (
@@ -1403,16 +1440,20 @@ export default function LifeSyncMangaLibrary() {
 
                     {/* Pagination */}
                     {pageInfo.totalPages > 1 && (
-                        <div className="flex items-center justify-between rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-4 py-2.5">
-                            <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageInfo.page <= 1 || refreshing}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
-                                <IconChevronLeft />
-                            </button>
-                            <p className="text-[12px] font-semibold text-(--color-text-primary)">Page {pageInfo.page} of {pageInfo.totalPages}</p>
-                            <button type="button" onClick={() => setPage((p) => p + 1)} disabled={!pageInfo.hasMore || refreshing}
-                                className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40">
-                                <IconChevronRight />
-                            </button>
+                        <div className="flex items-center justify-center">
+                            <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1.5 shadow-sm">
+                                <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageInfo.page <= 1 || refreshing}
+                                    className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
+                                    ← Prev
+                                </button>
+                                <span className="px-2 text-[12px] font-black tabular-nums text-(--color-text-secondary)">
+                                    Page {pageInfo.page}
+                                </span>
+                                <button type="button" onClick={() => setPage((p) => p + 1)} disabled={!pageInfo.hasMore || refreshing}
+                                    className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
+                                    Next →
+                                </button>
+                            </div>
                         </div>
                     )}
                 </>

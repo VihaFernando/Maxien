@@ -68,6 +68,9 @@ function remapToV1Path(path) {
     if (pathname.startsWith('/api/anime/watch-history')) {
         return pathname.replace('/api/anime', '/api/v1/anime') + suffix
     }
+    if (pathname.startsWith('/api/anime/library')) {
+        return pathname.replace('/api/anime', '/api/v1/anime') + suffix
+    }
     if (pathname.startsWith('/api/anime/calendar/')) {
         return pathname.replace('/api/anime', '/api/v1/anime') + suffix
     }
@@ -142,6 +145,22 @@ function remapToV1Path(path) {
         return pathname.replace('/api/wishlist', '/api/v1/wishlist') + suffix
     }
 
+    // Notifications v1 routes
+    if (
+        pathname === '/api/notifications' ||
+        pathname.startsWith('/api/notifications/')
+    ) {
+        return pathname.replace('/api/notifications', '/api/v1/notifications') + suffix
+    }
+
+    // Activity feed v1 routes
+    if (
+        pathname === '/api/feed' ||
+        pathname.startsWith('/api/feed/')
+    ) {
+        return pathname.replace('/api/feed', '/api/v1/feed') + suffix
+    }
+
     return path
 }
 
@@ -150,6 +169,25 @@ export function getLifesyncToken() {
         return localStorage.getItem(LIFESYNC_TOKEN_KEY)
     } catch {
         return null
+    }
+}
+
+const LIFESYNC_DEVICE_KEY = 'lifesync_device_id'
+
+/**
+ * Stable per-browser device id used for multi-device sync status (lets the backend flag
+ * progress that was last updated from a *different* device). Generated once and persisted.
+ */
+export function getLifesyncDeviceId() {
+    try {
+        let id = localStorage.getItem(LIFESYNC_DEVICE_KEY)
+        if (!id) {
+            id = (globalThis.crypto?.randomUUID?.() || `dev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`)
+            localStorage.setItem(LIFESYNC_DEVICE_KEY, id)
+        }
+        return id
+    } catch {
+        return ''
     }
 }
 

@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { FaArrowLeft } from "react-icons/fa";
 import { useLifeSync } from "../../context/LifeSyncContext";
 import { isLifeSyncHManhwaVisible, lifesyncFetch } from "../../lib/lifesyncApi";
 import useControllerSupportEnabled from "../../hooks/useControllerSupportEnabled";
@@ -190,55 +191,31 @@ function MangaPagerFooter({ page, lastPage, total, busy, onPrev, onNext }) {
   const last = Math.max(1, Number(lastPage) || 1);
   if (last <= 1 && cur <= 1) return null;
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-4 py-2.5">
-      <button
-        type="button"
-        disabled={busy || cur <= 1}
-        onClick={onPrev}
-        aria-label="Previous page"
-        className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary) disabled:opacity-40"
-      >
-        <svg
-          className="h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          strokeWidth="2.5"
-          aria-hidden
+    <div className="flex items-center justify-center">
+      <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1.5 shadow-sm">
+        <button
+          type="button"
+          disabled={busy || cur <= 1}
+          onClick={onPrev}
+          className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M15 19l-7-7 7-7"
-          />
-        </svg>
-      </button>
-      <p className="min-w-0 text-center text-[12px] font-semibold text-(--color-text-primary)">
-        Page {cur} of {last}
-        {Number(total) > 0 && (
-          <span className="ml-1.5 font-medium text-(--color-text-secondary) tabular-nums">
-            · {Number(total).toLocaleString()} titles
-          </span>
-        )}
-      </p>
-      <button
-        type="button"
-        disabled={busy || cur >= last}
-        onClick={onNext}
-        aria-label="Next page"
-        className="flex h-8 w-8 items-center justify-center rounded-xl border border-(--color-border-soft) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary) disabled:opacity-40"
-      >
-        <svg
-          className="h-3.5 w-3.5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          strokeWidth="2.5"
-          aria-hidden
+          ← Prev
+        </button>
+        <span className="px-2 text-[12px] font-black tabular-nums text-(--color-text-secondary)">
+          Page {cur}
+          {Number(total) > 0 && (
+            <span className="ml-1.5 font-medium">· {Number(total).toLocaleString()}</span>
+          )}
+        </span>
+        <button
+          type="button"
+          disabled={busy || cur >= last}
+          onClick={onNext}
+          className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30"
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
+          Next →
+        </button>
+      </div>
     </div>
   );
 }
@@ -1502,6 +1479,10 @@ export default function LifeSyncManga() {
   const resumeKeyDone = useRef(null);
 
   const basePath = "/dashboard/lifesync/anime/manga";
+  const fromHome = useMemo(() => {
+    const f = location.state?.from;
+    return typeof f === "string" && f.startsWith(`${basePath}/home`) ? f : null;
+  }, [location.state]);
   const route = useMemo(() => {
     const rel = location.pathname.startsWith(basePath)
       ? location.pathname.slice(basePath.length)
@@ -2904,6 +2885,15 @@ export default function LifeSyncManga() {
             }
             actions={
               <>
+                {fromHome && (
+                  <button
+                    type="button"
+                    onClick={() => navigate(fromHome)}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-(--color-surface) px-3.5 py-2 text-[12px] font-bold text-(--color-text-primary) ring-1 ring-(--color-border-soft) transition hover:brightness-95"
+                  >
+                    <FaArrowLeft className="h-3 w-3" /> Manga Home
+                  </button>
+                )}
                 <ControllerHintBar
                   cols={2}
                   hints={[
@@ -2940,7 +2930,7 @@ export default function LifeSyncManga() {
                 aria-pressed={source === id}
                 className={`rounded-xl px-3.5 py-1.5 text-[12px] font-bold transition-all ${
                   source === id
-                    ? "bg-primary text-(--color-ink-strong) shadow-sm"
+                    ? "bg-primary text-black shadow-sm"
                     : "text-(--color-text-secondary) hover:text-(--color-text-primary)"
                 }`}
               >

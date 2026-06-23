@@ -3,6 +3,7 @@ import { lifesyncFetch } from '../../../../lib/lifesyncApi'
 import { TVCard, TVCardSkeleton, TVPageHints } from '../TVCard'
 import { loadTVSectionFilters, resetTVSectionFilters, saveTVSectionFilters } from '../tvFilterStorage'
 import { useTVCardSelect } from '../useTVCardSelect'
+import { useTVGridMeta } from '../useTVGridMeta'
 
 const COLS = 5
 const BROWSE_TYPE_OPTIONS = [
@@ -45,7 +46,7 @@ function buildAnimeDetailItem(node) {
     }
 }
 
-export function TVAnimeSection({ focusPos, onItemSelect, enabled, filterOpen, onRegisterFilter, onFocusedItemChange, page, onPageChange }) {
+export function TVAnimeSection({ focusPos, onItemSelect, enabled, filterOpen, onRegisterFilter, onFocusedItemChange, onGridMetaChange, page, onPageChange }) {
     const [items, setItems] = useState([])
     const [loading, setLoading] = useState(true)
     const [hasMore, setHasMore] = useState(true)
@@ -154,6 +155,8 @@ export function TVAnimeSection({ focusPos, onItemSelect, enabled, filterOpen, on
         if (!enabled) return
         onFocusedItemChange?.(focusedItem)
     }, [enabled, focusedItem, onFocusedItemChange])
+
+    useTVGridMeta(enabled, items.length, hasMore, onGridMetaChange, loading)
 
     // Stable per-card select handlers so memoized cards don't re-render when an
     // unrelated card gains/loses focus.

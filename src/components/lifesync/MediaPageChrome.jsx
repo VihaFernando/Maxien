@@ -153,7 +153,7 @@ export function MediaArrowButton({ onClick, disabled = false, direction = 'right
 export function mediaChipClass(active) {
     return `whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[11px] font-bold transition-all duration-200 ${
         active
-            ? 'border-primary bg-primary text-(--color-ink-strong) shadow-[0_6px_18px_-6px_rgba(198,255,0,0.5)]'
+            ? 'border-primary bg-primary text-black shadow-[0_6px_18px_-6px_rgba(198,255,0,0.5)]'
             : 'border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) hover:-translate-y-px hover:border-(--color-border-strong) hover:text-(--color-text-primary)'
     }`
 }
@@ -180,38 +180,28 @@ export const mediaPosterFrameClass =
 
 /** Pill pager. */
 export function MediaPager({ page, canPrev, canNext, onPage }) {
-    const pages = []
-    const start = Math.max(1, page - 2)
-    if (start > 1) pages.push(1, '…')
-    for (let p = start; p <= page + 2; p += 1) pages.push(p)
-    if (canNext) pages.push('…')
     return (
-        <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="rounded-full bg-(--color-surface-muted) px-3 py-1 text-[11px] font-bold tabular-nums text-(--color-text-secondary)">
-                Page {page}
-            </p>
-            <div className="flex items-center gap-1 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1 shadow-sm">
-                <MediaArrowButton size="sm" direction="left" disabled={!canPrev} onClick={() => onPage(page - 1)} label="Previous page" />
-                {pages.map((p, idx) =>
-                    typeof p === 'number' ? (
-                        <button
-                            key={p}
-                            type="button"
-                            onClick={() => onPage(p)}
-                            aria-current={p === page ? 'page' : undefined}
-                            className={`min-w-7 rounded-full px-2 py-1 text-[11px] font-black tabular-nums transition-all duration-200 ${
-                                p === page
-                                    ? 'bg-primary text-(--color-ink-strong) shadow-[0_3px_10px_-3px_rgba(198,255,0,0.55)]'
-                                    : 'text-(--color-text-secondary) hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)'
-                            }`}
-                        >
-                            {p}
-                        </button>
-                    ) : (
-                        <span key={`dots-${idx}`} className="px-0.5 text-[11px] text-(--color-text-secondary)">…</span>
-                    ),
-                )}
-                <MediaArrowButton size="sm" direction="right" disabled={!canNext} onClick={() => onPage(page + 1)} label="Next page" />
+        <div className="flex items-center justify-center">
+            <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1.5 shadow-sm">
+                <button
+                    type="button"
+                    disabled={!canPrev}
+                    onClick={() => onPage(page - 1)}
+                    className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30"
+                >
+                    ← Prev
+                </button>
+                <span className="px-2 text-[12px] font-black tabular-nums text-(--color-text-secondary)">
+                    Page {page}
+                </span>
+                <button
+                    type="button"
+                    disabled={!canNext}
+                    onClick={() => onPage(page + 1)}
+                    className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30"
+                >
+                    Next →
+                </button>
             </div>
         </div>
     )

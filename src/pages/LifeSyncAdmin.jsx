@@ -768,7 +768,7 @@ export default function LifeSyncAdmin() {
                             type="button"
                             disabled={loadBusy}
                             onClick={() => load()}
-                            className="w-full rounded-xl bg-primary px-4 py-2.5 text-[12px] font-semibold text-apple-text shadow-sm disabled:opacity-50 sm:w-auto"
+                            className="w-full rounded-xl bg-primary px-4 py-2.5 text-[12px] font-semibold text-black shadow-sm disabled:opacity-50 sm:w-auto"
                         >
                             {loadBusy ? 'Refreshing…' : 'Refresh all data'}
                         </button>
@@ -972,8 +972,8 @@ export default function LifeSyncAdmin() {
                                     aria-pressed={liveOn}
                                     className={`rounded-xl px-4 py-2 text-[12px] font-semibold shadow-sm transition-colors ${
                                         liveOn
-                                            ? 'border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] text-apple-text hover:bg-apple-bg'
-                                            : 'bg-primary text-apple-text'
+                                            ? 'border border-[var(--mx-color-e5e5ea)] bg-(--color-surface) text-white hover:bg-apple-bg'
+                                            : 'bg-primary text-black'
                                     }`}
                                 >
                                     {liveOn ? 'Pause' : 'Start monitor'}
@@ -1611,7 +1611,7 @@ export default function LifeSyncAdmin() {
                                         type="button"
                                         disabled={lookupBusy}
                                         onClick={runLookup}
-                                        className="w-full rounded-xl bg-primary px-4 py-2.5 text-[13px] font-semibold text-apple-text disabled:opacity-50 sm:w-auto"
+                                        className="w-full rounded-xl bg-primary px-4 py-2.5 text-[13px] font-semibold text-black disabled:opacity-50 sm:w-auto"
                                     >
                                         {lookupBusy ? '…' : 'Search'}
                                     </button>

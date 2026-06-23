@@ -66,6 +66,8 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
     const zoomPrevPct     = useRef(60)
     const lastCommittedProg = useRef(0)
     const readProgressRef = useRef(0)
+    const loadedPageCountRef = useRef(0)
+    const pageCountRef = useRef(0)
 
     const zoomScale = clampZoom(zoomPct) / 100
 
@@ -76,15 +78,41 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
         const el = scrollRef.current
         if (!el) return
         const { scrollTop, scrollHeight, clientHeight } = el
-        const max = scrollHeight - clientHeight
-        const p = max <= 0 ? 1 : Math.min(1, Math.max(0, scrollTop / max))
+
+        // The pages wrapper is visually shrunk with `transform: scale()`, which
+        // does NOT change its layout box  so `scrollHeight` reflects the full
+        // *unscaled* height while the content only renders to `scaledHeight`.
+        // At the default 60% zoom that leaves ~40% empty space below the last
+        // page, so a plain scrollTop/(scrollHeight-clientHeight) ratio reaches
+        // 100% long after the reader has actually seen everything. Derive the
+        // real scrollable extent from the wrapper's rendered (scaled) height.
+        const inner = pagesInnerRef.current
+        let max = scrollHeight - clientHeight
+        if (inner) {
+            const scaledContentBottom = inner.offsetTop + inner.offsetHeight * zoomScale
+            const usableMax = Math.max(0, scaledContentBottom - clientHeight)
+            // Never exceed the actual scrollable range of the container.
+            max = Math.min(max, usableMax)
+        }
+
+        // `max <= 0` means the content fits the viewport with no scrolling.
+        // That is genuinely "fully read" only once every page image has loaded;
+        // while images are still streaming in the wrapper is briefly short, so
+        // report position-based progress (0 at the top) to avoid a 100% flash.
+        let p
+        if (max <= 0) {
+            const allLoaded = pageCountRef.current > 0 && loadedPageCountRef.current >= pageCountRef.current
+            p = allLoaded ? 1 : (scrollTop > 0 ? 1 : 0)
+        } else {
+            p = Math.min(1, Math.max(0, scrollTop / max))
+        }
         readProgressRef.current = p
         const prev = lastCommittedProg.current
         if (p === 0 || p === 1 || Math.abs(p - prev) >= 0.005) {
             lastCommittedProg.current = p
             setReadProgress(p)
         }
-    }, [])
+    }, [zoomScale])
 
     const scheduleProgressUpdate = useCallback(() => {
         if (scrollRafRef.current != null) cancelAnimationFrame(scrollRafRef.current)
@@ -97,6 +125,7 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
     const onReaderScroll = useCallback(() => scheduleProgressUpdate(), [scheduleProgressUpdate])
 
     const onPageImageLoad = useCallback(() => {
+        loadedPageCountRef.current += 1
         if (imageLoadRafRef.current != null) return
         imageLoadRafRef.current = requestAnimationFrame(() => {
             imageLoadRafRef.current = null
@@ -149,6 +178,8 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
             setReadProgress(0)
             lastCommittedProg.current = 0
             readProgressRef.current = 0
+            loadedPageCountRef.current = 0
+            pageCountRef.current = 0
             const el = scrollRef.current
             if (el) el.scrollTop = 0
         })
@@ -163,7 +194,9 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
         lifesyncFetch(`${endpoint}?view=full`)
             .then(data => {
                 if (cancelRef.current) return
-                setPages(Array.isArray(data?.pages) ? data.pages.filter(Boolean) : [])
+                const nextPages = Array.isArray(data?.pages) ? data.pages.filter(Boolean) : []
+                pageCountRef.current = nextPages.length
+                setPages(nextPages)
             })
             .catch(e => { if (!cancelRef.current) setError(e?.message || 'Failed to load chapter') })
             .finally(() => { if (!cancelRef.current) setLoading(false) })
@@ -360,6 +393,7 @@ export function TVMangaReader({ mangaId, chapterId: initialChapterId, source, al
                                 src={src}
                                 alt={`Page ${i + 1}`}
                                 className="w-full bg-black"
+                                referrerPolicy="no-referrer"
                                 loading={i < INITIAL_PAGE_BURST ? 'eager' : 'lazy'}
                                 fetchPriority={i < INITIAL_PAGE_BURST ? 'high' : 'low'}
                                 decoding="async"

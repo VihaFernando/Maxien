@@ -81,9 +81,22 @@ export function upsertProgressLocal(payload, { savedAt } = {}) {
     if (!bookId) return null
 
     const nowIso = typeof savedAt === 'string' && savedAt ? savedAt : new Date().toISOString()
-    const next = { ...payload, bookId, savedAt: nowIso }
-
     const prevProgress = progressByBookId.get(bookId)
+
+    // Carry forward the last-synced fingerprint so a re-save of the SAME position doesn't
+    // erase it — otherwise the flush change-detector would treat it as new and re-POST.
+    const next = {
+        ...payload,
+        bookId,
+        savedAt: nowIso,
+        ...(payload?.lastSyncedFingerprint === undefined && prevProgress?.lastSyncedFingerprint
+            ? { lastSyncedFingerprint: prevProgress.lastSyncedFingerprint }
+            : {}),
+        ...(payload?.lastSyncedAt === undefined && prevProgress?.lastSyncedAt
+            ? { lastSyncedAt: prevProgress.lastSyncedAt }
+            : {}),
+    }
+
     const prevUpdatedAt = Date.parse(String(prevProgress?.updatedAt || prevProgress?.savedAt || ''))
     const nextUpdatedAt = Date.parse(String(next.updatedAt || next.savedAt || ''))
 

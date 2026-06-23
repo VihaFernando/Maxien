@@ -30,6 +30,11 @@ import { TVHManhwaSection } from './tv/sections/TVHManhwaSection'
 import { TVMangaDNASection } from './tv/sections/TVMangaDNASection'
 import { TVHentaiSection } from './tv/sections/TVHentaiSection'
 import { TVHistorySection } from './tv/sections/TVHistorySection'
+import { TVAnimeHomeSection } from './tv/sections/TVAnimeHomeSection'
+import { TVMangaHomeSection } from './tv/sections/TVMangaHomeSection'
+import { TVMangaDNAHomeSection } from './tv/sections/TVMangaDNAHomeSection'
+import { TVHManhwaHomeSection } from './tv/sections/TVHManhwaHomeSection'
+import { TVHentaiHomeSection } from './tv/sections/TVHentaiHomeSection'
 
 const LOW_END = readStoredReduceAnimationsSetting() === true
 
@@ -538,12 +543,20 @@ function LifeSyncTVModeInner({ onExit }) {
     const [pageJumpOpen, setPageJumpOpen] = useState(false)
     const [pageJumpValue, setPageJumpValue] = useState('')
     const [focusedItem, setFocusedItem] = useState(null)
+    // Grid metadata reported by the active section so the shell can clamp focus
+    // to real items and cross pages at the grid edges. { count, hasMore }
+    const [gridMeta, setGridMeta] = useState({ count: 0, hasMore: false })
     const [showIntro, setShowIntro] = useState(() => Boolean(ctx?.playIntroRef?.current))
     const [mangaReaderBackBlocked, setMangaReaderBackBlocked] = useState(false)
     const lastStartPressRef = useRef(0)
     const lastAPressRef = useRef(0)
     const lastPagePressRef = useRef(0)
     const inputBlockUntilRef = useRef(0)
+    // When crossing to a previous page via UP/LEFT we don't yet know that page's
+    // item count, so we record where focus should land ('bottom' = last row same
+    // col, 'last' = final item) and resolve it once the new grid meta arrives.
+    const pendingFocusRef = useRef(null)
+    const lastEdgePagePressRef = useRef(0)
 
     const activeTab = tabs[activeTabIdx]
     const currentPage = pageByTab[activeTab?.id] || 1
@@ -561,6 +574,13 @@ function LifeSyncTVModeInner({ onExit }) {
     const flatIndex = (detailItem || filterOpen) ? -1 : (focusPos.row * cols + focusPos.col)
     useFocusedCardScroll(flatIndex)
 
+    // Mirrors of focus/cols so the stable grid-meta callback can clamp focus
+    // without depending on (and thus being recreated by) every focus move.
+    const focusPosRef = useRef(focusPos)
+    const colsRef = useRef(cols)
+    useEffect(() => { focusPosRef.current = focusPos }, [focusPos])
+    useEffect(() => { colsRef.current = cols }, [cols])
+
     // Reset per-section state when the active tab changes.
     // Using a ref + synchronous guard avoids setState-in-effect lint errors while
     // still resetting focus/detail/filter immediately on the same render cycle.
@@ -573,6 +593,7 @@ function LifeSyncTVModeInner({ onExit }) {
         if (detailItem !== null) setDetailItem(null)
         if (focusedItem !== null) setFocusedItem(null)
         if (filterOpen) setFilterOpen(false)
+        if (gridMeta.count !== 0 || gridMeta.hasMore) setGridMeta({ count: 0, hasMore: false })
     }
 
     // Exit confirmation is shown whenever the exit tab is active OR was opened via B/START.
@@ -610,6 +631,32 @@ function LifeSyncTVModeInner({ onExit }) {
         const idx = tabs.findIndex(tab => tab.id === tabId)
         if (idx >= 0) setActiveTabIdx(idx)
     }, [tabs])
+
+    // Cross to the previous/next page at a grid edge. `landing` decides where
+    // focus settles: 'first' = top-left (forward), 'bottom' = last row same col,
+    // 'last' = final item (both backward, resolved once the page reports its count).
+    const crossToAdjacentPage = useCallback((dir, landing) => {
+        const now = Date.now()
+        // Debounce so a held D-pad can't skip several pages in one press-repeat burst.
+        if (now - lastEdgePagePressRef.current < 360) return
+        lastEdgePagePressRef.current = now
+
+        if (dir > 0) {
+            setCurrentPage(p => p + 1)
+            setFocusPos({ row: 0, col: 0 })
+        } else {
+            // Guard against paging below 1.
+            let willPage = false
+            setCurrentPage(p => {
+                if (p <= 1) return p
+                willPage = true
+                return p - 1
+            })
+            if (willPage) {
+                pendingFocusRef.current = { type: landing, col: focusPos.col, cols }
+            }
+        }
+    }, [cols, focusPos.col, setCurrentPage])
 
     const setHistoryFocusedStatus = useCallback(async () => {
         if (activeTab?.id !== 'history' || !focusedItem) return
@@ -672,19 +719,72 @@ function LifeSyncTVModeInner({ onExit }) {
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_LEFT]: () => {
             if (blocked) return
-            setFocusPos(pos => movePos(pos, 'left', 999, cols))
+            // Home: single-column tile list — left/right have no meaning, ignore.
+            if (activeTab?.id === 'home') return
+            const count = gridMeta.count
+            if (count <= 0) return
+            const next = movePos(focusPos, 'left', count, cols)
+            // At the very first item: cross to the previous page's last item.
+            if (next.row === focusPos.row && next.col === focusPos.col &&
+                focusPos.row === 0 && focusPos.col === 0 && currentPage > 1) {
+                crossToAdjacentPage(-1, 'last')
+                return
+            }
+            setFocusPos(next)
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_RIGHT]: () => {
             if (blocked) return
-            setFocusPos(pos => movePos(pos, 'right', 999, cols))
+            // Home: single-column tile list — pressing right opens the focused tile.
+            if (activeTab?.id === 'home') {
+                const homeTabs = tabs.filter(tab => !tab.isHome && !tab.isExit)
+                const target = homeTabs[focusPos.row]
+                if (target) setActiveTabIdx(tabs.findIndex(tab => tab.id === target.id))
+                return
+            }
+            const count = gridMeta.count
+            if (count <= 0) return
+            const next = movePos(focusPos, 'right', count, cols)
+            // At the very last item: cross to the next page's first item.
+            if (next.row === focusPos.row && next.col === focusPos.col &&
+                (focusPos.row * cols + focusPos.col) >= count - 1 && gridMeta.hasMore) {
+                crossToAdjacentPage(1, 'first')
+                return
+            }
+            setFocusPos(next)
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
             if (blocked) return
-            setFocusPos(pos => movePos(pos, 'up', 999, cols))
+            if (activeTab?.id === 'home') {
+                const homeTabs = tabs.filter(tab => !tab.isHome && !tab.isExit)
+                setFocusPos(pos => ({ row: Math.max(0, pos.row - 1), col: 0 }))
+                return
+            }
+            const count = gridMeta.count
+            if (count <= 0) return
+            // At the top row: cross to the previous page, keeping the column.
+            if (focusPos.row === 0 && currentPage > 1) {
+                crossToAdjacentPage(-1, 'bottom')
+                return
+            }
+            setFocusPos(movePos(focusPos, 'up', count, cols))
         },
         [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
             if (blocked) return
-            setFocusPos(pos => movePos(pos, 'down', 999, cols))
+            if (activeTab?.id === 'home') {
+                const homeTabs = tabs.filter(tab => !tab.isHome && !tab.isExit)
+                setFocusPos(pos => ({ row: Math.min(homeTabs.length - 1, pos.row + 1), col: 0 }))
+                return
+            }
+            const count = gridMeta.count
+            if (count <= 0) return
+            const next = movePos(focusPos, 'down', count, cols)
+            // Already on the last row: cross to the next page if one exists.
+            if (next.row === focusPos.row && next.col === focusPos.col &&
+                focusPos.row >= maxRow(count, cols) && gridMeta.hasMore) {
+                crossToAdjacentPage(1, 'first')
+                return
+            }
+            setFocusPos(next)
         },
         [XBOX_GAMEPAD_BUTTONS.A]: () => {
             if (blocked) return
@@ -693,7 +793,7 @@ function LifeSyncTVModeInner({ onExit }) {
             lastAPressRef.current = now
             if (activeTab?.id === 'home') {
                 const homeTabs = tabs.filter(tab => !tab.isHome && !tab.isExit)
-                const target = homeTabs[focusPos.row]
+                const target = homeTabs[Math.min(focusPos.row, homeTabs.length - 1)]
                 if (target) setActiveTabIdx(tabs.findIndex(tab => tab.id === target.id))
                 return
             }
@@ -734,7 +834,7 @@ function LifeSyncTVModeInner({ onExit }) {
             if (filterOpen) { setFilterOpen(false); return }
             setActiveTabIdx(tabs.length - 1)
         },
-    }), [activeTab?.id, blocked, canPageJump, cols, currentPage, detailItem, filterOpen, filterPanel?.filterConfig?.length, focusedItem, focusPos.row, mangaReaderBackBlocked, pageJumpOpen, playerState, setCurrentPage, setHistoryFocusedStatus, showExitConfirm, tabs])
+    }), [activeTab?.id, blocked, canPageJump, cols, crossToAdjacentPage, currentPage, detailItem, filterOpen, filterPanel?.filterConfig?.length, focusedItem, focusPos, gridMeta.count, gridMeta.hasMore, mangaReaderBackBlocked, pageJumpOpen, playerState, setCurrentPage, setHistoryFocusedStatus, showExitConfirm, tabs])
 
     const confirmPageJump = useCallback(() => {
         const next = Number.parseInt(pageJumpValue, 10)
@@ -765,6 +865,41 @@ function LifeSyncTVModeInner({ onExit }) {
         setFilterPanel(data)
     }, [])
 
+    const handleGridMeta = useCallback((meta) => {
+        const count = Number(meta?.count) || 0
+        const hasMore = Boolean(meta?.hasMore)
+
+        // Land focus at the requested spot once a back-navigated page has loaded.
+        const pending = pendingFocusRef.current
+        if (pending && count > 0) {
+            pendingFocusRef.current = null
+            const lastRow = maxRow(count, pending.cols)
+            const lastRowCols = colsInRow(count, pending.cols, lastRow)
+            const col = pending.type === 'last'
+                ? lastRowCols - 1
+                : Math.min(pending.col, lastRowCols - 1)
+            setFocusPos({ row: lastRow, col: Math.max(0, col) })
+        } else if (count > 0) {
+            // No pending intent: snap focus back into range if the freshly loaded
+            // page (or a history sub-tab switch) holds fewer items than before.
+            const pos = focusPosRef.current
+            const c = colsRef.current
+            const lastRow = maxRow(count, c)
+            if (pos.row > lastRow) {
+                const lastRowCols = colsInRow(count, c, lastRow)
+                setFocusPos({ row: lastRow, col: Math.max(0, Math.min(pos.col, lastRowCols - 1)) })
+            } else {
+                const rowCols = colsInRow(count, c, pos.row)
+                if (pos.col > rowCols - 1) setFocusPos({ row: pos.row, col: Math.max(0, rowCols - 1) })
+            }
+        }
+
+        setGridMeta(prev => {
+            if (prev.count === count && prev.hasMore === hasMore) return prev
+            return { count, hasMore }
+        })
+    }, [])
+
     const sectionCommonProps = useMemo(() => ({
         focusPos,
         onItemSelect: setDetailItem,
@@ -772,15 +907,19 @@ function LifeSyncTVModeInner({ onExit }) {
         filterOpen,
         onRegisterFilter: handleRegisterFilter,
         onFocusedItemChange: setFocusedItem,
+        onGridMetaChange: handleGridMeta,
         page: currentPage,
         onPageChange: setCurrentPage,
-    }), [currentPage, filterOpen, focusPos, handleRegisterFilter, setCurrentPage])
+    }), [currentPage, filterOpen, focusPos, handleGridMeta, handleRegisterFilter, setCurrentPage])
 
+    const HOME_TABS = new Set(['anime', 'manga', 'hmanhwa', 'mangadna', 'hentai'])
     const pageSubtitle = activeTab?.id === 'home'
         ? 'Choose a destination'
-        : activeTab?.id !== 'history' && activeTab?.id !== 'exit'
-        ? `Page ${currentPage} · ${tvHintLabel('LT/RT', shellInputSource)} to change`
-        : activeTab?.id === 'history' ? 'Your watch & reading history' : null
+        : activeTab?.id === 'history' ? 'Your watch & reading history'
+        : activeTab?.id === 'exit' ? null
+        : HOME_TABS.has(activeTab?.id) && currentPage === 1
+        ? `Home · ${tvHintLabel('RT', shellInputSource)} to browse`
+        : `Page ${currentPage - 1} · ${tvHintLabel('LT/RT', shellInputSource)} to change`
 
     return (
         <div className="fixed inset-0 z-9999 flex h-dvh w-full flex-col overflow-hidden bg-[#07070b] text-white" style={{ cursor: 'none' }}>
@@ -815,7 +954,7 @@ function LifeSyncTVModeInner({ onExit }) {
 
                     <AnimatePresence mode="wait">
                         <Motion.div
-                            key={activeTab?.id}
+                            key={`${activeTab?.id}-${currentPage === 1 ? 'home' : 'browse'}`}
                             className={activeTab?.id === 'home' ? 'h-full' : undefined}
                             initial={{ opacity: 0, x: 40 }}
                             animate={{ opacity: 1, x: 0 }}
@@ -823,11 +962,16 @@ function LifeSyncTVModeInner({ onExit }) {
                             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                         >
                             {activeTab?.id === 'home' && <TVHomeSection tabs={tabs} focusPos={focusPos} onOpenTab={openTabById} />}
-                            {activeTab?.id === 'anime' && <TVAnimeSection {...sectionCommonProps} />}
-                            {activeTab?.id === 'manga' && <TVMangaSection {...sectionCommonProps} />}
-                            {activeTab?.id === 'hmanhwa' && <TVHManhwaSection {...sectionCommonProps} />}
-                            {activeTab?.id === 'mangadna' && <TVMangaDNASection {...sectionCommonProps} />}
-                            {activeTab?.id === 'hentai' && <TVHentaiSection {...sectionCommonProps} />}
+                            {activeTab?.id === 'anime' && currentPage === 1 && <TVAnimeHomeSection {...sectionCommonProps} />}
+                            {activeTab?.id === 'anime' && currentPage > 1 && <TVAnimeSection {...sectionCommonProps} page={currentPage - 1} />}
+                            {activeTab?.id === 'manga' && currentPage === 1 && <TVMangaHomeSection {...sectionCommonProps} />}
+                            {activeTab?.id === 'manga' && currentPage > 1 && <TVMangaSection {...sectionCommonProps} page={currentPage - 1} />}
+                            {activeTab?.id === 'hmanhwa' && currentPage === 1 && <TVHManhwaHomeSection {...sectionCommonProps} />}
+                            {activeTab?.id === 'hmanhwa' && currentPage > 1 && <TVHManhwaSection {...sectionCommonProps} page={currentPage - 1} />}
+                            {activeTab?.id === 'mangadna' && currentPage === 1 && <TVMangaDNAHomeSection {...sectionCommonProps} />}
+                            {activeTab?.id === 'mangadna' && currentPage > 1 && <TVMangaDNASection {...sectionCommonProps} page={currentPage - 1} />}
+                            {activeTab?.id === 'hentai' && currentPage === 1 && <TVHentaiHomeSection {...sectionCommonProps} />}
+                            {activeTab?.id === 'hentai' && currentPage > 1 && <TVHentaiSection {...sectionCommonProps} page={currentPage - 1} />}
                             {activeTab?.id === 'history' && <TVHistorySection {...sectionCommonProps} />}
                             {activeTab?.id === 'exit' && (
                                 <div className="flex min-h-[60vh] items-center justify-center">

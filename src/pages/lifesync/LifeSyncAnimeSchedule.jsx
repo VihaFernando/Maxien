@@ -475,7 +475,7 @@ export default function LifeSyncAnimeSchedule() {
                 </span>
                 {count > 0 ? (
                   <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold tabular-nums ${
-                    isActive ? "bg-primary text-(--color-ink-strong)" : "bg-(--color-surface-muted) text-(--color-text-secondary)"
+                    isActive ? "bg-primary text-black" : "bg-(--color-surface-muted) text-(--color-text-secondary)"
                   }`}>
                     {count}
                   </span>

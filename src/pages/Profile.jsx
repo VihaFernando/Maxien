@@ -1215,6 +1215,46 @@ export default function Profile() {
                                                 />
                                             </button>
                                         </div>
+
+                                        {/* In-app notification categories (manga chapters, anime episodes, wishlist drops, deals) */}
+                                        {lifeSyncUser && (
+                                            <div className="mt-6 border-t border-[var(--color-border-soft)] pt-6">
+                                                <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">In-app notifications</p>
+                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                                                    Choose which alerts appear in your notification bell.
+                                                </p>
+                                                <div className="mt-4 space-y-3">
+                                                    {[
+                                                        { key: "notifyManga", label: "New manga chapters" },
+                                                        { key: "notifyAnime", label: "New anime episodes" },
+                                                        { key: "notifyWishlist", label: "Wishlist price drops" },
+                                                        { key: "notifyDeals", label: "Game deal digest" },
+                                                    ].map(({ key, label }) => {
+                                                        const on = lifeSyncUser?.preferences?.[key] !== false
+                                                        return (
+                                                            <div key={key} className="flex items-center justify-between gap-4">
+                                                                <span className="text-[13px] text-[var(--color-text-primary)]">{label}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    role="switch"
+                                                                    aria-checked={on}
+                                                                    onClick={async () => {
+                                                                        try {
+                                                                            await lifeSyncUpdatePreferences({ [key]: !on })
+                                                                        } catch (e) {
+                                                                            setError(e?.message || "Could not update notification preference")
+                                                                        }
+                                                                    }}
+                                                                    className={`relative h-6 w-11 flex-shrink-0 rounded-full transition-colors ${on ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"}`}
+                                                                >
+                                                                    <span className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${on ? "translate-x-5" : ""}`} />
+                                                                </button>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

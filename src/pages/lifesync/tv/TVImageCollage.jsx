@@ -107,7 +107,7 @@ function Cell({ src, className = '' }) {
     return (
         <div className={`relative overflow-hidden ${className}`}>
             {src
-                ? <img src={src} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" draggable={false} />
+                ? <img src={src} alt="" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full object-cover" loading="lazy" draggable={false} />
                 : <div className="absolute inset-0 bg-white/4" />
             }
         </div>

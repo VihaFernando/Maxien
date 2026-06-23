@@ -16,6 +16,7 @@ const Tasks = lazy(() => import('./pages/Tasks'))
 const Projects = lazy(() => import('./pages/Projects'))
 const TaskTypes = lazy(() => import('./pages/TaskTypes'))
 const Notes = lazy(() => import('./pages/Notes'))
+const Feed = lazy(() => import('./pages/Feed'))
 const Workplaces = lazy(() => import('./pages/Workplaces'))
 const WorkplaceDetail = lazy(() => import('./pages/WorkplaceDetail'))
 const Calendar = lazy(() => import('./pages/Calendar'))
@@ -53,7 +54,10 @@ const PWAEngagementNotifications = lazy(() => import('./components/PWAEngagement
 const LifeSyncAnimeWatch = lazy(() => import('./pages/lifesync/LifeSyncAnimeWatch'))
 const LifeSyncMangaRead = lazy(() => import('./pages/lifesync/LifeSyncMangaRead'))
 const LifeSyncMangaLibrary = lazy(() => import('./pages/lifesync/LifeSyncMangaLibrary'))
+const LifeSyncMangaHome = lazy(() => import('./pages/lifesync/LifeSyncMangaHome'))
+const LifeSyncHentaiHome = lazy(() => import('./pages/lifesync/LifeSyncHentaiHome'))
 const LifeSyncAnimeHistory = lazy(() => import('./pages/lifesync/LifeSyncAnimeHistory'))
+const LifeSyncAnimeLibrary = lazy(() => import('./pages/lifesync/LifeSyncAnimeLibrary'))
 
 function App() {
   return (
@@ -75,6 +79,7 @@ function App() {
                     <Route path="ai-assistant" element={<AIAssistant />} />
                     <Route path="task-types" element={<TaskTypes />} />
                     <Route path="notes" element={<Notes />} />
+                    <Route path="feed" element={<Feed />} />
                     <Route path="workplaces" element={<Workplaces />} />
                     <Route path="workplaces/:id" element={<WorkplaceDetail />} />
                     <Route path="profile" element={<Profile />} />
@@ -95,7 +100,10 @@ function App() {
                       <Route path="anime/watch/:animeId/:ep" element={<LifeSyncAnimeWatch />} />
                       <Route path="manga/read/:mangaId/:chapterId" element={<LifeSyncMangaRead />} />
                       <Route path="manga/library" element={<LifeSyncMangaLibrary />} />
+                      <Route path="manga/home" element={<LifeSyncMangaHome />} />
+                      <Route path="hentai/home" element={<LifeSyncHentaiHome />} />
                       <Route path="anime/history" element={<LifeSyncAnimeHistory />} />
+                      <Route path="anime/library" element={<LifeSyncAnimeLibrary />} />
                       <Route path="anime/calendar" element={<LifeSyncAnimeCalendar />} />
                       <Route path="anime/schedule" element={<LifeSyncAnimeSchedule />} />
                       <Route path="anime/*" element={<LifeSyncAnime />} />
