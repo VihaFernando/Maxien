@@ -282,6 +282,25 @@ html[data-maxien-theme='dark'] .lifesync-scene-bg-active .lifesync-games-glass:h
   background: rgba(21, 20, 24, 0.8) !important;
 }
 
+/* Finance page: main grid (Expense Breakdown + Recent Activity) */
+/* On desktop: fixed viewport height so cards don't overflow below fold */
+/* On mobile/tablet: auto height so stacked cards size naturally */
+@media (min-width: 1024px) {
+  .finance-main-grid {
+    height: calc(100vh - 320px);
+    min-height: 420px;
+  }
+  .finance-main-card {
+    min-height: 0;
+    overflow: hidden;
+  }
+}
+@media (max-width: 1023px) {
+  .finance-main-card {
+    min-height: 400px;
+  }
+}
+
 .lifesync-scene-bg-active [class*="border-white"] {
   border-color: rgba(148, 163, 184, 0.28) !important;
 }
