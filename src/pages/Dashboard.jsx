@@ -18,6 +18,7 @@ import {
     FaGamepad,
     FaFilm,
     FaUserShield,
+    FaChartPie,
 } from "react-icons/fa"
 import AIShortcutHint from "../components/AIShortcutHint"
 import NotificationBell from "../components/lifesync/NotificationBell"
@@ -248,12 +249,13 @@ function DashboardInner() {
     const personalLinks = useMemo(() => {
         const base = [
             { to: "/dashboard", icon: FaHome, label: "Overview" },
-            { to: "/dashboard/github", icon: FaGithub, label: "GitHub" },
-            { to: "/dashboard/subscriptions", icon: FaWallet, label: "Subscriptions" },
             { to: "/dashboard/tasks", icon: FaCheckSquare, label: "Tasks" },
             { to: "/dashboard/projects", icon: FaFolder, label: "Projects" },
             { to: "/dashboard/calendar", icon: FaCalendarAlt, label: "Calendar" },
             { to: "/dashboard/notes", icon: FaStickyNote, label: "Notes" },
+            { to: "/dashboard/finance", icon: FaChartPie, label: "Finance" },
+            { to: "/dashboard/subscriptions", icon: FaWallet, label: "Subscriptions" },
+            { to: "/dashboard/github", icon: FaGithub, label: "GitHub" },
             { to: "/dashboard/ai-assistant", icon: FaBrain, label: "AI Assistant" },
         ]
         return base
@@ -464,31 +466,31 @@ function DashboardInner() {
                     )}
                 </div>
 
-                <div className="mt-auto px-5 pb-5">
+                <div className="mt-auto px-4 pb-4">
                     <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} onOpenTVMode={isLifeSyncConnected ? openTVMode : null} />
-                    <div className="bg-[var(--mx-color-f5f5f7)] rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mt-2 px-1 py-1.5 rounded-xl hover:bg-[var(--mx-color-f5f5f7)] transition-colors">
                         <button
                             type="button"
                             onClick={handleOpenProfile}
-                            className="mb-3 flex w-full items-center gap-3 rounded-xl p-1 text-left transition-colors hover:bg-[var(--color-surface)]/70"
+                            className="flex items-center gap-2 flex-1 min-w-0 text-left"
                         >
                             {user?.user_metadata?.picture ? (
-                                <img src={user.user_metadata.picture} alt="Avatar" className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5" />
+                                <img src={user.user_metadata.picture} alt="Avatar" className="w-7 h-7 rounded-full object-cover ring-1 ring-black/5 flex-shrink-0" />
                             ) : (
-                                <div className="w-9 h-9 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-sm ring-1 ring-black/5">
+                                <div className="w-7 h-7 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-[11px] ring-1 ring-black/5 flex-shrink-0">
                                     {initials}
                                 </div>
                             )}
-                            <div className="min-w-0">
-                                <p className="text-[12px] font-bold text-[var(--color-text-primary)] truncate">{profileName}</p>
-                                <p className="text-[10px] font-medium text-[var(--color-text-secondary)] truncate">{user?.email}</p>
-                            </div>
+                            <p className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate">{profileName}</p>
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); handleSignOut() }}
-                            className="w-full bg-[var(--color-surface)] hover:bg-red-50 text-red-500 font-semibold py-2 rounded-lg text-[12px] transition-all border border-[var(--mx-color-d2d2d7)] active:scale-[0.98]"
+                            title="Sign out"
+                            className="flex-shrink-0 p-1.5 rounded-lg text-[var(--color-text-secondary)] hover:text-red-500 hover:bg-red-50 transition-colors"
                         >
-                            Sign Out
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
                         </button>
                     </div>
                 </div>
@@ -566,31 +568,31 @@ function DashboardInner() {
                         </div>
                     )}
 
-                    <div className="mt-auto pt-5 border-t border-[var(--mx-color-e5e5ea)]">
+                    <div className="mt-auto pt-3 border-t border-[var(--mx-color-e5e5ea)]">
                         <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} onOpenTVMode={isLifeSyncConnected ? openTVMode : null} />
-                        <div className="rounded-2xl p-4">
+                        <div className="flex items-center gap-2 mt-2 px-1 py-1.5 rounded-xl hover:bg-[var(--mx-color-f5f5f7)] transition-colors">
                             <button
                                 type="button"
                                 onClick={handleOpenProfile}
-                                className="mb-3 flex w-full items-center gap-3 rounded-xl p-1 text-left transition-colors hover:bg-[var(--color-surface)]/70"
+                                className="flex items-center gap-2 flex-1 min-w-0 text-left"
                             >
                                 {user?.user_metadata?.picture ? (
-                                    <img src={user.user_metadata.picture} alt="Avatar" className="w-9 h-9 rounded-full object-cover ring-1 ring-black/5" />
+                                    <img src={user.user_metadata.picture} alt="Avatar" className="w-7 h-7 rounded-full object-cover ring-1 ring-black/5 shrink-0" />
                                 ) : (
-                                    <div className="w-9 h-9 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-sm ring-1 ring-black/5">
+                                    <div className="w-7 h-7 rounded-full bg-[var(--color-surface)] flex items-center justify-center text-[var(--color-text-primary)] font-bold text-[11px] ring-1 ring-black/5 shrink-0">
                                         {initials}
                                     </div>
                                 )}
-                                <div className="min-w-0">
-                                    <p className="text-[12px] font-bold text-[var(--color-text-primary)] truncate">{profileName}</p>
-                                    <p className="text-[10px] font-medium text-[var(--color-text-secondary)] truncate">{user?.email}</p>
-                                </div>
+                                <p className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate">{profileName}</p>
                             </button>
                             <button
                                 onClick={(e) => { e.stopPropagation(); handleSignOut() }}
-                                className="w-full bg-[var(--color-surface)] hover:bg-red-50 text-red-500 font-semibold py-2 rounded-lg text-[12px] transition-all border border-[var(--mx-color-d2d2d7)] active:scale-[0.98]"
+                                title="Sign out"
+                                className="shrink-0 p-1.5 rounded-lg text-[var(--color-text-secondary)] hover:text-red-500 hover:bg-red-50 transition-colors"
                             >
-                                Sign Out
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
                             </button>
                         </div>
                     </div>

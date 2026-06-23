@@ -21,6 +21,7 @@ const Workplaces = lazy(() => import('./pages/Workplaces'))
 const WorkplaceDetail = lazy(() => import('./pages/WorkplaceDetail'))
 const Calendar = lazy(() => import('./pages/Calendar'))
 const AIAssistant = lazy(() => import('./pages/AIAssistant'))
+const Finance = lazy(() => import('./pages/Finance'))
 const LifeSyncAdmin = lazy(() => import('./pages/LifeSyncAdmin'))
 const GithubCallback = lazy(() => import('./pages/GithubCallback'))
 const Github = lazy(() => import('./pages/Github'))
@@ -79,6 +80,7 @@ function App() {
                     <Route path="ai-assistant" element={<AIAssistant />} />
                     <Route path="task-types" element={<TaskTypes />} />
                     <Route path="notes" element={<Notes />} />
+                    <Route path="finance" element={<Finance />} />
                     <Route path="feed" element={<Feed />} />
                     <Route path="workplaces" element={<Workplaces />} />
                     <Route path="workplaces/:id" element={<WorkplaceDetail />} />
