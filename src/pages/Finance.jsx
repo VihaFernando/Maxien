@@ -1254,9 +1254,13 @@ function ExpensesTab({ user, period, expenseCategories, expenseEntries, subscrip
                                         left={e.category_name}
                                         sub={e.note || fmtDate(e.entry_date)}
                                         detail={e.note ? fmtDate(e.entry_date) : null}
-                                        badge={e.is_from_subscription && (
-                                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 leading-none">SUB</span>
-                                        )}
+                                        badge={
+                                            e.is_cc_repayment
+                                                ? <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-600 leading-none shrink-0">CC REPAY</span>
+                                                : e.is_from_subscription
+                                                    ? <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-600 leading-none shrink-0">SUB</span>
+                                                    : null
+                                        }
                                         right={`−${fmt(e.amount_lkr)}`}
                                         rightColor="red"
                                         onDelete={() => handleDeleteEntry(e.id)}
@@ -1426,10 +1430,30 @@ function CreditCardsTab({ user, period, creditCards, onRefreshCards }) {
         if (!selectedCardId) return
         setRepayLoading(true); setRepayErr("")
         const amount = Number(repayAmount)
+        const cardLabel = selectedCard.nickname || `${selectedCard.bank_name} ${selectedCard.card_network}`
+        const expNote = `CC Repayment · ${cardLabel}${repayNote.trim() ? " · " + repayNote.trim() : ""}`
+
+        // Auto-create cash expense entry so it reduces from cash balance
+        const { data: expEntry, error: expError } = await supabase
+            .from("finance_expense_entries")
+            .insert({
+                user_id: user.id, period_id: period?.id || null,
+                category_name: "Credit Card Repayment",
+                amount_original: amount, currency_original: "LKR", amount_lkr: amount,
+                note: expNote, entry_date: repayDate,
+                is_cc_repayment: true,
+            })
+            .select("id")
+            .single()
+
+        if (expError) { setRepayErr(expError.message); setRepayLoading(false); return }
+
+        // Insert repayment record linked to the expense entry
         const { error } = await supabase.from("finance_cc_repayments").insert({
             user_id: user.id, card_id: selectedCardId,
             period_id: period?.id || null,
             amount_lkr: amount, note: repayNote.trim() || null, entry_date: repayDate,
+            linked_expense_id: expEntry.id,
         })
         if (!error) {
             const newBal = Math.max(Number(selectedCard.current_balance_lkr) - amount, 0)
@@ -1442,8 +1466,13 @@ function CreditCardsTab({ user, period, creditCards, onRefreshCards }) {
     }
 
     const handleDeleteRepayment = async (entry) => {
-        if (!window.confirm("Delete this repayment?")) return
+        if (!window.confirm("Delete this repayment? The linked cash expense will also be removed.")) return
+        // Delete the linked expense entry first (if exists)
+        if (entry.linked_expense_id) {
+            await supabase.from("finance_expense_entries").delete().eq("id", entry.linked_expense_id)
+        }
         await supabase.from("finance_cc_repayments").delete().eq("id", entry.id)
+        // Restore card balance
         const newBal = Number(selectedCard.current_balance_lkr) + Number(entry.amount_lkr)
         await supabase.from("finance_credit_cards").update({ current_balance_lkr: newBal }).eq("id", selectedCardId)
         onRefreshCards(); loadCardEntries(selectedCardId)
