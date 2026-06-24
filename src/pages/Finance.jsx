@@ -487,6 +487,7 @@ export default function Finance() {
     const [incomeEntries, setIncomeEntries] = useState([])
     const [expenseEntries, setExpenseEntries] = useState([])
     const [subscriptions, setSubscriptions] = useState([])
+    const [creditCards, setCreditCards] = useState([])
     const [loading, setLoading] = useState(true)
 
     const loadEntriesForPeriod = useCallback(async (periodRow) => {
@@ -507,14 +508,16 @@ export default function Finance() {
             // Auto-create this month's period if it doesn't exist yet
             const currentMonthPeriod = await ensureMonthPeriod(user.id, now.getFullYear(), now.getMonth())
 
-            const [typesRes, catsRes, subsRes] = await Promise.all([
+            const [typesRes, catsRes, subsRes, cardsRes] = await Promise.all([
                 supabase.from("finance_income_types").select("*").eq("user_id", user.id).order("name"),
                 supabase.from("finance_expense_categories").select("*").eq("user_id", user.id).order("name"),
                 supabase.from("subscriptions").select("*").eq("user_id", user.id),
+                supabase.from("finance_credit_cards").select("*").eq("user_id", user.id).order("created_at"),
             ])
             setIncomeTypes(typesRes.data || [])
             setExpenseCategories(catsRes.data || [])
             setSubscriptions(subsRes.data || [])
+            setCreditCards(cardsRes.data || [])
 
             // Default to current month
             setSelectedPeriod(currentMonthPeriod)
@@ -573,7 +576,7 @@ export default function Finance() {
         )
     }
 
-    const TABS = ["Overview", "Income", "Expenses", "Reports"]
+    const TABS = ["Overview", "Income", "Expenses", "Credit Cards", "Reports"]
 
     return (
         <div className="max-w-7xl mx-auto space-y-5 min-w-0 overflow-x-hidden">
@@ -604,20 +607,23 @@ export default function Finance() {
             </div>
 
             {/* ── Tabs ── */}
-            <div className="flex gap-0.5 bg-[var(--mx-color-f5f5f7)] rounded-xl p-1 w-fit border border-[var(--mx-color-e5e5ea)]">
-                {TABS.map(t => (
-                    <button key={t} onClick={() => setTab(t)}
-                        className={`px-4 py-1.5 rounded-lg text-[12px] font-bold transition-all ${tab === t
-                            ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-sm border border-[var(--mx-color-e5e5ea)]"
-                            : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"}`}>
-                        {t}
-                    </button>
-                ))}
+            <div className="w-full overflow-x-auto">
+                <div className="flex gap-0.5 bg-[var(--mx-color-f5f5f7)] rounded-xl p-1 w-fit min-w-full sm:min-w-0 border border-[var(--mx-color-e5e5ea)]">
+                    {TABS.map(t => (
+                        <button key={t} onClick={() => setTab(t)}
+                            className={`px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-[12px] font-bold transition-all whitespace-nowrap ${tab === t
+                                ? "bg-[var(--color-surface)] text-[var(--color-text-primary)] shadow-sm border border-[var(--mx-color-e5e5ea)]"
+                                : "text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"}`}>
+                            {t}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {tab === "Overview" && <OverviewTab period={selectedPeriod} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} incomeEntries={filteredIncomeEntries} expenseEntries={filteredExpenseEntries} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} />}
+            {tab === "Overview" && <OverviewTab period={selectedPeriod} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} incomeEntries={filteredIncomeEntries} expenseEntries={filteredExpenseEntries} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} creditCards={creditCards} />}
             {tab === "Income" && <IncomeTab user={user} period={selectedPeriod} incomeTypes={incomeTypes} incomeEntries={filteredIncomeEntries} onRefresh={refreshEntries} />}
             {tab === "Expenses" && <ExpensesTab user={user} period={selectedPeriod} expenseCategories={expenseCategories} expenseEntries={filteredExpenseEntries} subscriptions={subscriptions} onRefresh={refreshEntries} />}
+            {tab === "Credit Cards" && <CreditCardsTab user={user} period={selectedPeriod} creditCards={creditCards} onRefreshCards={fetchAll} />}
             {tab === "Reports" && <ReportsTab user={user} period={selectedPeriod} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} expenseEntries={filteredExpenseEntries} incomeEntries={filteredIncomeEntries} />}
 
             {showPeriodPicker && <PeriodPicker current={selectedPeriod} selectedDays={selectedDays} onSelect={handleSelectPeriod} onDaysChange={setSelectedDays} onClose={() => setShowPeriodPicker(false)} />}
@@ -625,8 +631,65 @@ export default function Finance() {
     )
 }
 
+// ─── Card network logos (SVG text badges) ─────────────────────────────────────
+const CARD_NETWORKS = ["Visa", "Mastercard", "Amex", "UnionPay", "JCB", "Discover"]
+const CARD_COLORS = ["#3B82F6", "#8B5CF6", "#EC4899", "#F97316", "#10B981", "#F59E0B", "#06B6D4", "#EF4444"]
+
+function NetworkBadge({ network, size = "sm" }) {
+    const small = size === "sm"
+    const base = small ? "text-[9px] px-1.5 py-0.5 rounded font-black tracking-wide" : "text-[11px] px-2 py-1 rounded-md font-black tracking-wide"
+    const styles = {
+        Visa: "bg-blue-600 text-white",
+        Mastercard: "bg-gradient-to-r from-red-500 to-orange-400 text-white",
+        Amex: "bg-blue-800 text-white",
+        UnionPay: "bg-red-600 text-white",
+        JCB: "bg-green-600 text-white",
+        Discover: "bg-orange-500 text-white",
+    }
+    return <span className={`${base} ${styles[network] || "bg-gray-600 text-white"}`}>{network}</span>
+}
+
+// ─── Visual credit card widget ─────────────────────────────────────────────────
+function CardVisual({ card }) {
+    const utilPct = card.credit_limit_lkr > 0
+        ? Math.min((card.current_balance_lkr / card.credit_limit_lkr) * 100, 100)
+        : 0
+    const available = Math.max(card.credit_limit_lkr - card.current_balance_lkr, 0)
+    return (
+        <div className="rounded-2xl p-4 relative overflow-hidden flex flex-col gap-3 min-h-[130px]"
+            style={{ background: `linear-gradient(135deg, ${card.color}ee 0%, ${card.color}99 100%)` }}>
+            {/* Decorative circles */}
+            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-20 bg-white" />
+            <div className="absolute -bottom-4 -right-2 w-16 h-16 rounded-full opacity-10 bg-white" />
+            <div className="flex items-start justify-between relative z-10">
+                <div className="min-w-0">
+                    <p className="text-white/70 text-[10px] font-bold uppercase tracking-widest truncate">{card.bank_name}</p>
+                    <p className="text-white text-[14px] font-black truncate leading-tight mt-0.5">{card.nickname || card.card_network + " Card"}</p>
+                </div>
+                <NetworkBadge network={card.card_network} size="sm" />
+            </div>
+            <div className="relative z-10 mt-auto">
+                <div className="flex items-end justify-between mb-1.5">
+                    <div>
+                        <p className="text-white/60 text-[9px] font-bold uppercase tracking-wide">Balance</p>
+                        <p className="text-white text-[15px] font-black tabular-nums leading-none">{fmtShort(card.current_balance_lkr)}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-white/60 text-[9px] font-bold uppercase tracking-wide">Available</p>
+                        <p className="text-white text-[13px] font-bold tabular-nums leading-none">{fmtShort(available)}</p>
+                    </div>
+                </div>
+                <div className="h-1.5 rounded-full bg-white/20 overflow-hidden">
+                    <div className="h-full rounded-full bg-white/80 transition-all duration-700" style={{ width: `${utilPct}%` }} />
+                </div>
+                <p className="text-white/60 text-[9px] mt-1 font-medium">{utilPct.toFixed(1)}% of {fmtShort(card.credit_limit_lkr)} LKR limit used</p>
+            </div>
+        </div>
+    )
+}
+
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
-function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEntries, expenseEntries, expenseByCategory, incomeByType, donutData, expenseCategories }) {
+function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEntries, expenseEntries, expenseByCategory, incomeByType, donutData, expenseCategories, creditCards }) {
     const recentEntries = useMemo(() => {
         const cutoff = new Date()
         cutoff.setDate(cutoff.getDate() - 14)
@@ -783,6 +846,21 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
                     )}
                 </div>
             </div>
+
+            {/* ── Credit Card Summary ── */}
+            {creditCards.length > 0 && (
+                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 min-w-0">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-[13px] font-bold text-[var(--color-text-primary)]">Credit Cards</h3>
+                            <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">{creditCards.length} card{creditCards.length > 1 ? "s" : ""} · total debt {fmtShort(creditCards.reduce((s, c) => s + Number(c.current_balance_lkr), 0))} LKR</p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {creditCards.map(card => <CardVisual key={card.id} card={card} />)}
+                    </div>
+                </div>
+            )}
 
             {/* ── Income Sources ── */}
             {incomeByType.length > 0 && (
@@ -1192,6 +1270,474 @@ function ExpensesTab({ user, period, expenseCategories, expenseEntries, subscrip
             {!period && (
                 <div className="rounded-2xl border border-dashed border-[var(--mx-color-e5e5ea)] p-8 text-center">
                     <p className="text-[12px] text-[var(--color-text-secondary)]">Set a financial period first to add expenses.</p>
+                </div>
+            )}
+        </div>
+    )
+}
+
+// ─── Credit Cards Tab ─────────────────────────────────────────────────────────
+function CreditCardsTab({ user, period, creditCards, onRefreshCards }) {
+    // ── Add card form state ──
+    const [showAddCard, setShowAddCard] = useState(false)
+    const [cardBank, setCardBank] = useState("")
+    const [cardNetwork, setCardNetwork] = useState("Visa")
+    const [cardNickname, setCardNickname] = useState("")
+    const [cardLimit, setCardLimit] = useState("")
+    const [cardColor, setCardColor] = useState(CARD_COLORS[0])
+    const [cardLoading, setCardLoading] = useState(false)
+    const [cardErr, setCardErr] = useState("")
+
+    // ── Edit limit state ──
+    const [editingLimitId, setEditingLimitId] = useState(null)
+    const [editLimitVal, setEditLimitVal] = useState("")
+
+    // ── Selected card for drill-down ──
+    const [selectedCardId, setSelectedCardId] = useState(null)
+
+    // ── CC expense form ──
+    const [showExpenseForm, setShowExpenseForm] = useState(false)
+    const [expCategory, setExpCategory] = useState("")
+    const [expAmount, setExpAmount] = useState("")
+    const [expCurrency, setExpCurrency] = useState("LKR")
+    const [expDate, setExpDate] = useState(today())
+    const [expNote, setExpNote] = useState("")
+    const [expLoading, setExpLoading] = useState(false)
+    const [expErr, setExpErr] = useState("")
+    const [expConvPreview, setExpConvPreview] = useState(null)
+    const [expConverting, setExpConverting] = useState(false)
+
+    // ── Repayment form ──
+    const [showRepayForm, setShowRepayForm] = useState(false)
+    const [repayAmount, setRepayAmount] = useState("")
+    const [repayDate, setRepayDate] = useState(today())
+    const [repayNote, setRepayNote] = useState("")
+    const [repayLoading, setRepayLoading] = useState(false)
+    const [repayErr, setRepayErr] = useState("")
+
+    // ── Entries for selected card ──
+    const [ccExpenses, setCcExpenses] = useState([])
+    const [ccRepayments, setCcRepayments] = useState([])
+    const [entriesLoading, setEntriesLoading] = useState(false)
+
+    const selectedCard = creditCards.find(c => c.id === selectedCardId) || null
+
+    const loadCardEntries = useCallback(async (cardId) => {
+        if (!cardId) return
+        setEntriesLoading(true)
+        const [expRes, repRes] = await Promise.all([
+            supabase.from("finance_cc_expenses").select("*").eq("user_id", user.id).eq("card_id", cardId).order("entry_date", { ascending: false }),
+            supabase.from("finance_cc_repayments").select("*").eq("user_id", user.id).eq("card_id", cardId).order("entry_date", { ascending: false }),
+        ])
+        setCcExpenses(expRes.data || [])
+        setCcRepayments(repRes.data || [])
+        setEntriesLoading(false)
+    }, [user.id])
+
+    useEffect(() => {
+        if (selectedCardId) loadCardEntries(selectedCardId)
+    }, [selectedCardId, loadCardEntries])
+
+    // Currency conversion preview for CC expense form
+    useEffect(() => {
+        if (!expAmount || Number(expAmount) <= 0 || expCurrency === "LKR") { setExpConvPreview(null); return }
+        let cancelled = false
+        setExpConverting(true)
+        fetchCurrencyConversion({ amount: Number(expAmount), fromCurrency: expCurrency, toCurrency: "LKR" })
+            .then(r => { if (!cancelled) setExpConvPreview(r) })
+            .catch(() => { if (!cancelled) setExpConvPreview(null) })
+            .finally(() => { if (!cancelled) setExpConverting(false) })
+        return () => { cancelled = true }
+    }, [expAmount, expCurrency])
+
+    const resetAddCard = () => { setCardBank(""); setCardNetwork("Visa"); setCardNickname(""); setCardLimit(""); setCardColor(CARD_COLORS[0]); setCardErr("") }
+
+    const handleAddCard = async () => {
+        if (!cardBank.trim()) { setCardErr("Enter a bank name"); return }
+        if (!cardLimit || Number(cardLimit) <= 0) { setCardErr("Enter a valid credit limit"); return }
+        setCardLoading(true); setCardErr("")
+        const { error } = await supabase.from("finance_credit_cards").insert({
+            user_id: user.id,
+            bank_name: cardBank.trim(),
+            card_network: cardNetwork,
+            nickname: cardNickname.trim() || null,
+            credit_limit_lkr: Number(cardLimit),
+            current_balance_lkr: 0,
+            color: cardColor,
+        })
+        setCardLoading(false)
+        if (error) { setCardErr(error.message); return }
+        resetAddCard(); setShowAddCard(false); onRefreshCards()
+    }
+
+    const handleDeleteCard = async (id) => {
+        if (!window.confirm("Delete this credit card and all its history?")) return
+        await supabase.from("finance_credit_cards").delete().eq("id", id)
+        if (selectedCardId === id) setSelectedCardId(null)
+        onRefreshCards()
+    }
+
+    const handleSaveLimit = async (cardId) => {
+        if (!editLimitVal || Number(editLimitVal) <= 0) return
+        await supabase.from("finance_credit_cards").update({ credit_limit_lkr: Number(editLimitVal) }).eq("id", cardId)
+        setEditingLimitId(null); onRefreshCards()
+    }
+
+    const handleAddCcExpense = async () => {
+        if (!expCategory.trim()) { setExpErr("Enter a category"); return }
+        if (!expAmount || Number(expAmount) <= 0) { setExpErr("Enter a valid amount"); return }
+        if (!selectedCardId) return
+        setExpLoading(true); setExpErr("")
+        let amountLkr = Number(expAmount)
+        if (expCurrency !== "LKR") {
+            try { amountLkr = await fetchCurrencyConversion({ amount: amountLkr, fromCurrency: expCurrency, toCurrency: "LKR" }) }
+            catch { setExpErr("Currency conversion failed. Try again."); setExpLoading(false); return }
+        }
+        const { error } = await supabase.from("finance_cc_expenses").insert({
+            user_id: user.id, card_id: selectedCardId,
+            period_id: period?.id || null,
+            category_name: expCategory.trim(),
+            amount_original: Number(expAmount), currency_original: expCurrency,
+            amount_lkr: amountLkr, note: expNote.trim() || null, entry_date: expDate,
+        })
+        if (!error) {
+            // Update card balance
+            await supabase.from("finance_credit_cards")
+                .update({ current_balance_lkr: Number(selectedCard.current_balance_lkr) + amountLkr })
+                .eq("id", selectedCardId)
+        }
+        setExpLoading(false)
+        if (error) { setExpErr(error.message); return }
+        setExpCategory(""); setExpAmount(""); setExpNote(""); setExpDate(today()); setExpCurrency("LKR"); setShowExpenseForm(false)
+        onRefreshCards(); loadCardEntries(selectedCardId)
+    }
+
+    const handleDeleteCcExpense = async (entry) => {
+        if (!window.confirm("Delete this credit card expense?")) return
+        await supabase.from("finance_cc_expenses").delete().eq("id", entry.id)
+        // Subtract from card balance
+        const newBal = Math.max(Number(selectedCard.current_balance_lkr) - Number(entry.amount_lkr), 0)
+        await supabase.from("finance_credit_cards").update({ current_balance_lkr: newBal }).eq("id", selectedCardId)
+        onRefreshCards(); loadCardEntries(selectedCardId)
+    }
+
+    const handleAddRepayment = async () => {
+        if (!repayAmount || Number(repayAmount) <= 0) { setRepayErr("Enter a valid amount"); return }
+        if (!selectedCardId) return
+        setRepayLoading(true); setRepayErr("")
+        const amount = Number(repayAmount)
+        const { error } = await supabase.from("finance_cc_repayments").insert({
+            user_id: user.id, card_id: selectedCardId,
+            period_id: period?.id || null,
+            amount_lkr: amount, note: repayNote.trim() || null, entry_date: repayDate,
+        })
+        if (!error) {
+            const newBal = Math.max(Number(selectedCard.current_balance_lkr) - amount, 0)
+            await supabase.from("finance_credit_cards").update({ current_balance_lkr: newBal }).eq("id", selectedCardId)
+        }
+        setRepayLoading(false)
+        if (error) { setRepayErr(error.message); return }
+        setRepayAmount(""); setRepayNote(""); setRepayDate(today()); setShowRepayForm(false)
+        onRefreshCards(); loadCardEntries(selectedCardId)
+    }
+
+    const handleDeleteRepayment = async (entry) => {
+        if (!window.confirm("Delete this repayment?")) return
+        await supabase.from("finance_cc_repayments").delete().eq("id", entry.id)
+        const newBal = Number(selectedCard.current_balance_lkr) + Number(entry.amount_lkr)
+        await supabase.from("finance_credit_cards").update({ current_balance_lkr: newBal }).eq("id", selectedCardId)
+        onRefreshCards(); loadCardEntries(selectedCardId)
+    }
+
+    // Combined timeline of expenses + repayments sorted by date
+    const timeline = useMemo(() => {
+        const exps = ccExpenses.map(e => ({ ...e, _type: "expense" }))
+        const reps = ccRepayments.map(r => ({ ...r, _type: "repayment" }))
+        return [...exps, ...reps].sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date))
+    }, [ccExpenses, ccRepayments])
+
+    const totalCcDebt = creditCards.reduce((s, c) => s + Number(c.current_balance_lkr), 0)
+    const totalCcLimit = creditCards.reduce((s, c) => s + Number(c.credit_limit_lkr), 0)
+    const totalAvailable = Math.max(totalCcLimit - totalCcDebt, 0)
+    const overallUtil = totalCcLimit > 0 ? (totalCcDebt / totalCcLimit) * 100 : 0
+
+    return (
+        <div className="space-y-4 min-w-0">
+            {/* ── Summary stats ── */}
+            {creditCards.length > 0 && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    {[
+                        { label: "Total Debt", value: fmtShort(totalCcDebt), sub: "LKR owed across all cards", color: totalCcDebt > 0 ? "text-red-500" : "text-emerald-600", bar: overallUtil, barColor: "#EF4444" },
+                        { label: "Total Limit", value: fmtShort(totalCcLimit), sub: `${creditCards.length} card${creditCards.length > 1 ? "s" : ""}`, color: "text-[var(--color-text-primary)]", bar: 100, barColor: "#3B82F6" },
+                        { label: "Available Credit", value: fmtShort(totalAvailable), sub: "across all cards", color: "text-emerald-600", bar: totalCcLimit > 0 ? (totalAvailable / totalCcLimit) * 100 : 0, barColor: "#22C55E" },
+                        { label: "Utilization", value: `${overallUtil.toFixed(1)}%`, sub: overallUtil >= 80 ? "High — pay down soon" : overallUtil >= 30 ? "Moderate" : "Healthy", color: overallUtil >= 80 ? "text-red-500" : overallUtil >= 30 ? "text-amber-500" : "text-emerald-600", bar: Math.min(overallUtil, 100), barColor: overallUtil >= 80 ? "#EF4444" : overallUtil >= 30 ? "#F59E0B" : "#22C55E" },
+                    ].map(m => (
+                        <div key={m.label} className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4">
+                            <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">{m.label}</p>
+                            <p className={`text-[18px] font-black leading-none tabular-nums ${m.color}`}>{m.value}</p>
+                            <p className="text-[10px] text-[var(--color-text-secondary)] mt-1 font-medium">{m.sub}</p>
+                            <div className="mt-3 h-1 rounded-full bg-[var(--mx-color-f5f5f7)] overflow-hidden">
+                                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${m.bar}%`, background: m.barColor }} />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* ── Card list + Add card ── */}
+            <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 min-w-0">
+                <SectionHeader title={`My Cards · ${creditCards.length}`}>
+                    <Btn onClick={() => setShowAddCard(v => !v)} variant="primary"><PlusIcon size="w-3.5 h-3.5" /> Add Card</Btn>
+                </SectionHeader>
+
+                {/* Add card form */}
+                <AddPanel show={showAddCard} onCancel={() => { setShowAddCard(false); resetAddCard() }} onSave={handleAddCard} saving={cardLoading} err={cardErr} saveLabel="Add Card">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Bank Name</label>
+                            <input value={cardBank} onChange={e => setCardBank(e.target.value)} placeholder="e.g. Sampath Bank, HNB, BOC…" className={inputCls} autoFocus />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Card Network</label>
+                            <select value={cardNetwork} onChange={e => setCardNetwork(e.target.value)}
+                                className={inputCls}>
+                                {CARD_NETWORKS.map(n => <option key={n} value={n}>{n}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Nickname (optional)</label>
+                            <input value={cardNickname} onChange={e => setCardNickname(e.target.value)} placeholder="e.g. My Sampath Visa" className={inputCls} />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Credit Limit (LKR)</label>
+                            <input type="number" min="0" step="1000" value={cardLimit} onChange={e => setCardLimit(e.target.value)} placeholder="e.g. 150000" className={inputCls} />
+                        </div>
+                        <div className="sm:col-span-2">
+                            <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Card Color</label>
+                            <div className="flex gap-2 flex-wrap">
+                                {CARD_COLORS.map(c => (
+                                    <button key={c} type="button" onClick={() => setCardColor(c)}
+                                        className={`w-7 h-7 rounded-full transition-all border-2 ${cardColor === c ? "border-[var(--color-text-primary)] scale-110" : "border-transparent"}`}
+                                        style={{ background: c }} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    {/* Preview */}
+                    {cardBank && (
+                        <div className="mt-2">
+                            <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Preview</p>
+                            <CardVisual card={{ bank_name: cardBank, card_network: cardNetwork, nickname: cardNickname, credit_limit_lkr: Number(cardLimit) || 0, current_balance_lkr: 0, color: cardColor }} />
+                        </div>
+                    )}
+                </AddPanel>
+
+                {creditCards.length === 0 ? (
+                    <div className="py-10 text-center">
+                        <div className="w-12 h-12 rounded-2xl bg-[var(--mx-color-f5f5f7)] flex items-center justify-center mx-auto mb-3">
+                            <svg className="w-6 h-6 text-[var(--color-text-secondary)] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                            </svg>
+                        </div>
+                        <p className="text-[12px] text-[var(--color-text-secondary)]">No credit cards added yet.</p>
+                        <p className="text-[11px] text-[var(--color-text-secondary)] opacity-60 mt-1">Click "Add Card" to get started.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-1">
+                        {creditCards.map(card => {
+                            const utilPct = card.credit_limit_lkr > 0 ? Math.min((card.current_balance_lkr / card.credit_limit_lkr) * 100, 100) : 0
+                            const isSelected = selectedCardId === card.id
+                            return (
+                                <div key={card.id} className={`group cursor-pointer transition-all rounded-2xl border-2 ${isSelected ? "border-[var(--mx-color-c6ff00)]" : "border-transparent hover:border-[var(--mx-color-e5e5ea)]"}`}
+                                    onClick={() => setSelectedCardId(isSelected ? null : card.id)}>
+                                    <CardVisual card={card} />
+                                    {/* Inline controls under each card */}
+                                    <div className="px-1 pt-2 pb-1 flex items-center gap-2 flex-wrap">
+                                        {editingLimitId === card.id ? (
+                                            <div className="flex items-center gap-1.5 flex-1 min-w-0" onClick={e => e.stopPropagation()}>
+                                                <input type="number" min="0" step="1000" value={editLimitVal}
+                                                    onChange={e => setEditLimitVal(e.target.value)}
+                                                    className="flex-1 min-w-0 rounded-lg border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafc)] px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-[var(--mx-color-c6ff00)]/50"
+                                                    placeholder="New limit" autoFocus />
+                                                <button onClick={() => handleSaveLimit(card.id)} className="text-[10px] font-bold px-2 py-1 rounded-lg bg-[var(--mx-color-c6ff00)] text-black">Save</button>
+                                                <button onClick={() => setEditingLimitId(null)} className="text-[10px] font-bold px-2 py-1 rounded-lg bg-[var(--mx-color-f5f5f7)] text-[var(--color-text-secondary)]">✕</button>
+                                            </div>
+                                        ) : (
+                                            <button onClick={e => { e.stopPropagation(); setEditingLimitId(card.id); setEditLimitVal(card.credit_limit_lkr) }}
+                                                className="text-[10px] font-semibold text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors opacity-0 group-hover:opacity-100 flex items-center gap-1">
+                                                <Icon size="w-3 h-3" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /> Edit Limit
+                                            </button>
+                                        )}
+                                        <button onClick={e => { e.stopPropagation(); handleDeleteCard(card.id) }}
+                                            className="text-[10px] font-semibold text-red-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 ml-auto flex items-center gap-1">
+                                            <TrashIcon /> Delete
+                                        </button>
+                                    </div>
+                                    <p className="px-1 pb-1 text-[10px] text-[var(--color-text-secondary)] font-medium">{isSelected ? "▲ Click to collapse" : "▼ Click to manage"}</p>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* ── Selected card detail panel ── */}
+            {selectedCard && (
+                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 min-w-0 space-y-5">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className="w-3 h-8 rounded-full shrink-0" style={{ background: selectedCard.color }} />
+                        <div className="min-w-0">
+                            <h3 className="text-[15px] font-black text-[var(--color-text-primary)] truncate">
+                                {selectedCard.nickname || `${selectedCard.bank_name} ${selectedCard.card_network}`}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <NetworkBadge network={selectedCard.card_network} size="sm" />
+                                <span className="text-[11px] text-[var(--color-text-secondary)]">{selectedCard.bank_name}</span>
+                                <span className="text-[11px] text-[var(--color-text-secondary)]">· Limit: {fmtShort(selectedCard.credit_limit_lkr)} LKR</span>
+                            </div>
+                        </div>
+                        <div className="ml-auto flex gap-2 shrink-0">
+                            <Btn onClick={() => { setShowRepayForm(v => !v); setShowExpenseForm(false) }} variant="ghost">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+                                Repay
+                            </Btn>
+                            <Btn onClick={() => { setShowExpenseForm(v => !v); setShowRepayForm(false) }} variant="primary">
+                                <PlusIcon size="w-3.5 h-3.5" /> Add Expense
+                            </Btn>
+                        </div>
+                    </div>
+
+                    {/* Add CC Expense form */}
+                    <AddPanel show={showExpenseForm} onCancel={() => { setShowExpenseForm(false); setExpErr("") }} onSave={handleAddCcExpense} saving={expLoading} err={expErr} saveLabel="Charge to Card">
+                        <p className="text-[11px] text-[var(--color-text-secondary)] font-medium flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                            This will increase the card balance, not reduce your cash.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Category</label>
+                                <input value={expCategory} onChange={e => setExpCategory(e.target.value)} placeholder="e.g. Dining, Shopping, Fuel…" className={inputCls} autoFocus />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Amount</label>
+                                <div className="flex gap-2">
+                                    <input type="number" min="0" step="0.01" value={expAmount} onChange={e => setExpAmount(e.target.value)} placeholder="0.00"
+                                        className="flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafc)] px-3 py-2 text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50" />
+                                    <select value={expCurrency} onChange={e => setExpCurrency(e.target.value)}
+                                        className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--mx-color-fafafc)] px-2 py-2 text-[12px] font-bold focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/50">
+                                        {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                {expCurrency !== "LKR" && (
+                                    <p className="text-[11px] text-[var(--color-text-secondary)] mt-1">{expConverting ? "Converting…" : expConvPreview != null ? `≈ ${fmt(expConvPreview)} LKR` : ""}</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Date</label>
+                                <input type="date" value={expDate} onChange={e => setExpDate(e.target.value)} className={inputCls} />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Note (optional)</label>
+                                <input value={expNote} onChange={e => setExpNote(e.target.value)} placeholder="Optional note" className={inputCls} />
+                            </div>
+                        </div>
+                    </AddPanel>
+
+                    {/* Repayment form */}
+                    <AddPanel show={showRepayForm} onCancel={() => { setShowRepayForm(false); setRepayErr("") }} onSave={handleAddRepayment} saving={repayLoading} err={repayErr} saveLabel="Record Repayment">
+                        <p className="text-[11px] text-[var(--color-text-secondary)] font-medium flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                            Repayment reduces the card balance. Track this as a cash expense in the Expenses tab too.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Repayment Amount (LKR)</label>
+                                <input type="number" min="0" step="0.01" value={repayAmount} onChange={e => setRepayAmount(e.target.value)} placeholder="0.00" className={inputCls} autoFocus />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Date</label>
+                                <input type="date" value={repayDate} onChange={e => setRepayDate(e.target.value)} className={inputCls} />
+                            </div>
+                            <div className="sm:col-span-2">
+                                <label className="block text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide mb-1.5">Note (optional)</label>
+                                <input value={repayNote} onChange={e => setRepayNote(e.target.value)} placeholder="e.g. Monthly payment" className={inputCls} />
+                            </div>
+                        </div>
+                    </AddPanel>
+
+                    {/* Card balance bar */}
+                    {!showExpenseForm && !showRepayForm && (
+                        <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl bg-[var(--mx-color-fafafc)] border border-[var(--mx-color-e5e5ea)]">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1.5 gap-2">
+                                    <span className="text-[11px] font-bold text-[var(--color-text-secondary)] uppercase tracking-wide">Balance Used</span>
+                                    <span className="text-[11px] font-bold text-red-500 tabular-nums shrink-0">{fmtShort(selectedCard.current_balance_lkr)} LKR</span>
+                                </div>
+                                <div className="h-2 rounded-full bg-[var(--mx-color-e5e5ea)] overflow-hidden">
+                                    <div className="h-full rounded-full transition-all duration-700"
+                                        style={{ width: `${selectedCard.credit_limit_lkr > 0 ? Math.min((selectedCard.current_balance_lkr / selectedCard.credit_limit_lkr) * 100, 100) : 0}%`, background: selectedCard.color }} />
+                                </div>
+                                <p className="text-[10px] text-[var(--color-text-secondary)] mt-1">Available: {fmtShort(Math.max(selectedCard.credit_limit_lkr - selectedCard.current_balance_lkr, 0))} LKR</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Transaction timeline */}
+                    {entriesLoading ? (
+                        <div className="flex justify-center py-6">
+                            <div className="w-6 h-6 border-2 border-[var(--mx-color-c6ff00)] border-t-transparent rounded-full animate-spin" />
+                        </div>
+                    ) : timeline.length === 0 ? (
+                        <div className="py-8 text-center">
+                            <p className="text-[12px] text-[var(--color-text-secondary)]">No transactions yet. Add an expense or record a repayment.</p>
+                        </div>
+                    ) : (
+                        <div>
+                            <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest mb-3">Transaction History · {timeline.length}</p>
+                            <div className="space-y-1.5 max-h-[480px] overflow-y-auto pr-0.5">
+                                {timeline.map(entry => {
+                                    const isRepay = entry._type === "repayment"
+                                    return (
+                                        <div key={entry.id}
+                                            className="group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-[var(--mx-color-f5f5f7)] transition-colors min-w-0">
+                                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-[13px] font-black ${isRepay ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-500"}`}>
+                                                {isRepay ? "↑" : "↓"}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                    <p className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate">
+                                                        {isRepay ? "Repayment" : entry.category_name}
+                                                    </p>
+                                                    {isRepay ? (
+                                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 shrink-0">REPAID</span>
+                                                    ) : (
+                                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0" style={{ background: selectedCard.color + "22", color: selectedCard.color }}>CC</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-[var(--color-text-secondary)] truncate mt-0.5">
+                                                    {entry.note || fmtDate(entry.entry_date)}
+                                                    {entry.note ? ` · ${fmtDate(entry.entry_date)}` : ""}
+                                                    {!isRepay && entry.currency_original !== "LKR" ? ` · ${entry.amount_original} ${entry.currency_original}` : ""}
+                                                </p>
+                                            </div>
+                                            <div className="text-right shrink-0 flex items-center gap-2">
+                                                <div>
+                                                    <p className={`text-[12px] font-bold tabular-nums ${isRepay ? "text-emerald-600" : "text-red-500"}`}>
+                                                        {isRepay ? "−" : "+"}{fmtShort(entry.amount_lkr)} LKR
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => isRepay ? handleDeleteRepayment(entry) : handleDeleteCcExpense(entry)}
+                                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-[var(--color-text-secondary)] hover:text-red-500 p-1 rounded-lg hover:bg-red-50">
+                                                    <TrashIcon />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>
