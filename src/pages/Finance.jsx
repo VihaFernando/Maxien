@@ -695,41 +695,36 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
             {/* ── Expense Breakdown + Recent Activity ── */}
             <div className="grid lg:grid-cols-[1fr_360px] gap-4 finance-main-grid">
                 {/* Expense Breakdown */}
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col finance-main-card">
-                    <div className="flex items-center justify-between mb-5 shrink-0">
-                        <div>
-                            <h3 className="text-[13px] font-bold text-[var(--color-text-primary)]">Expense Breakdown</h3>
+                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col finance-main-card min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-5 shrink-0 min-w-0">
+                        <div className="min-w-0">
+                            <h3 className="text-[13px] font-bold text-[var(--color-text-primary)] truncate">Expense Breakdown</h3>
                             <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">{expenseByCategory.length} categories this period</p>
                         </div>
                         {donutData.length > 0 && (
-                            <span className="text-[11px] font-bold text-[var(--color-text-secondary)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-1 rounded-lg border border-[var(--mx-color-e5e5ea)] tabular-nums">
+                            <span className="text-[11px] font-bold text-[var(--color-text-secondary)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-1 rounded-lg border border-[var(--mx-color-e5e5ea)] tabular-nums shrink-0">
                                 {fmtShort(totalExpenses)} LKR
                             </span>
                         )}
                     </div>
                     {donutData.length > 0 ? (
-                        <div className="flex flex-col sm:flex-row gap-6 items-center flex-1 min-h-0">
-                            <div className="shrink-0">
-                                <PieChart data={donutData} size={240} total={totalExpenses} />
+                        <div className="flex flex-col sm:flex-row gap-6 items-center flex-1 min-h-0 min-w-0">
+                            <div className="shrink-0 flex justify-center w-full sm:w-auto">
+                                <PieChart data={donutData} size={200} total={totalExpenses} />
                             </div>
-                            <div className="flex-1 overflow-y-auto min-h-0 w-full space-y-3">
+                            <div className="flex-1 overflow-y-auto min-h-0 w-full min-w-0 space-y-3">
                                 {expenseByCategory.map(([name, value], i) => {
                                     const pct = totalExpenses > 0 ? (value / totalExpenses) * 100 : 0
                                     const budget = expenseCategories.find(c => c.name === name)?.budget_lkr
                                     const over = budget && value > budget
                                     return (
-                                        <div key={name}>
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                                                    <span className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate">{name}</span>
-                                                    {over && <span className="text-[9px] font-bold text-red-500 shrink-0 px-1.5 py-0.5 rounded-full bg-red-50 border border-red-100">OVER</span>}
-                                                </div>
-                                                <div className="flex items-center gap-2 shrink-0 ml-3">
-                                                    {budget && <span className={`text-[10px] font-medium ${over ? "text-red-400" : "text-[var(--color-text-secondary)]"}`}>/ {fmtShort(budget)}</span>}
-                                                    <span className="text-[11px] font-bold text-[var(--color-text-primary)] tabular-nums">{fmtShort(value)}</span>
-                                                    <span className="text-[10px] text-[var(--color-text-secondary)] w-8 text-right tabular-nums">{pct.toFixed(1)}%</span>
-                                                </div>
+                                        <div key={name} className="min-w-0">
+                                            <div className="flex items-center gap-2 mb-1.5 min-w-0">
+                                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                                                <span className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate flex-1 min-w-0">{name}</span>
+                                                {over && <span className="text-[9px] font-bold text-red-500 shrink-0 px-1.5 py-0.5 rounded-full bg-red-50 border border-red-100">OVER</span>}
+                                                <span className="text-[11px] font-bold text-[var(--color-text-primary)] tabular-nums shrink-0">{fmtShort(value)}</span>
+                                                <span className="text-[10px] text-[var(--color-text-secondary)] shrink-0 tabular-nums">{pct.toFixed(1)}%</span>
                                             </div>
                                             <div className="h-1.5 rounded-full bg-[var(--mx-color-f5f5f7)] overflow-hidden">
                                                 <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: CHART_COLORS[i % CHART_COLORS.length] }} />
@@ -752,10 +747,10 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
                 </div>
 
                 {/* Recent activity */}
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col finance-main-card">
-                    <div className="flex items-center justify-between mb-4 shrink-0">
-                        <h3 className="text-[13px] font-bold text-[var(--color-text-primary)]">Recent Activity</h3>
-                        <span className="text-[10px] font-bold text-[var(--color-text-secondary)] bg-[var(--mx-color-f5f5f7)] px-2 py-1 rounded-lg border border-[var(--mx-color-e5e5ea)]">last 14 days · {recentEntries.length}</span>
+                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col finance-main-card min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-4 shrink-0 min-w-0">
+                        <h3 className="text-[13px] font-bold text-[var(--color-text-primary)] truncate">Recent Activity</h3>
+                        <span className="text-[10px] font-bold text-[var(--color-text-secondary)] bg-[var(--mx-color-f5f5f7)] px-2 py-1 rounded-lg border border-[var(--mx-color-e5e5ea)] shrink-0">last 14d · {recentEntries.length}</span>
                     </div>
                     {recentEntries.length === 0 ? (
                         <div className="flex-1 flex items-center justify-center">
