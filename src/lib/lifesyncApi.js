@@ -352,6 +352,19 @@ export function lifesyncBatchUserStartup() {
     }))
 }
 
+/**
+ * Fetches public server settings (no auth required).
+ * Returns `{ registrationLocked: boolean }` or null on failure.
+ */
+export async function lifesyncFetchPublicSettings() {
+    try {
+        const data = await lifesyncFetch('/api/v1/public/settings', { skipAuth: true })
+        return data && typeof data === 'object' ? data : null
+    } catch {
+        return null
+    }
+}
+
 /** Matches LifeSyncHentai: plugin on and NSFW preference on. */
 export function isLifeSyncHentaiHubVisible(prefs) {
     return isPluginEnabled(prefs, 'pluginHentaiEnabled') && Boolean(prefs?.nsfwContentEnabled)

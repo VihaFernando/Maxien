@@ -5,7 +5,7 @@ import { useAppTheme } from "../context/AppThemeContext"
 import { supabase } from "../lib/supabase"
 import { useSearchParams } from "react-router-dom"
 import GithubIntegrations from "../components/GithubIntegrations"
-import { getAnimeStreamAudio, lifesyncResolveYouTubeLoopSource } from "../lib/lifesyncApi"
+import { getAnimeStreamAudio, lifesyncFetchPublicSettings, lifesyncResolveYouTubeLoopSource } from "../lib/lifesyncApi"
 import {
     isLifeSyncReduceAnimationsEnabled,
     notifyReduceMotionPreferenceChanged,
@@ -25,18 +25,12 @@ import {
     sanitizeBackgroundUrl,
 } from "../lib/lifeSyncBackgroundPrefs"
 import {
-    engagementNotificationsSupported,
-    readPwaEngagementNotificationsEnabled,
-    writePwaEngagementNotificationsEnabled,
-} from "../lib/pwaNotifications"
-import {
     CONTROLLER_SUPPORT_PREFERENCE_CHANGED,
     CONTROLLER_SUPPORT_STORAGE_KEY,
     readControllerSupportEnabled,
     writeControllerSupportEnabled,
 } from "../lib/lifeSyncControllerPreference"
 import useTimeoutRegistry from "../hooks/useTimeoutRegistry"
-import { useTVModeContext } from "../hooks/useTVModeContext"
 const NAV = [
     {
         id: "profile", label: "Profile",
@@ -261,6 +255,7 @@ export default function Profile() {
     } = useAppTheme()
     const [searchParams] = useSearchParams()
     const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "profile")
+    const [registrationLocked, setRegistrationLocked] = useState(false)
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState("")
     const [error, setError] = useState("")
@@ -269,10 +264,7 @@ export default function Profile() {
     const [appThemeBusy, setAppThemeBusy] = useState(false)
     const [prefsBusy, setPrefsBusy] = useState(false)
     const [backgroundPrefsBusy, setBackgroundPrefsBusy] = useState(false)
-    const [engageNotifs, setEngageNotifs] = useState(() => readPwaEngagementNotificationsEnabled())
     const [controllerSupportEnabled, setControllerSupportEnabled] = useState(() => readControllerSupportEnabled())
-    const { enterTV } = useTVModeContext()
-    const [engageBusy, setEngageBusy] = useState(false)
     const { registerTimeout } = useTimeoutRegistry()
     const [gamesCustomImageUrlInput, setGamesCustomImageUrlInput] = useState("")
     const [gamesCustomVideoUrlInput, setGamesCustomVideoUrlInput] = useState("")
@@ -305,12 +297,6 @@ export default function Profile() {
     }, [searchParams])
 
     useEffect(() => {
-        const onChange = () => setEngageNotifs(readPwaEngagementNotificationsEnabled())
-        window.addEventListener("pwa-engagement-notifications-changed", onChange)
-        return () => window.removeEventListener("pwa-engagement-notifications-changed", onChange)
-    }, [])
-
-    useEffect(() => {
         const sync = () => setControllerSupportEnabled(readControllerSupportEnabled())
         const onStorage = (e) => {
             if (e?.key && e.key !== CONTROLLER_SUPPORT_STORAGE_KEY) return
@@ -321,17 +307,6 @@ export default function Profile() {
         return () => {
             window.removeEventListener(CONTROLLER_SUPPORT_PREFERENCE_CHANGED, sync)
             window.removeEventListener("storage", onStorage)
-        }
-    }, [])
-
-    useEffect(() => {
-        if (
-            readPwaEngagementNotificationsEnabled() &&
-            engagementNotificationsSupported() &&
-            Notification.permission === "denied"
-        ) {
-            writePwaEngagementNotificationsEnabled(false)
-            setEngageNotifs(false)
         }
     }, [])
 
@@ -353,6 +328,13 @@ export default function Profile() {
     useEffect(() => {
         refreshLifeSyncPreferencesFromDb().catch(() => {})
     }, [refreshLifeSyncPreferencesFromDb])
+
+    useEffect(() => {
+        if (lifeSyncUser) return
+        lifesyncFetchPublicSettings().then((s) => {
+            if (s?.registrationLocked) setRegistrationLocked(true)
+        })
+    }, [lifeSyncUser])
 
     useEffect(() => {
         if (!lifeSyncUser?.integrations?.steam) return
@@ -378,14 +360,6 @@ export default function Profile() {
         lifeSyncUser?.preferences?.animeBackgroundCustomImageUrl,
         lifeSyncUser?.preferences?.animeBackgroundCustomVideoUrl,
     ])
-
-    /** If another device enabled tips in LifeSync, mirror locally. */
-    useEffect(() => {
-        if (lifeSyncUser?.preferences?.pwaEngagementNotifications === true) {
-            writePwaEngagementNotificationsEnabled(true)
-            setEngageNotifs(true)
-        }
-    }, [lifeSyncUser?.preferences?.pwaEngagementNotifications])
 
     const steamTheme = lifeSyncSteamProfile?.profile?.theme && typeof lifeSyncSteamProfile.profile.theme === "object"
         ? lifeSyncSteamProfile.profile.theme
@@ -1006,73 +980,8 @@ export default function Profile() {
                                     </div>
 
                                     <div className="px-6 sm:px-8 py-5">
+                                        <p className="mb-4 text-[12px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest">App</p>
                                         <div className="flex items-start justify-between gap-4">
-                                            <div className="min-w-0">
-                                                <p className="text-[12px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest">App</p>
-                                                <p className="mt-1 text-[13px] font-semibold text-[var(--color-text-primary)]">Reduce animations</p>
-                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                                                    Turns off transitions and decorative motion app-wide for less CPU/GPU use and a calmer UI.
-                                                </p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                disabled={prefMotionBusy}
-                                                role="switch"
-                                                aria-checked={isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)}
-                                                onClick={async () => {
-                                                    const next = !isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)
-                                                    if (!lifeSyncUser) {
-                                                        writeStoredReduceAnimationsSetting(next)
-                                                        notifyReduceMotionPreferenceChanged()
-                                                        return
-                                                    }
-                                                    setPrefMotionBusy(true)
-                                                    setError("")
-                                                    try {
-                                                        await lifeSyncUpdatePreferences({ reduceAnimations: next })
-                                                    } catch (e) {
-                                                        setError(e?.message || "Could not save preference")
-                                                    } finally {
-                                                        setPrefMotionBusy(false)
-                                                    }
-                                                }}
-                                                className={`relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"} disabled:opacity-50`}
-                                            >
-                                                <span
-                                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
-                                                />
-                                            </button>
-                                        </div>
-
-                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-(--color-border-soft) pt-6">
-                                            <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-(--color-text-primary)">TV mode</p>
-                                                <p className="mt-1 text-[12px] leading-relaxed text-(--color-text-secondary)">
-                                                    Enable Xbox controller mappings for TV mode across anime, hentai, and manga.
-                                                </p>
-                                                <p className="mt-1 text-[11px] text-(--color-text-secondary)">
-                                                    Local device only. This setting is not synced to your account.
-                                                </p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                role="switch"
-                                                aria-checked={controllerSupportEnabled}
-                                                onClick={() => {
-                                                    const next = !controllerSupportEnabled
-                                                    writeControllerSupportEnabled(next)
-                                                    setControllerSupportEnabled(next)
-                                                }}
-                                                className={`relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors ${controllerSupportEnabled ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"}`}
-                                            >
-                                                <span
-                                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${controllerSupportEnabled ? "translate-x-5" : ""}`}
-                                                />
-                                            </button>
-                                        </div>
-                                        
-
-                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--color-border-soft)] pt-6">
                                             <div className="min-w-0">
                                                 <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Appearance theme</p>
                                                 <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
@@ -1129,93 +1038,6 @@ export default function Profile() {
                                             </div>
                                         </div>
 
-                                        <div className="mt-6 flex items-start justify-between gap-4 border-t border-[var(--color-border-soft)] pt-6">
-                                            <div className="min-w-0">
-                                                <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Tips & reminders</p>
-                                                <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                                                    Occasional nudges for manga, anime, and Steam wishlist deals. They only
-                                                    appear while Maxien has an open tab and your browser allows notifications.
-                                                </p>
-                                                {!engagementNotificationsSupported() && (
-                                                    <p className="mt-2 text-[12px] text-amber-700">
-                                                        Notifications are not available in this browser.
-                                                    </p>
-                                                )}
-                                                {engagementNotificationsSupported() && Notification.permission === "denied" && (
-                                                    <p className="mt-2 text-[12px] text-amber-700">
-                                                        Notifications are blocked for this site  change it in browser or OS
-                                                        settings to turn this on.
-                                                    </p>
-                                                )}
-                                            </div>
-                                            <button
-                                                type="button"
-                                                disabled={engageBusy || !engagementNotificationsSupported()}
-                                                role="switch"
-                                                aria-checked={engageNotifs}
-                                                onClick={async () => {
-                                                    if (!engagementNotificationsSupported()) return
-                                                    const next = !engageNotifs
-                                                    if (!next) {
-                                                        writePwaEngagementNotificationsEnabled(false)
-                                                        setEngageNotifs(false)
-                                                        setError("")
-                                                        setEngageBusy(true)
-                                                        try {
-                                                            if (lifeSyncUser) {
-                                                                await lifeSyncUpdatePreferences({
-                                                                    pwaEngagementNotifications: false,
-                                                                })
-                                                            }
-                                                        } catch (e) {
-                                                            setError(e?.message || "Could not turn off reminders")
-                                                        } finally {
-                                                            setEngageBusy(false)
-                                                        }
-                                                        return
-                                                    }
-                                                    setEngageBusy(true)
-                                                    setError("")
-                                                    try {
-                                                        let perm = Notification.permission
-                                                        if (perm === "default") {
-                                                            perm = await Notification.requestPermission()
-                                                        }
-                                                        if (perm === "granted") {
-                                                            setError("")
-                                                            writePwaEngagementNotificationsEnabled(true)
-                                                            setEngageNotifs(true)
-                                                            if (lifeSyncUser) {
-                                                                await lifeSyncUpdatePreferences({
-                                                                    pwaEngagementNotifications: true,
-                                                                })
-                                                            }
-                                                        } else {
-                                                            writePwaEngagementNotificationsEnabled(false)
-                                                            setEngageNotifs(false)
-                                                            setError(
-                                                                "Notifications are blocked. Enable them in your browser or system settings for this site.",
-                                                            )
-                                                        }
-                                                    } catch (e) {
-                                                        setError(e?.message || "Could not enable reminders")
-                                                    } finally {
-                                                        setEngageBusy(false)
-                                                    }
-                                                }}
-                                                className={`relative mt-0.5 h-6 w-11 flex-shrink-0 rounded-full transition-colors ${engageNotifs ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"} disabled:opacity-50`}
-                                                title={
-                                                    !engagementNotificationsSupported()
-                                                        ? "Not supported in this browser"
-                                                        : undefined
-                                                }
-                                            >
-                                                <span
-                                                    className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${engageNotifs ? "translate-x-5" : ""}`}
-                                                />
-                                            </button>
-                                        </div>
-
                                         {/* In-app notification categories (manga chapters, anime episodes, wishlist drops, deals) */}
                                         {lifeSyncUser && (
                                             <div className="mt-6 border-t border-[var(--color-border-soft)] pt-6">
@@ -1258,6 +1080,7 @@ export default function Profile() {
                                     </div>
                                 </div>
 
+                                {!registrationLocked && (
                                 <div className="lifesync-soft-borders bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] border border-[var(--color-border-soft)] shadow-sm overflow-hidden">
                                     <div className="px-6 sm:px-8 pt-6 pb-4 border-b border-[var(--color-border-soft)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="min-w-0">
@@ -1291,6 +1114,72 @@ export default function Profile() {
                                     </div>
 
                                     <ul className="">
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Reduce animations</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                                                        Turns off transitions and decorative motion app-wide for less CPU/GPU use and a calmer UI.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={prefMotionBusy}
+                                                    role="switch"
+                                                    aria-checked={isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)}
+                                                    onClick={async () => {
+                                                        const next = !isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences)
+                                                        if (!lifeSyncUser) {
+                                                            writeStoredReduceAnimationsSetting(next)
+                                                            notifyReduceMotionPreferenceChanged()
+                                                            return
+                                                        }
+                                                        setPrefMotionBusy(true)
+                                                        setError("")
+                                                        try {
+                                                            await lifeSyncUpdatePreferences({ reduceAnimations: next })
+                                                        } catch (e) {
+                                                            setError(e?.message || "Could not save preference")
+                                                        } finally {
+                                                            setPrefMotionBusy(false)
+                                                        }
+                                                    }}
+                                                    className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"} disabled:opacity-50`}
+                                                >
+                                                    <span
+                                                        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${isLifeSyncReduceAnimationsEnabled(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
+                                                    />
+                                                </button>
+                                            </div>
+                                        </li>
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">TV mode</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                                                        Enable Xbox controller mappings for TV mode across anime, hentai, and manga.
+                                                    </p>
+                                                    <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
+                                                        Local device only. This setting is not synced to your account.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    role="switch"
+                                                    aria-checked={controllerSupportEnabled}
+                                                    onClick={() => {
+                                                        const next = !controllerSupportEnabled
+                                                        writeControllerSupportEnabled(next)
+                                                        setControllerSupportEnabled(next)
+                                                    }}
+                                                    className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${controllerSupportEnabled ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"}`}
+                                                >
+                                                    <span
+                                                        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${controllerSupportEnabled ? "translate-x-5" : ""}`}
+                                                    />
+                                                </button>
+                                            </div>
+                                        </li>
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="min-w-0">
@@ -1656,6 +1545,7 @@ export default function Profile() {
                                         </li>
                                     </ul>
                                 </div>
+                                )}
                             </div>
                         )}
                         {activeTab === "integrations" && (

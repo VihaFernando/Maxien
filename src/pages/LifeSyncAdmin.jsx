@@ -269,6 +269,10 @@ export default function LifeSyncAdmin() {
     const [hydrateBusy, setHydrateBusy] = useState(false)
     const [hydrateResult, setHydrateResult] = useState(null)
 
+    const [regLocked, setRegLocked] = useState(null)  // null = not yet loaded
+    const [regLockBusy, setRegLockBusy] = useState(false)
+    const [regLockError, setRegLockError] = useState('')
+
 
     const hasToken = Boolean(getLifesyncToken())
     const allowed = isLifeSyncAdmin(lifeSyncUser)
@@ -550,6 +554,32 @@ export default function LifeSyncAdmin() {
         await runUserMaintenance('unlink', { json: { integration: unlinkIntegration } })
     }
 
+    const loadRegLock = useCallback(async () => {
+        try {
+            const data = await lifesyncFetch('/api/v1/admin/settings', { method: 'GET' })
+            setRegLocked(Boolean(data?.registrationLocked))
+            setRegLockError('')
+        } catch (e) {
+            setRegLockError(e?.message || 'Could not load registration lock state.')
+        }
+    }, [])
+
+    const toggleRegLock = async (next) => {
+        setRegLockBusy(true)
+        setRegLockError('')
+        try {
+            const data = await lifesyncFetch('/api/v1/admin/settings', {
+                method: 'POST',
+                json: { registrationLocked: next },
+            })
+            setRegLocked(Boolean(data?.registrationLocked))
+        } catch (e) {
+            setRegLockError(e?.message || 'Could not update registration lock.')
+        } finally {
+            setRegLockBusy(false)
+        }
+    }
+
 
     const runSlugCheck = async () => {
         const slug = slugCheckId.trim().replace(/^\/+|\/+$/g, '')
@@ -623,6 +653,12 @@ export default function LifeSyncAdmin() {
         if (!allowed || tab !== 'activity') return
         loadActivity()
     }, [allowed, tab, loadActivity])
+
+    useEffect(() => {
+        if (V1_ADMIN_MODE) return
+        if (!allowed || tab !== 'users') return
+        loadRegLock()
+    }, [allowed, tab, loadRegLock])
 
     useEffect(() => {
         if (V1_ADMIN_MODE) return
@@ -1873,6 +1909,66 @@ export default function LifeSyncAdmin() {
             {/*  Users  */}
             {tab === 'users' && (
                 <div className="space-y-8">
+                    <Panel>
+                        <SectionIntro title="Registration lock">
+                            When locked, new users cannot sign up or connect LifeSync from the Maxien frontend.
+                            Existing users who are already signed in are unaffected — only the connect / sign-up flow is hidden.
+                        </SectionIntro>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-3">
+                                {regLocked === null ? (
+                                    <span className="text-[12px] text-apple-subtext">Loading…</span>
+                                ) : (
+                                    <>
+                                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold ${
+                                            regLocked
+                                                ? 'bg-red-100 text-red-800'
+                                                : 'bg-emerald-100 text-emerald-800'
+                                        }`}>
+                                            <span className={`h-1.5 w-1.5 rounded-full ${regLocked ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                                            {regLocked ? 'Locked — new connections blocked' : 'Open — new connections allowed'}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    disabled={regLockBusy || regLocked === null}
+                                    onClick={() => toggleRegLock(true)}
+                                    className={`rounded-xl px-4 py-2.5 text-[12px] font-semibold shadow-sm transition-colors disabled:opacity-50 ${
+                                        regLocked
+                                            ? 'bg-red-600 text-white ring-2 ring-red-600/30'
+                                            : 'border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] text-apple-text hover:bg-apple-bg'
+                                    }`}
+                                >
+                                    {regLockBusy && regLocked !== true ? 'Locking…' : 'Lock registrations'}
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={regLockBusy || regLocked === null}
+                                    onClick={() => toggleRegLock(false)}
+                                    className={`rounded-xl px-4 py-2.5 text-[12px] font-semibold shadow-sm transition-colors disabled:opacity-50 ${
+                                        !regLocked && regLocked !== null
+                                            ? 'bg-emerald-600 text-white ring-2 ring-emerald-600/30'
+                                            : 'border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] text-apple-text hover:bg-apple-bg'
+                                    }`}
+                                >
+                                    {regLockBusy && regLocked !== false ? 'Unlocking…' : 'Unlock registrations'}
+                                </button>
+                            </div>
+                        </div>
+                        {regLockError ? (
+                            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                                {regLockError}
+                            </p>
+                        ) : null}
+                        <p className="mt-4 text-[11px] leading-relaxed text-apple-subtext">
+                            This setting is persisted server-side. The Maxien frontend reads it on load and hides the
+                            LifeSync connect flow for any user who is not already signed in.
+                        </p>
+                    </Panel>
+
                     <Panel>
                         <SectionIntro title="Look up a user">
                             Support tools: find by verified email or by Mongo user id (from tables or logs).
