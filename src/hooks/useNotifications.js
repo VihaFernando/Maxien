@@ -47,8 +47,10 @@ export function useNotifications({ enabled = true, domain, unreadOnly = false, l
 
     const refreshUnreadCount = useCallback(async () => {
         if (!enabled) return
+        const requestId = ++requestIdRef.current
         try {
             const data = await lifesyncFetch('/api/notifications/unread-count')
+            if (requestId !== requestIdRef.current) return
             setUnreadCount(Number(data?.unreadCount || 0))
         } catch {
             // non-fatal

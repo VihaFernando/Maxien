@@ -487,6 +487,13 @@ export default function AdvancedVideoPlayer({
     // frozen  (1) nudge the playhead past a buffer hole, (2) restart the
     // loader (hls) or reload the element (mp4) at the same position.
     useEffect(() => {
+        // No source → nothing to watch; skip the interval entirely.
+        if (!activeSrc) return undefined
+
+        // Holds a cleanup for any loadedmetadata listener added during recovery
+        // so it is always removed if the interval clears before the event fires.
+        let pendingResumeCleanup = null
+
         const id = setInterval(() => {
             const v = videoRef.current
             if (!v) return
@@ -526,13 +533,19 @@ export default function AdvancedVideoPlayer({
                             try { v.currentTime = t } catch { /* ignore */ }
                             v.play?.().catch(() => {})
                             v.removeEventListener('loadedmetadata', resume)
+                            pendingResumeCleanup = null
                         }
                         v.addEventListener('loadedmetadata', resume)
+                        pendingResumeCleanup = () => v.removeEventListener('loadedmetadata', resume)
                     } catch { /* ignore */ }
                 }
             }
         }, 1000)
-        return () => clearInterval(id)
+        return () => {
+            clearInterval(id)
+            pendingResumeCleanup?.()
+            pendingResumeCleanup = null
+        }
     }, [activeSrc, retryNonce, markBuffering])
 
     useEffect(() => {
