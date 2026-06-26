@@ -47,6 +47,33 @@ function lastEpNum(entry) {
     const n = Math.floor(Number(entry?.lastEpisodeNumber) || 1)
     return Number.isFinite(n) && n > 0 ? n : 1
 }
+function latestEpNum(entry) {
+    const n = Math.floor(Number(entry?.latestEpisode) || 0)
+    return Number.isFinite(n) && n > 0 ? n : 0
+}
+function hasNewEpisode(entry) { return Boolean(entry?.hasNewEpisode) }
+// How many aired episodes the viewer has not watched yet.
+function newEpisodeCount(entry) {
+    const n = Math.floor(Number(entry?.episodesBehind) || 0)
+    if (Number.isFinite(n) && n > 0) return n
+    return Math.max(0, latestEpNum(entry) - lastEpNum(entry))
+}
+// Target episode for "watch the new one": the next unwatched episode, bounded by
+// the latest aired episode the catalog knows about.
+function newEpisodeTarget(entry) {
+    const latest = latestEpNum(entry)
+    const next = lastEpNum(entry) + 1
+    const ep = latest > 0 ? Math.min(next, latest) : next
+    return {
+        to: `${ANIME_BASE}/watch/${encodeURIComponent(String(entry.animeId))}/${ep}`,
+        state: { from: ANIME_HISTORY_PATH },
+        ep,
+    }
+}
+function isSyncTerminal(s) {
+    const v = String(s || '').toLowerCase()
+    return v === 'completed' || v === 'completed_with_errors' || v === 'failed'
+}
 function totalEpNum(entry) {
     const n = Math.floor(Number(entry?.numEpisodes))
     return Number.isFinite(n) && n > 0 ? n : null
@@ -102,6 +129,16 @@ const IconGrid = ({ className = 'h-4 w-4' }) => (
 const IconList = ({ className = 'h-4 w-4' }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
         <path strokeLinecap="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+    </svg>
+)
+const IconSync = ({ className = 'h-3.5 w-3.5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+)
+const IconSparkle = ({ className = 'h-3 w-3' }) => (
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 2l1.9 5.6L19.5 9l-5.6 1.9L12 16.5l-1.9-5.6L4.5 9l5.6-1.4L12 2z" />
     </svg>
 )
 
@@ -318,6 +355,12 @@ function FeedRow({ entry, onOpenDetail, onRemove, removeBusyKey, isLast }) {
                     }`}>
                         {complete ? 'Done' : `Ep ${current}${total != null ? ` / ${total}` : ''}`}
                     </span>
+                    {hasNewEpisode(entry) && (
+                        <span className="inline-flex h-[18px] items-center gap-1 rounded-md bg-sky-500/15 px-1.5 text-[9px] font-black uppercase tracking-wide text-sky-500 dark:text-sky-400">
+                            <IconSparkle className="h-2.5 w-2.5" />
+                            {newEpisodeCount(entry) > 1 ? `${newEpisodeCount(entry)} New` : `New Ep ${newEpisodeTarget(entry).ep}`}
+                        </span>
+                    )}
                     {rel && <span className="text-[10px] text-(--color-text-secondary)">{rel}</span>}
                 </div>
                 {frac != null && (
@@ -393,6 +436,11 @@ function GridCard({ entry, onOpenDetail, onRemove, removeBusyKey }) {
                 <span className="absolute left-2 top-2 z-10 rounded-md bg-black/60 px-1.5 py-0.5 text-[9px] font-bold tabular-nums text-white backdrop-blur-sm">
                     EP {current}
                 </span>
+                {hasNewEpisode(entry) && (
+                    <span className="absolute left-2 top-7 z-10 flex items-center gap-1 rounded-md bg-sky-500/90 px-1.5 py-0.5 text-[9px] font-black uppercase text-white shadow-sm backdrop-blur-sm">
+                        <IconSparkle className="h-2.5 w-2.5" /> New
+                    </span>
+                )}
                 {rel && (
                     <span className="absolute right-2 top-2 z-10 rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] font-medium text-white/80 backdrop-blur-sm">
                         {rel}
@@ -462,6 +510,70 @@ export default function LifeSyncAnimeHistory() {
     const [query, setQuery] = useState('')
     const [detailEntry, setDetailEntry] = useState(null)
     const [layout, setLayout] = useState('list') // 'list' | 'grid'
+
+    // ── Sync job (async, mirrors the manga library sync UX) ──
+    const [syncJob, setSyncJob] = useState(null)
+    const [syncBusy, setSyncBusy] = useState(false)
+    const [syncDismissed, setSyncDismissed] = useState(false)
+    const syncPollRef = useRef(null)
+    const syncDismissTimerRef = useRef(null)
+
+    const syncRunning = syncJob != null && (syncJob.status === 'queued' || syncJob.status === 'running')
+    const syncPercent = (() => {
+        const t = Number(syncJob?.total || 0); const p = Number(syncJob?.processed || 0)
+        return t > 0 ? Math.min(100, Math.round((p / t) * 100)) : (syncJob?.percent ?? 0)
+    })()
+
+    const stopSyncPoll = useCallback(() => {
+        if (syncPollRef.current) { clearInterval(syncPollRef.current); syncPollRef.current = null }
+    }, [])
+    const scheduleSyncDismiss = useCallback(() => {
+        if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current)
+        syncDismissTimerRef.current = window.setTimeout(() => { setSyncDismissed(true); syncDismissTimerRef.current = null }, 8000)
+    }, [])
+
+    const startSyncPoll = useCallback(() => {
+        stopSyncPoll()
+        setSyncDismissed(false)
+        let inFlight = false
+        const intervalId = setInterval(async () => {
+            if (inFlight) return
+            inFlight = true
+            try {
+                const data = await lifesyncFetch('/api/v1/anime/watch-history/sync', { method: 'GET' })
+                const job = data?.job || null
+                setSyncJob(job)
+                if (!job || isSyncTerminal(job.status)) {
+                    stopSyncPoll()
+                    await refresh()
+                    scheduleSyncDismiss()
+                }
+            } catch { /* keep polling; transient */ }
+            finally { inFlight = false }
+        }, 1200)
+        syncPollRef.current = intervalId
+    }, [refresh, scheduleSyncDismiss, stopSyncPoll])
+
+    const runSync = useCallback(async () => {
+        if (syncBusy || syncRunning) return
+        setSyncBusy(true)
+        try {
+            const data = await lifesyncFetch('/api/v1/anime/watch-history/sync', { method: 'POST' })
+            const job = data?.job || null
+            setSyncJob(job)
+            setSyncDismissed(false)
+            if (job && !isSyncTerminal(job.status)) startSyncPoll()
+            else { await refresh(); scheduleSyncDismiss() }
+        } catch { /* surfaced via no job */ }
+        finally { setSyncBusy(false) }
+    }, [refresh, scheduleSyncDismiss, startSyncPoll, syncBusy, syncRunning])
+
+    useEffect(() => () => {
+        if (syncPollRef.current) clearInterval(syncPollRef.current)
+        if (syncDismissTimerRef.current) clearTimeout(syncDismissTimerRef.current)
+    }, [])
+
+    const newEpisodeEntries = useMemo(() => entries.filter(hasNewEpisode), [entries])
 
     useEffect(() => {
         if (!isLifeSyncConnected) navigate('/dashboard/profile?tab=integrations', { replace: true })
@@ -566,6 +678,64 @@ export default function LifeSyncAnimeHistory() {
                 ))}
             </MotionDiv>
 
+            {/* ── New Episodes banner ── */}
+            <AnimatePresence initial={false}>
+                {newEpisodeEntries.length > 0 && (
+                    <MotionDiv
+                        key="new-episodes-banner"
+                        initial={{ opacity: 0, y: -8, height: 0 }}
+                        animate={{ opacity: 1, y: 0, height: 'auto' }}
+                        exit={{ opacity: 0, y: -8, height: 0 }}
+                        transition={{ type: 'spring', stiffness: 280, damping: 28 }}
+                        className="overflow-hidden rounded-2xl border border-sky-400/30 bg-[linear-gradient(135deg,rgba(56,189,248,0.10),rgba(56,189,248,0.02))]"
+                    >
+                        <div className="flex items-center gap-2 px-4 pt-3">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-sky-500/20 text-sky-500 dark:text-sky-400">
+                                <IconSparkle className="h-3.5 w-3.5" />
+                            </span>
+                            <p className="text-[13px] font-black text-(--color-text-primary)">
+                                New Episodes
+                                <span className="ml-1.5 rounded-md bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-bold text-sky-500 dark:text-sky-400 align-middle">{newEpisodeEntries.length}</span>
+                            </p>
+                        </div>
+                        <div className="flex gap-2.5 overflow-x-auto px-4 py-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                            {newEpisodeEntries.map((entry) => {
+                                const { to, state, ep } = newEpisodeTarget(entry)
+                                const title = cleanAnimeTitle(entry.title)
+                                return (
+                                    <Link
+                                        key={entryKey(entry)} to={to} state={state}
+                                        className="group relative flex w-[116px] shrink-0 flex-col overflow-hidden rounded-xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm transition hover:border-sky-400/50 hover:shadow-md"
+                                    >
+                                        <div className="relative aspect-2/3 w-full overflow-hidden bg-(--color-surface-muted)">
+                                            {entry.imageUrl ? (
+                                                <LifesyncEpisodeThumbnail
+                                                    src={entry.imageUrl}
+                                                    className="absolute inset-0 h-full w-full"
+                                                    imgClassName="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                                    imgProps={{ referrerPolicy: 'no-referrer' }}
+                                                />
+                                            ) : (
+                                                <div className="flex h-full items-center justify-center text-(--color-border-strong)"><IconPlay className="h-6 w-6" /></div>
+                                            )}
+                                            <div className="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent" />
+                                            <span className="absolute left-1.5 top-1.5 rounded-md bg-sky-500/90 px-1.5 py-0.5 text-[8px] font-black uppercase text-white backdrop-blur-sm">New</span>
+                                            <span className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-black shadow opacity-0 transition group-hover:opacity-100">
+                                                <IconPlay className="ml-px h-3 w-3" />
+                                            </span>
+                                        </div>
+                                        <div className="px-2 py-1.5">
+                                            <p className="truncate text-[11px] font-semibold text-(--color-text-primary)">{title || 'Untitled'}</p>
+                                            <p className="text-[10px] font-medium text-sky-500 dark:text-sky-400 tabular-nums">Episode {ep}</p>
+                                        </div>
+                                    </Link>
+                                )
+                            })}
+                        </div>
+                    </MotionDiv>
+                )}
+            </AnimatePresence>
+
             {/* ── Controls ── */}
             <div className="flex flex-wrap gap-2">
                 {/* Search */}
@@ -614,6 +784,14 @@ export default function LifeSyncAnimeHistory() {
                     </button>
                 </div>
 
+                {/* Sync — check tracked anime for new episodes */}
+                <button type="button" onClick={() => void runSync()} disabled={syncBusy || syncRunning || entries.length === 0}
+                    className="flex h-9 items-center gap-1.5 shrink-0 rounded-xl bg-primary px-3 text-[12px] font-bold text-black transition hover:brightness-95 disabled:opacity-40"
+                    aria-label="Sync episodes">
+                    <IconSync className={`h-3.5 w-3.5 ${syncRunning ? 'animate-spin' : ''}`} />
+                    <span className="hidden sm:inline">{syncRunning ? 'Syncing…' : 'Sync'}</span>
+                </button>
+
                 {/* Reload */}
                 <button type="button" onClick={() => void refresh()} disabled={loading}
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
@@ -623,6 +801,23 @@ export default function LifeSyncAnimeHistory() {
                     </svg>
                 </button>
             </div>
+
+            {/* ── Sync progress card ── */}
+            {syncJob && !syncDismissed && (
+                <div className={`rounded-2xl border px-4 py-3 ${syncJob.status === 'failed' ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30' : isSyncTerminal(syncJob.status) ? 'border-primary/30 bg-primary/5' : 'border-(--color-border-soft) bg-(--color-surface-muted)'}`}>
+                    <div className="flex items-center justify-between text-[12px]">
+                        <span className="font-semibold text-(--color-text-primary)">
+                            {syncJob.status === 'failed' ? 'Sync failed'
+                                : isSyncTerminal(syncJob.status) ? (Number(syncJob.newEpisodeCount || 0) > 0 ? `Sync complete — ${syncJob.newEpisodeCount} new` : 'Sync complete — up to date')
+                                : `Checking for new episodes ${Math.round(syncPercent)}%`}
+                        </span>
+                        <span className="text-(--color-text-secondary) tabular-nums">{Number(syncJob?.processed || 0)}/{Number(syncJob?.total || 0)}</span>
+                    </div>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-(--color-border-soft)">
+                        <div className={`h-full rounded-full transition-all ${syncJob.status === 'failed' ? 'bg-red-500' : 'bg-primary'}`} style={{ width: `${Math.round(syncPercent)}%` }} />
+                    </div>
+                </div>
+            )}
 
             {/* ── Content ── */}
             {loading && entries.length === 0 ? (

@@ -231,6 +231,7 @@ export default function LifeSyncAdmin() {
     const [auditError, setAuditError] = useState('')
     const [cacheFlushBusy, setCacheFlushBusy] = useState(false)
     const [animeCleanupBusy, setAnimeCleanupBusy] = useState(false)
+    const [scheduleRefreshBusy, setScheduleRefreshBusy] = useState(false)
     const [opsMessage, setOpsMessage] = useState('')
     const [opsError, setOpsError] = useState('')
 
@@ -252,6 +253,11 @@ export default function LifeSyncAdmin() {
     const [seriesError, setSeriesError] = useState('')
     const [seriesRange, setSeriesRange] = useState(30)
 
+    const [scraperStats, setScraperStats] = useState(null)
+    const [scraperStatsBusy, setScraperStatsBusy] = useState(false)
+    const [scraperStatsError, setScraperStatsError] = useState('')
+    const [scraperResetBusy, setScraperResetBusy] = useState(false)
+
     const [liveOn, setLiveOn] = useState(false)
     const [liveSamples, setLiveSamples] = useState([]) // { t, rssMb, heapMb, pingMs }
     const liveTimerRef = useRef(null)
@@ -262,6 +268,10 @@ export default function LifeSyncAdmin() {
     const [hydrateSlug, setHydrateSlug] = useState('')
     const [hydrateBusy, setHydrateBusy] = useState(false)
     const [hydrateResult, setHydrateResult] = useState(null)
+
+    const [regLocked, setRegLocked] = useState(null)  // null = not yet loaded
+    const [regLockBusy, setRegLockBusy] = useState(false)
+    const [regLockError, setRegLockError] = useState('')
 
 
     const hasToken = Boolean(getLifesyncToken())
@@ -401,6 +411,31 @@ export default function LifeSyncAdmin() {
         }
     }
 
+    const refreshScraperStats = async () => {
+        setScraperStatsBusy(true)
+        setScraperStatsError('')
+        try {
+            setScraperStats(await lifesyncFetch('/api/v1/admin/scraper-stats', { method: 'GET' }))
+        } catch (e) {
+            setScraperStats(null)
+            setScraperStatsError(e?.message || 'Could not load scraper stats.')
+        } finally {
+            setScraperStatsBusy(false)
+        }
+    }
+
+    const runScraperStatsReset = async () => {
+        setScraperResetBusy(true)
+        try {
+            await lifesyncFetch('/api/v1/admin/scraper-stats/reset', { method: 'POST' })
+            await refreshScraperStats()
+        } catch {
+            // ignore
+        } finally {
+            setScraperResetBusy(false)
+        }
+    }
+
     const runCacheFlush = async () => {
         setOpsMessage('')
         setOpsError('')
@@ -428,6 +463,20 @@ export default function LifeSyncAdmin() {
             setOpsError(e?.message || 'Anime cache cleanup failed.')
         } finally {
             setAnimeCleanupBusy(false)
+        }
+    }
+
+    const runScheduleRefresh = async () => {
+        setOpsMessage('')
+        setOpsError('')
+        setScheduleRefreshBusy(true)
+        try {
+            const data = await lifesyncFetch('/api/v1/admin/anime-schedule/refresh', { method: 'POST' })
+            setOpsMessage(`Weekly anime schedule refreshed for ${data?.weekKey ?? 'this week'}.`)
+        } catch (e) {
+            setOpsError(e?.message || 'Schedule refresh failed.')
+        } finally {
+            setScheduleRefreshBusy(false)
         }
     }
 
@@ -505,6 +554,32 @@ export default function LifeSyncAdmin() {
         await runUserMaintenance('unlink', { json: { integration: unlinkIntegration } })
     }
 
+    const loadRegLock = useCallback(async () => {
+        try {
+            const data = await lifesyncFetch('/api/v1/admin/settings', { method: 'GET' })
+            setRegLocked(Boolean(data?.registrationLocked))
+            setRegLockError('')
+        } catch (e) {
+            setRegLockError(e?.message || 'Could not load registration lock state.')
+        }
+    }, [])
+
+    const toggleRegLock = async (next) => {
+        setRegLockBusy(true)
+        setRegLockError('')
+        try {
+            const data = await lifesyncFetch('/api/v1/admin/settings', {
+                method: 'POST',
+                json: { registrationLocked: next },
+            })
+            setRegLocked(Boolean(data?.registrationLocked))
+        } catch (e) {
+            setRegLockError(e?.message || 'Could not update registration lock.')
+        } finally {
+            setRegLockBusy(false)
+        }
+    }
+
 
     const runSlugCheck = async () => {
         const slug = slugCheckId.trim().replace(/^\/+|\/+$/g, '')
@@ -578,6 +653,12 @@ export default function LifeSyncAdmin() {
         if (!allowed || tab !== 'activity') return
         loadActivity()
     }, [allowed, tab, loadActivity])
+
+    useEffect(() => {
+        if (V1_ADMIN_MODE) return
+        if (!allowed || tab !== 'users') return
+        loadRegLock()
+    }, [allowed, tab, loadRegLock])
 
     useEffect(() => {
         if (V1_ADMIN_MODE) return
@@ -1267,6 +1348,14 @@ export default function LifeSyncAdmin() {
                             >
                                 {animeCleanupBusy ? 'Cleaning…' : 'Anime cache cleanup'}
                             </button>
+                            <button
+                                type="button"
+                                disabled={scheduleRefreshBusy}
+                                onClick={runScheduleRefresh}
+                                className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[12px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                            >
+                                {scheduleRefreshBusy ? 'Refreshing…' : 'Refresh weekly anime schedule'}
+                            </button>
                         </div>
                     </Panel>
 
@@ -1326,6 +1415,236 @@ export default function LifeSyncAdmin() {
                                         {auditMangaSample.map((row) => `${row.source}:${row.mangaId}`).join(', ')}
                                     </p>
                                 ) : null}
+                            </div>
+                        </div>
+                    </Panel>
+
+                    {/* Scraper stats */}
+                    <Panel>
+                        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+                            <SectionIntro title="Web scraper status">
+                                Live request counters per scraper label — tracked in-process since last reset or server restart.
+                            </SectionIntro>
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    disabled={scraperResetBusy}
+                                    onClick={runScraperStatsReset}
+                                    className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] px-3 py-2 text-[11px] font-semibold text-apple-text hover:bg-apple-bg disabled:opacity-50"
+                                >
+                                    {scraperResetBusy ? 'Resetting…' : 'Reset stats'}
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={scraperStatsBusy}
+                                    onClick={refreshScraperStats}
+                                    className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-[11px] font-semibold text-apple-text disabled:opacity-50"
+                                >
+                                    {scraperStatsBusy ? 'Loading…' : 'Refresh'}
+                                </button>
+                            </div>
+                        </div>
+                        {scraperStatsError ? (
+                            <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">{scraperStatsError}</p>
+                        ) : null}
+                        {scraperStats ? (
+                            <>
+                                {/* Totals row */}
+                                <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                    {[
+                                        { label: 'Total requests', value: scraperStats.totals?.requests ?? 0 },
+                                        { label: 'Successes', value: scraperStats.totals?.successes ?? 0, ok: true },
+                                        { label: 'Failures', value: scraperStats.totals?.failures ?? 0, bad: true },
+                                        { label: 'Retries', value: scraperStats.totals?.retries ?? 0 },
+                                    ].map(({ label, value, ok, bad }) => (
+                                        <div
+                                            key={label}
+                                            className={`rounded-2xl border p-4 ${ok ? 'border-emerald-200 bg-emerald-50' : bad && value > 0 ? 'border-rose-200 bg-rose-50' : 'border-[var(--mx-color-e5e5ea)] bg-apple-bg'}`}
+                                        >
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-apple-subtext">{label}</p>
+                                            <p className={`mt-1.5 text-[22px] font-bold tabular-nums ${ok ? 'text-emerald-800' : bad && value > 0 ? 'text-rose-800' : 'text-apple-text'}`}>{value}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Per-scraper table */}
+                                {Array.isArray(scraperStats.scrapers) && scraperStats.scrapers.length > 0 ? (
+                                    <div className="overflow-x-auto rounded-xl border border-[var(--mx-color-f0f0f0)]">
+                                        <table className="min-w-full text-left text-[12px]">
+                                            <thead className="bg-apple-bg text-[10px] font-bold uppercase tracking-wider text-apple-subtext">
+                                                <tr>
+                                                    <th className="px-3 py-2">Scraper</th>
+                                                    <th className="px-3 py-2 text-right">Requests</th>
+                                                    <th className="px-3 py-2 text-right">OK</th>
+                                                    <th className="px-3 py-2 text-right">Fail</th>
+                                                    <th className="px-3 py-2 text-right">Retries</th>
+                                                    <th className="px-3 py-2 text-right">Avg ms</th>
+                                                    <th className="px-3 py-2 text-right">Status</th>
+                                                    <th className="px-3 py-2">Last error</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-[var(--mx-color-f0f0f0)]">
+                                                {scraperStats.scrapers.map((s) => {
+                                                    const pct = s.requests > 0 ? Math.round((s.successes / s.requests) * 100) : null
+                                                    const healthy = pct === null ? null : pct >= 80
+                                                    return (
+                                                        <tr key={s.label} className="hover:bg-apple-bg">
+                                                            <td className="px-3 py-2.5 font-mono font-semibold text-apple-text">{s.label}</td>
+                                                            <td className="px-3 py-2.5 text-right tabular-nums text-apple-subtext">{s.requests}</td>
+                                                            <td className="px-3 py-2.5 text-right tabular-nums text-emerald-700">{s.successes}</td>
+                                                            <td className={`px-3 py-2.5 text-right tabular-nums ${s.failures > 0 ? 'font-semibold text-rose-700' : 'text-apple-subtext'}`}>{s.failures}</td>
+                                                            <td className="px-3 py-2.5 text-right tabular-nums text-apple-subtext">{s.retries}</td>
+                                                            <td className="px-3 py-2.5 text-right tabular-nums text-apple-subtext">{s.avgLatencyMs != null ? `${s.avgLatencyMs}` : '—'}</td>
+                                                            <td className="px-3 py-2.5 text-right">
+                                                                {healthy === null ? (
+                                                                    <span className="text-apple-subtext">—</span>
+                                                                ) : healthy ? (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800">
+                                                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                                        {pct}%
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center gap-1 rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold text-rose-800">
+                                                                        <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                                                                        {pct}%
+                                                                    </span>
+                                                                )}
+                                                            </td>
+                                                            <td className="max-w-[200px] truncate px-3 py-2.5 font-mono text-[10px] text-apple-subtext" title={s.lastErrorMessage || ''}>{s.lastErrorMessage || '—'}</td>
+                                                        </tr>
+                                                    )
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="text-[12px] text-apple-subtext">No scraper activity recorded yet. Scrapers are instrumented automatically when the server processes requests.</p>
+                                )}
+                                <p className="mt-2 text-[11px] text-apple-subtext">Last updated: {scraperStats.serverTime || ''}</p>
+                            </>
+                        ) : (
+                            <p className="text-[12px] text-apple-subtext">Click Refresh to load live scraper counters.</p>
+                        )}
+                    </Panel>
+
+                    {/* Backend architecture diagram */}
+                    <Panel>
+                        <SectionIntro title="Backend architecture">
+                            How the LifeSync server routes requests through its scraper integrations, cache, and database layers.
+                        </SectionIntro>
+                        <div className="mt-4 overflow-x-auto">
+                            <div className="min-w-[600px] space-y-3 font-mono text-[11px]">
+                                {/* Client layer */}
+                                <div className="flex items-center justify-center gap-2">
+                                    {['Web client', 'Mobile PWA', 'TV mode'].map((label) => (
+                                        <div key={label} className="flex-1 rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-2 text-center text-apple-text">
+                                            {label}
+                                        </div>
+                                    ))}
+                                </div>
+                                {/* Arrow */}
+                                <div className="flex justify-center text-apple-subtext">↓ HTTPS / REST</div>
+
+                                {/* API gateway */}
+                                <div className="rounded-xl border-2 border-[var(--color-primary)] bg-[color-mix(in_srgb,var(--color-primary)_8%,transparent)] px-4 py-2.5 text-center font-semibold text-apple-text">
+                                    Express API gateway · /api/v1
+                                    <span className="ml-2 rounded-full bg-[var(--color-primary)] px-2 py-0.5 text-[10px] font-bold text-black">Auth · Rate-limit · CORS</span>
+                                </div>
+
+                                {/* Router row */}
+                                <div className="flex justify-center text-apple-subtext">↓ module router</div>
+                                <div className="grid grid-cols-5 gap-2">
+                                    {[
+                                        { label: 'Anime', color: '#0080FF' },
+                                        { label: 'Manga', color: '#FF9500' },
+                                        { label: 'Games / Xbox', color: '#107C10' },
+                                        { label: 'Feed / Media', color: '#8B5CF6' },
+                                        { label: 'Admin', color: '#EF4444' },
+                                    ].map(({ label, color }) => (
+                                        <div
+                                            key={label}
+                                            className="rounded-xl border px-2 py-2 text-center text-[10px] font-semibold text-apple-text"
+                                            style={{ borderColor: color, background: `${color}14` }}
+                                        >
+                                            {label}
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex justify-center text-apple-subtext">↓ services + repositories</div>
+
+                                {/* Middle: Cache + DB side by side */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-3">
+                                        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-apple-subtext">In-process cache</p>
+                                        {[
+                                            { label: 'Listing snapshot cache', hint: 'manga / anime pages' },
+                                            { label: 'Steam store featured', hint: 'in-memory TTL' },
+                                            { label: 'OpenXBL get cache', hint: 'per-key TTL' },
+                                            { label: 'Proxy cookie jars', hint: 'per-egress session' },
+                                            { label: 'Scraper stats', hint: 'in-memory counters' },
+                                        ].map(({ label, hint }) => (
+                                            <div key={label} className="flex items-center gap-2 py-0.5">
+                                                <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[var(--mx-color-c6ff00)]" />
+                                                <span className="text-apple-text">{label}</span>
+                                                <span className="ml-auto text-apple-subtext">{hint}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="rounded-xl border border-[var(--mx-color-e5e5ea)] bg-apple-bg px-3 py-3">
+                                        <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-apple-subtext">MongoDB (Mongoose)</p>
+                                        {[
+                                            { label: 'User', hint: 'auth · progress · pins' },
+                                            { label: 'AnimeData', hint: 'stream pointers' },
+                                            { label: 'MangaCatalog', hint: 'chapter cache' },
+                                            { label: 'MangaProgress', hint: 'per-user reading' },
+                                            { label: 'WishlistItem', hint: 'game deals' },
+                                        ].map(({ label, hint }) => (
+                                            <div key={label} className="flex items-center gap-2 py-0.5">
+                                                <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#0080FF]" />
+                                                <span className="text-apple-text">{label}</span>
+                                                <span className="ml-auto text-apple-subtext">{hint}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex justify-center text-apple-subtext">↓ outbound HTTP (stealth-client · proxy rotation · fingerprint pool)</div>
+
+                                {/* External scrapers */}
+                                <div className="rounded-xl border border-dashed border-[var(--mx-color-e5e5ea)] px-3 py-3">
+                                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-apple-subtext">External integrations</p>
+                                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
+                                        {[
+                                            { label: 'Anineko', tag: 'anime · scraper' },
+                                            { label: 'WatchHentai', tag: 'anime · scraper' },
+                                            { label: 'MangaDNA', tag: 'manga · scraper' },
+                                            { label: 'Manga District', tag: 'manga · scraper' },
+                                            { label: 'Roliascan', tag: 'manga · API' },
+                                            { label: 'Comix', tag: 'manga · API' },
+                                            { label: 'Steam Web API', tag: 'games · API' },
+                                            { label: 'OpenXBL', tag: 'xbox · API' },
+                                            { label: 'CheapShark', tag: 'deals · API' },
+                                            { label: 'GameRant', tag: 'news · scraper' },
+                                            { label: 'Google OAuth', tag: 'auth · OAuth2' },
+                                            { label: 'Supabase', tag: 'auth · JWT' },
+                                        ].map(({ label, tag }) => (
+                                            <div key={label} className="flex items-center gap-1.5 py-0.5">
+                                                <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-[#FF9500]" />
+                                                <span className="text-apple-text">{label}</span>
+                                                <span className="text-apple-subtext">· {tag}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Legend */}
+                                <div className="flex flex-wrap gap-4 pt-1 text-[10px] text-apple-subtext">
+                                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-[var(--mx-color-c6ff00)]" /> In-process cache</span>
+                                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-[#0080FF]" /> MongoDB collections</span>
+                                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-[#FF9500]" /> External services</span>
+                                    <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm border-2 border-[var(--color-primary)]" /> API gateway</span>
+                                </div>
                             </div>
                         </div>
                     </Panel>
@@ -1590,6 +1909,66 @@ export default function LifeSyncAdmin() {
             {/*  Users  */}
             {tab === 'users' && (
                 <div className="space-y-8">
+                    <Panel>
+                        <SectionIntro title="Registration lock">
+                            When locked, new users cannot sign up or connect LifeSync from the Maxien frontend.
+                            Existing users who are already signed in are unaffected — only the connect / sign-up flow is hidden.
+                        </SectionIntro>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-3">
+                                {regLocked === null ? (
+                                    <span className="text-[12px] text-apple-subtext">Loading…</span>
+                                ) : (
+                                    <>
+                                        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold ${
+                                            regLocked
+                                                ? 'bg-red-100 text-red-800'
+                                                : 'bg-emerald-100 text-emerald-800'
+                                        }`}>
+                                            <span className={`h-1.5 w-1.5 rounded-full ${regLocked ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                                            {regLocked ? 'Locked — new connections blocked' : 'Open — new connections allowed'}
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    disabled={regLockBusy || regLocked === null}
+                                    onClick={() => toggleRegLock(true)}
+                                    className={`rounded-xl px-4 py-2.5 text-[12px] font-semibold shadow-sm transition-colors disabled:opacity-50 ${
+                                        regLocked
+                                            ? 'bg-red-600 text-white ring-2 ring-red-600/30'
+                                            : 'border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] text-apple-text hover:bg-apple-bg'
+                                    }`}
+                                >
+                                    {regLockBusy && regLocked !== true ? 'Locking…' : 'Lock registrations'}
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={regLockBusy || regLocked === null}
+                                    onClick={() => toggleRegLock(false)}
+                                    className={`rounded-xl px-4 py-2.5 text-[12px] font-semibold shadow-sm transition-colors disabled:opacity-50 ${
+                                        !regLocked && regLocked !== null
+                                            ? 'bg-emerald-600 text-white ring-2 ring-emerald-600/30'
+                                            : 'border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] text-apple-text hover:bg-apple-bg'
+                                    }`}
+                                >
+                                    {regLockBusy && regLocked !== false ? 'Unlocking…' : 'Unlock registrations'}
+                                </button>
+                            </div>
+                        </div>
+                        {regLockError ? (
+                            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900">
+                                {regLockError}
+                            </p>
+                        ) : null}
+                        <p className="mt-4 text-[11px] leading-relaxed text-apple-subtext">
+                            This setting is persisted server-side. The Maxien frontend reads it on load and hides the
+                            LifeSync connect flow for any user who is not already signed in.
+                        </p>
+                    </Panel>
+
                     <Panel>
                         <SectionIntro title="Look up a user">
                             Support tools: find by verified email or by Mongo user id (from tables or logs).

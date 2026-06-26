@@ -12,9 +12,10 @@ import { readProgressQueueSync, writeProgressQueueSync } from '../../features/ma
 
 // ─── constants ───────────────────────────────────────────────────────────────
 
-const PROGRESS_LOCAL_SAVE_MS        = 8000
-const PROGRESS_REMOTE_DEBOUNCE_MS   = 6000
 const PROGRESS_FLUSH_BATCH          = 16
+// Checkpoints (%) at which progress is immediately persisted and flushed remotely.
+// Crossing any threshold triggers one save; re-crossing the same chapter/threshold is a no-op.
+const PROGRESS_CHECKPOINTS          = [20, 35, 50, 60, 80, 97, 100]
 const PROGRESS_SOURCES              = new Set(['mangadistrict', 'roliascan', 'mangadna'])
 const INITIAL_PAGE_BURST            = 3
 const ZOOM_TRANSITION_MS            = 180
@@ -203,7 +204,6 @@ export default function LifeSyncMangaRead() {
         ready:          progressReady,
         persistLocal:   persistLocalProgress,
         flushNow:       flushProgressNow,
-        scheduleFlush:  scheduleProgressFlushService,
     } = useMangaProgress({ enabled: isLifeSyncConnected })
     const controllerSupportEnabled = useControllerSupportEnabled()
 
@@ -315,6 +315,9 @@ export default function LifeSyncMangaRead() {
     const resumeRestoreKey   = useRef('')
     const latestProgress     = useRef({ manga: null, chapter: null, percent: 0 })
     const lastFlushedSig     = useRef('')
+    // Tracks which checkpoints have already fired for the current chapter (by chapterId).
+    // Stored as "chapterId:threshold" strings so a chapter switch resets all checkpoints.
+    const firedCheckpoints   = useRef(new Set())
 
     // ── progress helpers (all stable  deps are refs or module-level fns) ──
 
@@ -391,16 +394,20 @@ export default function LifeSyncMangaRead() {
         }
     }, [buildPayload, persistLocal, toWritePayload])
 
-    const scheduleRemoteFlush = useCallback(() => {
-        if (!isLifeSyncConnected) return
-        if (remoteFlushTimer.current) window.clearTimeout(remoteFlushTimer.current)
-        remoteFlushTimer.current = window.setTimeout(() => {
-            remoteFlushTimer.current = null
-            void flushReading({ queueFirst: true })
+    const checkAndFireCheckpoint = useCallback((pct) => {
+        if (!isLifeSyncConnected || !manga?.id || !chapter?.id) return
+        const chId = String(chapter.id)
+        for (const threshold of PROGRESS_CHECKPOINTS) {
+            if (pct < threshold) break
+            const key = `${chId}:${threshold}`
+            if (firedCheckpoints.current.has(key)) continue
+            firedCheckpoints.current.add(key)
+            persistLocal()
+            void flushReading({ queueFirst: false })
             void flushQueued({ maxItems: 4 })
-            scheduleProgressFlushService()
-        }, PROGRESS_REMOTE_DEBOUNCE_MS)
-    }, [flushQueued, flushReading, isLifeSyncConnected, scheduleProgressFlushService])
+            break // only fire the highest newly-crossed checkpoint per scroll event
+        }
+    }, [chapter?.id, flushQueued, flushReading, isLifeSyncConnected, manga?.id, persistLocal])
 
     // ── scroll progress (hot path  minimise allocations) ──
 
@@ -556,6 +563,7 @@ export default function LifeSyncMangaRead() {
         if (el) el.scrollTop = 0
         lastCommittedProg.current = 0
         setReadProgress(0)
+        firedCheckpoints.current.clear()
     }, [chapter?.id])
 
     // Zoom change: preserve scroll position
@@ -629,19 +637,12 @@ export default function LifeSyncMangaRead() {
         latestProgress.current = { manga, chapter, percent: pct }
     }, [readProgress, chapter, manga, resumeChapterId, resumePercent])
 
-    // Schedule remote progress flush on scroll progress changes
-    useEffect(() => {
-        if (!isLifeSyncConnected || !manga?.id || !chapter?.id) return
-        scheduleRemoteFlush()
-    }, [chapter?.id, readProgress, isLifeSyncConnected, manga?.id, scheduleRemoteFlush])
-
-    // Periodic local save
+    // Checkpoint-driven progress save: fire exactly once per checkpoint per chapter.
     useEffect(() => {
         if (!manga?.id || !chapter?.id) return
-        persistLocal()
-        const id = window.setInterval(persistLocal, PROGRESS_LOCAL_SAVE_MS)
-        return () => window.clearInterval(id)
-    }, [chapter?.id, manga?.id, persistLocal])
+        const pct = Math.round(readProgress * 100)
+        checkAndFireCheckpoint(pct)
+    }, [chapter?.id, manga?.id, readProgress, checkAndFireCheckpoint])
 
     // Flush on online / tab visible
     useEffect(() => {

@@ -1,9 +1,9 @@
 import { useEffect } from 'react'
 
-const DPAD_BUTTONS = new Set([12, 13, 14, 15]) // up, down, left, right
-
+// Shared cursor state — writing the same value twice is a no-op so multiple
+// concurrent callers are safe. Only the body style write is shared; the rAF
+// loop is instance-local (see below) so each caller manages its own loop.
 let globalCursorHidden = false
-let rafId = null
 
 function setBodyCursorHidden(hidden) {
     if (globalCursorHidden === hidden) return
@@ -33,10 +33,13 @@ export function useHideCursorOnDpad() {
         const onMouseMove = () => setBodyCursorHidden(false)
         window.addEventListener('mousemove', onMouseMove, { passive: true })
 
-        // Poll for d-pad presses and stick movement
+        // Poll for d-pad presses and stick movement.
+        // rafId is instance-local: each mounted caller owns its own loop so
+        // one unmounting caller cannot cancel another caller's animation frame.
         const STICK_DEADZONE = 0.25
         let prevDpadPressed = false
         let frameCount = 0
+        let rafId = null
 
         const tick = () => {
             frameCount++
@@ -70,7 +73,6 @@ export function useHideCursorOnDpad() {
         return () => {
             window.removeEventListener('mousemove', onMouseMove)
             if (rafId != null) cancelAnimationFrame(rafId)
-            // Restore cursor when component unmounts
             setBodyCursorHidden(false)
         }
     }, [])

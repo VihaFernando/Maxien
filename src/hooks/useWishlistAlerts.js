@@ -15,7 +15,7 @@ export function useWishlistAlerts({ enabled = true, autoLoadDigest = false } = {
     const mountedRef = useRef(true)
 
     useEffect(() => {
-        mountedRef.current = true
+        // ref starts true; set false on cleanup so async callbacks can bail out
         return () => {
             mountedRef.current = false
         }

@@ -6,6 +6,7 @@ import useTimeoutRegistry from '../hooks/useTimeoutRegistry'
 import {
     isPluginEnabled,
     lifesyncFetch,
+    lifesyncFetchPublicSettings,
     lifesyncOAuthStartUrl,
 } from '../lib/lifesyncApi'
 
@@ -446,10 +447,18 @@ export default function LifeSyncIntegration({ embedded = false }) {
     const [busy, setBusy] = useState(false)
     const [message, setMessage] = useState('')
     const [error, setError] = useState('')
+    const [registrationLocked, setRegistrationLocked] = useState(false)
     const { registerTimeout } = useTimeoutRegistry()
 
     const prefs = lifeSyncUser?.preferences
     const connected = Boolean(lifeSyncUser)
+
+    useEffect(() => {
+        if (connected) return
+        lifesyncFetchPublicSettings().then((s) => {
+            if (s?.registrationLocked) setRegistrationLocked(true)
+        })
+    }, [connected])
 
     const handleConnectAuto = async () => {
         setError('')
@@ -515,6 +524,8 @@ export default function LifeSyncIntegration({ embedded = false }) {
         }
     }
 
+    if (registrationLocked && !connected) return null
+
     return (
         <div className={embedded ? "" : "mb-5 sm:mb-6"}>
             {/* Connection card  matches GitHub integration row */}
@@ -548,19 +559,17 @@ export default function LifeSyncIntegration({ embedded = false }) {
                     </div>
                     <div className="flex flex-shrink-0 flex-wrap items-center gap-2 lg:justify-end">
                         {connected ? (
-                            <>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        lifeSyncLogout()
-                                        setMessage('')
-                                        setError('')
-                                    }}
-                                    className="text-[12px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 transition-colors px-3 py-2 rounded-xl hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 whitespace-nowrap"
-                                >
-                                    Disconnect
-                                </button>
-                            </>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    lifeSyncLogout()
+                                    setMessage('')
+                                    setError('')
+                                }}
+                                className="text-[12px] font-semibold text-[var(--mx-color-86868b)] hover:text-red-500 transition-colors px-3 py-2 rounded-xl hover:bg-red-50 border border-[var(--mx-color-e5e5ea)] hover:border-red-100 whitespace-nowrap"
+                            >
+                                Disconnect
+                            </button>
                         ) : (
                             <div className="flex flex-wrap items-center gap-2 justify-end">
                                 <button

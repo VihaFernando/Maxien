@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useActivityFeed } from '../hooks/useActivityFeed'
 import { getRelativeTime } from '../lib/dateUtils'
 
-// ─── Domain config ────────────────────────────────────────────────────────────
+// ─── Domain config ─────────────────────────────────────────────────────────────
 
 const DOMAINS = [
     { key: '', label: 'All' },
@@ -15,7 +15,6 @@ const DOMAINS = [
 const DOMAIN_META = {
     anime: {
         accent: '#3B82F6',
-        dim: 'rgba(59,130,246,0.13)',
         label: 'Anime',
         icon: (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
@@ -25,7 +24,6 @@ const DOMAIN_META = {
     },
     manga: {
         accent: '#F97316',
-        dim: 'rgba(249,115,22,0.13)',
         label: 'Manga',
         icon: (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
@@ -35,7 +33,6 @@ const DOMAIN_META = {
     },
     game: {
         accent: '#22C55E',
-        dim: 'rgba(34,197,94,0.13)',
         label: 'Games',
         icon: (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
@@ -45,7 +42,6 @@ const DOMAIN_META = {
     },
     wishlist: {
         accent: '#A855F7',
-        dim: 'rgba(168,85,247,0.13)',
         label: 'Wishlist',
         icon: (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
@@ -55,7 +51,6 @@ const DOMAIN_META = {
     },
     system: {
         accent: '#6B7280',
-        dim: 'rgba(107,114,128,0.13)',
         label: 'System',
         icon: (
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-full w-full">
@@ -68,148 +63,192 @@ const DOMAIN_META = {
 const ACTION_LABEL = {
     manga_progress: 'Reading',
     manga_chapter_finished: 'Finished chapter',
-    manga_new_chapter: 'New chapter out',
+    manga_new_chapter: 'New chapter',
+    manga_status_changed: 'Status update',
     anime_progress: 'Watching',
     anime_episode_finished: 'Finished episode',
-    anime_new_episode: 'New episode out',
-    wishlist_added: 'Added to wishlist',
+    anime_new_episode: 'New episode',
+    anime_status_changed: 'Status update',
+    wishlist_added: 'Added',
     wishlist_removed: 'Removed',
     wishlist_price_drop: 'Price dropped',
     game_deal: 'Deal found',
 }
 
-function getBadge(entry) {
+const STATUS_LABEL = {
+    watching: 'Watching',
+    on_hold: 'On Hold',
+    plan_to_watch: 'Plan to Watch',
+    dropped: 'Dropped',
+    completed: 'Completed',
+    re_watching: 'Re-watching',
+    reading: 'Reading',
+    plan_to_read: 'Plan to Read',
+    re_reading: 'Re-reading',
+}
+
+function getStatusFromEntry(entry) {
     const d = entry.data || {}
-    if (d.episodeNumber != null) return `EP ${d.episodeNumber}`
-    if (d.lastEpisodeNumber != null) return `EP ${d.lastEpisodeNumber}`
-    if (d.chapterNum != null) return `CH ${d.chapterNum}`
-    if (d.chapterId != null) return `CH ${d.chapterId}`
+    const raw = d.watchStatus || d.readingStatus || ''
+    return STATUS_LABEL[raw] || (raw ? raw.replace(/_/g, ' ') : null)
+}
+
+function getBadge(entry) {
+    if (entry.action === 'anime_status_changed' || entry.action === 'manga_status_changed') return null
+    const d = entry.data || {}
+    if (d.episodeNumber != null) return `Ep ${d.episodeNumber}`
+    if (d.lastEpisodeNumber != null) return `Ep ${d.lastEpisodeNumber}`
+    if (d.chapterNum != null) return `Ch ${d.chapterNum}`
+    if (d.chapterId != null) return `Ch ${d.chapterId}`
     return null
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
+// ─── Skeleton ──────────────────────────────────────────────────────────────────
 
-function CardSkeleton() {
+function RowSkeleton() {
     return (
-        <div className="flex gap-4 overflow-hidden rounded-2xl border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] p-4 animate-pulse">
-            <div className="h-24 w-16 flex-shrink-0 rounded-xl bg-[var(--mx-color-f0f0f0)]" />
-            <div className="flex-1 space-y-3 py-1">
-                <div className="flex gap-2">
-                    <div className="h-5 w-14 rounded-full bg-[var(--mx-color-f0f0f0)]" />
-                    <div className="h-5 w-10 rounded-full bg-[var(--mx-color-f0f0f0)]" />
+        <div className="flex gap-4 py-4 animate-pulse" aria-hidden="true">
+            <div className="flex flex-col items-center gap-1 pt-1">
+                <div className="h-2 w-2 rounded-full bg-[var(--mx-color-d2d2d7)]" />
+            </div>
+            <div className="flex flex-1 gap-3">
+                <div className="h-12 w-9 flex-shrink-0 rounded-md bg-[var(--mx-color-f0f0f0)]" />
+                <div className="flex-1 space-y-2 pt-0.5">
+                    <div className="h-3 w-24 rounded-sm bg-(--mx-color-f0f0f0)" />
+                    <div className="h-4 w-2/3 rounded-sm bg-(--mx-color-f0f0f0)" />
+                    <div className="h-3 w-1/3 rounded-sm bg-(--mx-color-f0f0f0)" />
                 </div>
-                <div className="h-4 w-3/4 rounded-full bg-[var(--mx-color-f0f0f0)]" />
-                <div className="h-3 w-1/2 rounded-full bg-[var(--mx-color-f0f0f0)]" />
-                <div className="h-3 w-1/4 rounded-full bg-[var(--mx-color-f0f0f0)]" />
             </div>
         </div>
     )
 }
 
-// ─── Activity card — full width horizontal ─────────────────────────────────────
+// ─── Single activity row ────────────────────────────────────────────────────────
 
-function ActivityCard({ entry }) {
+function ActivityRow({ entry, isLast }) {
     const meta = DOMAIN_META[entry.domain] || DOMAIN_META.system
     const action = ACTION_LABEL[entry.action] || entry.action?.replace(/_/g, ' ')
     const badge = getBadge(entry)
+    const statusLabel = getStatusFromEntry(entry)
+    const isStatusEvent = entry.action === 'anime_status_changed' || entry.action === 'manga_status_changed'
     const [imgErr, setImgErr] = useState(false)
     const hasImage = entry.imageUrl && !imgErr
 
     return (
-        <li className="group flex gap-4 overflow-hidden rounded-2xl border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] p-4 transition-all duration-200 hover:border-[var(--mx-color-c0c0c5)] hover:shadow-md">
-
-            {/* Poster / icon block */}
-            <div className="relative h-24 w-16 flex-shrink-0 overflow-hidden rounded-xl">
-                {hasImage ? (
-                    <img
-                        src={entry.imageUrl}
-                        alt={entry.title || ''}
-                        loading="lazy"
-                        onError={() => setImgErr(true)}
-                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                ) : (
-                    <div
-                        className="absolute inset-0 flex items-center justify-center p-4"
-                        style={{ background: meta.dim }}
-                    >
-                        <span style={{ color: meta.accent }}>{meta.icon}</span>
-                    </div>
+        <li className="group flex gap-4">
+            {/* Timeline spine */}
+            <div className="flex flex-col items-center" style={{ width: 8 }}>
+                <div
+                    className="mt-2 h-2 w-2 flex-shrink-0 rounded-full transition-colors duration-150 group-hover:scale-125"
+                    style={{ background: meta.accent, transition: 'transform 150ms ease-out' }}
+                />
+                {!isLast && (
+                    <div className="mt-1 flex-1 w-px bg-[var(--mx-color-d2d2d7)]" />
                 )}
             </div>
 
-            {/* Content */}
-            <div className="min-w-0 flex-1">
-
-                {/* Top row: domain pill + action + badge + time */}
-                <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                    <span
-                        className="rounded-md px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-widest"
-                        style={{ background: meta.accent, color: '#fff' }}
-                    >
-                        {meta.label}
-                    </span>
-                    {action && (
-                        <span
-                            className="rounded-md px-2 py-0.5 text-[10px] font-semibold"
-                            style={{ background: meta.dim, color: meta.accent }}
+            {/* Row content */}
+            <div className="flex flex-1 gap-3 pb-6 min-w-0">
+                {/* Thumbnail */}
+                <div className="relative h-12 w-9 flex-shrink-0 overflow-hidden rounded-md bg-[var(--mx-color-f0f0f0)]">
+                    {hasImage ? (
+                        <img
+                            src={entry.imageUrl}
+                            alt=""
+                            loading="lazy"
+                            onError={() => setImgErr(true)}
+                            className="absolute inset-0 h-full w-full object-cover"
+                        />
+                    ) : (
+                        <div
+                            className="absolute inset-0 flex items-center justify-center p-2"
+                            style={{ color: meta.accent }}
                         >
-                            {action}
-                        </span>
+                            {meta.icon}
+                        </div>
                     )}
-                    {badge && (
-                        <span className="rounded-md bg-[var(--mx-color-f0f0f0)] px-2 py-0.5 text-[10px] font-bold text-[var(--color-text-secondary)]">
-                            {badge}
-                        </span>
-                    )}
-                    <span className="ml-auto text-[11px] text-[var(--color-text-secondary)]">
-                        {getRelativeTime(entry.occurredAt)}
-                    </span>
                 </div>
 
-                {/* Title */}
-                <p className="line-clamp-2 text-[14px] font-bold leading-snug text-[var(--color-text-primary)]">
-                    {entry.title}
-                </p>
+                {/* Text */}
+                <div className="min-w-0 flex-1 pt-0.5">
+                    {/* Meta row */}
+                    <div className="mb-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                        <span
+                            className="text-[11px] font-semibold uppercase tracking-wider"
+                            style={{ color: meta.accent }}
+                        >
+                            {meta.label}
+                        </span>
+                        {action && (
+                            <span className="text-[11px] text-[var(--color-text-secondary)]">
+                                {action}
+                            </span>
+                        )}
+                        {badge && (
+                            <span className="text-[11px] font-medium text-[var(--color-text-secondary)]">
+                                · {badge}
+                            </span>
+                        )}
+                        {isStatusEvent && statusLabel && (
+                            <span
+                                className="text-[11px] font-semibold"
+                                style={{ color: meta.accent }}
+                            >
+                                · {statusLabel}
+                            </span>
+                        )}
+                        <span className="ml-auto text-[11px] text-[var(--color-text-secondary)] tabular-nums">
+                            {getRelativeTime(entry.occurredAt)}
+                        </span>
+                    </div>
 
-                {/* Subtitle */}
-                {entry.subtitle && (
-                    <p className="mt-1 line-clamp-1 text-[12px] text-[var(--color-text-secondary)]">
-                        {entry.subtitle}
+                    {/* Title */}
+                    <p className="line-clamp-2 text-[13px] font-semibold leading-snug text-[var(--color-text-primary)]">
+                        {entry.title}
                     </p>
-                )}
+
+                    {/* Subtitle */}
+                    {entry.subtitle && (
+                        <p className="mt-0.5 line-clamp-1 text-[12px] text-[var(--color-text-secondary)]">
+                            {entry.subtitle}
+                        </p>
+                    )}
+                </div>
             </div>
         </li>
     )
 }
 
-// ─── Empty state ──────────────────────────────────────────────────────────────
+// ─── Empty state ───────────────────────────────────────────────────────────────
 
 function EmptyState({ domain }) {
     const meta = domain ? DOMAIN_META[domain] : null
     return (
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-8 py-20 text-center">
-            <span
-                className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl p-4"
-                style={meta ? { background: meta.dim, color: meta.accent } : { background: 'var(--mx-color-f0f0f0)', color: 'var(--color-text-secondary)' }}
+        <div className="py-20 text-center">
+            <div
+                className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full p-2.5"
+                style={meta
+                    ? { background: `${meta.accent}15`, color: meta.accent }
+                    : { background: 'var(--mx-color-f0f0f0)', color: 'var(--color-text-secondary)' }
+                }
             >
                 {meta ? meta.icon : (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" className="h-full w-full">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                     </svg>
                 )}
-            </span>
-            <p className="text-[16px] font-extrabold text-[var(--color-text-primary)]">Nothing here yet</p>
-            <p className="mt-2 max-w-[240px] text-[13px] leading-relaxed text-[var(--color-text-secondary)]">
+            </div>
+            <p className="text-[14px] font-semibold text-[var(--color-text-primary)]">Nothing here yet</p>
+            <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
                 {domain
-                    ? `Start tracking ${meta?.label?.toLowerCase() || domain} and your activity will appear here.`
-                    : "Start reading, watching, or tracking and your activity will show up here."}
+                    ? `Start tracking ${meta?.label?.toLowerCase() || domain} to see activity.`
+                    : 'Start reading, watching, or tracking.'}
             </p>
         </div>
     )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function Feed() {
     const [domain, setDomain] = useState('')
@@ -219,16 +258,16 @@ export default function Feed() {
     })
 
     return (
-        <div className="h-full w-full px-6 py-6 lg:px-10">
+        <div className="w-full px-6 py-8 lg:px-10 xl:px-16">
 
             {/* ── Header ── */}
-            <div className="mb-6 flex items-start justify-between">
+            <div className="mb-8 flex items-start justify-between">
                 <div>
-                    <h1 className="text-[24px] font-extrabold tracking-tight text-[var(--color-text-primary)]">
+                    <h1 className="text-[20px] font-semibold tracking-tight text-[var(--color-text-primary)]">
                         Activity
                     </h1>
                     <p className="mt-0.5 text-[13px] text-[var(--color-text-secondary)]">
-                        Everything you read, watch &amp; track
+                        Your recent reads, watches &amp; updates
                     </p>
                 </div>
                 <button
@@ -236,13 +275,12 @@ export default function Feed() {
                     onClick={() => refresh()}
                     disabled={loading}
                     aria-label="Refresh activity"
-                    className="mt-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-[var(--color-text-secondary)] transition-colors duration-150 hover:bg-[var(--mx-color-f0f0f0)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
+                    className="mt-0.5 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-[var(--color-text-secondary)] transition-colors duration-150 hover:bg-[var(--mx-color-f0f0f0)] hover:text-[var(--color-text-primary)] disabled:opacity-40"
                 >
                     <svg
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                         strokeLinecap="round" strokeLinejoin="round"
-                        className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
-                        style={{ transition: 'transform 300ms ease' }}
+                        className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`}
                     >
                         <path d="M1 4v6h6M23 20v-6h-6" />
                         <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
@@ -250,8 +288,8 @@ export default function Feed() {
                 </button>
             </div>
 
-            {/* ── Filter pills ── */}
-            <div className="mb-6 flex flex-wrap gap-2">
+            {/* ── Filter tabs ── */}
+            <div className="mb-8 flex gap-0 border-b border-[var(--mx-color-d2d2d7)]">
                 {DOMAINS.map((f) => {
                     const active = domain === f.key
                     const m = f.key ? DOMAIN_META[f.key] : null
@@ -260,71 +298,81 @@ export default function Feed() {
                             key={f.key || 'all'}
                             type="button"
                             onClick={() => setDomain(f.key)}
-                            className="cursor-pointer rounded-full px-4 py-2 text-[12px] font-bold transition-all duration-150 min-h-[36px]"
-                            style={
-                                active && m
-                                    ? { background: m.accent, color: '#fff', border: 'none' }
-                                    : active
-                                    ? { background: 'var(--mx-color-c6ff00)', color: '#000', border: 'none' }
-                                    : { background: 'transparent', color: 'var(--color-text-secondary)', border: '1.5px solid var(--mx-color-d2d2d7)' }
-                            }
+                            className="relative cursor-pointer px-3 pb-2.5 pt-0.5 text-[12px] font-medium transition-colors duration-150 min-h-[36px]"
+                            style={{
+                                color: active
+                                    ? (m?.accent || 'var(--color-text-primary)')
+                                    : 'var(--color-text-secondary)',
+                            }}
                         >
                             {f.label}
+                            {active && (
+                                <span
+                                    className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
+                                    style={{ background: m?.accent || 'var(--color-text-primary)' }}
+                                />
+                            )}
                         </button>
                     )
                 })}
             </div>
 
-            {/* ── Content ── */}
-            {error ? (
-                <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-6 text-center">
-                    <p className="text-[14px] font-bold text-red-700">Failed to load activity</p>
-                    <p className="mt-1 text-[12px] text-red-500">{error}</p>
+            {/* ── Error ── */}
+            {error && (
+                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-center dark:border-red-900 dark:bg-red-950">
+                    <p className="text-[13px] font-medium text-red-700 dark:text-red-400">{error}</p>
                     <button
                         type="button"
                         onClick={() => refresh()}
-                        className="mt-4 cursor-pointer rounded-xl bg-red-600 px-5 py-2 text-[12px] font-bold text-white transition-opacity hover:opacity-90"
+                        className="mt-2 cursor-pointer text-[12px] font-semibold text-red-600 underline underline-offset-2 hover:no-underline dark:text-red-400"
                     >
-                        Retry
+                        Try again
                     </button>
                 </div>
-
-            ) : loading && entries.length === 0 ? (
-                /* Two-column skeleton mirrors real layout */
-                <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                    {Array.from({ length: 8 }).map((_, i) => <CardSkeleton key={i} />)}
-                </div>
-
-            ) : entries.length === 0 ? (
-                <EmptyState domain={domain} />
-
-            ) : (
-                <ol className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                    {entries.map((e) => (
-                        <ActivityCard key={e._id} entry={e} />
-                    ))}
-                </ol>
             )}
 
-            {/* ── Load more ── */}
-            {pageInfo?.hasMore && (
-                <div className="mt-8 text-center">
-                    <button
-                        type="button"
-                        onClick={() => loadMore()}
-                        disabled={loadingMore}
-                        className="cursor-pointer rounded-2xl border border-[var(--mx-color-d2d2d7)] bg-[var(--color-surface)] px-8 py-3 text-[13px] font-bold text-[var(--color-text-primary)] transition-all duration-150 hover:bg-[var(--mx-color-f0f0f0)] disabled:opacity-50"
-                    >
-                        {loadingMore ? (
-                            <span className="flex items-center gap-2">
-                                <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-                                </svg>
-                                Loading more…
-                            </span>
-                        ) : 'Load more'}
-                    </button>
-                </div>
+            {/* ── Content ── */}
+            {!error && (
+                <>
+                    {loading && entries.length === 0 ? (
+                        <ol className="ml-3">
+                            {Array.from({ length: 6 }).map((_, i) => <RowSkeleton key={i} />)}
+                        </ol>
+                    ) : entries.length === 0 ? (
+                        <EmptyState domain={domain} />
+                    ) : (
+                        <ol className="ml-3">
+                            {entries.map((e, i) => (
+                                <ActivityRow
+                                    key={e._id}
+                                    entry={e}
+                                    isLast={i === entries.length - 1 && !pageInfo?.hasMore}
+                                />
+                            ))}
+                        </ol>
+                    )}
+
+                    {/* ── Load more ── */}
+                    {pageInfo?.hasMore && (
+                        <div className="ml-3 mt-2 pb-4">
+                            <button
+                                type="button"
+                                onClick={() => loadMore()}
+                                disabled={loadingMore}
+                                className="cursor-pointer text-[12px] font-medium text-[var(--color-text-secondary)] transition-colors duration-150 hover:text-[var(--color-text-primary)] disabled:opacity-40"
+                            >
+                                {loadingMore ? (
+                                    <span className="flex items-center gap-1.5">
+                                        <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                                        </svg>
+                                        Loading…
+                                    </span>
+                                ) : 'Load more'}
+                            </button>
+                        </div>
+                    )}
+                </>
             )}
         </div>
     )
