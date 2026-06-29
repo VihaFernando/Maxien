@@ -526,7 +526,7 @@ function LibraryFilterDrawer({ open, onClose, count, onReset, children }) {
 }
 
 // ─── Detail drawer ────────────────────────────────────────────────────────────
-function DetailDrawer({ entry, onClose, onContinue }) {
+function DetailDrawer({ entry, onClose, onContinue, onBrowse }) {
     useEffect(() => {
         const fn = (e) => { if (e.key === 'Escape') onClose() }
         window.addEventListener('keydown', fn)
@@ -682,12 +682,13 @@ function DetailDrawer({ entry, onClose, onContinue }) {
                             <IconBook className="h-4 w-4" /> {rm.button}
                         </button>
                     </MotionDiv>
-                    <Link
-                        to={MANGA_BASE}
+                    <button
+                        type="button"
+                        onClick={() => onBrowse?.(entry)}
                         className="flex min-h-12 shrink-0 items-center justify-center rounded-2xl border border-(--color-border-soft) px-5 text-[13px] font-semibold text-(--color-text-secondary) transition hover:border-(--color-border-strong) hover:bg-(--color-surface-muted)"
                     >
                         Browse
-                    </Link>
+                    </button>
                 </div>
             </MotionDiv>
         </MotionDiv>
@@ -1151,6 +1152,11 @@ export default function LifeSyncMangaLibrary() {
         const { to, state } = resumeTarget(entry, browseTranslatedLang)
         setDetailEntry(null); navigate(to, { state: state || undefined })
     }, [browseTranslatedLang, navigate])
+    const onBrowseDetail = useCallback((entry) => {
+        if (!entry) return
+        setDetailEntry(null)
+        openSuggestionDetail({ id: entry.mangaId, source: entry.source, title: entry.title, coverUrl: entry.coverUrl, backgroundImageUrl: entry.backgroundImageUrl }, entry.source)
+    }, [openSuggestionDetail])
 
     const onToggleSelect = useCallback((entry) => {
         const k = entryKey(entry)
@@ -1322,11 +1328,28 @@ export default function LifeSyncMangaLibrary() {
 
             {/* ── Command bar: search · filters · view · sync ── */}
             <div className="sticky top-2 z-30 flex flex-wrap items-center gap-2 rounded-2xl border border-(--color-border-soft) bg-(--color-surface)/85 px-2 py-2 backdrop-blur-md">
-                {/* Search */}
+                {/* Search + suggestions */}
                 <div className="relative min-w-0 flex-1 basis-44">
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)"><IconSearch /></span>
-                    <input ref={searchRef} type="search" value={queryInput} onChange={(e) => setQueryInput(e.target.value)} placeholder="Search your shelf…"
-                        className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none focus:ring-2 focus:ring-primary/15 transition" />
+                    <input
+                        ref={searchRef}
+                        type="search"
+                        value={queryInput}
+                        onChange={(e) => { setQueryInput(e.target.value); setSuggestionsOpen(true) }}
+                        onFocus={() => { if (queryInput.trim().length >= 2) setSuggestionsOpen(true) }}
+                        placeholder="Search your shelf or discover…"
+                        className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none focus:ring-2 focus:ring-primary/15 transition"
+                    />
+                    {suggestionsOpen && (
+                        <MangaSearchSuggestions
+                            suggestions={suggestions}
+                            loading={suggestionsLoading}
+                            query={queryInput}
+                            anchorRef={searchRef}
+                            onSelect={onSuggestionSelect}
+                            onClose={onSuggestionClose}
+                        />
+                    )}
                 </div>
 
                 {/* Filters */}
@@ -1634,13 +1657,15 @@ export default function LifeSyncMangaLibrary() {
 
             {/* ── Modals ── */}
             <AnimatePresence>
-                {detailEntry && <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} />}
+                {detailEntry && <DetailDrawer entry={detailEntry} onClose={onCloseDetail} onContinue={onContinueFromDetail} onBrowse={onBrowseDetail} />}
             </AnimatePresence>
             <AnimatePresence>
                 {deleteConfirm.isOpen && (
                     <ConfirmModal isOpen title="Remove from library" message={`Remove "${decodeHtmlEntities(deleteConfirm.entry?.title) || 'this manga'}" from your shelf?`} onConfirm={onConfirmDelete} onCancel={onCancelDelete} />
                 )}
             </AnimatePresence>
+            {/* Suggestion detail portal — full MangaDetailPortal opened on suggestion click */}
+            {suggestionDetailPortal}
         </MotionDiv>
     )
 }
