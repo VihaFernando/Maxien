@@ -13,7 +13,10 @@ import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
 import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
 import { useNewMangaToRead } from '../../hooks/useNewMangaToRead'
+import { useMangaSearchSuggestions } from '../../hooks/useMangaSearchSuggestions'
+import { useMangaDetailPortal } from '../../components/lifesync/MangaDetailPortal'
 import NewMangaToReadPanel from '../../components/lifesync/NewMangaToReadPanel'
+import MangaSearchSuggestions from '../../components/lifesync/MangaSearchSuggestions'
 import { mangaImageProps, decodeHtmlEntities } from '../../lib/mangaChapterUtils'
 import { LifesyncEpisodeThumbnail } from '../../components/lifesync/EpisodeLoadingSkeletons'
 import {
@@ -25,7 +28,7 @@ import {
 
 const MANGA_BASE = '/dashboard/lifesync/anime/manga'
 const MANGA_LIBRARY_PATH = `${MANGA_BASE}/library`
-const FETCH_LIMIT = 500
+const FETCH_LIMIT = 100
 const RENDER_BATCH = 40
 
 const SOURCE_OPTIONS = [
@@ -954,6 +957,30 @@ export default function LifeSyncMangaLibrary() {
     const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, entry: null })
     const [detailEntry, setDetailEntry] = useState(null)
     const [filtersOpen, setFiltersOpen] = useState(false)
+    const [suggestionsOpen, setSuggestionsOpen] = useState(false)
+
+    // Unified search suggestions (all sources, fired after user stops typing)
+    const { suggestions, loading: suggestionsLoading } = useMangaSearchSuggestions(queryInput, {
+        enabled: isLifeSyncConnected && mangaPluginOn && suggestionsOpen,
+    })
+
+    // Detail portal for suggestion clicks — opens the full MangaDetailPortal
+    const { openManga: openSuggestionDetail, portal: suggestionDetailPortal } = useMangaDetailPortal({
+        isLifeSyncConnected,
+        browseTranslatedLang,
+        onStartRead: (manga, chapter) => {
+            const src = String(manga?.source || '').trim()
+            const q = new URLSearchParams({ source: src, lang: browseTranslatedLang === 'all' ? 'all' : 'en' }).toString()
+            navigate(`${MANGA_BASE}/read/${encodeURIComponent(String(manga.id))}/${encodeURIComponent(String(chapter.id))}?${q}`)
+        },
+    })
+
+    const onSuggestionSelect = useCallback((manga) => {
+        setSuggestionsOpen(false)
+        openSuggestionDetail(manga, manga.source)
+    }, [openSuggestionDetail])
+
+    const onSuggestionClose = useCallback(() => setSuggestionsOpen(false), [])
 
     const sourceOptions = useMemo(
         () => hManhwaEnabled ? SOURCE_OPTIONS : SOURCE_OPTIONS.filter((o) => o.id !== 'mangadistrict' && o.id !== 'mangadna'),
