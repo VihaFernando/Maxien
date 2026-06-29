@@ -25,7 +25,8 @@ import {
 
 const MANGA_BASE = '/dashboard/lifesync/anime/manga'
 const MANGA_LIBRARY_PATH = `${MANGA_BASE}/library`
-const PAGE_SIZE = 24
+const FETCH_LIMIT = 500
+const RENDER_BATCH = 40
 
 const SOURCE_OPTIONS = [
     { id: 'all', label: 'All sources' },
@@ -205,8 +206,17 @@ function statusLabel(status) {
 }
 function parseChapterNum(label) {
     if (!label) return NaN
-    const m = String(label).match(/Ch\.?\s*([\d.]+)/i)
-    return m ? parseFloat(m[1]) : NaN
+    const s = String(label)
+    // "Ch. 11", "Ch 90.5"
+    const m = s.match(/Ch\.?\s*([\d.]+)/i)
+    if (m) return parseFloat(m[1])
+    // "chapter-11", "chapter-90.5" raw slugs from MangaDNA/MangaDistrict
+    const slug = s.match(/chapter-(\d+(?:\.\d+)?)/i)
+    if (slug) return parseFloat(slug[1])
+    // bare number
+    const bare = s.match(/^[\s#]*(\d+(?:\.\d+)?)[\s]*$/)
+    if (bare) return parseFloat(bare[1])
+    return NaN
 }
 function clampPct(v) { const n = Number(v); return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : 0 }
 function fmtChapter(v) {
@@ -232,17 +242,21 @@ function chapterSnapshot(entry) {
 function resumeMeta(entry) {
     const pct = Number(entry?.lastReadPercent || 0)
     const chapterLabel = entry?.lastChapterLabel || ''
+    const behind = entry?.behind
+    const chaptersBehind = Number(entry?.chaptersBehind || 0)
     if (entry?.hasNewChapter) {
         return { rowLabel: 'Up next', rowValue: entry?.remoteLatestChapterLabel || chapterLabel, button: 'Read new chapter', callout: 'New chapter ready for you' }
     }
+    if (behind) {
+        const callout = chaptersBehind > 1 ? `${chaptersBehind} chapters to catch up` : 'Behind — catch up'
+        return { rowLabel: 'Continue from', rowValue: chapterLabel, button: 'Catch up', callout }
+    }
     if (pct >= 100 || (entry?.caughtUp && pct === 0)) {
-        // Finished the latest available chapter — nothing new yet.
         return { rowLabel: 'Up next', rowValue: chapterLabel || 'All caught up', button: 'Read again', callout: '' }
     }
     if (pct > 0 && pct < 97) {
         return { rowLabel: 'Continue from', rowValue: chapterLabel, button: 'Continue reading', callout: '' }
     }
-    // Fresh chapter queued at the start (auto-advanced), or never opened.
     return { rowLabel: 'Up next', rowValue: chapterLabel, button: chapterLabel ? 'Start next chapter' : 'Start reading', callout: '' }
 }
 
@@ -910,7 +924,8 @@ export default function LifeSyncMangaLibrary() {
     const [updateStateFilter, setUpdateStateFilter] = useState('all')
     const [sortBy, setSortBy] = useState('updatedAt')
     const [sortOrder, setSortOrder] = useState('desc')
-    const [page, setPage] = useState(1)
+    const [renderCount, setRenderCount] = useState(RENDER_BATCH)
+    const sentinelRef = useRef(null)
     const [layout, setLayout] = useState(() => {
         try { return localStorage.getItem('lifesync.mangaLibrary.layout') === 'grid' ? 'grid' : 'list' } catch { return 'list' }
     })
@@ -947,17 +962,24 @@ export default function LifeSyncMangaLibrary() {
 
     useEffect(() => { if (!isLifeSyncConnected) navigate('/dashboard/profile?tab=integrations', { replace: true }) }, [isLifeSyncConnected, navigate])
     useEffect(() => { const id = setTimeout(() => setQuery(queryInput.trim()), 260); return () => clearTimeout(id) }, [queryInput])
-    useEffect(() => { setPage(1) }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder])
+    useEffect(() => { setRenderCount(RENDER_BATCH) }, [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder])
     useEffect(() => { if (!hManhwaEnabled && (sourceFilter === 'mangadistrict' || sourceFilter === 'mangadna')) setSourceFilter('all') }, [hManhwaEnabled, sourceFilter])
 
-    const listFilters = useMemo(() => ({ q: query, source: sourceFilter, status: statusFilter, updateState: updateStateFilter, sortBy, order: sortOrder, page, limit: PAGE_SIZE }), [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder, page])
+    const listFilters = useMemo(() => ({ q: query, source: sourceFilter, status: statusFilter, updateState: updateStateFilter, sortBy, order: sortOrder, limit: FETCH_LIMIT }), [query, sourceFilter, statusFilter, updateStateFilter, sortBy, sortOrder])
 
     const { entries: listEntries, visibleEntries, visibleSummary, pageInfo, error, initialLoading, refreshing, refresh: refreshList, patchEntry, removeEntry, bulkPatch, bulkDelete } = useMangaReadingList({ enabled: isLifeSyncConnected && mangaPluginOn, nsfwEnabled, hManhwaEnabled, filters: listFilters })
 
+    // Grow the rendered slice as the sentinel scrolls into view
     useEffect(() => {
-        const total = Math.max(1, Number(pageInfo?.totalPages || 1))
-        if (page > total) setPage(total)
-    }, [page, pageInfo?.totalPages])
+        const el = sentinelRef.current
+        if (!el) return undefined
+        const observer = new IntersectionObserver(
+            ([entry]) => { if (entry.isIntersecting) setRenderCount((c) => c + RENDER_BATCH) },
+            { rootMargin: '200px' },
+        )
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [visibleEntries])
 
     // Post-sync "new chapters to read" deck  derived from the full list (not the
     // paginated/filtered view), persisted dismissals in localStorage via the hook.
@@ -977,6 +999,12 @@ export default function LifeSyncMangaLibrary() {
         }
         return out
     }, [listEntries])
+
+    // Slice for progressive scroll rendering — grows as sentinel fires
+    const renderedEntries = useMemo(
+        () => visibleEntries.slice(0, renderCount),
+        [visibleEntries, renderCount],
+    )
 
     const selectableEntries = useMemo(() => {
         const m = new Map()
@@ -1126,14 +1154,10 @@ export default function LifeSyncMangaLibrary() {
             setFocusedCardIndex(-1)
         },
         [XBOX_GAMEPAD_BUTTONS.LB]: () => {
-            setPage(p => Math.max(1, p - 1))
-            setFocusedCardIndex(0)
+            setFocusedCardIndex((p) => Math.max(0, p - 1))
         },
         [XBOX_GAMEPAD_BUTTONS.RB]: () => {
-            if (pageInfo?.hasMore) {
-                setPage(p => p + 1)
-                setFocusedCardIndex(0)
-            }
+            setFocusedCardIndex((p) => Math.min(visibleEntries.length - 1, p + 1))
         },
         [XBOX_GAMEPAD_BUTTONS.X]: () => {
             if (searchRef.current) searchRef.current.focus()
@@ -1165,7 +1189,7 @@ export default function LifeSyncMangaLibrary() {
                 navigate(-1)
             }
         },
-    }), [detailEntry, focusedCardIndex, layout, navigate, onCloseDetail, onOpenDetail, pageInfo?.hasMore, visibleEntries])
+    }), [detailEntry, focusedCardIndex, layout, navigate, onCloseDetail, onOpenDetail, visibleEntries])
 
     useLifeSyncGamepadInput({
         enabled: controllerSupportEnabled && !detailEntry && !deleteConfirm.isOpen && !filtersOpen,
@@ -1428,7 +1452,7 @@ export default function LifeSyncMangaLibrary() {
                     {/* Select row */}
                     <div className="flex items-center justify-between gap-2">
                         <p className="text-[11px] font-medium text-(--color-text-secondary)">
-                            {pageInfo.totalPages > 1 ? <>Showing {visibleEntries.length} · page {pageInfo.page} of {pageInfo.totalPages}</> : <>{visibleEntries.length} title{visibleEntries.length === 1 ? '' : 's'}</>}
+                            {visibleEntries.length} title{visibleEntries.length === 1 ? '' : 's'}
                         </p>
                         <button type="button" onClick={onSelectAll} className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)">Select all</button>
                     </div>
@@ -1440,7 +1464,7 @@ export default function LifeSyncMangaLibrary() {
                             (() => {
                                 const STATUS_ORDER = ['reading', 're_reading', 'on_hold', 'plan_to_read', 'completed', 'dropped', '']
                                 const groups = new Map()
-                                for (const entry of visibleEntries) {
+                                for (const entry of renderedEntries) {
                                     const s = entry.readingStatus || ''
                                     if (!groups.has(s)) groups.set(s, [])
                                     groups.get(s).push(entry)
@@ -1487,7 +1511,7 @@ export default function LifeSyncMangaLibrary() {
                         ) : (
                             <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
                                 <AnimatePresence initial={false}>
-                                    {visibleEntries.map((entry, idx) => {
+                                    {renderedEntries.map((entry, idx) => {
                                         const k = entryKey(entry)
                                         return (
                                             <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}>
@@ -1496,7 +1520,7 @@ export default function LifeSyncMangaLibrary() {
                                                     syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
                                                     onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
                                                     onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
-                                                    isLast={idx === visibleEntries.length - 1} />
+                                                    isLast={idx === renderedEntries.length - 1} />
                                             </div>
                                         )
                                     })}
@@ -1509,7 +1533,7 @@ export default function LifeSyncMangaLibrary() {
                             (() => {
                                 const STATUS_ORDER = ['reading', 're_reading', 'on_hold', 'plan_to_read', 'completed', 'dropped', '']
                                 const groups = new Map()
-                                for (const entry of visibleEntries) {
+                                for (const entry of renderedEntries) {
                                     const s = entry.readingStatus || ''
                                     if (!groups.has(s)) groups.set(s, [])
                                     groups.get(s).push(entry)
@@ -1555,7 +1579,7 @@ export default function LifeSyncMangaLibrary() {
                         ) : (
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                                 <AnimatePresence initial={false}>
-                                    {visibleEntries.map((entry, idx) => {
+                                    {renderedEntries.map((entry, idx) => {
                                         const k = entryKey(entry)
                                         return (
                                             <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'rounded-2xl ring-2 ring-primary ring-offset-2' : ''}>
@@ -1572,22 +1596,10 @@ export default function LifeSyncMangaLibrary() {
                         )
                     )}
 
-                    {/* Pagination */}
-                    {pageInfo.totalPages > 1 && (
-                        <div className="flex items-center justify-center">
-                            <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1.5 shadow-sm">
-                                <button type="button" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={pageInfo.page <= 1 || refreshing}
-                                    className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
-                                    ← Prev
-                                </button>
-                                <span className="px-2 text-[12px] font-black tabular-nums text-(--color-text-secondary)">
-                                    Page {pageInfo.page}
-                                </span>
-                                <button type="button" onClick={() => setPage((p) => p + 1)} disabled={!pageInfo.hasMore || refreshing}
-                                    className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
-                                    Next →
-                                </button>
-                            </div>
+                    {/* Scroll sentinel — triggers next batch when it enters the viewport */}
+                    {renderCount < visibleEntries.length && (
+                        <div ref={sentinelRef} className="flex justify-center py-4">
+                            <span className="h-1 w-12 animate-pulse rounded-full bg-(--color-border-soft)" />
                         </div>
                     )}
                 </>
