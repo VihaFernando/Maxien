@@ -627,7 +627,8 @@ function DetailDrawer({ entry, onClose, onContinue }) {
                     <div className="divide-y divide-(--color-border-soft) rounded-2xl bg-(--color-surface-muted)/60">
                         {[
                             { label: 'Source', value: [entry.source, ...(Array.isArray(entry.mirrorSources) ? entry.mirrorSources.map(m => m?.source) : [])].filter(Boolean).map(sourceLabel).join(' + ') },
-                            { label: 'Status', value: entry.readingStatus ? statusLabel(entry.readingStatus) : '' },
+                            { label: 'My status', value: entry.readingStatus ? statusLabel(entry.readingStatus) : '' },
+                            { label: 'Series', value: entry.seriesStatus ? (entry.seriesStatus.charAt(0).toUpperCase() + entry.seriesStatus.slice(1).toLowerCase()) : '' },
                             { label: rm.rowLabel, value: rm.rowValue },
                             { label: 'Newest chapter', value: entry.remoteLatestChapterLabel },
                             { label: 'Released', value: releaseDate ? formatDateLabel(releaseDate) : '' },
@@ -740,6 +741,11 @@ function MangaRow({ entry, browseTranslatedLang, busy, removeBusy, syncState, se
                 <div className="mt-0.5 flex items-center gap-2">
                     <span className="text-[10px] text-(--color-text-secondary)">{snap.currentLabel} / {snap.latestLabel}</span>
                     {rel && <span className="text-[10px] text-(--color-text-secondary)">· {rel}</span>}
+                    {entry.seriesStatus && (
+                        <span className={`shrink-0 rounded-md px-1.5 py-0.5 text-[9px] font-bold ${entry.seriesEnded ? 'bg-emerald-400/12 text-emerald-400' : 'bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>
+                            {entry.seriesStatus.charAt(0).toUpperCase() + entry.seriesStatus.slice(1).toLowerCase()}
+                        </span>
+                    )}
                 </div>
                 <div className="mt-1.5 h-[3px] w-full overflow-hidden rounded-full bg-(--color-border-soft)">
                     <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${snap.percent}%` }} />
@@ -831,10 +837,15 @@ function MangaCard({ entry, browseTranslatedLang, busy, removeBusy, syncState, s
 
             {/* ── Bottom content ── */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-2.5">
-                {/* Source + chapter line */}
+                {/* Source + chapter + series status line */}
                 <div className="mb-1 flex items-center gap-1.5">
                     <span className="rounded bg-white/15 px-1.5 py-px text-[8px] font-black uppercase tracking-wide text-white/80 backdrop-blur-sm">{src}</span>
                     {snap.currentLabel && <span className="truncate text-[10px] font-semibold text-white/85">{snap.currentLabel}</span>}
+                    {entry.seriesStatus && (
+                        <span className={`ml-auto shrink-0 rounded px-1.5 py-px text-[8px] font-bold backdrop-blur-sm ${entry.seriesEnded ? 'bg-emerald-500/30 text-emerald-300' : 'bg-white/10 text-white/60'}`}>
+                            {entry.seriesStatus.charAt(0).toUpperCase() + entry.seriesStatus.slice(1).toLowerCase()}
+                        </span>
+                    )}
                 </div>
                 <h3 className="line-clamp-2 text-[12.5px] font-bold leading-tight text-white">{title}</h3>
 
@@ -952,6 +963,21 @@ export default function LifeSyncMangaLibrary() {
     // paginated/filtered view), persisted dismissals in localStorage via the hook.
     const { newItems, dismissOne, dismissAll } = useNewMangaToRead(listEntries)
 
+    // Catch-up items: entries where the reader is behind (backlog of chapters).
+    const catchUpItems = useMemo(() => {
+        const list = Array.isArray(listEntries) ? listEntries : []
+        const seen = new Set()
+        const out = []
+        for (const entry of list) {
+            if (!entry?.behind) continue
+            const k = entryKey(entry)
+            if (!k || k === ':' || seen.has(k)) continue
+            seen.add(k)
+            out.push(entry)
+        }
+        return out
+    }, [listEntries])
+
     const selectableEntries = useMemo(() => {
         const m = new Map()
         for (const e of visibleEntries) { const k = entryKey(e); if (k && k !== ':') m.set(k, e) }
@@ -1056,8 +1082,13 @@ export default function LifeSyncMangaLibrary() {
         const { to, state } = resumeTarget(entry, browseTranslatedLang)
         navigate(to, { state: state || undefined })
     }, [browseTranslatedLang, dismissOne, navigate])
+    const onReadCatchUp = useCallback((entry) => {
+        if (!entry) return
+        const { to, state } = resumeTarget(entry, browseTranslatedLang)
+        navigate(to, { state: state || undefined })
+    }, [browseTranslatedLang, navigate])
     const onDismissNew = useCallback((entry) => dismissOne(entry), [dismissOne])
-    const onDismissAllNew = useCallback(() => dismissAll(newItems), [dismissAll, newItems])
+    const onDismissAllNew = useCallback((activeItems) => dismissAll(activeItems ?? newItems), [dismissAll, newItems])
 
     const onOpenDetail = useCallback((entry) => setDetailEntry(entry || null), [])
     const onCloseDetail = useCallback(() => setDetailEntry(null), [])
@@ -1224,12 +1255,14 @@ export default function LifeSyncMangaLibrary() {
                 </div>
             )}
 
-            {/* ── New chapters to read (post-sync deck) ── */}
+            {/* ── New chapters / Catch-up deck ── */}
             <AnimatePresence>
-                {newItems.length > 0 && (
+                {(newItems.length > 0 || catchUpItems.length > 0) && (
                     <NewMangaToReadPanel
                         items={newItems}
+                        catchUpItems={catchUpItems}
                         onRead={onReadNew}
+                        onReadCatchUp={onReadCatchUp}
                         onDismiss={onDismissNew}
                         onDismissAll={onDismissAllNew}
                     />
@@ -1400,42 +1433,143 @@ export default function LifeSyncMangaLibrary() {
                         <button type="button" onClick={onSelectAll} className="rounded-lg px-2.5 py-1 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)">Select all</button>
                     </div>
 
-                    {/* List */}
+                    {/* List — grouped by reading status when no status filter is active */}
                     {layout === 'list' ? (
-                        <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
-                            <AnimatePresence initial={false}>
-                                {visibleEntries.map((entry, idx) => {
-                                    const k = entryKey(entry)
+                        statusFilter === 'all' && !query ? (
+                            // Group by reading status with section headers
+                            (() => {
+                                const STATUS_ORDER = ['reading', 're_reading', 'on_hold', 'plan_to_read', 'completed', 'dropped', '']
+                                const groups = new Map()
+                                for (const entry of visibleEntries) {
+                                    const s = entry.readingStatus || ''
+                                    if (!groups.has(s)) groups.set(s, [])
+                                    groups.get(s).push(entry)
+                                }
+                                const ordered = STATUS_ORDER.filter((s) => groups.has(s))
+                                let globalIdx = 0
+                                return ordered.map((statusKey) => {
+                                    const groupEntries = groups.get(statusKey)
+                                    const meta = statusMeta(statusKey)
+                                    const GlyphIcon = meta.icon
+                                    const sectionLabel = statusKey ? statusLabel(statusKey) : 'No status'
                                     return (
-                                        <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}>
-                                            <MangaRow entry={entry} browseTranslatedLang={browseTranslatedLang}
-                                                busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
-                                                syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
-                                                onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
-                                                onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
-                                                isLast={idx === visibleEntries.length - 1} />
+                                        <div key={statusKey || '__none'} className="space-y-1">
+                                            {/* Section header */}
+                                            <div className="flex items-center gap-2 px-1 py-1.5">
+                                                <span className={`flex h-6 w-6 items-center justify-center rounded-lg ${statusKey ? meta.soft : 'bg-(--color-surface-muted)'}`}>
+                                                    <GlyphIcon className={`h-3.5 w-3.5 ${statusKey ? meta.text : 'text-(--color-text-secondary)'}`} />
+                                                </span>
+                                                <span className={`text-[12px] font-black tracking-wide ${statusKey ? meta.text : 'text-(--color-text-secondary)'}`}>{sectionLabel}</span>
+                                                <span className="ml-auto rounded-full bg-(--color-surface-muted) px-2 py-0.5 text-[10px] font-bold tabular-nums text-(--color-text-secondary)">{groupEntries.length}</span>
+                                            </div>
+                                            <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+                                                <AnimatePresence initial={false}>
+                                                    {groupEntries.map((entry) => {
+                                                        const k = entryKey(entry)
+                                                        const idx = globalIdx++
+                                                        return (
+                                                            <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}>
+                                                                <MangaRow entry={entry} browseTranslatedLang={browseTranslatedLang}
+                                                                    busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
+                                                                    syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
+                                                                    onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
+                                                                    onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
+                                                                    isLast={groupEntries[groupEntries.length - 1] === entry} />
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </AnimatePresence>
+                                            </div>
                                         </div>
                                     )
-                                })}
-                            </AnimatePresence>
-                        </div>
+                                })
+                            })()
+                        ) : (
+                            <div className="overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface)">
+                                <AnimatePresence initial={false}>
+                                    {visibleEntries.map((entry, idx) => {
+                                        const k = entryKey(entry)
+                                        return (
+                                            <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'ring-2 ring-primary ring-inset' : ''}>
+                                                <MangaRow entry={entry} browseTranslatedLang={browseTranslatedLang}
+                                                    busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
+                                                    syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
+                                                    onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
+                                                    onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail}
+                                                    isLast={idx === visibleEntries.length - 1} />
+                                            </div>
+                                        )
+                                    })}
+                                </AnimatePresence>
+                            </div>
+                        )
                     ) : (
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                            <AnimatePresence initial={false}>
-                                {visibleEntries.map((entry, idx) => {
-                                    const k = entryKey(entry)
+                        statusFilter === 'all' && !query ? (
+                            // Grid grouped by reading status
+                            (() => {
+                                const STATUS_ORDER = ['reading', 're_reading', 'on_hold', 'plan_to_read', 'completed', 'dropped', '']
+                                const groups = new Map()
+                                for (const entry of visibleEntries) {
+                                    const s = entry.readingStatus || ''
+                                    if (!groups.has(s)) groups.set(s, [])
+                                    groups.get(s).push(entry)
+                                }
+                                const ordered = STATUS_ORDER.filter((s) => groups.has(s))
+                                let globalIdx = 0
+                                return ordered.map((statusKey) => {
+                                    const groupEntries = groups.get(statusKey)
+                                    const meta = statusMeta(statusKey)
+                                    const GlyphIcon = meta.icon
+                                    const sectionLabel = statusKey ? statusLabel(statusKey) : 'No status'
                                     return (
-                                        <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'rounded-2xl ring-2 ring-primary ring-offset-2' : ''}>
-                                            <MangaCard entry={entry} browseTranslatedLang={browseTranslatedLang}
-                                                busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
-                                                syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
-                                                onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
-                                                onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail} />
+                                        <div key={statusKey || '__none'} className="space-y-2">
+                                            {/* Section header */}
+                                            <div className="flex items-center gap-2 px-1 py-1">
+                                                <span className={`flex h-6 w-6 items-center justify-center rounded-lg ${statusKey ? meta.soft : 'bg-(--color-surface-muted)'}`}>
+                                                    <GlyphIcon className={`h-3.5 w-3.5 ${statusKey ? meta.text : 'text-(--color-text-secondary)'}`} />
+                                                </span>
+                                                <span className={`text-[12px] font-black tracking-wide ${statusKey ? meta.text : 'text-(--color-text-secondary)'}`}>{sectionLabel}</span>
+                                                <span className="ml-auto rounded-full bg-(--color-surface-muted) px-2 py-0.5 text-[10px] font-bold tabular-nums text-(--color-text-secondary)">{groupEntries.length}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                                                <AnimatePresence initial={false}>
+                                                    {groupEntries.map((entry) => {
+                                                        const k = entryKey(entry)
+                                                        const idx = globalIdx++
+                                                        return (
+                                                            <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'rounded-2xl ring-2 ring-primary ring-offset-2' : ''}>
+                                                                <MangaCard entry={entry} browseTranslatedLang={browseTranslatedLang}
+                                                                    busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
+                                                                    syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
+                                                                    onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
+                                                                    onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail} />
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </AnimatePresence>
+                                            </div>
                                         </div>
                                     )
-                                })}
-                            </AnimatePresence>
-                        </div>
+                                })
+                            })()
+                        ) : (
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                                <AnimatePresence initial={false}>
+                                    {visibleEntries.map((entry, idx) => {
+                                        const k = entryKey(entry)
+                                        return (
+                                            <div key={k} data-focused-card={focusedCardIndex === idx ? 'true' : undefined} className={focusedCardIndex === idx ? 'rounded-2xl ring-2 ring-primary ring-offset-2' : ''}>
+                                                <MangaCard entry={entry} browseTranslatedLang={browseTranslatedLang}
+                                                    busy={actionBusyKeys.has(k)} removeBusy={removeBusyKey === k}
+                                                    syncState={syncJob?.itemStates?.[k]?.state} selected={selectedKeys.has(k)}
+                                                    onToggleSelect={onToggleSelect} onStatusChange={onStatusChange}
+                                                    onRequestRemove={onRequestDelete} onOpenDetail={onOpenDetail} />
+                                            </div>
+                                        )
+                                    })}
+                                </AnimatePresence>
+                            </div>
+                        )
                     )}
 
                     {/* Pagination */}
