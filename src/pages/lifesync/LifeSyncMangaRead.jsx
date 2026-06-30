@@ -608,7 +608,20 @@ export default function LifeSyncMangaRead() {
         return () => ro?.disconnect()
     }, [loadingPages, urls.length, chapter?.id, updateScrollProgress])
 
-    // Restore scroll to resume position
+    const goToChapter = useCallback((ch) => {
+        if (!ch?.id || navBusy) return
+        persistLocal()
+        void flushReading({ queueFirst: true })
+        setNavBusy(true)
+        navigate(
+            `/dashboard/lifesync/anime/manga/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(ch.id))}${readerSearch}`,
+            { replace: true, state: { ...(location.state || {}), source, browseTranslatedLang, from: closeTo } }
+        )
+    }, [browseTranslatedLang, closeTo, flushReading, location.state, mangaId, navBusy, navigate, persistLocal, readerSearch, source])
+
+    // Restore scroll to resume position — or, if the saved progress was essentially
+    // finished (95-100%) and a next chapter exists, open that instead of re-showing
+    // the last few panels of the chapter the user already finished.
     useEffect(() => {
         if (loadingPages || !manga?.id || !chapter?.id || !urls.length) return
         if (!resumeChapterId || String(chapter.id) !== resumeChapterId) return
@@ -616,6 +629,12 @@ export default function LifeSyncMangaRead() {
         const key = `${manga.source || source}:${manga.id}:${chapter.id}`
         if (resumeRestoreKey.current === key) return
         resumeRestoreKey.current = key
+
+        if (resumePercent >= 95 && nextCh) {
+            goToChapter(nextCh)
+            return
+        }
+
         const el = scrollRef.current
         if (!el) return
         const raf = requestAnimationFrame(() => {
@@ -623,7 +642,7 @@ export default function LifeSyncMangaRead() {
             scheduleProgressUpdate()
         })
         return () => cancelAnimationFrame(raf)
-    }, [chapter?.id, loadingPages, manga?.id, manga?.source, resumeChapterId, resumePercent, scheduleProgressUpdate, source, urls.length])
+    }, [chapter?.id, goToChapter, loadingPages, manga?.id, manga?.source, nextCh, resumeChapterId, resumePercent, scheduleProgressUpdate, source, urls.length])
 
     // Keep latestProgress ref in sync (for flush callbacks  ref update only, no render)
     useEffect(() => {
@@ -736,17 +755,6 @@ export default function LifeSyncMangaRead() {
         const step = fullscreen ? ZOOM_STEP_FS : ZOOM_STEP
         setZoomPct(prev => clampZoom(prev + (Number(dir) >= 0 ? step : -step), fullscreen))
     }, [fullscreen])
-
-    const goToChapter = useCallback((ch) => {
-        if (!ch?.id || navBusy) return
-        persistLocal()
-        void flushReading({ queueFirst: true })
-        setNavBusy(true)
-        navigate(
-            `/dashboard/lifesync/anime/manga/read/${encodeURIComponent(String(mangaId))}/${encodeURIComponent(String(ch.id))}${readerSearch}`,
-            { replace: true, state: { ...(location.state || {}), source, browseTranslatedLang, from: closeTo } }
-        )
-    }, [browseTranslatedLang, closeTo, flushReading, location.state, mangaId, navBusy, navigate, persistLocal, readerSearch, source])
 
     const closeReader = useCallback(() => {
         persistLocal()
