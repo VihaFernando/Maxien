@@ -234,6 +234,47 @@ const ensureMonthPeriod = async (userId, year, month) => {
     return created
 }
 
+const CARRYOVER_TYPE = "Carryover"
+
+// Auto-add previous month's remaining balance (income − expenses, incl. its own
+// carryover so it rolls forward) as a Carryover income entry. Idempotent: skips
+// if this period already has one. Net 0 or no prior month → nothing added.
+const ensureCarryover = async (userId, period) => {
+    const year = Number(period.start_date.slice(0, 4))
+    const month = Number(period.start_date.slice(5, 7)) - 1
+
+    const { data: existing } = await supabase
+        .from("finance_income_entries")
+        .select("id")
+        .eq("user_id", userId).eq("period_id", period.id).eq("income_type_name", CARRYOVER_TYPE)
+        .maybeSingle()
+    if (existing) return
+
+    // Prior month = month before this period's start
+    const prev = new Date(year, month - 1, 1)
+    const { data: prevPeriod } = await supabase
+        .from("finance_periods")
+        .select("id, label")
+        .eq("user_id", userId)
+        .eq("start_date", firstOfMonth(prev.getFullYear(), prev.getMonth()))
+        .maybeSingle()
+    if (!prevPeriod) return
+
+    const [incRes, expRes] = await Promise.all([
+        supabase.from("finance_income_entries").select("amount_lkr").eq("user_id", userId).eq("period_id", prevPeriod.id),
+        supabase.from("finance_expense_entries").select("amount_lkr").eq("user_id", userId).eq("period_id", prevPeriod.id),
+    ])
+    const sum = (rows) => (rows || []).reduce((s, r) => s + Number(r.amount_lkr), 0)
+    const net = sum(incRes.data) - sum(expRes.data)
+    if (net === 0) return
+
+    await supabase.from("finance_income_entries").insert({
+        user_id: userId, period_id: period.id,
+        income_type_name: CARRYOVER_TYPE, amount_lkr: net,
+        note: `Balance from ${prevPeriod.label}`, entry_date: firstOfMonth(year, month),
+    })
+}
+
 // ─── Period picker (filter only — no DB write on select) ─────────────────────
 function PeriodPicker({ current, selectedDays, onSelect, onDaysChange, onClose }) {
     const now = new Date()
@@ -507,6 +548,7 @@ export default function Finance() {
             const now = new Date()
             // Auto-create this month's period if it doesn't exist yet
             const currentMonthPeriod = await ensureMonthPeriod(user.id, now.getFullYear(), now.getMonth())
+            await ensureCarryover(user.id, currentMonthPeriod)
 
             const [typesRes, catsRes, subsRes, cardsRes] = await Promise.all([
                 supabase.from("finance_income_types").select("*").eq("user_id", user.id).order("name"),
@@ -533,6 +575,7 @@ export default function Finance() {
     const handleSelectPeriod = useCallback(async (year, month) => {
         if (!user?.id) return
         const period = await ensureMonthPeriod(user.id, year, month)
+        await ensureCarryover(user.id, period)
         setSelectedPeriod(period)
         setSelectedDays(new Set())
         await loadEntriesForPeriod(period)
@@ -835,8 +878,8 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
                                         </p>
                                     </div>
                                     <div className="text-right shrink-0">
-                                        <p className={`text-[12px] font-bold tabular-nums ${e._kind === "income" ? "text-emerald-600" : "text-red-500"}`}>
-                                            {e._kind === "income" ? "+" : "−"}{fmtShort(e.amount_lkr)}
+                                        <p className={`text-[12px] font-bold tabular-nums ${e._kind === "income" && Number(e.amount_lkr) >= 0 ? "text-emerald-600" : "text-red-500"}`}>
+                                            {e._kind === "income" && Number(e.amount_lkr) >= 0 ? "+" : "−"}{fmtShort(Math.abs(e.amount_lkr))}
                                         </p>
                                         <p className="text-[10px] text-[var(--color-text-secondary)]">{fmtDate(e.entry_date)}</p>
                                     </div>
@@ -1022,8 +1065,8 @@ function IncomeTab({ user, period, incomeTypes, incomeEntries, onRefresh }) {
                                         left={e.income_type_name}
                                         sub={e.note || fmtDate(e.entry_date)}
                                         detail={e.note ? fmtDate(e.entry_date) : null}
-                                        right={`+${fmt(e.amount_lkr)}`}
-                                        rightColor="emerald"
+                                        right={`${Number(e.amount_lkr) < 0 ? "−" : "+"}${fmt(Math.abs(e.amount_lkr))}`}
+                                        rightColor={Number(e.amount_lkr) < 0 ? "red" : "emerald"}
                                         onDelete={() => handleDeleteEntry(e.id)}
                                     />
                                 ))}
