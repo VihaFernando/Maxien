@@ -561,19 +561,21 @@ export default function LifeSyncMangaHome() {
                 }
             />
 
-            {/* Source selector */}
-            <div className="flex flex-wrap gap-2">
-                {visibleSources.map((s) => (
-                    <button
-                        key={s.id}
-                        type="button"
-                        onClick={() => changeSource(s.id)}
-                        className={mediaChipClass(source === s.id)}
-                    >
-                        {s.label}
-                    </button>
-                ))}
-            </div>
+            {/* Source selector — hidden entirely when only one source is visible (e.g. NSFW disabled) */}
+            {visibleSources.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                    {visibleSources.map((s) => (
+                        <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => changeSource(s.id)}
+                            className={mediaChipClass(source === s.id)}
+                        >
+                            {s.label}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {error ? (
                 <MediaEmptyState
