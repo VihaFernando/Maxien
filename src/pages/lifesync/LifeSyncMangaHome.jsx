@@ -480,6 +480,8 @@ function MangaDnaLayout({ data, onOpen, tab, loading }) {
 
 const HOME_PATH = `${MANGA_BASE}/home`
 const VALID_SOURCES = new Set(SOURCES.map((s) => s.id))
+// Manga District and MangaDNA are NSFW sources — admin-only, hidden from everyone else.
+const NSFW_SOURCE_IDS = new Set(['mangadistrict', 'mangadna'])
 
 export default function LifeSyncMangaHome() {
     const navigate = useNavigate()
@@ -487,16 +489,15 @@ export default function LifeSyncMangaHome() {
     const { isLifeSyncConnected, lifeSyncUser } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
     const mangaEnabled = isPluginEnabled(prefs, 'pluginMangaEnabled')
-    // Manga District is the NSFW/H-manhwa source — admin-only, hidden from everyone else.
     const isAdmin = isLifeSyncAdmin(lifeSyncUser)
     const visibleSources = useMemo(
-        () => (isAdmin ? SOURCES : SOURCES.filter((s) => s.id !== 'mangadistrict')),
+        () => (isAdmin ? SOURCES : SOURCES.filter((s) => !NSFW_SOURCE_IDS.has(s.id))),
         [isAdmin],
     )
 
     const initialSource = useMemo(() => {
         const q = new URLSearchParams(location.search).get('source')
-        if (q === 'mangadistrict' && !isAdmin) return 'roliascan'
+        if (NSFW_SOURCE_IDS.has(q) && !isAdmin) return 'roliascan'
         return VALID_SOURCES.has(q) ? q : 'roliascan'
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
