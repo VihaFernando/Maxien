@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useActivityFeed } from '../hooks/useActivityFeed'
 import { getRelativeTime } from '../lib/dateUtils'
 
@@ -103,6 +103,65 @@ function getBadge(entry) {
     return null
 }
 
+function getChapterNum(entry) {
+    const n = entry?.data?.chapterNum
+    return typeof n === 'number' ? n : null
+}
+
+// Formats a sorted list of chapter numbers as ranges, e.g. [13,14,15,16,17,35] -> "13-17, 35"
+// and [13,15,16,17,35] -> "13, 15-17, 35".
+function formatChapterRanges(nums) {
+    const sorted = [...new Set(nums)].sort((a, b) => a - b)
+    const parts = []
+    let start = sorted[0]
+    let prev = sorted[0]
+    for (let i = 1; i <= sorted.length; i++) {
+        const n = sorted[i]
+        if (n === prev + 1) {
+            prev = n
+            continue
+        }
+        parts.push(start === prev ? `${start}` : `${start}-${prev}`)
+        start = n
+        prev = n
+    }
+    return parts.join(', ')
+}
+
+// Groups consecutive "finished chapter" entries for the same manga into a single
+// collapsible group so a reading binge shows as one row (e.g. "Ch 13-17") instead of
+// five identical rows. Non-chapter entries, or runs of a single chapter, pass through.
+function groupFeedEntries(entries) {
+    const groups = []
+    let i = 0
+    while (i < entries.length) {
+        const entry = entries[i]
+        if (entry.action !== 'manga_chapter_finished' || getChapterNum(entry) == null) {
+            groups.push({ type: 'single', entry })
+            i++
+            continue
+        }
+        const run = [entry]
+        let j = i + 1
+        while (
+            j < entries.length &&
+            entries[j].action === 'manga_chapter_finished' &&
+            entries[j].refId === entry.refId &&
+            getChapterNum(entries[j]) != null
+        ) {
+            run.push(entries[j])
+            j++
+        }
+        if (run.length > 1) {
+            groups.push({ type: 'group', entries: run })
+        } else {
+            groups.push({ type: 'single', entry })
+        }
+        i = j
+    }
+    return groups
+}
+
 // ─── Skeleton ──────────────────────────────────────────────────────────────────
 
 function RowSkeleton() {
@@ -125,10 +184,10 @@ function RowSkeleton() {
 
 // ─── Single activity row ────────────────────────────────────────────────────────
 
-function ActivityRow({ entry, isLast }) {
+function ActivityRow({ entry, isLast, badgeOverride, timeOverride, trailing }) {
     const meta = DOMAIN_META[entry.domain] || DOMAIN_META.system
     const action = ACTION_LABEL[entry.action] || entry.action?.replace(/_/g, ' ')
-    const badge = getBadge(entry)
+    const badge = badgeOverride !== undefined ? badgeOverride : getBadge(entry)
     const statusLabel = getStatusFromEntry(entry)
     const isStatusEvent = entry.action === 'anime_status_changed' || entry.action === 'manga_status_changed'
     const [imgErr, setImgErr] = useState(false)
@@ -198,7 +257,7 @@ function ActivityRow({ entry, isLast }) {
                             </span>
                         )}
                         <span className="ml-auto text-[11px] text-[var(--color-text-secondary)] tabular-nums">
-                            {getRelativeTime(entry.occurredAt)}
+                            {timeOverride || getRelativeTime(entry.occurredAt)}
                         </span>
                     </div>
 
@@ -213,9 +272,58 @@ function ActivityRow({ entry, isLast }) {
                             {entry.subtitle}
                         </p>
                     )}
+
+                    {trailing}
                 </div>
             </div>
         </li>
+    )
+}
+
+// ─── Grouped "reading binge" row (consecutive chapters, same manga) ────────────
+
+function GroupedActivityRow({ entries, isLast }) {
+    const [expanded, setExpanded] = useState(false)
+    const head = entries[0]
+    const nums = entries.map(getChapterNum).filter((n) => n != null)
+    const rangeLabel = `Ch ${formatChapterRanges(nums)}`
+
+    if (expanded) {
+        return (
+            <>
+                {entries.map((e, i) => (
+                    <ActivityRow key={e._id} entry={e} isLast={isLast && i === entries.length - 1} />
+                ))}
+                <li className="-mt-4 flex gap-4 pb-6">
+                    <div style={{ width: 8 }} />
+                    <button
+                        type="button"
+                        onClick={() => setExpanded(false)}
+                        className="cursor-pointer text-[12px] font-medium text-[var(--color-text-secondary)] transition-colors duration-150 hover:text-[var(--color-text-primary)]"
+                    >
+                        Collapse
+                    </button>
+                </li>
+            </>
+        )
+    }
+
+    return (
+        <ActivityRow
+            entry={head}
+            isLast={isLast}
+            badgeOverride={rangeLabel}
+            timeOverride={getRelativeTime(head.occurredAt)}
+            trailing={
+                <button
+                    type="button"
+                    onClick={() => setExpanded(true)}
+                    className="mt-1 cursor-pointer text-[12px] font-medium text-[var(--color-text-secondary)] transition-colors duration-150 hover:text-[var(--color-text-primary)]"
+                >
+                    Show {entries.length} chapters
+                </button>
+            }
+        />
     )
 }
 
@@ -256,6 +364,7 @@ export default function Feed() {
         domain: domain || undefined,
         limit: 40,
     })
+    const groups = useMemo(() => groupFeedEntries(entries), [entries])
 
     return (
         <div className="w-full px-6 py-8 lg:px-10 xl:px-16">
@@ -342,13 +451,14 @@ export default function Feed() {
                         <EmptyState domain={domain} />
                     ) : (
                         <ol className="ml-3">
-                            {entries.map((e, i) => (
-                                <ActivityRow
-                                    key={e._id}
-                                    entry={e}
-                                    isLast={i === entries.length - 1 && !pageInfo?.hasMore}
-                                />
-                            ))}
+                            {groups.map((g, i) => {
+                                const isLast = i === groups.length - 1 && !pageInfo?.hasMore
+                                return g.type === 'group' ? (
+                                    <GroupedActivityRow key={g.entries[0]._id} entries={g.entries} isLast={isLast} />
+                                ) : (
+                                    <ActivityRow key={g.entry._id} entry={g.entry} isLast={isLast} />
+                                )
+                            })}
                         </ol>
                     )}
 
