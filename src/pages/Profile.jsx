@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useAuth } from "../context/AuthContext"
 import { useLifeSync } from "../context/LifeSyncContext"
+import { isLifeSyncAdmin } from "../lib/lifeSyncRoles"
 import { useAppTheme } from "../context/AppThemeContext"
 import { supabase } from "../lib/supabase"
 import { useSearchParams } from "react-router-dom"
@@ -248,6 +249,7 @@ export default function Profile() {
         refreshLifeSyncPreferencesFromDb,
         refreshLifeSyncSteamProfile,
     } = useLifeSync()
+    const isAdmin = isLifeSyncAdmin(lifeSyncUser)
     const {
         themePreference: appThemePreference,
         resolvedTheme: resolvedAppTheme,
@@ -1180,41 +1182,43 @@ export default function Profile() {
                                                 </button>
                                             </div>
                                         </li>
-                                        <li className="px-6 sm:px-8 py-5">
-                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                                                <div className="min-w-0">
-                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">NSFW content</p>
-                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
-                                                        Allow mature catalog areas (e.g. Hentai Ocean, NSFW manga sources) when those plugins are enabled.
-                                                    </p>
+                                        {isAdmin && (
+                                            <li className="px-6 sm:px-8 py-5">
+                                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="min-w-0">
+                                                        <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">NSFW content (Admin)</p>
+                                                        <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                                                            Allow mature catalog areas (e.g. Hentai Ocean, H-manhwa, NSFW manga sources). Restricted to admins.
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        disabled={prefsBusy || !lifeSyncUser}
+                                                        role="switch"
+                                                        aria-checked={Boolean(lifeSyncUser?.preferences?.nsfwContentEnabled)}
+                                                        onClick={async () => {
+                                                            if (!lifeSyncUser) return
+                                                            const next = !lifeSyncUser?.preferences?.nsfwContentEnabled
+                                                            setPrefsBusy(true)
+                                                            setError("")
+                                                            try {
+                                                                await lifeSyncUpdatePreferences({ nsfwContentEnabled: next })
+                                                            } catch (e) {
+                                                                setError(e?.message || "Could not save preference")
+                                                            } finally {
+                                                                setPrefsBusy(false)
+                                                            }
+                                                        }}
+                                                        className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${lifeSyncUser?.preferences?.nsfwContentEnabled ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"} disabled:opacity-50`}
+                                                        title={!lifeSyncUser ? "Connect LifeSync under Integrations to edit" : undefined}
+                                                    >
+                                                        <span
+                                                            className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${lifeSyncUser?.preferences?.nsfwContentEnabled ? "translate-x-5" : ""}`}
+                                                        />
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    disabled={prefsBusy || !lifeSyncUser}
-                                                    role="switch"
-                                                    aria-checked={Boolean(lifeSyncUser?.preferences?.nsfwContentEnabled)}
-                                                    onClick={async () => {
-                                                        if (!lifeSyncUser) return
-                                                        const next = !lifeSyncUser?.preferences?.nsfwContentEnabled
-                                                        setPrefsBusy(true)
-                                                        setError("")
-                                                        try {
-                                                            await lifeSyncUpdatePreferences({ nsfwContentEnabled: next })
-                                                        } catch (e) {
-                                                            setError(e?.message || "Could not save preference")
-                                                        } finally {
-                                                            setPrefsBusy(false)
-                                                        }
-                                                    }}
-                                                    className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${lifeSyncUser?.preferences?.nsfwContentEnabled ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"} disabled:opacity-50`}
-                                                    title={!lifeSyncUser ? "Connect LifeSync under Integrations to edit" : undefined}
-                                                >
-                                                    <span
-                                                        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${lifeSyncUser?.preferences?.nsfwContentEnabled ? "translate-x-5" : ""}`}
-                                                    />
-                                                </button>
-                                            </div>
-                                        </li>
+                                            </li>
+                                        )}
                                         <li className="px-6 sm:px-8 py-5">
                                             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                 <div className="min-w-0">

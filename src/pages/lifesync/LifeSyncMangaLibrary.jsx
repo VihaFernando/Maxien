@@ -1010,12 +1010,12 @@ export default function LifeSyncMangaLibrary() {
     }, [visibleEntries])
 
     // Post-sync "new chapters to read" deck  derived from the full list (not the
-    // paginated/filtered view), persisted dismissals in localStorage via the hook.
-    const { newItems, dismissOne, dismissAll } = useNewMangaToRead(listEntries)
+    // paginated view, but still NSFW-filtered), persisted dismissals in localStorage via the hook.
+    const { newItems, dismissOne, dismissAll } = useNewMangaToRead(visibleEntries)
 
     // Catch-up items: entries where the reader is behind (backlog of chapters).
     const catchUpItems = useMemo(() => {
-        const list = Array.isArray(listEntries) ? listEntries : []
+        const list = Array.isArray(visibleEntries) ? visibleEntries : []
         const seen = new Set()
         const out = []
         for (const entry of list) {
@@ -1026,7 +1026,7 @@ export default function LifeSyncMangaLibrary() {
             out.push(entry)
         }
         return out
-    }, [listEntries])
+    }, [visibleEntries])
 
     // Slice for progressive scroll rendering — grows as sentinel fires
     const renderedEntries = useMemo(
