@@ -6,6 +6,7 @@ import {
 } from 'react-icons/fa'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isPluginEnabled } from '../../lib/lifesyncApi'
+import { isLifeSyncAdmin } from '../../lib/lifeSyncRoles'
 import { mangaImageProps } from '../../lib/mangaChapterUtils'
 import {
     MediaPageHeader,
@@ -486,15 +487,22 @@ export default function LifeSyncMangaHome() {
     const { isLifeSyncConnected, lifeSyncUser } = useLifeSync()
     const prefs = lifeSyncUser?.preferences
     const mangaEnabled = isPluginEnabled(prefs, 'pluginMangaEnabled')
+    // Manga District is the NSFW/H-manhwa source — admin-only, hidden from everyone else.
+    const isAdmin = isLifeSyncAdmin(lifeSyncUser)
+    const visibleSources = useMemo(
+        () => (isAdmin ? SOURCES : SOURCES.filter((s) => s.id !== 'mangadistrict')),
+        [isAdmin],
+    )
 
     const initialSource = useMemo(() => {
         const q = new URLSearchParams(location.search).get('source')
+        if (q === 'mangadistrict' && !isAdmin) return 'roliascan'
         return VALID_SOURCES.has(q) ? q : 'roliascan'
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const [source, setSource] = useState(initialSource)
-    const activeSource = useMemo(() => SOURCES.find((s) => s.id === source) || SOURCES[0], [source])
+    const activeSource = useMemo(() => visibleSources.find((s) => s.id === source) || visibleSources[0], [source, visibleSources])
     const enabled = isLifeSyncConnected && mangaEnabled
     const { data, loading, error, refresh } = useMangaHome({ source, enabled })
 
@@ -554,7 +562,7 @@ export default function LifeSyncMangaHome() {
 
             {/* Source selector */}
             <div className="flex flex-wrap gap-2">
-                {SOURCES.map((s) => (
+                {visibleSources.map((s) => (
                     <button
                         key={s.id}
                         type="button"
