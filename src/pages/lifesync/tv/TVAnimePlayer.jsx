@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { lifesyncFetch, getLifesyncApiBase, getAnimePreferEmbed } from '../../../lib/lifesyncApi'
+import { lifesyncFetch, getLifesyncApiBase, getAnimePreferEmbed, lifesyncPatchPreferences } from '../../../lib/lifesyncApi'
 import { useLifeSync } from '../../../context/LifeSyncContext'
 import AdvancedVideoPlayer from '../../../components/lifesync/AdvancedVideoPlayer'
 import { streamIframeSandboxProps } from '../../../lib/lifesyncStreamIframe'
@@ -201,6 +201,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
         if (embed === preferEmbed) return
         setPreferEmbed(embed)
         showToast(embed ? 'EMBED' : 'DIRECT')
+        lifesyncPatchPreferences({ animePreferEmbed: embed }).catch(() => {})
     }, [preferEmbed, showToast])
 
     const setQuality = useCallback((url) => {

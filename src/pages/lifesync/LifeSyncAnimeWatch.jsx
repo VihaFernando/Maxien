@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { getAnimePreferEmbed, getAnimeStreamAudio, getLifesyncApiBase, lifesyncFetch } from '../../lib/lifesyncApi'
+import { getAnimePreferEmbed, getAnimeStreamAudio, getLifesyncApiBase, lifesyncFetch, lifesyncPatchPreferences } from '../../lib/lifesyncApi'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import {
@@ -94,6 +94,10 @@ export default function LifeSyncAnimeWatch() {
     const [audioOverride, setAudioOverride] = useState(null)
     const [mirrorOverrideId, setMirrorOverrideId] = useState('')
     const [preferEmbed, setPreferEmbed] = useState(preferEmbedDefault)
+    const setPreferEmbedAndSave = useCallback((next) => {
+        setPreferEmbed(next)
+        lifesyncPatchPreferences({ animePreferEmbed: next }).catch(() => {})
+    }, [])
     const [audioAvailByEp, setAudioAvailByEp] = useState(() => (/** @type {Record<string, { sub: boolean, dub: boolean }>} */ ({})))
     const [resolveKey, setResolveKey] = useState(0)
     const audioAvailRef = useRef(audioAvailByEp)
@@ -709,12 +713,13 @@ export default function LifeSyncAnimeWatch() {
                                 <main className="min-w-0 space-y-3 sm:space-y-4">
                                     <div className="lifesync-anime-watch-media overflow-hidden rounded-3xl border border-(--color-border-strong)/12 bg-black">
                                         <div ref={streamIframeContainerRef} className="relative aspect-video w-full">
-                                            {/* Settings trigger button  top right of player */}
-                                            {!stream?.resolving && (stream?.videoUrl || stream?.iframeUrl) && (
+                                            {/* Settings trigger button  top right of player. Also reachable
+                                                during a playback error so the user can switch source and retry. */}
+                                            {!stream?.resolving && (stream?.videoUrl || stream?.iframeUrl || stream?.error) && (
                                                 <button
                                                     type="button"
                                                     onClick={() => setSettingsOpen(v => !v)}
-                                                    className={`absolute right-2 top-2 z-30 flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all ${
+                                                    className={`absolute right-2 top-2 z-40 flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] font-semibold backdrop-blur-md transition-all ${
                                                         settingsOpen
                                                             ? 'border-(--mx-color-c6ff00)/40 bg-(--mx-color-c6ff00)/10 text-(--mx-color-c6ff00)'
                                                             : 'border-white/15 bg-black/50 text-white/70 hover:border-white/30 hover:text-white'
@@ -732,7 +737,7 @@ export default function LifeSyncAnimeWatch() {
                                             {/* Settings drawer  slides in from right inside the player */}
                                             {settingsOpen && (
                                                 <div
-                                                    className="absolute inset-0 z-20 flex items-stretch justify-end overflow-hidden rounded-3xl"
+                                                    className="absolute inset-0 z-40 flex items-stretch justify-end overflow-hidden rounded-3xl"
                                                     style={{ background: 'linear-gradient(to left, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 55%, transparent 100%)' }}
                                                     onClick={() => setSettingsOpen(false)}
                                                 >
@@ -844,7 +849,7 @@ export default function LifeSyncAnimeWatch() {
                                                             <div className="flex gap-1.5">
                                                                 {[{ val: false, label: 'Direct' }, { val: true, label: 'Embed' }].map(({ val, label }) => (
                                                                     <button key={label} type="button"
-                                                                        onClick={() => { setPreferEmbed(val); setResolveKey(k => k + 1); setSettingsOpen(false) }}
+                                                                        onClick={() => { setPreferEmbedAndSave(val); setResolveKey(k => k + 1); setSettingsOpen(false) }}
                                                                         className={`flex-1 rounded-xl border py-2 text-[11px] font-black uppercase tracking-widest transition-all ${
                                                                             preferEmbed === val
                                                                                 ? 'border-(--mx-color-c6ff00)/50 bg-(--mx-color-c6ff00)/14 text-(--mx-color-c6ff00)'

@@ -6,7 +6,7 @@ import { useAppTheme } from "../context/AppThemeContext"
 import { supabase } from "../lib/supabase"
 import { useSearchParams } from "react-router-dom"
 import GithubIntegrations from "../components/GithubIntegrations"
-import { getAnimeStreamAudio, lifesyncFetchPublicSettings, lifesyncResolveYouTubeLoopSource } from "../lib/lifesyncApi"
+import { getAnimePreferEmbed, getAnimeStreamAudio, lifesyncFetchPublicSettings, lifesyncResolveYouTubeLoopSource } from "../lib/lifesyncApi"
 import {
     isLifeSyncReduceAnimationsEnabled,
     notifyReduceMotionPreferenceChanged,
@@ -1392,6 +1392,41 @@ export default function Profile() {
                                                         )
                                                     })}
                                                 </div>
+                                            </div>
+                                        </li>
+                                        <li className="px-6 sm:px-8 py-5">
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <p className="text-[13px] font-semibold text-[var(--color-text-primary)]">Prefer embedded anime player</p>
+                                                    <p className="mt-1 text-[12px] leading-relaxed text-[var(--color-text-secondary)]">
+                                                        Use the provider's embed player instead of the direct stream. Useful if playback keeps failing.
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    disabled={prefsBusy || !lifeSyncUser}
+                                                    role="switch"
+                                                    aria-checked={getAnimePreferEmbed(lifeSyncUser?.preferences)}
+                                                    onClick={async () => {
+                                                        if (!lifeSyncUser) return
+                                                        const next = !getAnimePreferEmbed(lifeSyncUser?.preferences)
+                                                        setPrefsBusy(true)
+                                                        setError("")
+                                                        try {
+                                                            await lifeSyncUpdatePreferences({ animePreferEmbed: next })
+                                                        } catch (e) {
+                                                            setError(e?.message || "Could not save preference")
+                                                        } finally {
+                                                            setPrefsBusy(false)
+                                                        }
+                                                    }}
+                                                    className={`relative h-6 w-11 flex-shrink-0 self-end rounded-full transition-colors sm:self-auto ${getAnimePreferEmbed(lifeSyncUser?.preferences) ? "bg-[var(--mx-color-c6ff00)]" : "bg-[var(--mx-color-d2d2d7)]"} disabled:opacity-50`}
+                                                    title={!lifeSyncUser ? "Connect LifeSync under Integrations to edit" : undefined}
+                                                >
+                                                    <span
+                                                        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--color-surface)] shadow transition-transform ${getAnimePreferEmbed(lifeSyncUser?.preferences) ? "translate-x-5" : ""}`}
+                                                    />
+                                                </button>
                                             </div>
                                         </li>
                                         <li className="px-6 sm:px-8 py-5">
