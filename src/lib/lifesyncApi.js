@@ -319,6 +319,11 @@ export function getAnimeStreamAudio(prefs) {
 }
 
 /** @param {Record<string, unknown>|null|undefined} prefs */
+export function getAnimePreferEmbed(prefs) {
+    return Boolean(prefs?.animePreferEmbed)
+}
+
+/** @param {Record<string, unknown>|null|undefined} prefs */
 export function getAnimeLibraryLayout(prefs) {
     return prefs?.animeLibraryLayout === 'list' ? 'list' : 'grid'
 }

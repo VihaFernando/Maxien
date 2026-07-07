@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { lifesyncFetch, getLifesyncApiBase } from '../../../lib/lifesyncApi'
+import { lifesyncFetch, getLifesyncApiBase, getAnimePreferEmbed } from '../../../lib/lifesyncApi'
 import { useLifeSync } from '../../../context/LifeSyncContext'
 import AdvancedVideoPlayer from '../../../components/lifesync/AdvancedVideoPlayer'
 import { streamIframeSandboxProps } from '../../../lib/lifesyncStreamIframe'
@@ -16,7 +16,7 @@ import { tvHintLabel } from '../../../lib/lifeSyncKeyboardGamepad'
 const NEXT_EP_COUNTDOWN_SECS = 5
 
 // Settings panel sections
-const SETTINGS_SECTIONS = ['audio', 'subtitles', 'quality']
+const SETTINGS_SECTIONS = ['audio', 'subtitles', 'quality', 'source']
 
 /**
  * Fullscreen anime stream player inside TV mode.
@@ -24,7 +24,7 @@ const SETTINGS_SECTIONS = ['audio', 'subtitles', 'quality']
  * X (controller) / Space (keyboard) = open/close settings panel.
  */
 export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0, onBack }) {
-    const { isLifeSyncConnected } = useLifeSync()
+    const { isLifeSyncConnected, lifeSyncUser } = useLifeSync()
     const controllerEnabled = useControllerSupportEnabled()
     const inputSource = useLifeSyncInputSource()
 
@@ -32,6 +32,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
     const [stream, setStream] = useState(null)
     const [audioType, setAudioType] = useState('sub')
     const [subtitlesOn, setSubtitlesOn] = useState(true)
+    const [preferEmbed, setPreferEmbed] = useState(() => getAnimePreferEmbed(lifeSyncUser?.preferences))
     // { forUrl: string, url: string }  quality resets automatically when video URL changes
     const [qualitySelection, setQualitySelection] = useState({ forUrl: '', url: '' })
     // Derive effective quality: only apply if it was set for the current video URL
@@ -60,11 +61,12 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
 
     // ── Stream resolution ────────────────────────────────────────────────────
 
-    const resolveStream = useCallback(async (ep, type, signal) => {
+    const resolveStream = useCallback(async (ep, type, signal, embed) => {
         if (!ep?.episodeId) return null
         const apiBase = getLifesyncApiBase()
+        const embedQ = embed ? '&preferEmbed=true' : ''
         const pack = await lifesyncFetch(
-            `/api/v1/anime/stream/watch/${encodeURIComponent(ep.episodeId)}?type=${type}&view=full`,
+            `/api/v1/anime/stream/watch/${encodeURIComponent(ep.episodeId)}?type=${type}${embedQ}&view=full`,
             signal ? { signal } : undefined,
         )
         const iframeFromPack = typeof pack?.iframeUrl === 'string' && /^https?:\/\//i.test(pack.iframeUrl) ? pack.iframeUrl : null
@@ -101,11 +103,11 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
         Promise.resolve().then(() => {
             if (!cancelRef.current) setStream({ title: initialTitle, resolving: true })
         })
-        resolveStream(epObj, audioType, ac.signal)
+        resolveStream(epObj, audioType, ac.signal, preferEmbed)
             .then(s => { if (!cancelRef.current) setStream(s ? { ...s, resolving: false } : null) })
             .catch(e => { if (!cancelRef.current && e?.name !== 'AbortError') setStream({ title: initialTitle, resolving: false, error: e?.message }) })
         return () => { cancelRef.current = true; ac.abort() }
-    }, [epObj, resolveStream, audioType])
+    }, [epObj, resolveStream, audioType, preferEmbed])
 
     useEffect(() => {
         if (!isLifeSyncConnected || !animeId) return
@@ -195,6 +197,12 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
         showToast(on ? 'CC ON' : 'CC OFF')
     }, [showToast])
 
+    const setSource = useCallback((embed) => {
+        if (embed === preferEmbed) return
+        setPreferEmbed(embed)
+        showToast(embed ? 'EMBED' : 'DIRECT')
+    }, [preferEmbed, showToast])
+
     const setQuality = useCallback((url) => {
         setQualityUrl(url)
         const label = url
@@ -252,8 +260,10 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
             const cur = opts.indexOf(qualityUrl)
             const next = Math.max(0, Math.min(opts.length - 1, cur + dir))
             setQuality(opts[next])
+        } else if (section === 'source') {
+            setSource(dir === 1)
         }
-    }, [settingsFocus, showSubDub, setAudio, setSubtitles, qualityList, qualityUrl, setQuality])
+    }, [settingsFocus, showSubDub, setAudio, setSubtitles, qualityList, qualityUrl, setQuality, setSource])
 
     const settingsNavHandlers = useMemo(() => ({
         [XBOX_GAMEPAD_BUTTONS.B]: () => closeSettings(),
@@ -604,6 +614,35 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                                         {stream?.resolving ? 'Loading…' : 'Quality variants not available'}
                                     </p>
                                 )}
+                            </SettingsSection>
+
+                            {/* ── Source ───────────────────────────────────────── */}
+                            <SettingsSection
+                                focused={settingsFocus === 3}
+                                icon={
+                                    <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 17l10-10M7 7h10v10" />
+                                    </svg>
+                                }
+                                label="Source"
+                            >
+                                <div className="flex gap-2">
+                                    {[{ val: false, label: 'Direct' }, { val: true, label: 'Embed' }].map(({ val, label }) => (
+                                        <button
+                                            key={label}
+                                            type="button"
+                                            onClick={() => setSource(val)}
+                                            className={`flex-1 rounded-xl border py-2 text-[12px] font-black uppercase tracking-widest transition-all ${
+                                                preferEmbed === val
+                                                    ? 'border-(--mx-color-c6ff00)/50 bg-(--mx-color-c6ff00)/14 text-(--mx-color-c6ff00) shadow-[0_0_12px_rgba(198,255,0,0.15)]'
+                                                    : 'border-white/10 bg-white/4 text-white/55 hover:border-white/20 hover:text-white/80'
+                                            }`}
+                                        >
+                                            {label}
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="mt-1.5 text-[10px] text-white/30">Embed uses the provider's player when direct playback fails</p>
                             </SettingsSection>
 
                             {/* Footer hint */}

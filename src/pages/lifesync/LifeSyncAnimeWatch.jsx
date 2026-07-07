@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
-import { getAnimeStreamAudio, getLifesyncApiBase, lifesyncFetch } from '../../lib/lifesyncApi'
+import { getAnimePreferEmbed, getAnimeStreamAudio, getLifesyncApiBase, lifesyncFetch } from '../../lib/lifesyncApi'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import {
@@ -72,6 +72,7 @@ export default function LifeSyncAnimeWatch() {
     const animeId = useMemo(() => String(animeIdParam || '').trim(), [animeIdParam])
     const episodeIndex = useMemo(() => clampPage(epParam) - 1, [epParam])
     const streamAudioType = getAnimeStreamAudio(lifeSyncUser?.preferences)
+    const preferEmbedDefault = getAnimePreferEmbed(lifeSyncUser?.preferences)
 
     const from = location.state?.from
     const titleHintFromState = typeof location.state?.title === 'string' ? location.state.title.trim() : ''
@@ -92,6 +93,7 @@ export default function LifeSyncAnimeWatch() {
     const [episodeIdx, setEpisodeIdx] = useState(episodeIndex)
     const [audioOverride, setAudioOverride] = useState(null)
     const [mirrorOverrideId, setMirrorOverrideId] = useState('')
+    const [preferEmbed, setPreferEmbed] = useState(preferEmbedDefault)
     const [audioAvailByEp, setAudioAvailByEp] = useState(() => (/** @type {Record<string, { sub: boolean, dub: boolean }>} */ ({})))
     const [resolveKey, setResolveKey] = useState(0)
     const audioAvailRef = useRef(audioAvailByEp)
@@ -116,7 +118,7 @@ export default function LifeSyncAnimeWatch() {
     }, [])
 
     const resolveAnimeStream = useCallback(
-        async (epObj, audioOverride, mirrorId, signal) => {
+        async (epObj, audioOverride, mirrorId, signal, preferEmbed) => {
             const episodeId = epObj?.episodeId
             if (!episodeId) return null
             const base = {
@@ -146,6 +148,7 @@ export default function LifeSyncAnimeWatch() {
                 mirrorId != null && String(mirrorId).trim() !== ''
                     ? `&server=${encodeURIComponent(String(mirrorId).trim())}`
                     : ''
+            const embedQ = preferEmbed ? '&preferEmbed=true' : ''
 
             // Hard 15s timeout so a hung API never leaves the spinner forever
             const timeoutAc = new AbortController()
@@ -157,7 +160,7 @@ export default function LifeSyncAnimeWatch() {
             let pack
             try {
                 pack = await lifesyncFetch(
-                    `/api/v1/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${mirrorQ}&view=full`,
+                    `/api/v1/anime/stream/watch/${encodeURIComponent(episodeId)}?type=${type}${mirrorQ}${embedQ}&view=full`,
                     combined,
                 )
             } finally {
@@ -358,6 +361,8 @@ export default function LifeSyncAnimeWatch() {
     audioOverrideRef.current = audioOverride
     const mirrorOverrideIdRef = useRef(mirrorOverrideId)
     mirrorOverrideIdRef.current = mirrorOverrideId
+    const preferEmbedRef = useRef(preferEmbed)
+    preferEmbedRef.current = preferEmbed
 
     useEffect(() => {
         if (!isLifeSyncConnected) return
@@ -377,6 +382,7 @@ export default function LifeSyncAnimeWatch() {
                     audioOverrideRef.current,
                     mirrorOverrideIdRef.current || undefined,
                     ac.signal,
+                    preferEmbedRef.current,
                 )
                 if (ac.signal.aborted) return
                 const av = resolved?.audioAvailability
@@ -831,6 +837,23 @@ export default function LifeSyncAnimeWatch() {
                                                                     return <option key={id} value={id} className="bg-(--mx-color-111)">{label}</option>
                                                                 })}
                                                             </select>
+                                                        </WatchSettingsSection>
+
+                                                        {/* Source */}
+                                                        <WatchSettingsSection label="Source" icon="mirror">
+                                                            <div className="flex gap-1.5">
+                                                                {[{ val: false, label: 'Direct' }, { val: true, label: 'Embed' }].map(({ val, label }) => (
+                                                                    <button key={label} type="button"
+                                                                        onClick={() => { setPreferEmbed(val); setResolveKey(k => k + 1); setSettingsOpen(false) }}
+                                                                        className={`flex-1 rounded-xl border py-2 text-[11px] font-black uppercase tracking-widest transition-all ${
+                                                                            preferEmbed === val
+                                                                                ? 'border-(--mx-color-c6ff00)/50 bg-(--mx-color-c6ff00)/14 text-(--mx-color-c6ff00)'
+                                                                                : 'border-white/10 bg-white/4 text-white/55 hover:border-white/20 hover:text-white/80'
+                                                                        }`}
+                                                                    >{label}</button>
+                                                                ))}
+                                                            </div>
+                                                            <p className="mt-1.5 text-[10px] text-white/30">Embed uses the provider's player when the direct stream fails to play</p>
                                                         </WatchSettingsSection>
 
                                                         <p className="mt-auto pt-2 text-center text-[9px] text-white/20">Space · toggle · Esc · close</p>
