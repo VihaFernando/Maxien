@@ -372,6 +372,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                         onEnded={() => { if (canNext) startNextEpCountdown() }}
                         onTimeNearEnd={canNext ? startNextEpCountdown : undefined}
                         onTimeNearEndCancel={cancelNextEpCountdown}
+                        onUseEmbed={() => setSource(true)}
                     />
                 ) : stream?.iframeUrl && !stream.resolving ? (
                     <iframe

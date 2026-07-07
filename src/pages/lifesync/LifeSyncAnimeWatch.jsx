@@ -905,6 +905,7 @@ export default function LifeSyncAnimeWatch() {
                                                     canPrevEpisode={canPrev}
                                                     canNextEpisode={canNext}
                                                     onEnded={() => { if (canNext) goEpisode(episodeIdx + 1) }}
+                                                    onUseEmbed={() => { setPreferEmbedAndSave(true); setResolveKey(k => k + 1) }}
                                                 />
                                             ) : !stream?.resolving && stream?.iframeUrl ? (
                                                 <iframe

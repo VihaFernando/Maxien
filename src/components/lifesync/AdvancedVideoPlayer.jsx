@@ -104,6 +104,8 @@ export default function AdvancedVideoPlayer({
     suppressKeys = false,
     /** Controlled subtitle on/off from parent. Undefined = use internal state. */
     subtitlesOnOverride,
+    /** When provided, the playback-error screen shows a second button to switch to an embed/alternate source. */
+    onUseEmbed,
 }) {
     const videoRef = useRef(null)
     const wrapRef = useRef(null)
@@ -1029,13 +1031,24 @@ export default function AdvancedVideoPlayer({
                         <p className="text-[14px] font-bold text-white">Playback failed</p>
                         <p className="mt-1 max-w-xs text-[11px] text-white/40">{mediaError?.message}</p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={retryPlayback}
-                        className="rounded-xl bg-(--mx-color-c6ff00) px-6 py-2.5 text-[12px] font-black text-black transition-all hover:brightness-110 active:scale-95"
-                    >
-                        Retry
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={retryPlayback}
+                            className="rounded-xl bg-(--mx-color-c6ff00) px-6 py-2.5 text-[12px] font-black text-black transition-all hover:brightness-110 active:scale-95"
+                        >
+                            Retry
+                        </button>
+                        {onUseEmbed ? (
+                            <button
+                                type="button"
+                                onClick={onUseEmbed}
+                                className="rounded-xl border border-white/15 bg-white/8 px-6 py-2.5 text-[12px] font-black text-white/80 transition-all hover:border-white/30 hover:text-white active:scale-95"
+                            >
+                                Use embed player
+                            </button>
+                        ) : null}
+                    </div>
                 </div>
             )}
 
