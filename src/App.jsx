@@ -16,6 +16,7 @@ const Tasks = lazy(() => import('./pages/Tasks'))
 const Projects = lazy(() => import('./pages/Projects'))
 const TaskTypes = lazy(() => import('./pages/TaskTypes'))
 const Notes = lazy(() => import('./pages/Notes'))
+const Workouts = lazy(() => import('./pages/Workouts'))
 const Feed = lazy(() => import('./pages/Feed'))
 const Workplaces = lazy(() => import('./pages/Workplaces'))
 const WorkplaceDetail = lazy(() => import('./pages/WorkplaceDetail'))
@@ -80,6 +81,7 @@ function App() {
                     <Route path="ai-assistant" element={<AIAssistant />} />
                     <Route path="task-types" element={<TaskTypes />} />
                     <Route path="notes" element={<Notes />} />
+                    <Route path="workouts" element={<Workouts />} />
                     <Route path="finance" element={<Finance />} />
                     <Route path="feed" element={<Feed />} />
                     <Route path="workplaces" element={<Workplaces />} />
