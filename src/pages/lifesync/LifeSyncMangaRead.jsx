@@ -796,11 +796,11 @@ export default function LifeSyncMangaRead() {
             {/* ── header (hidden in fullscreen) ── */}
             {!fullscreen && (
                 <header className={`shrink-0 border-b border-white/10 px-2 py-2 ${LOW_END ? 'bg-black' : 'bg-black/70 backdrop-blur-xl'}`}>
-                    <div className="mx-auto flex w-full max-w-5xl items-center gap-2">
+                    <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-2">
                         <button
                             type="button"
                             onClick={closeReader}
-                            className="inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-2.5 py-2 text-[11px] font-semibold text-white"
+                            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white"
                             title="Back to list"
                         >
                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
@@ -842,7 +842,7 @@ export default function LifeSyncMangaRead() {
                                 if (ch) goToChapter(ch)
                             }}
                             disabled={navBusy || busy || loadingPages || !sortedChapters.length}
-                            className="min-w-[10rem] max-w-[16rem] rounded-lg border border-white/20 bg-white/5 px-2.5 py-2 text-[11px] font-semibold text-white focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/40 disabled:opacity-50"
+                            className="min-h-11 min-w-32 max-w-64 flex-1 rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white focus:outline-none focus:ring-2 focus:ring-(--mx-color-c6ff00)/40 disabled:opacity-50 sm:flex-none sm:min-w-40 sm:max-w-64"
                         >
                             {!sortedChapters.length
                                 ? <option value="">Loading…</option>
@@ -858,7 +858,7 @@ export default function LifeSyncMangaRead() {
                             type="button"
                             disabled={!prevCh || navBusy || busy || loadingPages}
                             onClick={() => prevCh && goToChapter(prevCh)}
-                            className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-2.5 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white disabled:opacity-40"
                             title="Previous chapter"
                         >
                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
@@ -869,7 +869,7 @@ export default function LifeSyncMangaRead() {
                             type="button"
                             disabled={!nextCh || navBusy || busy || loadingPages}
                             onClick={() => nextCh && goToChapter(nextCh)}
-                            className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-2.5 py-2 text-[11px] font-semibold text-white disabled:opacity-40"
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white disabled:opacity-40"
                             title="Next chapter"
                         >
                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
@@ -879,7 +879,7 @@ export default function LifeSyncMangaRead() {
                         <button
                             type="button"
                             onClick={() => void enterFullscreen()}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 px-2.5 py-2 text-[11px] font-semibold text-white"
+                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white"
                             title="Fullscreen"
                         >
                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>

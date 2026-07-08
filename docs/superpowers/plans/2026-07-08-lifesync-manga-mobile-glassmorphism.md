@@ -18,6 +18,7 @@
 - `useIsMobile()` must be SSR-safe: default to desktop (`false`) before mount, update via `matchMedia` on mount, breakpoint `(max-width: 767px)`.
 - Games pages, desktop layout changes beyond adding the conditional branch, and TV mode are out of scope — do not touch them.
 - Tailwind v4 canonical classes only (e.g. `h-11` not `h-[44px]`) per project style rules.
+- **No test framework exists in this project** (`package.json` has no `test` script, no Vitest/Jest, no `@testing-library/react`). Do not add one for this plan — verify behavior manually via the dev server instead of writing `.test.js` files. This overrides any "write the failing test" step below that assumes a test runner.
 
 ---
 
@@ -25,7 +26,6 @@
 
 - Create: `src/hooks/useIsMobile.js` — shared hook, used by this page and every later page in the queue.
 - Modify: `src/pages/lifesync/LifeSyncManga.jsx` — add `BottomSheet` component (near existing `FilterDrawer`, ~line 92), add mobile JSX tree, branch the final `return`.
-- Test: `src/hooks/useIsMobile.test.js` — hook behavior (mount default, media query match/unmatch).
 
 No other files change. `MediaPageChrome.jsx`, `MangaCard`, `MangaDetail`, `MangaPagerFooter` are reused as-is in the mobile tree.
 
@@ -35,71 +35,13 @@ No other files change. `MediaPageChrome.jsx`, `MangaCard`, `MangaDetail`, `Manga
 
 **Files:**
 - Create: `src/hooks/useIsMobile.js`
-- Test: `src/hooks/useIsMobile.test.js`
 
 **Interfaces:**
 - Produces: `useIsMobile(): boolean` — default export named `useIsMobile`, no arguments, returns `true` when viewport matches `(max-width: 767px)`, else `false`. Every later page task imports this exact name/signature from `src/hooks/useIsMobile.js`.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1: Write the implementation**
 
-Check the existing hook test style first:
-
-```bash
-find src/hooks -name "*.test.js" | head -3
-```
-
-Then create `src/hooks/useIsMobile.test.js`:
-
-```javascript
-import { renderHook, act } from "@testing-library/react";
-import useIsMobile from "./useIsMobile";
-
-function setMatchMedia(matches) {
-  const listeners = new Set();
-  window.matchMedia = (query) => ({
-    matches,
-    media: query,
-    addEventListener: (_, cb) => listeners.add(cb),
-    removeEventListener: (_, cb) => listeners.delete(cb),
-    dispatchEvent: () => {},
-  });
-  return {
-    trigger(nextMatches) {
-      matches = nextMatches;
-      listeners.forEach((cb) => cb({ matches: nextMatches }));
-    },
-  };
-}
-
-test("returns false when viewport is wider than the mobile breakpoint", () => {
-  setMatchMedia(false);
-  const { result } = renderHook(() => useIsMobile());
-  expect(result.current).toBe(false);
-});
-
-test("returns true when viewport matches the mobile breakpoint", () => {
-  setMatchMedia(true);
-  const { result } = renderHook(() => useIsMobile());
-  expect(result.current).toBe(true);
-});
-
-test("updates when the media query match changes after mount", () => {
-  const mq = setMatchMedia(false);
-  const { result } = renderHook(() => useIsMobile());
-  expect(result.current).toBe(false);
-  act(() => {
-    mq.trigger(true);
-  });
-  expect(result.current).toBe(true);
-});
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `npx vitest run src/hooks/useIsMobile.test.js` (check `package.json` `scripts.test` first — use Jest's equivalent invocation if the project uses Jest instead of Vitest)
-Expected: FAIL with "Cannot find module './useIsMobile'" or similar.
-
-- [ ] **Step 3: Write minimal implementation**
+This project has no test framework installed (no Vitest/Jest, no `@testing-library/react`, no `test` script in `package.json`) — do not add one. Write the hook directly:
 
 ```javascript
 import { useEffect, useState } from "react";
@@ -125,15 +67,15 @@ export default function useIsMobile() {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 2: Verify manually via a temporary render**
 
-Run: `npx vitest run src/hooks/useIsMobile.test.js`
-Expected: PASS (3 tests)
+Since there's no test runner, confirm the hook works by temporarily importing and logging it from any already-mounted component (e.g. add `console.log(useIsMobile())` inside `LifeSyncManga`'s body right after its other hook calls — do not commit this line, it's throwaway verification), running `npm run dev`, opening the LifeSyncManga page, and resizing the browser across 767px while watching the console log flip between `true`/`false`. Remove the temporary log line before committing.
+Expected: log value is `false` above 767px width, `true` at or below it, and updates live on resize without a page reload.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/hooks/useIsMobile.js src/hooks/useIsMobile.test.js
+git add src/hooks/useIsMobile.js
 git commit -m "feat: add useIsMobile hook for mobile-specific LifeSync views"
 ```
 
@@ -564,10 +506,12 @@ Run: `npm run dev`
 - At <768px width: confirm sticky header, source tabs, search bar, tapping "Filters" opens the bottom sheet (slides up, backdrop blur; drag-down, Escape, or × closes it), pager and 2-column grid render, tapping a card opens `MangaDetail`.
 Expected: no console errors in either mode; resizing the browser without reloading switches trees live (confirms the hook's `matchMedia` listener fires).
 
-- [ ] **Step 5: Run existing test suite to confirm no regressions**
+- [ ] **Step 5: Run the build and lint to confirm no regressions**
 
-Run: `npm test` (use the project's exact script from `package.json`)
-Expected: PASS — this change only adds a conditional branch above the existing desktop `return`; the desktop tree's code is untouched.
+This project has no test suite (see Global Constraints) — use the build and lint as the regression check instead.
+
+Run: `npm run build && npm run lint`
+Expected: build succeeds; lint shows no NEW errors/warnings beyond the pre-existing ones already known in this file (see project memory `project-lifesync-ui-rework-2026` for the pre-existing baseline count) — this change only adds a conditional branch above the existing desktop `return`; the desktop tree's code is untouched.
 
 - [ ] **Step 6: Commit**
 

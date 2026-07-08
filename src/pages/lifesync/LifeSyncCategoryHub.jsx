@@ -1072,13 +1072,13 @@ function AnimeHubBroadcastWeekSection({
                                         onClick={() => setSelectedKey(k)}
                                         className={`
                                             shrink-0 rounded-2xl px-3 py-2 text-left shadow-sm transition
-                                            ${isSel ? 'bg-(--color-ink-strong) text-white' : 'text-(--color-text-primary) hover:bg-(--color-surface-soft)'}
+                                            ${isSel ? 'bg-(--color-ink-strong) text-black' : 'text-white hover:bg-(--color-primary)/10 hover:text-white/80'}
                                             ${focusRing}
                                         `}
                                         aria-pressed={isSel}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <span className={`text-[10px] font-black uppercase tracking-[0.16em] ${isSel ? 'text-white/75' : 'text-(--color-text-secondary)'}`}>
+                                            <span className={`text-[10px] font-black uppercase tracking-[0.16em] ${isSel ? 'text-black/75' : 'text-(--color-text-secondary)'}`}>
                                                 {isToday ? 'Today' : dow}
                                             </span>
                                             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tabular-nums ${isSel ? 'bg-(--color-surface)/15 text-white' : 'bg-(--color-surface-muted) text-(--color-text-secondary)'}`}>

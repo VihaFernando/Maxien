@@ -5,6 +5,7 @@ import { FaArrowLeft } from "react-icons/fa";
 import { useLifeSync } from "../../context/LifeSyncContext";
 import { isLifeSyncHManhwaVisible, lifesyncFetch } from "../../lib/lifesyncApi";
 import useControllerSupportEnabled from "../../hooks/useControllerSupportEnabled";
+import useIsMobile from "../../hooks/useIsMobile";
 import useLifeSyncGamepadInput from "../../hooks/useLifeSyncGamepadInput";
 import { XBOX_GAMEPAD_BUTTONS } from "../../lib/lifeSyncControllerInput";
 import { ControllerHintBar } from "../../components/lifesync/ControllerHintOverlay";
@@ -181,6 +182,108 @@ function FilterDrawer({ open, onClose, title, count, onReset, children }) {
 }
 
 /**
+ * Mobile filter sheet  slides up from the bottom, drag-to-dismiss. Same
+ * prop shape as `FilterDrawer` so source-specific filter bodies
+ * (Roliascan/MangaDistrict/MangaDNA panels) pass through unchanged.
+ */
+function BottomSheet({ open, onClose, title, count, onReset, children }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
+  return createPortal(
+    <AnimatePresence>
+      {open && (
+        <MotionDiv
+          className="fixed inset-0 z-9997 flex items-end"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={lifeSyncDetailOverlayFadeTransition}
+        >
+          <MotionDiv
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+          <MotionDiv
+            className="relative flex max-h-[85dvh] w-full flex-col rounded-t-3xl bg-(--color-surface)/70 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", stiffness: 360, damping: 36 }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.4 }}
+            onDragEnd={(_, info) => {
+              if (info.offset.y > 120 || info.velocity.y > 600) onClose?.();
+            }}
+          >
+            <div className="mx-auto mt-2.5 h-1.25 w-10 shrink-0 rounded-full bg-(--color-border-strong)" />
+            <div className="flex shrink-0 items-center justify-between gap-3 px-5 py-4">
+              <div className="flex min-w-0 items-center gap-2">
+                <h2 className="truncate text-[15px] font-black text-(--color-text-primary)">
+                  {title}
+                </h2>
+                {count > 0 && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-black tabular-nums text-(--color-ink-strong)">
+                    {count}
+                  </span>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {count > 0 && onReset && (
+                  <button
+                    type="button"
+                    onClick={onReset}
+                    className="min-h-11 rounded-lg border border-(--color-border-soft) px-2.5 text-[11px] font-semibold text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close filters"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) hover:text-(--color-text-primary)"
+                >
+                  <svg
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth="2.5"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+              {children}
+            </div>
+          </MotionDiv>
+        </MotionDiv>
+      )}
+    </AnimatePresence>,
+    document.body,
+  );
+}
+
+/**
  * Unified browse pager footer  one polished control shared by every source
  * (Roliascan / Manga District / MangaDNA). Replaces three near-identical inline
  * Prev/Next rows. Chevron icon buttons + centered page label, matching the
@@ -191,8 +294,11 @@ function MangaPagerFooter({ page, lastPage, total, busy, onPrev, onNext }) {
   const last = Math.max(1, Number(lastPage) || 1);
   if (last <= 1 && cur <= 1) return null;
   return (
-    <div className="flex items-center justify-center">
-      <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1.5 shadow-sm">
+    <div
+      className="fixed inset-x-0 bottom-4 z-30 flex items-center justify-center px-4"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface)/90 backdrop-blur-xl p-1.5 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4)]">
         <button
           type="button"
           disabled={busy || cur <= 1}
@@ -1538,6 +1644,7 @@ export default function LifeSyncManga() {
   }, []);
   const searchInputRef = useRef(null);
   const controllerSupportEnabled = useControllerSupportEnabled();
+  const isMobile = useIsMobile();
 
   const listPath = useMemo(() => {
     const src = route.src || "roliascan";
@@ -2823,6 +2930,684 @@ export default function LifeSyncManga() {
     );
   }
 
+  // Filter panel bodies  extracted once so the desktop `FilterDrawer` and
+  // the mobile `BottomSheet` render the exact same JSX, no duplication.
+  const roliascanFilterBody = (
+    <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4">
+      <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Sorting
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+            Order
+            <select
+              value={roliascanOrderKey}
+              onChange={(e) => setRoliascanOrderKey(e.target.value)}
+              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none"
+            >
+              {ROLIASCAN_ORDER_OPTIONS.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+            Direction
+            <select
+              value={roliascanOrderDir}
+              onChange={(e) => setRoliascanOrderDir(e.target.value)}
+              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none"
+            >
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </label>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+            Min chapter
+            <input
+              type="number"
+              value={roliascanMinchap}
+              onChange={(e) => setRoliascanMinchap(e.target.value)}
+              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
+            />
+          </label>
+          {roliascanYears.length > 0 ? (
+            <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+              Year
+              <select
+                value={roliascanYearFrom || ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setRoliascanYearFrom(v);
+                  setRoliascanYearTo(v);
+                }}
+                className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
+              >
+                <option value="">Any year</option>
+                {roliascanYears.map((y) => (
+                  <option key={String(y)} value={String(y)}>
+                    {String(y)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <>
+              <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                Year from
+                <input
+                  type="number"
+                  value={roliascanYearFrom}
+                  onChange={(e) => setRoliascanYearFrom(e.target.value)}
+                  className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
+                />
+              </label>
+              <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+                Year to
+                <input
+                  type="number"
+                  value={roliascanYearTo}
+                  onChange={(e) => setRoliascanYearTo(e.target.value)}
+                  className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
+                />
+              </label>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Authors & Artists
+        </p>
+        <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+          Authors (comma separated)
+          <input
+            type="text"
+            value={roliascanAuthorsInput}
+            onChange={(e) => setRoliascanAuthorsInput(e.target.value)}
+            placeholder="eiichiro oda, ..."
+            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
+          />
+        </label>
+        <label className="mt-2 text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
+          Artists (comma separated)
+          <input
+            type="text"
+            value={roliascanArtistsInput}
+            onChange={(e) => setRoliascanArtistsInput(e.target.value)}
+            placeholder="artist slug, ..."
+            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
+          />
+        </label>
+      </div>
+
+      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Genres
+        </p>
+        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
+          {roliascanGenreTerms.slice(0, 240).map((term) => {
+            const key = roliascanTermToken(term);
+            const title = String(term.title || term.slug || key);
+            if (!key || !title) return null;
+            const included = roliascanIncludeGenres.includes(key);
+            const excluded = roliascanExcludeGenres.includes(key);
+            return (
+              <button
+                key={`cg-${key}`}
+                type="button"
+                onClick={() => cycleRoliascanGenre(key)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  toggleRoliascanGenre(key, "exclude");
+                }}
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  included
+                    ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                    : excluded
+                      ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                }`}
+              >
+                {title}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-(--color-text-secondary)">
+          Tap cycles include → exclude → clear. Right-click toggles exclude.
+        </p>
+      </div>
+
+      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Tags
+        </p>
+        <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
+          {roliascanFormatTerms.slice(0, 240).map((term) => {
+            const key = roliascanTermToken(term);
+            const title = String(term.title || term.slug || key);
+            if (!key || !title) return null;
+            const included = roliascanIncludeTags.includes(key);
+            const excluded = roliascanExcludeTags.includes(key);
+            return (
+              <button
+                key={`ct-${key}`}
+                type="button"
+                onClick={() => cycleRoliascanTag(key)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  toggleRoliascanTag(key, "exclude");
+                }}
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  included
+                    ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                    : excluded
+                      ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                }`}
+              >
+                {title}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-(--color-text-secondary)">
+          Tap cycles include → exclude → clear. Right-click toggles exclude.
+        </p>
+      </div>
+
+      <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Demographics & Status
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {roliascanDemographicTerms.slice(0, 120).map((term) => {
+            const key = roliascanTermToken(term);
+            const title = String(term.title || term.slug || key);
+            if (!key || !title) return null;
+            const included = roliascanIncludeDemographics.includes(key);
+            const excluded = roliascanExcludeDemographics.includes(key);
+            return (
+              <button
+                key={`cd-${key}`}
+                type="button"
+                onClick={() => cycleRoliascanDemographic(key)}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  toggleRoliascanDemographic(key, "exclude");
+                }}
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  included
+                    ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                    : excluded
+                      ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
+                      : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                }`}
+              >
+                {title}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-(--color-text-secondary)">
+          Tap cycles include → exclude → clear. Right-click toggles exclude.
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {roliascanStatusTerms.map((status) => {
+            const key = String(
+              status.id || status.slug || status.title || "",
+            ).trim();
+            const title = String(status.title || status.slug || key);
+            if (!key || !title) return null;
+            return (
+              <button
+                key={`cs-${key}`}
+                type="button"
+                onClick={() => toggleRoliascanStatus(key)}
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  roliascanStatuses.includes(key)
+                    ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                    : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                }`}
+              >
+                {title}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const mdFilterBody = (
+    <div className="min-w-0 max-w-full space-y-4">
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Section
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {["latest", "censored", "uncensored"].map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setMdSection(s)}
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
+                mdSection === s
+                  ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+              }`}
+            >
+              {s === "latest" ? "All Latest" : s}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-(--color-text-secondary)">
+          Section applies when no type is selected (latest releases feed).
+          Censored still filters out uncensored rows from listings.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Type of manga
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {MD_TYPE_OPTIONS.map(({ slug, label }) => (
+            <button
+              key={slug}
+              type="button"
+              onClick={() =>
+                setMdTypeSlug((prev) => (prev === slug ? "" : slug))
+              }
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                mdTypeSlug === slug
+                  ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Order by
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {MD_ORDER_BY_OPTIONS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setMdBrowse(id);
+                goToPage(1);
+              }}
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                mdBrowse === id
+                  ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Filters
+        </p>
+        <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
+          {MD_FILTER_OPTIONS.map(({ slug, label }) => (
+            <button
+              key={slug}
+              type="button"
+              onClick={() =>
+                setMdFilterGenre((prev) => (prev === slug ? "" : slug))
+              }
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                mdFilterGenre === slug
+                  ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-(--color-text-secondary)">
+          {
+            "With a type selected, the tag narrows via the site's genre filter. With no type, the tag becomes the main browse path."
+          }
+        </p>
+      </div>
+    </div>
+  );
+
+  const dnaFilterBody = (
+    <div className="min-w-0 max-w-full space-y-4">
+      <div className="space-y-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+          Order by
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {MANGADNA_ORDER_BY_OPTIONS.map(({ id, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setDnaOrderBy(id);
+                setDnaPage(1);
+                goToPage(1);
+              }}
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                dnaOrderBy === id
+                  ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {dnaGenres.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
+            Genre
+          </p>
+          <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
+            <button
+              type="button"
+              onClick={() => {
+                setDnaGenre("");
+                setDnaPage(1);
+                goToPage(1);
+              }}
+              className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                !dnaGenre
+                  ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+              }`}
+            >
+              All
+            </button>
+            {dnaGenres.map((g) => (
+              <button
+                key={g.slug || g.id}
+                type="button"
+                onClick={() => {
+                  setDnaGenre((prev) =>
+                    prev === (g.slug || g.id) ? "" : g.slug || g.id,
+                  );
+                  setDnaPage(1);
+                  goToPage(1);
+                }}
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  dnaGenre === (g.slug || g.id)
+                    ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
+                    : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
+                }`}
+              >
+                {g.title || g.name || g.slug}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="min-w-0 w-full max-w-full space-y-4 pb-24">
+        <AnimatePresence mode="sync">
+          {selectedManga ? (
+            <MangaDetail
+              key={`${selectedManga.source || source}-${selectedManga.id}`}
+              manga={selectedManga}
+              source={source}
+              isLifeSyncConnected={isLifeSyncConnected}
+              onClose={() => goToList({ replace: true })}
+              onStartRead={handleStartRead}
+              roliascanConnected={false}
+              browseTranslatedLang={
+                mangaEnglishReleasesOnly ? "en" : dexTranslatedLang
+              }
+            />
+          ) : null}
+        </AnimatePresence>
+
+        <div
+          className="sticky top-0 z-30 -mx-4 space-y-3 border-b border-(--color-border-soft)/60 bg-(--color-surface)/70 px-4 pb-3 pt-3 backdrop-blur-xl"
+          style={{ pointerEvents: selectedManga ? "none" : undefined }}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="truncate text-[11px] font-bold text-(--color-text-secondary)">
+                LifeSync · Reading
+              </p>
+              <h1 className="truncate text-[19px] font-black text-(--color-text-primary)">
+                {source === "mangadistrict" || source === "mangadna"
+                  ? "H Manhwa"
+                  : "Manga"}
+              </h1>
+            </div>
+            {fromHome && (
+              <button
+                type="button"
+                onClick={() => navigate(fromHome)}
+                className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-(--color-surface)/80 px-3.5 text-[12px] font-bold text-(--color-text-primary) ring-1 ring-(--color-border-soft) backdrop-blur-sm"
+              >
+                <FaArrowLeft className="h-3 w-3" /> Home
+              </button>
+            )}
+          </div>
+
+          <div className="scrollbar-none -mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-1">
+            {[
+              { id: "roliascan", label: "Roliascan" },
+              ...(hManhwaEnabled
+                ? [
+                    { id: "mangadna", label: "MangaDNA" },
+                    { id: "mangadistrict", label: "H Manhwa" },
+                  ]
+                : []),
+            ].map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() =>
+                  navigate(
+                    `${basePath}/${id}/${defaultTabForSource(id)}/page/1${location.search || ""}`,
+                  )
+                }
+                aria-pressed={source === id}
+                className={`min-h-11 shrink-0 snap-start rounded-xl px-4 text-[13px] font-bold transition-all ${
+                  source === id
+                    ? "bg-primary text-black shadow-sm"
+                    : "bg-(--color-surface-muted)/70 text-(--color-text-secondary) ring-1 ring-(--color-border-soft) backdrop-blur-sm"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {error && (
+            <div className="rounded-2xl border border-red-200/60 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-600 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-300">
+              {error}
+            </div>
+          )}
+
+          {source === "roliascan" && (
+            <form
+              onSubmit={handleRoliascanSearch}
+              className="flex items-stretch gap-2"
+            >
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={roliascanSearchQ}
+                onChange={(e) => setRoliascanSearchQ(e.target.value)}
+                placeholder="Search Roliascan…"
+                className="min-h-11 min-w-0 flex-1 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted)/70 px-4 text-[13px] text-(--color-text-primary) backdrop-blur-sm focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setRoliascanFiltersOpen(true)}
+                aria-expanded={roliascanFiltersOpen}
+                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted)/70 px-3.5 text-[13px] font-semibold text-(--color-text-primary) backdrop-blur-sm"
+              >
+                Filters
+                {roliascanFilterBarCount > 0 && (
+                  <span className="rounded-full bg-primary/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    {roliascanFilterBarCount}
+                  </span>
+                )}
+              </button>
+            </form>
+          )}
+
+          {source === "mangadistrict" && (
+            <div className="flex items-stretch gap-2">
+              <button
+                type="button"
+                onClick={() => setMdFiltersOpen(true)}
+                aria-expanded={mdFiltersOpen}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted)/70 px-3.5 text-[13px] font-semibold text-(--color-text-primary) backdrop-blur-sm"
+              >
+                Filters
+                {mdFilterBarCount > 0 && (
+                  <span className="rounded-full bg-primary/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    {mdFilterBarCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {source === "mangadna" && (
+            <div className="flex items-stretch gap-2">
+              <button
+                type="button"
+                onClick={() => setDnaFiltersOpen(true)}
+                aria-expanded={dnaFiltersOpen}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted)/70 px-3.5 text-[13px] font-semibold text-(--color-text-primary) backdrop-blur-sm"
+              >
+                Filters
+                {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0) >
+                  0 && (
+                  <span className="rounded-full bg-primary/35 px-1.5 py-0.5 text-[10px] font-bold tabular-nums">
+                    {(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0)}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        <BottomSheet
+          open={roliascanFiltersOpen}
+          onClose={() => setRoliascanFiltersOpen(false)}
+          title="Roliascan filters"
+          count={roliascanFilterBarCount}
+          onReset={resetRoliascanFilters}
+        >
+          {roliascanFilterBody}
+        </BottomSheet>
+
+        <BottomSheet
+          open={mdFiltersOpen}
+          onClose={() => setMdFiltersOpen(false)}
+          title="Manga District filters"
+          count={mdFilterBarCount}
+        >
+          {mdFilterBody}
+        </BottomSheet>
+
+        <BottomSheet
+          open={dnaFiltersOpen}
+          onClose={() => setDnaFiltersOpen(false)}
+          title="MangaDNA filters"
+          count={(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0)}
+        >
+          {dnaFilterBody}
+        </BottomSheet>
+
+        <div className="px-4">
+          {source === "mangadistrict" && !mdFilter.trim() && mdLatest && (
+            <MangaPagerFooter
+              page={mdCurPage}
+              lastPage={mdLastPage}
+              busy={busy}
+              onPrev={() => goToPage(mdCurPage - 1)}
+              onNext={() => goToPage(mdCurPage + 1)}
+            />
+          )}
+          {source === "mangadna" && !dnaFilter.trim() && dnaLatest && (
+            <MangaPagerFooter
+              page={dnaCurPage}
+              lastPage={dnaLastPage}
+              busy={busy}
+              onPrev={() => goToPage(dnaCurPage - 1)}
+              onNext={() => goToPage(dnaCurPage + 1)}
+            />
+          )}
+          {source === "roliascan" && (
+            <MangaPagerFooter
+              page={roliascanPage}
+              lastPage={roliascanLastPage}
+              total={roliascanTotal}
+              busy={roliascanLoading}
+              onPrev={() => goToPage(roliascanPage - 1)}
+              onNext={() => goToPage(roliascanPage + 1)}
+            />
+          )}
+
+          <AnimatePresence mode="wait">
+            <MotionDiv
+              key={source}
+              className="min-w-0 max-w-full space-y-4"
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              variants={lifeSyncSectionPresenceVariants}
+              transition={lifeSyncSectionPresenceTransition}
+            >
+              {mangaGridLoading ? (
+                <LifesyncMangaBrowseGridSkeleton />
+              ) : currentItems.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 items-stretch">
+                  {currentItems.map((manga, i) => (
+                    <div key={`${manga.source || source}-${manga.id || i}`}>
+                      <MangaCard
+                        manga={{ ...manga, source: manga.source || source }}
+                        onClick={openMangaFromCard}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : !busy ? (
+                <MediaEmptyState
+                  accent={source === "mangadistrict" ? "hmanhwa" : "manga"}
+                  title="Nothing to show"
+                  message="No manga to display."
+                />
+              ) : null}
+            </MotionDiv>
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <LayoutGroup id="lifesync-manga">
       <MotionDiv
@@ -3010,271 +3795,7 @@ export default function LifeSyncManga() {
                 count={roliascanFilterBarCount}
                 onReset={resetRoliascanFilters}
               >
-                <div className="grid min-w-0 max-w-full grid-cols-1 gap-3 sm:gap-4">
-                  <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Sorting
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                        Order
-                        <select
-                          value={roliascanOrderKey}
-                          onChange={(e) => setRoliascanOrderKey(e.target.value)}
-                          className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none"
-                        >
-                          {ROLIASCAN_ORDER_OPTIONS.map((option) => (
-                            <option key={option.id} value={option.id}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                        Direction
-                        <select
-                          value={roliascanOrderDir}
-                          onChange={(e) => setRoliascanOrderDir(e.target.value)}
-                          className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none"
-                        >
-                          <option value="desc">Descending</option>
-                          <option value="asc">Ascending</option>
-                        </select>
-                      </label>
-                    </div>
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                        Min chapter
-                        <input
-                          type="number"
-                          value={roliascanMinchap}
-                          onChange={(e) => setRoliascanMinchap(e.target.value)}
-                          className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
-                        />
-                      </label>
-                      {roliascanYears.length > 0 ? (
-                        <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                          Year
-                          <select
-                            value={roliascanYearFrom || ""}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setRoliascanYearFrom(v);
-                              setRoliascanYearTo(v);
-                            }}
-                            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
-                          >
-                            <option value="">Any year</option>
-                            {roliascanYears.map((y) => (
-                              <option key={String(y)} value={String(y)}>
-                                {String(y)}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      ) : (
-                        <>
-                          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                            Year from
-                            <input
-                              type="number"
-                              value={roliascanYearFrom}
-                              onChange={(e) =>
-                                setRoliascanYearFrom(e.target.value)
-                              }
-                              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
-                            />
-                          </label>
-                          <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                            Year to
-                            <input
-                              type="number"
-                              value={roliascanYearTo}
-                              onChange={(e) =>
-                                setRoliascanYearTo(e.target.value)
-                              }
-                              className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2.5 py-2 text-[12px] text-(--color-text-primary)"
-                            />
-                          </label>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4">
-                    <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Authors & Artists
-                    </p>
-                    <label className="text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                      Authors (comma separated)
-                      <input
-                        type="text"
-                        value={roliascanAuthorsInput}
-                        onChange={(e) =>
-                          setRoliascanAuthorsInput(e.target.value)
-                        }
-                        placeholder="eiichiro oda, ..."
-                        className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
-                      />
-                    </label>
-                    <label className="mt-2 text-[10px] font-semibold text-(--color-text-secondary) flex flex-col gap-1">
-                      Artists (comma separated)
-                      <input
-                        type="text"
-                        value={roliascanArtistsInput}
-                        onChange={(e) =>
-                          setRoliascanArtistsInput(e.target.value)
-                        }
-                        placeholder="artist slug, ..."
-                        className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary)"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Genres
-                    </p>
-                    <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                      {roliascanGenreTerms.slice(0, 240).map((term) => {
-                        const key = roliascanTermToken(term);
-                        const title = String(term.title || term.slug || key);
-                        if (!key || !title) return null;
-                        const included = roliascanIncludeGenres.includes(key);
-                        const excluded = roliascanExcludeGenres.includes(key);
-                        return (
-                          <button
-                            key={`cg-${key}`}
-                            type="button"
-                            onClick={() => cycleRoliascanGenre(key)}
-                            onContextMenu={(event) => {
-                              event.preventDefault();
-                              toggleRoliascanGenre(key, "exclude");
-                            }}
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                              included
-                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                                : excluded
-                                  ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                            }`}
-                          >
-                            {title}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[11px] text-(--color-text-secondary)">
-                      Tap cycles include → exclude → clear. Right-click toggles
-                      exclude.
-                    </p>
-                  </div>
-
-                  <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Tags
-                    </p>
-                    <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                      {roliascanFormatTerms.slice(0, 240).map((term) => {
-                        const key = roliascanTermToken(term);
-                        const title = String(term.title || term.slug || key);
-                        if (!key || !title) return null;
-                        const included = roliascanIncludeTags.includes(key);
-                        const excluded = roliascanExcludeTags.includes(key);
-                        return (
-                          <button
-                            key={`ct-${key}`}
-                            type="button"
-                            onClick={() => cycleRoliascanTag(key)}
-                            onContextMenu={(event) => {
-                              event.preventDefault();
-                              toggleRoliascanTag(key, "exclude");
-                            }}
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                              included
-                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                                : excluded
-                                  ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                            }`}
-                          >
-                            {title}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[11px] text-(--color-text-secondary)">
-                      Tap cycles include → exclude → clear. Right-click toggles
-                      exclude.
-                    </p>
-                  </div>
-
-                  <div className="md:col-span-2 rounded-2xl border border-(--color-border-soft)/60 bg-(--color-surface)/70 p-3 sm:p-4 space-y-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Demographics & Status
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {roliascanDemographicTerms.slice(0, 120).map((term) => {
-                        const key = roliascanTermToken(term);
-                        const title = String(term.title || term.slug || key);
-                        if (!key || !title) return null;
-                        const included =
-                          roliascanIncludeDemographics.includes(key);
-                        const excluded =
-                          roliascanExcludeDemographics.includes(key);
-                        return (
-                          <button
-                            key={`cd-${key}`}
-                            type="button"
-                            onClick={() => cycleRoliascanDemographic(key)}
-                            onContextMenu={(event) => {
-                              event.preventDefault();
-                              toggleRoliascanDemographic(key, "exclude");
-                            }}
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                              included
-                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                                : excluded
-                                  ? "bg-rose-100 text-rose-700 ring-1 ring-rose-200"
-                                  : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                            }`}
-                          >
-                            {title}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[11px] text-(--color-text-secondary)">
-                      Tap cycles include → exclude → clear. Right-click toggles
-                      exclude.
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {roliascanStatusTerms.map((status) => {
-                        const key = String(
-                          status.id || status.slug || status.title || "",
-                        ).trim();
-                        const title = String(
-                          status.title || status.slug || key,
-                        );
-                        if (!key || !title) return null;
-                        return (
-                          <button
-                            key={`cs-${key}`}
-                            type="button"
-                            onClick={() => toggleRoliascanStatus(key)}
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                              roliascanStatuses.includes(key)
-                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                                : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                            }`}
-                          >
-                            {title}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+                {roliascanFilterBody}
               </FilterDrawer>
             </div>
           )}
@@ -3357,111 +3878,7 @@ export default function LifeSyncManga() {
                 title="Manga District filters"
                 count={mdFilterBarCount}
               >
-                <div className="min-w-0 max-w-full space-y-4">
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Section
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {["latest", "censored", "uncensored"].map((s) => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => setMdSection(s)}
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium capitalize transition-colors ${
-                            mdSection === s
-                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                          }`}
-                        >
-                          {s === "latest" ? "All Latest" : s}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[11px] text-(--color-text-secondary)">
-                      Section applies when no type is selected (latest releases
-                      feed). Censored still filters out uncensored rows from
-                      listings.
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Type of manga
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {MD_TYPE_OPTIONS.map(({ slug, label }) => (
-                        <button
-                          key={slug}
-                          type="button"
-                          onClick={() =>
-                            setMdTypeSlug((prev) => (prev === slug ? "" : slug))
-                          }
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                            mdTypeSlug === slug
-                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Order by
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {MD_ORDER_BY_OPTIONS.map(({ id, label }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => {
-                            setMdBrowse(id);
-                            goToPage(1);
-                          }}
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                            mdBrowse === id
-                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Filters
-                    </p>
-                    <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                      {MD_FILTER_OPTIONS.map(({ slug, label }) => (
-                        <button
-                          key={slug}
-                          type="button"
-                          onClick={() =>
-                            setMdFilterGenre((prev) =>
-                              prev === slug ? "" : slug,
-                            )
-                          }
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                            mdFilterGenre === slug
-                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[11px] text-(--color-text-secondary)">
-                      {
-                        "With a type selected, the tag narrows via the site's genre filter. With no type, the tag becomes the main browse path."
-                      }
-                    </p>
-                  </div>
-                </div>
+                {mdFilterBody}
               </FilterDrawer>
             </div>
           )}
@@ -3546,77 +3963,7 @@ export default function LifeSyncManga() {
                 title="MangaDNA filters"
                 count={(dnaGenre ? 1 : 0) + (dnaOrderBy !== "latest" ? 1 : 0)}
               >
-                <div className="min-w-0 max-w-full space-y-4">
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                      Order by
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {MANGADNA_ORDER_BY_OPTIONS.map(({ id, label }) => (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => {
-                            setDnaOrderBy(id);
-                            setDnaPage(1);
-                            goToPage(1);
-                          }}
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                            dnaOrderBy === id
-                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  {dnaGenres.length > 0 && (
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">
-                        Genre
-                      </p>
-                      <div className="max-h-48 overflow-y-auto flex flex-wrap gap-1 pr-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setDnaGenre("");
-                            setDnaPage(1);
-                            goToPage(1);
-                          }}
-                          className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                            !dnaGenre
-                              ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                              : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                          }`}
-                        >
-                          All
-                        </button>
-                        {dnaGenres.map((g) => (
-                          <button
-                            key={g.slug || g.id}
-                            type="button"
-                            onClick={() => {
-                              setDnaGenre((prev) =>
-                                prev === (g.slug || g.id) ? "" : g.slug || g.id,
-                              );
-                              setDnaPage(1);
-                              goToPage(1);
-                            }}
-                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                              dnaGenre === (g.slug || g.id)
-                                ? "bg-primary/25 text-(--color-text-primary) ring-1 ring-primary/50"
-                                : "bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)"
-                            }`}
-                          >
-                            {g.title || g.name || g.slug}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                {dnaFilterBody}
               </FilterDrawer>
             </div>
           )}

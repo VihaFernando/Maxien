@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { lifesyncFetch, isPluginEnabled } from '../../lib/lifesyncApi'
+import useIsMobile from '../../hooks/useIsMobile'
 import {
     LIFESYNC_ANIME_WATCH_HISTORY_UPDATED_EVENT,
     useAnimeWatchHistory,
@@ -498,6 +499,7 @@ export default function LifeSyncAnimeHistory() {
     const prefs = lifeSyncUser?.preferences
     const animePluginOn = isPluginEnabled(prefs, 'pluginAnimeEnabled')
     const searchRef = useRef(null)
+    const isMobile = useIsMobile()
 
     const { entries, loading, refresh } = useAnimeWatchHistory({
         enabled: isLifeSyncConnected && animePluginOn,
@@ -646,11 +648,11 @@ export default function LifeSyncAnimeHistory() {
 
             {/* ── Header ── */}
             <div className="flex items-center gap-3">
-                <Link to="/dashboard/lifesync/anime" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-primary) transition hover:bg-(--color-surface-muted)" aria-label="Back">
+                <Link to="/dashboard/lifesync/anime" className={`flex shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-primary) transition hover:bg-(--color-surface-muted) ${isMobile ? 'h-11 w-11' : 'h-9 w-9'}`} aria-label="Back">
                     <IconBack />
                 </Link>
                 <h1 className="min-w-0 flex-1 text-[20px] font-black leading-none text-(--color-text-primary)">Watch History</h1>
-                <Link to={`${ANIME_BASE}/home/page/1`} className="flex h-9 items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-black transition hover:brightness-95">
+                <Link to={`${ANIME_BASE}/home/page/1`} className={`flex items-center justify-center rounded-xl bg-primary px-4 text-[12px] font-bold text-black transition hover:brightness-95 ${isMobile ? 'h-11' : 'h-9'}`}>
                     Browse
                 </Link>
             </div>
@@ -737,48 +739,48 @@ export default function LifeSyncAnimeHistory() {
             </AnimatePresence>
 
             {/* ── Controls ── */}
-            <div className="flex flex-wrap gap-2">
+            <div className={`flex flex-wrap gap-2 ${isMobile ? 'sticky top-2 z-30 rounded-2xl border border-(--color-border-soft) bg-(--color-surface)/70 p-2 ring-1 ring-white/10 backdrop-blur-xl' : ''}`}>
                 {/* Search */}
-                <div className="relative min-w-0 flex-1 basis-48">
+                <div className={`relative min-w-0 flex-1 ${isMobile ? 'basis-full' : 'basis-48'}`}>
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)">
                         <IconSearch className="h-3.5 w-3.5" />
                     </span>
                     <input
                         ref={searchRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)}
                         placeholder="Search titles…"
-                        className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 transition"
+                        className={`w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/15 transition ${isMobile ? 'min-h-11' : 'h-9'}`}
                     />
                 </div>
 
                 {/* Filter */}
-                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                <div className={`flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) gap-0.5 ${isMobile ? 'p-1' : 'p-0.5'}`}>
                     {[{ id: 'all', label: 'All' }, { id: 'watching', label: 'Watching' }, { id: 'done', label: 'Done' }].map((f) => (
                         <button key={f.id} type="button" onClick={() => setFilter(f.id)}
-                            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition ${filter === f.id ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
+                            className={`rounded-lg px-3 text-[11px] font-semibold transition ${isMobile ? 'min-h-11' : 'py-1.5'} ${filter === f.id ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
                             {f.label}
                         </button>
                     ))}
                 </div>
 
                 {/* Sort */}
-                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                <div className={`flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) gap-0.5 ${isMobile ? 'p-1' : 'p-0.5'}`}>
                     {[{ id: 'recent', label: 'Recent' }, { id: 'title', label: 'A–Z' }].map((s) => (
                         <button key={s.id} type="button" onClick={() => setSortBy(s.id)}
-                            className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition ${sortBy === s.id ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
+                            className={`rounded-lg px-3 text-[11px] font-semibold transition ${isMobile ? 'min-h-11' : 'py-1.5'} ${sortBy === s.id ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}>
                             {s.label}
                         </button>
                     ))}
                 </div>
 
                 {/* Layout toggle */}
-                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                <div className={`flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) gap-0.5 ${isMobile ? 'p-1' : 'p-0.5'}`}>
                     <button type="button" onClick={() => setLayout('list')}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        className={`flex items-center justify-center rounded-lg transition ${isMobile ? 'h-9 w-9' : 'h-8 w-8'} ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
                         aria-label="List view">
                         <IconList className="h-3.5 w-3.5" />
                     </button>
                     <button type="button" onClick={() => setLayout('grid')}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        className={`flex items-center justify-center rounded-lg transition ${isMobile ? 'h-9 w-9' : 'h-8 w-8'} ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary) shadow-sm' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
                         aria-label="Grid view">
                         <IconGrid className="h-3.5 w-3.5" />
                     </button>
@@ -786,7 +788,7 @@ export default function LifeSyncAnimeHistory() {
 
                 {/* Sync — check tracked anime for new episodes */}
                 <button type="button" onClick={() => void runSync()} disabled={syncBusy || syncRunning || entries.length === 0}
-                    className="flex h-9 items-center gap-1.5 shrink-0 rounded-xl bg-primary px-3 text-[12px] font-bold text-black transition hover:brightness-95 disabled:opacity-40"
+                    className={`flex items-center gap-1.5 shrink-0 rounded-xl bg-primary px-3 text-[12px] font-bold text-black transition hover:brightness-95 disabled:opacity-40 ${isMobile ? 'min-h-11' : 'h-9'}`}
                     aria-label="Sync episodes">
                     <IconSync className={`h-3.5 w-3.5 ${syncRunning ? 'animate-spin' : ''}`} />
                     <span className="hidden sm:inline">{syncRunning ? 'Syncing…' : 'Sync'}</span>
@@ -794,7 +796,7 @@ export default function LifeSyncAnimeHistory() {
 
                 {/* Reload */}
                 <button type="button" onClick={() => void refresh()} disabled={loading}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
+                    className={`flex shrink-0 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40 ${isMobile ? 'min-h-11 min-w-11' : 'h-9 w-9'}`}
                     aria-label="Reload">
                     <svg className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

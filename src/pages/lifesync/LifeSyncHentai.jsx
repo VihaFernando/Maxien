@@ -4,7 +4,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import AdvancedVideoPlayer from '../../components/lifesync/AdvancedVideoPlayer'
 import { FadeInImg } from '../../components/lifesync/FadeInImg'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useIsMobile from '../../hooks/useIsMobile'
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
+import BottomSheet from '../../components/lifesync/BottomSheet'
 import {
     LifesyncEpisodeThumbnail,
     LifesyncHentaiCatalogGridSkeleton,
@@ -1282,6 +1284,7 @@ export default function LifeSyncHentai() {
     const [focusedCardIndex, setFocusedCardIndex] = useState(-1)
     const searchInputRef = useRef(null)
     const controllerSupportEnabledCatalog = useControllerSupportEnabled()
+    const isMobile = useIsMobile()
     useFocusedCardScroll(focusedCardIndex)
     useHideCursorOnDpad()
     useEffect(() => {
@@ -1716,6 +1719,98 @@ export default function LifeSyncHentai() {
         )
     }
 
+    // Filter panel body — extracted once so the desktop FilterDrawer and the
+    // mobile BottomSheet render identical JSX, no duplication.
+    const hentaiFilterBody = (
+        <div className="space-y-4">
+            <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Genre</p>
+                <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => handleWatchGenreChange('')}
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            !watchGenre
+                                ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
+                        }`}
+                    >
+                        All genres
+                    </button>
+                    {genreTagOptions.map(opt => (
+                        <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => handleWatchGenreChange(opt.id)}
+                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                                watchGenre === String(opt.id)
+                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
+                            }`}
+                        >
+                            {opt.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            <div className="space-y-1.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Sort order</p>
+                <div className="flex flex-wrap gap-1.5">
+                    <button
+                        type="button"
+                        onClick={() => setSortOrder('trending')}
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            sortOrder === 'trending'
+                                ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
+                        }`}
+                    >
+                        Trending
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setSortOrder('latest')}
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            sortOrder === 'latest'
+                                ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
+                        }`}
+                    >
+                        Latest
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setSortOrder('random')}
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                            sortOrder === 'random'
+                                ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
+                                : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
+                        }`}
+                    >
+                        Random
+                    </button>
+                </div>
+            </div>
+
+            <div className="w-full max-w-56">
+                <label className="flex flex-col gap-1">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Year</span>
+                    <select
+                        value={watchYear}
+                        onChange={e => handleWatchYearChange(e.target.value)}
+                        className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
+                    >
+                        <option value="">All years</option>
+                        {watchYearOptions.map(opt => (
+                            <option key={opt.id} value={String(opt.id || '').trim()}>{opt.label}</option>
+                        ))}
+                    </select>
+                </label>
+            </div>
+        </div>
+    )
+
     return (
         <LayoutGroup id="lifesync-hentai">
         <MotionDiv
@@ -1822,114 +1917,43 @@ export default function LifeSyncHentai() {
                     <button
                         type="button"
                         onClick={() => setFiltersExpanded(p => !p)}
-                        className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-4 py-2.5 text-[13px] font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-surface-muted)"
+                        className="min-h-11 rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-4 text-[13px] font-semibold text-(--color-text-primary) transition-colors hover:bg-(--color-surface-muted)"
                     >
                         Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
                     </button>
-                    <button type="submit" disabled={busy} className="rounded-xl bg-(--color-primary) px-4 py-2.5 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50">
+                    <button type="submit" disabled={busy} className="min-h-11 rounded-xl bg-(--color-primary) px-4 text-[13px] font-semibold text-(--color-ink-strong) shadow-sm ring-1 ring-(--color-ink-strong)/10 transition-all hover:brightness-95 disabled:opacity-50">
                         Search
                     </button>
                 </div>
             </form>
 
-            <FilterDrawer
-                open={filtersExpanded}
-                onClose={() => setFiltersExpanded(false)}
-                title="Filters & Genres"
-                count={activeFilterCount}
-                onReset={() => {
-                    handleWatchGenreChange('')
-                    handleWatchYearChange('')
-                }}
-            >
-                            <div className="space-y-4">
-                            <div className="space-y-1.5">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Genre</p>
-                                    <div className="flex min-w-0 max-w-full flex-wrap gap-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => handleWatchGenreChange('')}
-                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                !watchGenre
-                                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
-                                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
-                                            }`}
-                                        >
-                                            All genres
-                                        </button>
-                                        {genreTagOptions.map(opt => (
-                                            <button
-                                                key={opt.id}
-                                                type="button"
-                                                onClick={() => handleWatchGenreChange(opt.id)}
-                                                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                    watchGenre === String(opt.id)
-                                                        ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
-                                                        : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
-                                                }`}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-1.5">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Sort order</p>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        <button
-                                            type="button"
-                                            onClick={() => setSortOrder('trending')}
-                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                sortOrder === 'trending'
-                                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
-                                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
-                                            }`}
-                                        >
-                                            Trending
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSortOrder('latest')}
-                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                sortOrder === 'latest'
-                                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
-                                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
-                                            }`}
-                                        >
-                                            Latest
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSortOrder('random')}
-                                            className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
-                                                sortOrder === 'random'
-                                                    ? 'bg-(--color-primary)/25 text-(--color-text-primary) ring-1 ring-(--color-primary)/50'
-                                                    : 'bg-(--color-surface-muted) text-(--color-text-secondary) hover:bg-(--color-surface-muted)'
-                                            }`}
-                                        >
-                                            Random
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="w-full max-w-[14rem]">
-                                    <label className="flex flex-col gap-1">
-                                        <span className="text-[10px] font-semibold uppercase tracking-wider text-(--color-text-secondary)">Year</span>
-                                        <select
-                                            value={watchYear}
-                                            onChange={e => handleWatchYearChange(e.target.value)}
-                                            className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2 text-[12px] text-(--color-text-primary) focus:border-(--color-primary)/60 focus:bg-(--color-surface) focus:outline-none"
-                                        >
-                                            <option value="">All years</option>
-                                            {watchYearOptions.map(opt => (
-                                                <option key={opt.id} value={String(opt.id || '').trim()}>{opt.label}</option>
-                                            ))}
-                                        </select>
-                                    </label>
-                                </div>
-                            </div>
-            </FilterDrawer>
+            {isMobile ? (
+                <BottomSheet
+                    open={filtersExpanded}
+                    onClose={() => setFiltersExpanded(false)}
+                    title="Filters & Genres"
+                    count={activeFilterCount}
+                    onReset={() => {
+                        handleWatchGenreChange('')
+                        handleWatchYearChange('')
+                    }}
+                >
+                    {hentaiFilterBody}
+                </BottomSheet>
+            ) : (
+                <FilterDrawer
+                    open={filtersExpanded}
+                    onClose={() => setFiltersExpanded(false)}
+                    title="Filters & Genres"
+                    count={activeFilterCount}
+                    onReset={() => {
+                        handleWatchGenreChange('')
+                        handleWatchYearChange('')
+                    }}
+                >
+                    {hentaiFilterBody}
+                </FilterDrawer>
+            )}
 
             {/* Stats */}
             {(catalog?.totalSeries != null || catalog?.totalEpisodes != null) && (
@@ -1977,16 +2001,19 @@ export default function LifeSyncHentai() {
                             </div>
                         ))}
                     </div>
-                    <div className="flex items-center justify-center">
-                        <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1.5 shadow-sm">
-                            <button disabled={page <= 1 || busy} onClick={() => goPage(page - 1)} className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
+                    <div
+                        className="fixed inset-x-0 bottom-4 z-30 flex items-center justify-center px-4"
+                        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+                    >
+                        <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface)/90 backdrop-blur-xl p-1.5 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4)]">
+                            <button disabled={page <= 1 || busy} onClick={() => goPage(page - 1)} className="min-h-11 rounded-full px-4 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
                                 ← Prev
                             </button>
                             <span className="px-2 text-[12px] font-black tabular-nums text-(--color-text-secondary)">
                                 Page {page}
                                 {catalog?.hasMore === false && catalog?.totalSeries != null ? ` · ${catalog.totalSeries} total` : ''}
                             </span>
-                            <button disabled={busy || catalog?.hasMore === false} onClick={() => goPage(page + 1)} className="rounded-full px-4 py-1.5 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
+                            <button disabled={busy || catalog?.hasMore === false} onClick={() => goPage(page + 1)} className="min-h-11 rounded-full px-4 text-[12px] font-bold text-(--color-text-primary) transition-all hover:bg-(--color-surface-muted) disabled:opacity-30">
                                 Next →
                             </button>
                         </div>

@@ -377,7 +377,7 @@ function MangaDetail({
             <MotionDiv
                 layout="size"
                 layoutRoot
-                className="lifesync-manga-detail-sheet relative flex h-dvh max-h-dvh w-full min-w-0 flex-col overflow-hidden bg-(--color-surface) shadow-2xl sm:h-auto sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
+                className="lifesync-manga-detail-sheet relative flex h-auto max-h-[92dvh] w-full min-w-0 flex-col overflow-hidden rounded-t-2xl bg-(--color-surface) shadow-2xl sm:max-h-[min(88vh,calc(100dvh-2rem))] sm:max-w-3xl sm:rounded-2xl"
                 onClick={(e) => e.stopPropagation()}
                 initial={lifeSyncDetailSheetEnterInitial}
                 animate={lifeSyncDetailSheetEnterAnimate}

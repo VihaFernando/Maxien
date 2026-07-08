@@ -554,7 +554,7 @@ export default function LifeSyncMangaHome() {
                     <Link
                         to={BROWSE_PATH[source]}
                         state={{ from: homeUrl }}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-(--color-surface) px-3.5 py-2 text-[12px] font-bold text-(--color-text-primary) ring-1 ring-(--color-border-soft) transition hover:brightness-95"
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-(--color-surface) px-3.5 text-[12px] font-bold text-(--color-text-primary) ring-1 ring-(--color-border-soft) transition hover:brightness-95"
                     >
                         Browse all {activeSource.label} <FaArrowRight className="h-3 w-3" />
                     </Link>

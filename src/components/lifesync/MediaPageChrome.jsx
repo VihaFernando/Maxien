@@ -181,8 +181,11 @@ export const mediaPosterFrameClass =
 /** Pill pager. */
 export function MediaPager({ page, canPrev, canNext, onPage }) {
     return (
-        <div className="flex items-center justify-center">
-            <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface) p-1.5 shadow-sm">
+        <div
+            className="fixed inset-x-0 bottom-4 z-30 flex items-center justify-center px-4"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+            <div className="flex items-center gap-2 rounded-full border border-(--color-border-soft) bg-(--color-surface)/90 backdrop-blur-xl p-1.5 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.4)]">
                 <button
                     type="button"
                     disabled={!canPrev}

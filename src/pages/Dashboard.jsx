@@ -500,7 +500,7 @@ function DashboardInner() {
             )}
 
             {sidebarOpen && !hideSidebarChrome && (
-                <div className="fixed inset-0 bg-black/30 z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
+                <div className="fixed inset-0 bg-black/30 backdrop-blur-md z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
             )}
 
             {!hideSidebarChrome && (

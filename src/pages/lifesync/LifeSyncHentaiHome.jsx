@@ -309,7 +309,7 @@ function RecentEpisodesSection({ episodes, loading, onOpen }) {
                         <button
                             type="button"
                             onClick={() => setExpanded((v) => !v)}
-                            className="flex items-center gap-1 rounded-full bg-(--color-surface-muted) px-3 py-1 text-[11px] font-bold text-(--color-text-secondary) transition hover:text-(--color-text-primary)"
+                            className="flex min-h-9 items-center gap-1 rounded-full bg-(--color-surface-muted) px-3 text-[11px] font-bold text-(--color-text-secondary) transition hover:text-(--color-text-primary)"
                         >
                             {expanded ? 'Show less' : `Show all ${episodes.length}`}
                         </button>
@@ -371,7 +371,7 @@ export default function LifeSyncHentaiHome() {
                     <button
                         type="button"
                         onClick={() => navigate(HENTAI_BASE, { state: { from: HENTAI_HOME } })}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-(--color-surface) px-3.5 py-2 text-[12px] font-bold text-(--color-text-primary) ring-1 ring-(--color-border-soft) transition hover:brightness-95"
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-xl bg-(--color-surface) px-3.5 text-[12px] font-bold text-(--color-text-primary) ring-1 ring-(--color-border-soft) transition hover:brightness-95"
                     >
                         Browse all <FaArrowRight className="h-3 w-3" />
                     </button>

@@ -5,10 +5,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { isLifeSyncHManhwaVisible, isPluginEnabled, lifesyncFetch } from '../../lib/lifesyncApi'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
+import useIsMobile from '../../hooks/useIsMobile'
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { ControllerHintBar } from '../../components/lifesync/ControllerHintOverlay'
 import { MediaPageHeader } from '../../components/lifesync/MediaPageChrome'
+import BottomSheet from '../../components/lifesync/BottomSheet'
 import { useFocusedCardScroll } from '../../hooks/useFocusedCardScroll'
 import { useHideCursorOnDpad } from '../../hooks/useHideCursorOnDpad'
 import { useMangaReadingList } from '../../hooks/useMangaReadingList'
@@ -942,6 +944,7 @@ export default function LifeSyncMangaLibrary() {
         return () => window.removeEventListener('mousemove', onMove)
     }, [])
     const controllerSupportEnabled = useControllerSupportEnabled()
+    const isMobile = useIsMobile()
 
     const [syncBusy, setSyncBusy] = useState(false)
     const [syncError, setSyncError] = useState('')
@@ -1250,6 +1253,17 @@ export default function LifeSyncMangaLibrary() {
         )
     }
 
+    // Extracted once so both the mobile BottomSheet and desktop LibraryFilterDrawer render identical filter groups.
+    const filterGroups = (
+        <>
+            <FilterGroup label="Source" options={sourceOptions} value={sourceFilter} onChange={setSourceFilter} />
+            <FilterGroup label="Status" options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
+            <FilterGroup label="Updates" options={UPDATE_STATE_OPTIONS} value={updateStateFilter} onChange={setUpdateStateFilter} />
+            <FilterGroup label="Sort by" options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} />
+            <FilterGroup label="Order" options={[{ id: 'desc', label: 'Newest first' }, { id: 'asc', label: 'Oldest first' }]} value={sortOrder} onChange={setSortOrder} />
+        </>
+    )
+
     return (
         <MotionDiv className="min-w-0 space-y-4" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={lifeSyncPageTransition}>
 
@@ -1327,9 +1341,11 @@ export default function LifeSyncMangaLibrary() {
             </AnimatePresence>
 
             {/* ── Command bar: search · filters · view · sync ── */}
-            <div className="sticky top-2 z-30 flex flex-wrap items-center gap-2 rounded-2xl border border-(--color-border-soft) bg-(--color-surface)/85 px-2 py-2 backdrop-blur-md">
+            <div
+                className={`sticky top-2 z-30 flex flex-wrap items-center gap-2 rounded-2xl border border-(--color-border-soft) px-2 py-2 backdrop-blur-md ${isMobile ? 'bg-(--color-surface)/70 ring-1 ring-white/10 backdrop-blur-xl' : 'bg-(--color-surface)/85'}`}
+            >
                 {/* Search + suggestions */}
-                <div className="relative min-w-0 flex-1 basis-44">
+                <div className={`relative min-w-0 flex-1 ${isMobile ? 'basis-full' : 'basis-44'}`}>
                     <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-(--color-text-secondary)"><IconSearch /></span>
                     <input
                         ref={searchRef}
@@ -1338,7 +1354,7 @@ export default function LifeSyncMangaLibrary() {
                         onChange={(e) => { setQueryInput(e.target.value); setSuggestionsOpen(true) }}
                         onFocus={() => { if (queryInput.trim().length >= 2) setSuggestionsOpen(true) }}
                         placeholder="Search your shelf or discover…"
-                        className="h-9 w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none focus:ring-2 focus:ring-primary/15 transition"
+                        className={`w-full rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) pl-8 pr-3 text-[13px] text-(--color-text-primary) placeholder:text-(--color-text-secondary) focus:border-primary/60 focus:bg-(--color-surface) focus:outline-none focus:ring-2 focus:ring-primary/15 transition ${isMobile ? 'min-h-11' : 'h-9'}`}
                     />
                     {suggestionsOpen && (
                         <MangaSearchSuggestions
@@ -1354,7 +1370,7 @@ export default function LifeSyncMangaLibrary() {
 
                 {/* Filters */}
                 <button type="button" onClick={() => setFiltersOpen(true)}
-                    className={`flex h-9 items-center gap-1.5 rounded-xl border px-3 text-[12px] font-bold transition ${activeFilterCount > 0
+                    className={`flex items-center gap-1.5 rounded-xl border px-3 text-[12px] font-bold transition ${isMobile ? 'min-h-11' : 'h-9'} ${activeFilterCount > 0
                         ? 'border-primary/50 bg-primary/10 text-primary'
                         : 'border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) hover:border-(--color-border-strong) hover:text-(--color-text-primary)'}`}>
                     <IconFilter />
@@ -1365,19 +1381,19 @@ export default function LifeSyncMangaLibrary() {
                 </button>
 
                 {/* View toggle */}
-                <div className="flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) p-0.5 gap-0.5">
+                <div className={`flex rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) gap-0.5 ${isMobile ? 'p-1' : 'p-0.5'}`}>
                     <button type="button" onClick={() => { setLayout('list'); try { localStorage.setItem('lifesync.mangaLibrary.layout', 'list') } catch { /* ignore */ } }}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary)' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        className={`flex items-center justify-center rounded-lg transition ${isMobile ? 'h-9 w-9' : 'h-8 w-8'} ${layout === 'list' ? 'bg-(--color-surface) text-(--color-text-primary)' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
                         aria-label="List view"><IconList /></button>
                     <button type="button" onClick={() => { setLayout('grid'); try { localStorage.setItem('lifesync.mangaLibrary.layout', 'grid') } catch { /* ignore */ } }}
-                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary)' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
+                        className={`flex items-center justify-center rounded-lg transition ${isMobile ? 'h-9 w-9' : 'h-8 w-8'} ${layout === 'grid' ? 'bg-(--color-surface) text-(--color-text-primary)' : 'text-(--color-text-secondary) hover:text-(--color-text-primary)'}`}
                         aria-label="Grid view"><IconGrid /></button>
                 </div>
 
                 <span className="mx-0.5 hidden h-6 w-px bg-(--color-border-soft) sm:block" aria-hidden />
 
                 {/* Sync (split: scope select + action) */}
-                <div className="flex h-9 items-center overflow-hidden rounded-xl bg-primary">
+                <div className={`flex items-center overflow-hidden rounded-xl bg-primary ${isMobile ? 'min-h-11' : 'h-9'}`}>
                     <button type="button" onClick={() => void onSync()} disabled={syncBusy || syncRunning || !Number(pageInfo?.total || 0)}
                         className="flex h-full items-center gap-1.5 px-3 text-[12px] font-bold text-black transition hover:brightness-95 disabled:opacity-50">
                         <IconSync className={syncBusy || syncRunning ? 'animate-spin' : ''} />
@@ -1391,7 +1407,7 @@ export default function LifeSyncMangaLibrary() {
 
                 {/* Refresh */}
                 <button type="button" onClick={() => void refreshAll()} disabled={refreshing}
-                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40"
+                    className={`flex items-center justify-center rounded-xl border border-(--color-border-soft) bg-(--color-surface) text-(--color-text-secondary) transition hover:bg-(--color-surface-muted) disabled:opacity-40 ${isMobile ? 'min-h-11 min-w-11' : 'h-9 w-9'}`}
                     aria-label="Reload">
                     <IconSync className={refreshing ? 'animate-spin h-3.5 w-3.5' : 'h-3.5 w-3.5'} />
                 </button>
@@ -1414,14 +1430,16 @@ export default function LifeSyncMangaLibrary() {
             )}
             {syncError && <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-[12px] font-semibold text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">{syncError}</div>}
 
-            {/* ── Filter & sort drawer ── */}
-            <LibraryFilterDrawer open={filtersOpen} onClose={() => setFiltersOpen(false)} count={activeFilterCount} onReset={resetFilters}>
-                <FilterGroup label="Source" options={sourceOptions} value={sourceFilter} onChange={setSourceFilter} />
-                <FilterGroup label="Status" options={STATUS_OPTIONS} value={statusFilter} onChange={setStatusFilter} />
-                <FilterGroup label="Updates" options={UPDATE_STATE_OPTIONS} value={updateStateFilter} onChange={setUpdateStateFilter} />
-                <FilterGroup label="Sort by" options={SORT_OPTIONS} value={sortBy} onChange={setSortBy} />
-                <FilterGroup label="Order" options={[{ id: 'desc', label: 'Newest first' }, { id: 'asc', label: 'Oldest first' }]} value={sortOrder} onChange={setSortOrder} />
-            </LibraryFilterDrawer>
+            {/* ── Filter & sort  bottom sheet on mobile, side drawer on desktop ── */}
+            {isMobile ? (
+                <BottomSheet open={filtersOpen} onClose={() => setFiltersOpen(false)} title="Filter & sort" count={activeFilterCount} onReset={resetFilters}>
+                    <div className="space-y-6">{filterGroups}</div>
+                </BottomSheet>
+            ) : (
+                <LibraryFilterDrawer open={filtersOpen} onClose={() => setFiltersOpen(false)} count={activeFilterCount} onReset={resetFilters}>
+                    {filterGroups}
+                </LibraryFilterDrawer>
+            )}
 
             {/* Bulk action bar */}
             {selectedEntries.length > 0 && (

@@ -2402,7 +2402,7 @@ export default function LifeSyncAnime() {
                       type="button"
                       onClick={() => setLayout("grid")}
                       title="Grid view"
-                      className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${layout === "grid" ? "bg-primary text-black shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+                      className={`flex h-11 w-11 items-center justify-center rounded-full transition-all ${layout === "grid" ? "bg-primary text-black shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
                     >
                       <IconGrid />
                     </button>
@@ -2410,7 +2410,7 @@ export default function LifeSyncAnime() {
                       type="button"
                       onClick={() => setLayout("list")}
                       title="List view"
-                      className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${layout === "list" ? "bg-primary text-black shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
+                      className={`flex h-11 w-11 items-center justify-center rounded-full transition-all ${layout === "list" ? "bg-primary text-black shadow-[0_4px_12px_-4px_rgba(198,255,0,0.6)]" : "text-(--color-text-secondary) hover:text-(--color-text-primary)"}`}
                     >
                       <IconList />
                     </button>
