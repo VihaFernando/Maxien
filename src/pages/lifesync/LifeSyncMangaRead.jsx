@@ -795,40 +795,22 @@ export default function LifeSyncMangaRead() {
         >
             {/* ── header (hidden in fullscreen) ── */}
             {!fullscreen && (
-                <header className={`shrink-0 border-b border-white/10 px-2 py-2 ${LOW_END ? 'bg-black' : 'bg-black/70 backdrop-blur-xl'}`}>
-                    <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-2">
+                <header className={`shrink-0 border-b border-white/10 px-2 py-1.5 ${LOW_END ? 'bg-black' : 'bg-black/70 backdrop-blur-xl'}`}>
+                    <div className="mx-auto flex w-full max-w-5xl items-center gap-1.5">
                         <button
                             type="button"
                             onClick={closeReader}
-                            className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white"
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-white/15 bg-white/5 text-white"
                             title="Back to list"
                         >
                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                             </svg>
-                            <span className="hidden sm:inline">Back</span>
                         </button>
 
                         <div className="min-w-0 flex-1">
-                            <p className="truncate text-[11px] font-semibold text-white">{decodeHtmlEntities(manga?.title) || 'Manga'}</p>
-                            <p className="truncate text-[10px] text-white/60">{formatChapterLabel(chapter)}</p>
-                        </div>
-
-                        {/* Zoom slider  hidden on small screens */}
-                        <div className="hidden md:flex items-center gap-2">
-                            <label className="text-[10px] font-semibold text-white/60 tabular-nums" htmlFor="manga-zoom">
-                                Zoom {Math.round(zoomScale * 100)}%
-                            </label>
-                            <input
-                                id="manga-zoom"
-                                type="range"
-                                min={ZOOM_MIN}
-                                max={ZOOM_MAX}
-                                step={1}
-                                value={zoomPct}
-                                onChange={e => setZoomPct(clampZoom(Number(e.target.value)))}
-                                className="w-28 accent-[var(--mx-color-c6ff00)]"
-                            />
+                            <p className="truncate text-[10px] font-semibold leading-tight text-white">{decodeHtmlEntities(manga?.title) || 'Manga'}</p>
+                            <p className="truncate text-[9px] leading-tight text-white/50">{formatChapterLabel(chapter)}</p>
                         </div>
 
                         <label className="sr-only" htmlFor="manga-chapter-select">Chapter</label>
@@ -842,7 +824,7 @@ export default function LifeSyncMangaRead() {
                                 if (ch) goToChapter(ch)
                             }}
                             disabled={navBusy || busy || loadingPages || !sortedChapters.length}
-                            className="min-h-11 min-w-32 max-w-64 flex-1 rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white focus:outline-none focus:ring-2 focus:ring-(--mx-color-c6ff00)/40 disabled:opacity-50 sm:flex-none sm:min-w-40 sm:max-w-64"
+                            className="h-8 max-w-24 min-w-0 flex-1 rounded-md border border-white/15 bg-white/5 px-1.5 text-[10px] font-semibold text-white focus:outline-none focus:ring-2 focus:ring-(--mx-color-c6ff00)/40 disabled:opacity-50 sm:max-w-64 sm:flex-none sm:px-2"
                         >
                             {!sortedChapters.length
                                 ? <option value="">Loading…</option>
@@ -854,39 +836,57 @@ export default function LifeSyncMangaRead() {
                             }
                         </select>
 
-                        <button
-                            type="button"
-                            disabled={!prevCh || navBusy || busy || loadingPages}
-                            onClick={() => prevCh && goToChapter(prevCh)}
-                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white disabled:opacity-40"
-                            title="Previous chapter"
-                        >
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                            </svg>
-                        </button>
-                        <button
-                            type="button"
-                            disabled={!nextCh || navBusy || busy || loadingPages}
-                            onClick={() => nextCh && goToChapter(nextCh)}
-                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white disabled:opacity-40"
-                            title="Next chapter"
-                        >
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => void enterFullscreen()}
-                            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-white/20 bg-white/5 px-3 text-[11px] font-semibold text-white"
-                            title="Fullscreen"
-                        >
-                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75h5.5m-5.5 0v5.5m0-5.5L9 9.25m11.25-5.5h-5.5m5.5 0v5.5m0-5.5L15 9.25M3.75 20.25h5.5m-5.5 0v-5.5m0 5.5L9 14.75m11.25 5.5h-5.5m5.5 0v-5.5m0 5.5L15 14.75" />
-                            </svg>
-                            <span className="hidden sm:inline">Fullscreen</span>
-                        </button>
+                        <div className="flex shrink-0 items-center gap-1">
+                            <button
+                                type="button"
+                                disabled={!prevCh || navBusy || busy || loadingPages}
+                                onClick={() => prevCh && goToChapter(prevCh)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-white/5 text-white disabled:opacity-40"
+                                title="Previous chapter"
+                            >
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                            <button
+                                type="button"
+                                disabled={!nextCh || navBusy || busy || loadingPages}
+                                onClick={() => nextCh && goToChapter(nextCh)}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-white/5 text-white disabled:opacity-40"
+                                title="Next chapter"
+                            >
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+
+                            {/* Zoom  desktop only, compact */}
+                            <div className="hidden items-center gap-1 md:flex">
+                                <input
+                                    id="manga-zoom"
+                                    type="range"
+                                    min={ZOOM_MIN}
+                                    max={ZOOM_MAX}
+                                    step={1}
+                                    value={zoomPct}
+                                    onChange={e => setZoomPct(clampZoom(Number(e.target.value)))}
+                                    className="w-16 accent-(--mx-color-c6ff00)"
+                                    aria-label={`Zoom ${Math.round(zoomScale * 100)}%`}
+                                />
+                                <span className="w-8 shrink-0 text-[9px] tabular-nums text-white/50">{Math.round(zoomScale * 100)}%</span>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => void enterFullscreen()}
+                                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-white/15 bg-white/5 text-white"
+                                title="Fullscreen"
+                            >
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" aria-hidden>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75h5.5m-5.5 0v5.5m0-5.5L9 9.25m11.25-5.5h-5.5m5.5 0v5.5m0-5.5L15 9.25M3.75 20.25h5.5m-5.5 0v-5.5m0 5.5L9 14.75m11.25 5.5h-5.5m5.5 0v-5.5m0 5.5L15 14.75" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </header>
             )}
@@ -934,11 +934,11 @@ export default function LifeSyncMangaRead() {
             </div>
 
             {/* ── footer ── */}
-            <footer className={`shrink-0 border-t border-white/10 px-3 py-2 ${LOW_END ? 'bg-black' : 'bg-black/85 backdrop-blur-xl'}`}>
+            <footer className={`shrink-0 border-t border-white/10 px-3 py-1.5 ${LOW_END ? 'bg-black' : 'bg-black/85 backdrop-blur-xl'}`}>
                 <div className="mx-auto max-w-3xl">
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-white/10">
                         <div
-                            className="h-full rounded-full bg-[var(--mx-color-c6ff00)]"
+                            className="h-full rounded-full bg-(--mx-color-c6ff00)"
                             style={{ width: progressPct }}
                             role="progressbar"
                             aria-valuenow={Math.round(readProgress * 100)}
@@ -947,22 +947,20 @@ export default function LifeSyncMangaRead() {
                             aria-label="Scroll position in this chapter"
                         />
                     </div>
-                    <div className="mt-1 flex items-center justify-between gap-2 text-[10px] text-white/50">
+                    <div className="mt-1 flex items-center justify-between gap-2 text-[9px] text-white/45">
                         {!fullscreen ? (
                             <span>
                                 {urls.length > 0 ? `${urls.length} page${urls.length === 1 ? '' : 's'}` : loadingPages ? '…' : ''}
                             </span>
                         ) : (
-                            <div className="inline-flex items-center gap-1.5 text-white/80">
+                            <div className="inline-flex items-center gap-1 text-white/70">
                                 <button
                                     type="button"
                                     onClick={() => adjustZoom(-1)}
-                                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-white/20 bg-black/40 text-[12px] font-bold text-white"
+                                    className="inline-flex h-5 w-5 items-center justify-center rounded border border-white/20 bg-black/40 text-[11px] font-bold text-white"
                                     title="Zoom out"
                                 >−</button>
-                                <span className="rounded border border-white/15 bg-black/35 px-2 py-0.5 tabular-nums">
-                                    Zoom {Math.round(zoomScale * 100)}%
-                                </span>
+                                <span className="tabular-nums">{Math.round(zoomScale * 100)}%</span>
                                 <input
                                     type="range"
                                     min={ZOOM_MIN_FS}
@@ -970,33 +968,34 @@ export default function LifeSyncMangaRead() {
                                     step={1}
                                     value={clampZoom(zoomPct, true)}
                                     onChange={e => setZoomPct(clampZoom(Number(e.target.value), true))}
-                                    className="w-28 accent-[var(--mx-color-c6ff00)]"
+                                    className="w-16 accent-(--mx-color-c6ff00)"
                                     aria-label="Zoom"
                                 />
                                 <button
                                     type="button"
                                     onClick={() => adjustZoom(1)}
-                                    className="inline-flex h-6 w-6 items-center justify-center rounded border border-white/20 bg-black/40 text-[12px] font-bold text-white"
+                                    className="inline-flex h-5 w-5 items-center justify-center rounded border border-white/20 bg-black/40 text-[11px] font-bold text-white"
                                     title="Zoom in"
                                 >+</button>
                                 <button
                                     type="button"
                                     onClick={() => void exitFullscreen()}
-                                    className="inline-flex items-center rounded border border-white/20 bg-black/40 px-2 py-0.5 text-[10px] font-semibold text-white"
+                                    className="inline-flex items-center rounded border border-white/20 bg-black/40 px-1.5 py-0.5 text-[9px] font-semibold text-white"
                                     title="Exit fullscreen"
                                 >Exit</button>
                             </div>
                         )}
-                        <span className="tabular-nums">{Math.round(readProgress * 100)}% through chapter</span>
+                        <span className="tabular-nums">{Math.round(readProgress * 100)}%</span>
                     </div>
                 </div>
             </footer>
 
-            {/* Controller hint overlay */}
+            {/* Controller hint overlay  desktop/TV only, not on mobile */}
             <ControllerHintOverlay
                 dark
                 position="bottom-right"
                 cols={2}
+                className="hidden sm:block"
                 hints={[
                     { btns: ['LB'], label: 'Prev chapter' },
                     { btns: ['RB'], label: 'Next chapter' },
