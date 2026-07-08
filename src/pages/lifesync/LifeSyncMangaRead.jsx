@@ -566,9 +566,13 @@ export default function LifeSyncMangaRead() {
         firedCheckpoints.current.clear()
     }, [chapter?.id])
 
-    // Zoom change: preserve scroll position
+    // Zoom change: preserve scroll position.
+    // The zoomed element animates via CSS `transition: transform`, so scrollHeight
+    // keeps changing for the full ZOOM_TRANSITION_MS  re-anchor scrollTop continuously
+    // on every frame of that animation instead of guessing the end state once.
     useLayoutEffect(() => {
-        const el = scrollRef.current
+        const el    = scrollRef.current
+        const inner = pagesInnerRef.current
         if (!el || zoomPrevPct.current === zoomPct) { zoomPrevPct.current = zoomPct; return }
 
         const oldMax      = Math.max(0, el.scrollHeight - el.clientHeight)
@@ -579,17 +583,30 @@ export default function LifeSyncMangaRead() {
         zoomChanging.current = true
         if (zoomResetTimer.current) window.clearTimeout(zoomResetTimer.current)
 
-        const raf = requestAnimationFrame(() => {
+        let raf = null
+        const reanchor = () => {
             const newMax = Math.max(0, el.scrollHeight - el.clientHeight)
             el.scrollTop = newMax * oldProgress
-            zoomResetTimer.current = window.setTimeout(() => {
-                zoomChanging.current = false
-                scheduleProgressUpdate()
-            }, ZOOM_TRANSITION_MS + 30)
-        })
+            raf = requestAnimationFrame(reanchor)
+        }
+        raf = requestAnimationFrame(reanchor)
+
+        const finish = () => {
+            if (raf != null) cancelAnimationFrame(raf)
+            zoomChanging.current = false
+            scheduleProgressUpdate()
+        }
+        // transitionend is the real signal; the timeout is a safety net if the
+        // transition is skipped (e.g. prefers-reduced-motion, no layout change).
+        inner?.addEventListener('transitionend', finish, { once: true })
+        zoomResetTimer.current = window.setTimeout(finish, ZOOM_TRANSITION_MS + 60)
 
         zoomPrevPct.current = zoomPct
-        return () => cancelAnimationFrame(raf)
+        return () => {
+            if (raf != null) cancelAnimationFrame(raf)
+            inner?.removeEventListener('transitionend', finish)
+            if (zoomResetTimer.current) window.clearTimeout(zoomResetTimer.current)
+        }
     }, [zoomPct, scheduleProgressUpdate])
 
     // Kick off progress update once pages finish loading
