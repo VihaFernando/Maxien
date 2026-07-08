@@ -2,8 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLifeSync } from '../../context/LifeSyncContext'
 import { getAnimePreferEmbed, getAnimeStreamAudio, getLifesyncApiBase, lifesyncFetch, lifesyncPatchPreferences } from '../../lib/lifesyncApi'
-import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
-import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
 import {
     fetchStreamInfoBySlugWithCache,
     writeLifesyncStreamCatalogBySlug,
@@ -17,7 +15,6 @@ import {
     LifesyncEpisodeThumbnail,
     WatchPageLoadSkeleton,
 } from '../../components/lifesync/EpisodeLoadingSkeletons'
-import { streamIframeSandboxProps } from '../../lib/lifesyncStreamIframe'
 import {
     AnimatePresence,
     lifeSyncModalSlideProps,
@@ -28,11 +25,6 @@ import {
     lifeSyncStaggerItem,
     MotionDiv,
 } from '../../lib/lifesyncMotion'
-import {
-    dispatchBestEffortIframeMediaKeys,
-    focusIframeForControllerInput,
-    XBOX_GAMEPAD_BUTTONS,
-} from '../../lib/lifeSyncControllerInput'
 
 function clampPage(n) {
     const v = Number.parseInt(String(n || '1'), 10)
@@ -110,8 +102,6 @@ export default function LifeSyncAnimeWatch() {
     const [videoPreload, setVideoPreload] = useState('metadata')
     const shouldForceCatalogRefreshRef = useRef(fromResumeDeck)
     const streamIframeContainerRef = useRef(null)
-    const streamIframeRef = useRef(null)
-    const controllerSupportEnabled = useControllerSupportEnabled()
 
     const bumpWatchHistory = useCallback(() => {
         try {
@@ -502,97 +492,6 @@ export default function LifeSyncAnimeWatch() {
             document.body.style.overflow = prev
         }
     }, [close, settingsOpen])
-    const toggleIframeContainerFullscreen = useCallback(() => {
-        const el = streamIframeContainerRef.current
-        if (!el) return
-        if (!document.fullscreenElement) {
-            if (el.requestFullscreen) {
-                el.requestFullscreen()
-                    .then(() => {
-                        if (typeof window === 'undefined') return
-                        window.setTimeout(() => { focusIframeForControllerInput(streamIframeRef.current) }, 60)
-                    })
-                    .catch(() => {})
-            }
-            return
-        }
-        if (document.exitFullscreen) {
-            document.exitFullscreen()
-                .then(() => {
-                    if (typeof window === 'undefined') return
-                    window.setTimeout(() => { focusIframeForControllerInput(streamIframeRef.current) }, 30)
-                })
-                .catch(() => {})
-        }
-    }, [])
-
-    const iframeGamepadHandlers = useMemo(() => ({
-        [XBOX_GAMEPAD_BUTTONS.A]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'Spacebar', 'MediaPlayPause'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.Y]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['k', ' ', 'MediaPlay', 'MediaPlayPause'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.X]: () => {
-            toggleIframeContainerFullscreen()
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['f'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.LT]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['j', 'ArrowLeft'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.RT]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['l', 'ArrowRight'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowUp'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => {
-            dispatchBestEffortIframeMediaKeys(streamIframeRef.current, ['ArrowDown'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.LB]: () => { if (!canPrev) return; goEpisode(episodeIdx - 1) },
-        [XBOX_GAMEPAD_BUTTONS.RB]: () => { if (!canNext) return; goEpisode(episodeIdx + 1) },
-    }), [canNext, canPrev, episodeIdx, goEpisode, toggleIframeContainerFullscreen])
-
-    // Iframe controller handlers apply only when the embed iframe is actually
-    // rendered (i.e. no raw videoUrl took priority).
-    const usingIframe = Boolean(stream?.iframeUrl) && !stream?.videoUrl
-
-    useLifeSyncGamepadInput({
-        enabled: controllerSupportEnabled && usingIframe,
-        handlers: iframeGamepadHandlers,
-        repeatableButtons: [
-            XBOX_GAMEPAD_BUTTONS.LT,
-            XBOX_GAMEPAD_BUTTONS.RT,
-            XBOX_GAMEPAD_BUTTONS.DPAD_UP,
-            XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
-        ],
-    })
-
-    useEffect(() => {
-        if (!usingIframe || typeof window === 'undefined') return undefined
-        const id = window.setTimeout(() => { focusIframeForControllerInput(streamIframeRef.current) }, 180)
-        return () => window.clearTimeout(id)
-    }, [usingIframe])
-
-    useEffect(() => {
-        if (!usingIframe || typeof window === 'undefined') return undefined
-        const onFullscreenChange = () => {
-            const container = streamIframeContainerRef.current
-            const fullscreenEl = document.fullscreenElement
-            if (!container || !fullscreenEl) return
-            const isAnimePlayerFullscreen =
-                fullscreenEl === container || container.contains(fullscreenEl)
-            if (!isAnimePlayerFullscreen) return
-            window.setTimeout(() => { focusIframeForControllerInput(streamIframeRef.current) }, 60)
-        }
-        document.addEventListener('fullscreenchange', onFullscreenChange)
-        document.addEventListener('webkitfullscreenchange', onFullscreenChange)
-        return () => {
-            document.removeEventListener('fullscreenchange', onFullscreenChange)
-            document.removeEventListener('webkitfullscreenchange', onFullscreenChange)
-        }
-    }, [usingIframe])
-
     const relatedAnime = Array.isArray(anime?.related) ? anime.related : []
 
     if (!isLifeSyncConnected) {
@@ -888,10 +787,12 @@ export default function LifeSyncAnimeWatch() {
                                                 </MotionDiv>
                                                 ) : null}
                                             </AnimatePresence>
-                                            {!stream?.resolving && stream?.videoUrl ? (
+                                            {!stream?.resolving && (stream?.videoUrl || stream?.iframeUrl) ? (
                                                 <AdvancedVideoPlayer
-                                                    key={stream.videoUrl}
+                                                    key={stream.videoUrl || stream.iframeUrl}
                                                     src={stream.videoUrl}
+                                                    embedUrl={!stream.videoUrl ? stream.iframeUrl : undefined}
+                                                    embedMeta={{ provider: stream.provider, selectedMirrorLabel: stream.selectedMirrorLabel }}
                                                     preload={videoPreload}
                                                     textTracks={stream.textTracks || []}
                                                     qualities={stream.qualities || []}
@@ -906,22 +807,6 @@ export default function LifeSyncAnimeWatch() {
                                                     canNextEpisode={canNext}
                                                     onEnded={() => { if (canNext) goEpisode(episodeIdx + 1) }}
                                                     onUseEmbed={() => { setPreferEmbedAndSave(true); setResolveKey(k => k + 1) }}
-                                                />
-                                            ) : !stream?.resolving && stream?.iframeUrl ? (
-                                                <iframe
-                                                    ref={streamIframeRef}
-                                                    key={stream.iframeUrl}
-                                                    title={stream.title || 'Episode'}
-                                                    src={stream.iframeUrl}
-                                                    tabIndex={0}
-                                                    onLoad={() => { focusIframeForControllerInput(streamIframeRef.current) }}
-                                                    className="lifesync-anime-watch-media h-full w-full border-0 bg-black"
-                                                    allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
-                                                    {...streamIframeSandboxProps(stream.iframeUrl, {
-                                                        provider: stream.provider,
-                                                        selectedMirrorLabel: stream.selectedMirrorLabel,
-                                                    })}
-                                                    referrerPolicy="no-referrer-when-downgrade"
                                                 />
                                             ) : (
                                                 <div className="lifesync-anime-watch-media flex h-full w-full items-center justify-center bg-(--mx-color-0f0f12) px-4 text-center">

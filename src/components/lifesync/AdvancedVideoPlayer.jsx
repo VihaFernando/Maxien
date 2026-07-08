@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
-import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
+import {
+    XBOX_GAMEPAD_BUTTONS,
+    dispatchBestEffortIframeMediaKeys,
+    focusIframeForControllerInput,
+} from '../../lib/lifeSyncControllerInput'
+import { streamIframeSandboxProps } from '../../lib/lifesyncStreamIframe'
 import { ControllerHintOverlay } from './ControllerHintOverlay'
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -106,6 +111,15 @@ export default function AdvancedVideoPlayer({
     subtitlesOnOverride,
     /** When provided, the playback-error screen shows a second button to switch to an embed/alternate source. */
     onUseEmbed,
+    /**
+     * Provider embed/iframe URL. When `src` is empty and this is set, the player
+     * renders the embed inside its own shell (fullscreen + gamepad focus still
+     * work) instead of the native <video>/hls.js pipeline  cross-origin embeds
+     * can't be scrubbed or queried, so seek/volume/quality controls don't apply.
+     */
+    embedUrl,
+    /** @type {{ provider?: string | null, selectedMirrorLabel?: string | null }} */
+    embedMeta,
 }) {
     const videoRef = useRef(null)
     const wrapRef = useRef(null)
@@ -747,8 +761,15 @@ export default function AdvancedVideoPlayer({
         togglePlay,
     ])
 
+    // Embed mode: no `src`, but a provider iframe URL is available. Cross-origin
+    // embeds can't be scrubbed/queried like <video>, so this renders a minimal
+    // shell (fullscreen + prev/next + best-effort media-key forwarding) instead
+    // of the full controls surface below.
+    const isEmbedMode = !src && typeof embedUrl === 'string' && /^https?:\/\//i.test(embedUrl)
+    const iframeRef = useRef(null)
+
     useLifeSyncGamepadInput({
-        enabled: controllerSupportEnabled && !suppressKeys,
+        enabled: controllerSupportEnabled && !suppressKeys && !isEmbedMode,
         handlers: gamepadHandlers,
         repeatableButtons: [
             XBOX_GAMEPAD_BUTTONS.LT,
@@ -757,6 +778,36 @@ export default function AdvancedVideoPlayer({
             XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
         ],
     })
+
+    const embedGamepadHandlers = useMemo(() => ({
+        [XBOX_GAMEPAD_BUTTONS.A]: () => {
+            dispatchBestEffortIframeMediaKeys(iframeRef.current, ['k', ' ', 'Spacebar', 'MediaPlayPause'])
+        },
+        [XBOX_GAMEPAD_BUTTONS.X]: () => {
+            toggleFullscreen()
+            dispatchBestEffortIframeMediaKeys(iframeRef.current, ['f'])
+        },
+        [XBOX_GAMEPAD_BUTTONS.LT]: () => {
+            dispatchBestEffortIframeMediaKeys(iframeRef.current, ['j', 'ArrowLeft'])
+        },
+        [XBOX_GAMEPAD_BUTTONS.RT]: () => {
+            dispatchBestEffortIframeMediaKeys(iframeRef.current, ['l', 'ArrowRight'])
+        },
+        [XBOX_GAMEPAD_BUTTONS.LB]: () => { if (!canPrevEpisode) return; onPrevEpisode?.() },
+        [XBOX_GAMEPAD_BUTTONS.RB]: () => { if (!canNextEpisode) return; onNextEpisode?.() },
+    }), [canNextEpisode, canPrevEpisode, onNextEpisode, onPrevEpisode, toggleFullscreen])
+
+    useLifeSyncGamepadInput({
+        enabled: controllerSupportEnabled && !suppressKeys && isEmbedMode,
+        handlers: embedGamepadHandlers,
+        repeatableButtons: [XBOX_GAMEPAD_BUTTONS.LT, XBOX_GAMEPAD_BUTTONS.RT],
+    })
+
+    useEffect(() => {
+        if (!isEmbedMode || typeof window === 'undefined') return undefined
+        const id = window.setTimeout(() => { focusIframeForControllerInput(iframeRef.current) }, 180)
+        return () => window.clearTimeout(id)
+    }, [isEmbedMode, embedUrl])
 
     useEffect(() => {
         const onKey = (e) => {
@@ -915,6 +966,45 @@ export default function AdvancedVideoPlayer({
             ? 'bg-(--mx-color-c6ff00)/15 text-(--mx-color-c6ff00) ring-1 ring-(--mx-color-c6ff00)/30'
             : 'text-white/75 hover:bg-white/10 hover:text-white'
     }`
+
+    if (isEmbedMode) {
+        return (
+            <div ref={wrapRef} className="group/player relative h-full w-full select-none bg-black">
+                <iframe
+                    ref={iframeRef}
+                    key={embedUrl}
+                    title="Episode"
+                    src={embedUrl}
+                    tabIndex={0}
+                    onLoad={() => { focusIframeForControllerInput(iframeRef.current) }}
+                    className="h-full w-full border-0 bg-black"
+                    allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
+                    {...streamIframeSandboxProps(embedUrl, embedMeta || {})}
+                    referrerPolicy="no-referrer-when-downgrade"
+                />
+                {(canPrevEpisode || canNextEpisode) && (
+                    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between p-2 opacity-0 transition-opacity group-hover/player:opacity-100">
+                        <button
+                            type="button"
+                            disabled={!canPrevEpisode}
+                            onClick={onPrevEpisode}
+                            className="pointer-events-auto flex h-8 items-center justify-center rounded-lg bg-black/55 px-3 text-[11px] font-bold text-white/85 backdrop-blur-md transition-all hover:bg-black/75 disabled:opacity-0"
+                        >
+                            ← Prev
+                        </button>
+                        <button
+                            type="button"
+                            disabled={!canNextEpisode}
+                            onClick={onNextEpisode}
+                            className="pointer-events-auto flex h-8 items-center justify-center rounded-lg bg-black/55 px-3 text-[11px] font-bold text-white/85 backdrop-blur-md transition-all hover:bg-black/75 disabled:opacity-0"
+                        >
+                            Next →
+                        </button>
+                    </div>
+                )}
+            </div>
+        )
+    }
 
     return (
         <div

@@ -2,14 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lifesyncFetch, getLifesyncApiBase, getAnimePreferEmbed, lifesyncPatchPreferences } from '../../../lib/lifesyncApi'
 import { useLifeSync } from '../../../context/LifeSyncContext'
 import AdvancedVideoPlayer from '../../../components/lifesync/AdvancedVideoPlayer'
-import { streamIframeSandboxProps } from '../../../lib/lifesyncStreamIframe'
 import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
 import useControllerSupportEnabled from '../../../hooks/useControllerSupportEnabled'
-import {
-    XBOX_GAMEPAD_BUTTONS,
-    dispatchBestEffortIframeMediaKeys,
-    focusIframeForControllerInput,
-} from '../../../lib/lifeSyncControllerInput'
+import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
 import useLifeSyncInputSource from '../../../hooks/useLifeSyncInputSource'
 import { tvHintLabel } from '../../../lib/lifeSyncKeyboardGamepad'
 
@@ -49,7 +44,6 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
     useEffect(() => { settingsOpenRef.current = settingsOpen }, [settingsOpen])
     const [settingsFocus, setSettingsFocus] = useState(0) // index into SETTINGS_SECTIONS
 
-    const iframeRef = useRef(null)
     const iframeContainerRef = useRef(null)
     const cancelRef = useRef(false)
     const countdownRef = useRef(null)
@@ -120,12 +114,6 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
         }).catch(() => {})
         return () => ac.abort()
     }, [animeId, episodeIdx, episodes, isLifeSyncConnected])
-
-    useEffect(() => {
-        if (!stream?.iframeUrl || stream?.videoUrl) return
-        const id = setTimeout(() => { focusIframeForControllerInput(iframeRef.current) }, 200)
-        return () => clearTimeout(id)
-    }, [stream?.iframeUrl, stream?.videoUrl])
 
     // ── Countdown ────────────────────────────────────────────────────────────
 
@@ -240,15 +228,6 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
 
     // ── Gamepad handlers ─────────────────────────────────────────────────────
 
-    const toggleIframeFullscreen = useCallback(() => {
-        const el = iframeContainerRef.current
-        if (!el) return
-        if (!document.fullscreenElement) el.requestFullscreen?.().catch(() => {})
-        else document.exitFullscreen?.().catch(() => {})
-    }, [])
-
-    const usingIframe = Boolean(stream?.iframeUrl) && !stream?.videoUrl
-
     // Controller: A/DPAD_LEFT/DPAD_RIGHT change the value in the focused section
     const settingsActivate = useCallback((dir) => {
         const section = SETTINGS_SECTIONS[settingsFocus]
@@ -282,25 +261,9 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
         repeatableButtons: [XBOX_GAMEPAD_BUTTONS.DPAD_UP, XBOX_GAMEPAD_BUTTONS.DPAD_DOWN],
     })
 
-    const iframeHandlers = useMemo(() => ({
-        [XBOX_GAMEPAD_BUTTONS.A]: () => { dispatchBestEffortIframeMediaKeys(iframeRef.current, ['k', ' ', 'MediaPlayPause']) },
-        [XBOX_GAMEPAD_BUTTONS.X]: () => { settingsOpen ? closeSettings() : openSettings() },
-        [XBOX_GAMEPAD_BUTTONS.Y]: () => { toggleIframeFullscreen(); dispatchBestEffortIframeMediaKeys(iframeRef.current, ['f']) },
-        [XBOX_GAMEPAD_BUTTONS.LT]: () => { dispatchBestEffortIframeMediaKeys(iframeRef.current, ['j', 'ArrowLeft']) },
-        [XBOX_GAMEPAD_BUTTONS.RT]: () => { dispatchBestEffortIframeMediaKeys(iframeRef.current, ['l', 'ArrowRight']) },
-        [XBOX_GAMEPAD_BUTTONS.DPAD_UP]: () => { dispatchBestEffortIframeMediaKeys(iframeRef.current, ['ArrowUp']) },
-        [XBOX_GAMEPAD_BUTTONS.DPAD_DOWN]: () => { dispatchBestEffortIframeMediaKeys(iframeRef.current, ['ArrowDown']) },
-        [XBOX_GAMEPAD_BUTTONS.LB]: () => { if (canPrev) setEpisodeIdx(i => i - 1) },
-        [XBOX_GAMEPAD_BUTTONS.RB]: () => { if (canNext) setEpisodeIdx(i => i + 1) },
-        [XBOX_GAMEPAD_BUTTONS.B]: () => onBack(),
-    }), [canNext, canPrev, onBack, toggleIframeFullscreen, settingsOpen, openSettings, closeSettings])
-
-    useLifeSyncGamepadInput({
-        enabled: controllerEnabled && usingIframe && !settingsOpen,
-        handlers: iframeHandlers,
-        repeatableButtons: [XBOX_GAMEPAD_BUTTONS.LT, XBOX_GAMEPAD_BUTTONS.RT, XBOX_GAMEPAD_BUTTONS.DPAD_UP, XBOX_GAMEPAD_BUTTONS.DPAD_DOWN],
-    })
-
+    // X/LB/RB/B apply the same way whether the active player is native video or
+    // the embed shell  A/fullscreen/seek for embed mode are handled inside
+    // AdvancedVideoPlayer itself.
     const videoHandlers = useMemo(() => ({
         [XBOX_GAMEPAD_BUTTONS.X]: () => { settingsOpen ? closeSettings() : openSettings() },
         [XBOX_GAMEPAD_BUTTONS.LB]: () => { if (canPrev) setEpisodeIdx(i => i - 1) },
@@ -309,7 +272,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
     }), [canNext, canPrev, onBack, settingsOpen, openSettings, closeSettings])
 
     useLifeSyncGamepadInput({
-        enabled: controllerEnabled && Boolean(stream?.videoUrl) && !settingsOpen,
+        enabled: controllerEnabled && Boolean(stream?.videoUrl || stream?.iframeUrl) && !settingsOpen,
         handlers: videoHandlers,
     })
 
@@ -353,11 +316,13 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                     </div>
                 )}
 
-                {/* Video player */}
-                {stream?.videoUrl && !stream.resolving ? (
+                {/* Video / embed player */}
+                {(stream?.videoUrl || stream?.iframeUrl) && !stream.resolving ? (
                     <AdvancedVideoPlayer
-                        key={`${stream.videoUrl}|${audioType}`}
+                        key={`${stream.videoUrl || stream.iframeUrl}|${audioType}`}
                         src={stream.videoUrl}
+                        embedUrl={!stream.videoUrl ? stream.iframeUrl : undefined}
+                        embedMeta={{ provider: stream.provider }}
                         textTracks={activeTextTracks}
                         qualities={stream.qualities || []}
                         autoPlay
@@ -373,18 +338,6 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                         onTimeNearEnd={canNext ? startNextEpCountdown : undefined}
                         onTimeNearEndCancel={cancelNextEpCountdown}
                         onUseEmbed={() => setSource(true)}
-                    />
-                ) : stream?.iframeUrl && !stream.resolving ? (
-                    <iframe
-                        ref={iframeRef}
-                        key={stream.iframeUrl}
-                        title={stream.title || 'Episode'}
-                        src={stream.iframeUrl}
-                        className="h-full w-full border-0 bg-black"
-                        allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
-                        {...streamIframeSandboxProps(stream.iframeUrl, { provider: stream.provider })}
-                        referrerPolicy="no-referrer-when-downgrade"
-                        onLoad={() => focusIframeForControllerInput(iframeRef.current)}
                     />
                 ) : null}
 
