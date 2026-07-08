@@ -27,11 +27,12 @@ This project adds a genuinely separate mobile-specific layout per page, styled i
 
 For each page in scope:
 
-1. The existing page component (e.g. `LifeSyncManga.jsx`) becomes a container: keeps all `useState`/`useEffect`/data-fetching/handlers unchanged.
-2. Its existing JSX render tree is extracted into a sibling `XDesktopView` component/file.
-3. A new `XMobileView` sibling file is built from scratch per the visual system below.
-4. The container renders one or the other based on a new shared hook: `src/hooks/useIsMobile.js` — `matchMedia('(max-width: 767px)')`-based, SSR-safe (defaults to desktop on first render, updates on mount), single source of truth reused across all pages.
-5. Both views receive the same data/handlers as props — no logic duplication, no separate route, no separate data fetching.
+1. The existing page component (e.g. `LifeSyncManga.jsx`) keeps all its `useState`/`useEffect`/data-fetching/handlers unchanged, in the same file.
+2. The final `return (...)` branches on a new shared hook — `src/hooks/useIsMobile.js` (`matchMedia('(max-width: 767px)')`-based, SSR-safe: defaults to desktop on first render, updates on mount) — into two JSX trees: the existing desktop tree, and a new mobile tree.
+3. Both trees live in the **same file**, as sibling render functions/components defined alongside the main component (not separate sibling files). This lets the mobile tree close over the same local variables/handlers naturally instead of requiring a large, error-prone explicit prop interface — these pages have 50+ interdependent locals (route state, selection state, navigation callbacks, controller/gamepad hooks), and hand-listing them all as named props across a file boundary is a correctness risk, not a simplification.
+4. No logic duplication, no separate route, no separate data fetching, regardless of file layout.
+
+**Why same-file over separate-file:** confirmed during planning by reading `LifeSyncManga.jsx` — its JSX return (~974 lines) depends on 50+ locals defined in the ~1,300-line component body above it (e.g. `source`, `selectedManga`, `goToList`, `goToMangaDetail`, `handleStartRead`, `route`, gamepad/controller hooks). Splitting the mobile tree into a separate file would require passing all of these as explicit props, which is exactly the kind of large, brittle interface writing-plans and ponytail both flag as a smell. Colocating avoids it entirely.
 
 ## Page order
 
