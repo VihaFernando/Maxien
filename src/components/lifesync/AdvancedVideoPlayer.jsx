@@ -149,8 +149,6 @@ export default function AdvancedVideoPlayer({
     const bufferingDelayTimer = useRef(null)
     const speedRef = useRef(speed)
     const lastTapRef = useRef({ t: 0, x: 0 })
-    // Playhead watchdog: detects real stalls (time not advancing while "playing")
-    const stallStateRef = useRef({ time: -1, at: 0, recoveries: 0 })
     // '' = Auto (the master `src`); otherwise a variant url from `qualities`
     const [qualityUrl, setQualityUrl] = useState('')
     const [subtitlesOnInternal, setSubtitlesOn] = useState(readStoredCC)
@@ -169,11 +167,13 @@ export default function AdvancedVideoPlayer({
         ? (qualityList.find(q => q.url === resolvedQualityUrl)?.label || 'Auto')
         : 'Auto'
 
-    // Reset to Auto whenever the underlying master source changes (e.g. new episode)
-    useEffect(() => {
+    // Reset to Auto whenever the underlying master source changes (e.g. new episode).
+    // State adjustment during render (not an effect) per react.dev/learn/you-might-not-need-an-effect
+    const [prevSrc, setPrevSrc] = useState(src)
+    if (prevSrc !== src) {
+        setPrevSrc(src)
         setQualityUrl('')
-        nearEndFiredRef.current = false
-    }, [src])
+    }
 
     // Debounced buffering indicator: only show the spinner if the wait lasts
     // longer than 300ms, so micro-rebuffers and spurious events never flash it.
@@ -288,7 +288,7 @@ export default function AdvancedVideoPlayer({
             v.addEventListener('loadedmetadata', seekOnReady)
         }
 
-        stallStateRef.current = { time: -1, at: 0, recoveries: 0 }
+        nearEndFiredRef.current = false
 
         let hls = null
         let cancelled = false
@@ -354,14 +354,6 @@ export default function AdvancedVideoPlayer({
                             if (!data?.fatal || !hls) return
                             if (data.type === Hls.ErrorTypes.NETWORK_ERROR && netRecoveries < 3) {
                                 netRecoveries += 1
-                                // A fragment that keeps failing after all retries would
-                                // just fail again on startLoad()  jump the playhead
-                                // past it so playback continues on the next fragment.
-                                const frag = data.frag
-                                if (frag && Number.isFinite(frag.start)
-                                    && (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR || data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT)) {
-                                    try { v.currentTime = frag.start + (frag.duration || 4) + 0.1 } catch { /* ignore */ }
-                                }
                                 hls.startLoad()
                                 return
                             }
@@ -513,78 +505,6 @@ export default function AdvancedVideoPlayer({
             v.removeEventListener('seeked', onSeeked)
         }
     }, [src, activeSrc, onEnded, onError, onTimeNearEnd, onTimeNearEndCancel, resetIdle, markBuffering, clearBuffering])
-
-    // Playhead watchdog: if the video claims to be playing but currentTime
-    // stops advancing, escalate through recovery steps instead of staying
-    // frozen  (1) nudge the playhead past a buffer hole, (2) restart the
-    // loader (hls) or reload the element (mp4) at the same position.
-    useEffect(() => {
-        // No source → nothing to watch; skip the interval entirely.
-        if (!activeSrc) return undefined
-
-        // Holds a cleanup for any loadedmetadata listener added during recovery
-        // so it is always removed if the interval clears before the event fires.
-        let pendingResumeCleanup = null
-
-        const id = setInterval(() => {
-            const v = videoRef.current
-            if (!v) return
-            const st = stallStateRef.current
-            const now = Date.now()
-            if (v.paused || v.ended || v.seeking || isSeekingRef.current) {
-                st.time = v.currentTime
-                st.at = now
-                return
-            }
-            if (v.currentTime !== st.time) {
-                st.time = v.currentTime
-                st.at = now
-                st.recoveries = 0
-                return
-            }
-            const stuckMs = now - st.at
-            if (stuckMs < 3000) return
-            markBuffering()
-            if (st.recoveries === 0) {
-                st.recoveries = 1
-                // Nudge past a potential buffer hole
-                try { v.currentTime = v.currentTime + 0.1 } catch { /* ignore */ }
-                v.play?.().catch(() => {})
-            } else if (st.recoveries === 2 && stuckMs > 20000) {
-                // Both recovery steps failed  stop the infinite spinner and
-                // surface the error screen (Retry re-resolves a fresh URL).
-                st.recoveries = 3
-                clearBuffering()
-                setMediaError(prev => prev ?? { forSrc: activeSrc, message: 'Playback stalled  the stream stopped responding' })
-            } else if (st.recoveries === 1 && stuckMs > 8000) {
-                st.recoveries = 2
-                const hls = hlsRef.current
-                if (hls) {
-                    try { hls.recoverMediaError() } catch { /* ignore */ }
-                    try { hls.startLoad() } catch { /* ignore */ }
-                } else {
-                    // Direct mp4: reload the element and resume at the same spot
-                    const t = v.currentTime
-                    try {
-                        v.load()
-                        const resume = () => {
-                            try { v.currentTime = t } catch { /* ignore */ }
-                            v.play?.().catch(() => {})
-                            v.removeEventListener('loadedmetadata', resume)
-                            pendingResumeCleanup = null
-                        }
-                        v.addEventListener('loadedmetadata', resume)
-                        pendingResumeCleanup = () => v.removeEventListener('loadedmetadata', resume)
-                    } catch { /* ignore */ }
-                }
-            }
-        }, 1000)
-        return () => {
-            clearInterval(id)
-            pendingResumeCleanup?.()
-            pendingResumeCleanup = null
-        }
-    }, [activeSrc, retryNonce, markBuffering, clearBuffering])
 
     useEffect(() => {
         const onFsChange = () => {
