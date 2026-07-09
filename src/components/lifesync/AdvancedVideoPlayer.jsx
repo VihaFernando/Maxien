@@ -1,12 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import useControllerSupportEnabled from '../../hooks/useControllerSupportEnabled'
 import useLifeSyncGamepadInput from '../../hooks/useLifeSyncGamepadInput'
-import {
-    XBOX_GAMEPAD_BUTTONS,
-    dispatchBestEffortIframeMediaKeys,
-    focusIframeForControllerInput,
-} from '../../lib/lifeSyncControllerInput'
-import { streamIframeSandboxProps } from '../../lib/lifesyncStreamIframe'
+import { XBOX_GAMEPAD_BUTTONS } from '../../lib/lifeSyncControllerInput'
 import { ControllerHintOverlay } from './ControllerHintOverlay'
 
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
@@ -112,14 +107,11 @@ export default function AdvancedVideoPlayer({
     /** When provided, the playback-error screen shows a second button to switch to an embed/alternate source. */
     onUseEmbed,
     /**
-     * Provider embed/iframe URL. When `src` is empty and this is set, the player
-     * renders the embed inside its own shell (fullscreen + gamepad focus still
-     * work) instead of the native <video>/hls.js pipeline  cross-origin embeds
-     * can't be scrubbed or queried, so seek/volume/quality controls don't apply.
+     * Re-resolve the stream from the API instead of reloading the current src.
+     * Proxy URLs carry a signed token with a 3h TTL  reloading an expired URL
+     * can never succeed, so the error-screen Retry uses this when provided.
      */
-    embedUrl,
-    /** @type {{ provider?: string | null, selectedMirrorLabel?: string | null }} */
-    embedMeta,
+    onRetry,
 }) {
     const videoRef = useRef(null)
     const wrapRef = useRef(null)
@@ -323,6 +315,15 @@ export default function AdvancedVideoPlayer({
                     if (cancelled) return
 
                     if (Hls.isSupported()) {
+                        // Fail fast instead of hanging: hls.js default policies allow
+                        // 10s to first byte + 120s per fragment load with backoff
+                        // retries  a hung proxy connection reads as infinite
+                        // loading. (The old fragLoadingMaxRetry-style keys are
+                        // deprecated in hls.js 1.x and never tightened these.)
+                        const retryFast = {
+                            timeoutRetry: { maxNumRetry: 2, retryDelayMs: 0, maxRetryDelayMs: 0 },
+                            errorRetry: { maxNumRetry: 2, retryDelayMs: 500, maxRetryDelayMs: 2000 },
+                        }
                         hls = new Hls({
                             enableWorker: true,
                             lowLatencyMode: false,
@@ -335,10 +336,17 @@ export default function AdvancedVideoPlayer({
                             maxBufferSize: 60 * 1000 * 1000,
                             backBufferLength: 30,
                             startFragPrefetch: true,
-                            fragLoadingMaxRetry: 4,
-                            manifestLoadingMaxRetry: 2,
-                            levelLoadingMaxRetry: 4,
                             nudgeMaxRetry: 6,
+                            manifestLoadPolicy: { default: { maxTimeToFirstByteMs: 6000, maxLoadTimeMs: 15000, ...retryFast } },
+                            playlistLoadPolicy: { default: { maxTimeToFirstByteMs: 6000, maxLoadTimeMs: 15000, ...retryFast } },
+                            fragLoadPolicy: {
+                                default: {
+                                    maxTimeToFirstByteMs: 8000,
+                                    maxLoadTimeMs: 20000,
+                                    timeoutRetry: { maxNumRetry: 2, retryDelayMs: 0, maxRetryDelayMs: 0 },
+                                    errorRetry: { maxNumRetry: 3, retryDelayMs: 500, maxRetryDelayMs: 4000 },
+                                },
+                            },
                         })
                         let netRecoveries = 0
                         let mediaRecoveries = 0
@@ -346,6 +354,14 @@ export default function AdvancedVideoPlayer({
                             if (!data?.fatal || !hls) return
                             if (data.type === Hls.ErrorTypes.NETWORK_ERROR && netRecoveries < 3) {
                                 netRecoveries += 1
+                                // A fragment that keeps failing after all retries would
+                                // just fail again on startLoad()  jump the playhead
+                                // past it so playback continues on the next fragment.
+                                const frag = data.frag
+                                if (frag && Number.isFinite(frag.start)
+                                    && (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR || data.details === Hls.ErrorDetails.FRAG_LOAD_TIMEOUT)) {
+                                    try { v.currentTime = frag.start + (frag.duration || 4) + 0.1 } catch { /* ignore */ }
+                                }
                                 hls.startLoad()
                                 return
                             }
@@ -534,6 +550,12 @@ export default function AdvancedVideoPlayer({
                 // Nudge past a potential buffer hole
                 try { v.currentTime = v.currentTime + 0.1 } catch { /* ignore */ }
                 v.play?.().catch(() => {})
+            } else if (st.recoveries === 2 && stuckMs > 20000) {
+                // Both recovery steps failed  stop the infinite spinner and
+                // surface the error screen (Retry re-resolves a fresh URL).
+                st.recoveries = 3
+                clearBuffering()
+                setMediaError(prev => prev ?? { forSrc: activeSrc, message: 'Playback stalled  the stream stopped responding' })
             } else if (st.recoveries === 1 && stuckMs > 8000) {
                 st.recoveries = 2
                 const hls = hlsRef.current
@@ -562,7 +584,7 @@ export default function AdvancedVideoPlayer({
             pendingResumeCleanup?.()
             pendingResumeCleanup = null
         }
-    }, [activeSrc, retryNonce, markBuffering])
+    }, [activeSrc, retryNonce, markBuffering, clearBuffering])
 
     useEffect(() => {
         const onFsChange = () => {
@@ -761,15 +783,8 @@ export default function AdvancedVideoPlayer({
         togglePlay,
     ])
 
-    // Embed mode: no `src`, but a provider iframe URL is available. Cross-origin
-    // embeds can't be scrubbed/queried like <video>, so this renders a minimal
-    // shell (fullscreen + prev/next + best-effort media-key forwarding) instead
-    // of the full controls surface below.
-    const isEmbedMode = !src && typeof embedUrl === 'string' && /^https?:\/\//i.test(embedUrl)
-    const iframeRef = useRef(null)
-
     useLifeSyncGamepadInput({
-        enabled: controllerSupportEnabled && !suppressKeys && !isEmbedMode,
+        enabled: controllerSupportEnabled && !suppressKeys,
         handlers: gamepadHandlers,
         repeatableButtons: [
             XBOX_GAMEPAD_BUTTONS.LT,
@@ -778,36 +793,6 @@ export default function AdvancedVideoPlayer({
             XBOX_GAMEPAD_BUTTONS.DPAD_DOWN,
         ],
     })
-
-    const embedGamepadHandlers = useMemo(() => ({
-        [XBOX_GAMEPAD_BUTTONS.A]: () => {
-            dispatchBestEffortIframeMediaKeys(iframeRef.current, ['k', ' ', 'Spacebar', 'MediaPlayPause'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.X]: () => {
-            toggleFullscreen()
-            dispatchBestEffortIframeMediaKeys(iframeRef.current, ['f'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.LT]: () => {
-            dispatchBestEffortIframeMediaKeys(iframeRef.current, ['j', 'ArrowLeft'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.RT]: () => {
-            dispatchBestEffortIframeMediaKeys(iframeRef.current, ['l', 'ArrowRight'])
-        },
-        [XBOX_GAMEPAD_BUTTONS.LB]: () => { if (!canPrevEpisode) return; onPrevEpisode?.() },
-        [XBOX_GAMEPAD_BUTTONS.RB]: () => { if (!canNextEpisode) return; onNextEpisode?.() },
-    }), [canNextEpisode, canPrevEpisode, onNextEpisode, onPrevEpisode, toggleFullscreen])
-
-    useLifeSyncGamepadInput({
-        enabled: controllerSupportEnabled && !suppressKeys && isEmbedMode,
-        handlers: embedGamepadHandlers,
-        repeatableButtons: [XBOX_GAMEPAD_BUTTONS.LT, XBOX_GAMEPAD_BUTTONS.RT],
-    })
-
-    useEffect(() => {
-        if (!isEmbedMode || typeof window === 'undefined') return undefined
-        const id = window.setTimeout(() => { focusIframeForControllerInput(iframeRef.current) }, 180)
-        return () => window.clearTimeout(id)
-    }, [isEmbedMode, embedUrl])
 
     useEffect(() => {
         const onKey = (e) => {
@@ -967,45 +952,6 @@ export default function AdvancedVideoPlayer({
             : 'text-white/75 hover:bg-white/10 hover:text-white'
     }`
 
-    if (isEmbedMode) {
-        return (
-            <div ref={wrapRef} className="group/player relative h-full w-full select-none bg-black">
-                <iframe
-                    ref={iframeRef}
-                    key={embedUrl}
-                    title="Episode"
-                    src={embedUrl}
-                    tabIndex={0}
-                    onLoad={() => { focusIframeForControllerInput(iframeRef.current) }}
-                    className="h-full w-full border-0 bg-black"
-                    allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
-                    {...streamIframeSandboxProps(embedUrl, embedMeta || {})}
-                    referrerPolicy="no-referrer-when-downgrade"
-                />
-                {(canPrevEpisode || canNextEpisode) && (
-                    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between p-2 opacity-0 transition-opacity group-hover/player:opacity-100">
-                        <button
-                            type="button"
-                            disabled={!canPrevEpisode}
-                            onClick={onPrevEpisode}
-                            className="pointer-events-auto flex h-8 items-center justify-center rounded-lg bg-black/55 px-3 text-[11px] font-bold text-white/85 backdrop-blur-md transition-all hover:bg-black/75 disabled:opacity-0"
-                        >
-                            ← Prev
-                        </button>
-                        <button
-                            type="button"
-                            disabled={!canNextEpisode}
-                            onClick={onNextEpisode}
-                            className="pointer-events-auto flex h-8 items-center justify-center rounded-lg bg-black/55 px-3 text-[11px] font-bold text-white/85 backdrop-blur-md transition-all hover:bg-black/75 disabled:opacity-0"
-                        >
-                            Next →
-                        </button>
-                    </div>
-                )}
-            </div>
-        )
-    }
-
     return (
         <div
             ref={wrapRef}
@@ -1124,7 +1070,7 @@ export default function AdvancedVideoPlayer({
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
-                            onClick={retryPlayback}
+                            onClick={() => { if (onRetry) onRetry(); else retryPlayback() }}
                             className="rounded-xl bg-(--mx-color-c6ff00) px-6 py-2.5 text-[12px] font-black text-black transition-all hover:brightness-110 active:scale-95"
                         >
                             Retry

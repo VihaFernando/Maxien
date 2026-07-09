@@ -15,6 +15,7 @@ import {
     LifesyncEpisodeThumbnail,
     WatchPageLoadSkeleton,
 } from '../../components/lifesync/EpisodeLoadingSkeletons'
+import { streamIframeSandboxProps } from '../../lib/lifesyncStreamIframe'
 import {
     AnimatePresence,
     lifeSyncModalSlideProps,
@@ -787,12 +788,10 @@ export default function LifeSyncAnimeWatch() {
                                                 </MotionDiv>
                                                 ) : null}
                                             </AnimatePresence>
-                                            {!stream?.resolving && (stream?.videoUrl || stream?.iframeUrl) ? (
+                                            {!stream?.resolving && stream?.videoUrl ? (
                                                 <AdvancedVideoPlayer
-                                                    key={stream.videoUrl || stream.iframeUrl}
+                                                    key={stream.videoUrl}
                                                     src={stream.videoUrl}
-                                                    embedUrl={!stream.videoUrl ? stream.iframeUrl : undefined}
-                                                    embedMeta={{ provider: stream.provider, selectedMirrorLabel: stream.selectedMirrorLabel }}
                                                     preload={videoPreload}
                                                     textTracks={stream.textTracks || []}
                                                     qualities={stream.qualities || []}
@@ -806,7 +805,21 @@ export default function LifeSyncAnimeWatch() {
                                                     canPrevEpisode={canPrev}
                                                     canNextEpisode={canNext}
                                                     onEnded={() => { if (canNext) goEpisode(episodeIdx + 1) }}
+                                                    onRetry={retryStream}
                                                     onUseEmbed={() => { setPreferEmbedAndSave(true); setResolveKey(k => k + 1) }}
+                                                />
+                                            ) : !stream?.resolving && stream?.iframeUrl ? (
+                                                <iframe
+                                                    key={stream.iframeUrl}
+                                                    title={stream.title || 'Episode'}
+                                                    src={stream.iframeUrl}
+                                                    className="lifesync-anime-watch-media h-full w-full border-0 bg-black"
+                                                    allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
+                                                    {...streamIframeSandboxProps(stream.iframeUrl, {
+                                                        provider: stream.provider,
+                                                        selectedMirrorLabel: stream.selectedMirrorLabel,
+                                                    })}
+                                                    referrerPolicy="no-referrer-when-downgrade"
                                                 />
                                             ) : (
                                                 <div className="lifesync-anime-watch-media flex h-full w-full items-center justify-center bg-(--mx-color-0f0f12) px-4 text-center">

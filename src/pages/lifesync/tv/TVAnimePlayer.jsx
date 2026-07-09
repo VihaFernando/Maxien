@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { lifesyncFetch, getLifesyncApiBase, getAnimePreferEmbed, lifesyncPatchPreferences } from '../../../lib/lifesyncApi'
 import { useLifeSync } from '../../../context/LifeSyncContext'
 import AdvancedVideoPlayer from '../../../components/lifesync/AdvancedVideoPlayer'
+import { streamIframeSandboxProps } from '../../../lib/lifesyncStreamIframe'
 import useLifeSyncGamepadInput from '../../../hooks/useLifeSyncGamepadInput'
 import useControllerSupportEnabled from '../../../hooks/useControllerSupportEnabled'
 import { XBOX_GAMEPAD_BUTTONS } from '../../../lib/lifeSyncControllerInput'
@@ -28,6 +29,9 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
     const [audioType, setAudioType] = useState('sub')
     const [subtitlesOn, setSubtitlesOn] = useState(true)
     const [preferEmbed, setPreferEmbed] = useState(() => getAnimePreferEmbed(lifeSyncUser?.preferences))
+    // Bumped by the player's error-screen Retry  re-resolves the stream from
+    // the API so proxy URLs get a fresh signed token (they expire after 3h)
+    const [resolveKey, setResolveKey] = useState(0)
     // { forUrl: string, url: string }  quality resets automatically when video URL changes
     const [qualitySelection, setQualitySelection] = useState({ forUrl: '', url: '' })
     // Derive effective quality: only apply if it was set for the current video URL
@@ -101,7 +105,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
             .then(s => { if (!cancelRef.current) setStream(s ? { ...s, resolving: false } : null) })
             .catch(e => { if (!cancelRef.current && e?.name !== 'AbortError') setStream({ title: initialTitle, resolving: false, error: e?.message }) })
         return () => { cancelRef.current = true; ac.abort() }
-    }, [epObj, resolveStream, audioType, preferEmbed])
+    }, [epObj, resolveStream, audioType, preferEmbed, resolveKey])
 
     useEffect(() => {
         if (!isLifeSyncConnected || !animeId) return
@@ -316,13 +320,11 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                     </div>
                 )}
 
-                {/* Video / embed player */}
-                {(stream?.videoUrl || stream?.iframeUrl) && !stream.resolving ? (
+                {/* Video player */}
+                {stream?.videoUrl && !stream.resolving ? (
                     <AdvancedVideoPlayer
-                        key={`${stream.videoUrl || stream.iframeUrl}|${audioType}`}
+                        key={`${stream.videoUrl}|${audioType}`}
                         src={stream.videoUrl}
-                        embedUrl={!stream.videoUrl ? stream.iframeUrl : undefined}
-                        embedMeta={{ provider: stream.provider }}
                         textTracks={activeTextTracks}
                         qualities={stream.qualities || []}
                         autoPlay
@@ -337,7 +339,18 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                         onEnded={() => { if (canNext) startNextEpCountdown() }}
                         onTimeNearEnd={canNext ? startNextEpCountdown : undefined}
                         onTimeNearEndCancel={cancelNextEpCountdown}
+                        onRetry={() => setResolveKey(k => k + 1)}
                         onUseEmbed={() => setSource(true)}
+                    />
+                ) : stream?.iframeUrl && !stream.resolving ? (
+                    <iframe
+                        key={stream.iframeUrl}
+                        title={stream.title || 'Episode'}
+                        src={stream.iframeUrl}
+                        className="h-full w-full border-0 bg-black"
+                        allow="fullscreen; encrypted-media; autoplay; picture-in-picture"
+                        {...streamIframeSandboxProps(stream.iframeUrl, { provider: stream.provider })}
+                        referrerPolicy="no-referrer-when-downgrade"
                     />
                 ) : null}
 
