@@ -23,7 +23,9 @@
   --color-text-secondary: var(--mx-color-86868b);
   --color-border-strong: var(--mx-color-d2d2d7);
   --color-border-soft: var(--mx-color-e5e5ea);
-  --color-ink-strong: var(--mx-color-1a1628);
+  /* Fixed dark ink for text on top of bg-primary (lime) — must stay dark in both themes,
+     so it cannot alias --mx-color-1a1628 (that token is remapped to light text for dark mode elsewhere). */
+  --color-ink-strong: #1a1628;
   --color-primary-contrast: var(--mx-color-000000);
 }
 

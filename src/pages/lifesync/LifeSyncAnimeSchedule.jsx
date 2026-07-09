@@ -8,8 +8,6 @@ import {
   lifeSyncSpringPageTransition,
   lifeSyncSectionPresenceTransition,
   lifeSyncSectionPresenceVariants,
-  lifeSyncCardGridContainer,
-  lifeSyncCardEnterVariants,
   MotionDiv,
 } from "../../lib/lifesyncMotion";
 
@@ -79,72 +77,182 @@ function releaseStatusColor(status) {
   return "bg-black/55 text-white";
 }
 
-// ── Anime card in schedule ─────────────────────────────────────────────────────
-function ScheduleCard({ entry, onSelect }) {
+// ── Time-of-day bands for the timeline ──────────────────────────────────────────
+const TIME_BANDS = [
+  { id: "morning", label: "Morning", range: "06:00 – 11:59", start: 6, end: 12 },
+  { id: "afternoon", label: "Afternoon", range: "12:00 – 17:59", start: 12, end: 18 },
+  { id: "evening", label: "Evening", range: "18:00 – 22:59", start: 18, end: 23 },
+  { id: "night", label: "Night", range: "23:00 – 05:59", start: 23, end: 6 },
+];
+
+function entryHourUTC(entry) {
+  if (entry?.fullAirDateTime) {
+    try {
+      const [datePart, timePart] = entry.fullAirDateTime.split(" ");
+      const d = new Date(datePart + "T" + timePart + "Z");
+      if (!isNaN(d.getTime())) return d.getUTCHours();
+    } catch { /* fallback */ }
+  }
+  if (typeof entry?.airTime === "string") {
+    const m = entry.airTime.match(/^(\d{1,2}):/);
+    if (m) return Number(m[1]);
+  }
+  return null;
+}
+
+function bandForHour(hour) {
+  if (hour == null) return null;
+  return TIME_BANDS.find((b) => (b.start < b.end ? hour >= b.start && hour < b.end : hour >= b.start || hour < b.end)) || null;
+}
+
+// ── Group sorted entries into time-of-day bands ─────────────────────────────────
+function groupIntoBands(sortedEntries) {
+  const groups = TIME_BANDS.map((band) => ({ band, entries: [] }));
+  const unscheduled = [];
+  for (const entry of sortedEntries) {
+    const band = bandForHour(entryHourUTC(entry));
+    if (!band) {
+      unscheduled.push(entry);
+      continue;
+    }
+    groups.find((g) => g.band.id === band.id).entries.push(entry);
+  }
+  const nonEmpty = groups.filter((g) => g.entries.length > 0);
+  if (unscheduled.length > 0) nonEmpty.push({ band: null, entries: unscheduled });
+  return nonEmpty;
+}
+
+// ── "Now" marker: ticking clock, only active when viewing today ────────────────
+function useNowMarker(isToday) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    if (!isToday) return;
+    const id = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(id);
+  }, [isToday]);
+  if (!isToday) return null;
+  return now;
+}
+
+// ── Timeline entry row ────────────────────────────────────────────────────────
+function TimelineEntry({ entry, onSelect }) {
   const pic = entry?.poster || entry?.image || entry?.main_picture?.large || entry?.main_picture?.medium;
-  const airTime = entry?.airTime;
-  const airDate = entry?.airDate;
   const releaseStatus = entry?.releaseStatus;
   const statusColor = releaseStatusColor(releaseStatus);
+  const isUpcoming = String(releaseStatus || "").toLowerCase().includes("upcoming");
+  const timeLabel = entry?.airTime || (entry?.fullAirDateTime ? entry.fullAirDateTime.split(" ")[1]?.slice(0, 5) : null);
 
   return (
     <button
       type="button"
       onClick={() => onSelect?.(entry)}
-      className="group w-full text-left"
+      className="group flex w-full items-center gap-3 rounded-2xl border border-(--color-border-soft) bg-(--color-surface) p-2.25 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40"
     >
-      <div className="relative overflow-hidden rounded-2xl border border-(--color-border-soft) bg-(--color-surface) shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
-        <div className="relative aspect-2/3 w-full overflow-hidden bg-(--color-surface-muted)">
-          {pic ? (
-            <img
-              src={pic}
-              alt=""
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
-              <IconTv />
-            </div>
-          )}
-          <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/70 via-black/10 to-transparent" />
+      <div className="w-11 shrink-0 text-right">
+        <span className="block text-[12px] font-black tabular-nums leading-none text-(--color-text-primary)">
+          {timeLabel || "--:--"}
+        </span>
+        {entry?.fullAirDateTime && (
+          <span className="mt-0.5 block text-[8.5px] font-bold uppercase text-(--color-text-secondary)">UTC</span>
+        )}
+      </div>
 
-          {/* Episode badge top-right */}
-          {entry?.episodeNumber != null && (
-            <span className="absolute right-2 top-2 rounded-lg bg-primary px-1.5 py-0.5 text-[9px] font-black text-(--color-ink-strong)">
-              EP {entry.episodeNumber}
-            </span>
-          )}
+      <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-lg bg-(--color-surface-muted)">
+        {pic ? (
+          <img src={pic} alt="" className="h-full w-full object-cover" loading="lazy" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+            <IconTv />
+          </div>
+        )}
+        {entry?.episodeNumber != null && (
+          <span className="absolute bottom-0.5 right-0.5 rounded bg-primary px-1 py-px text-[7px] font-black text-(--color-ink-strong)">
+            EP {entry.episodeNumber}
+          </span>
+        )}
+      </div>
 
-          {/* Release status top-left */}
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-1 text-[13px] font-bold leading-tight text-(--color-text-primary)">
+          {entry?.title}
+        </p>
+        <div className="mt-1 flex items-center gap-1.5">
           {releaseStatus && statusColor && (
-            <span className={`absolute left-2 top-2 rounded-lg px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wide backdrop-blur-sm ${statusColor}`}>
+            <span className={`rounded-full px-1.75 py-0.5 text-[9.5px] font-bold ${statusColor}`}>
               {releaseStatus}
             </span>
           )}
-
-          {/* Bottom info */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 p-2.5">
-            <p className="line-clamp-2 text-[11px] font-bold leading-tight text-white drop-shadow">
-              {entry?.title}
-            </p>
-            {/* Air time / date */}
-            {(airTime || airDate) && (
-              <span className="mt-1 inline-flex items-center gap-1 text-[9px] font-semibold text-white/75">
-                <IconClock />
-                {airDate && airTime ? `${airDate} · ${airTime}` : airDate || airTime}
-              </span>
-            )}
-          </div>
-
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/90 text-(--color-ink-strong) shadow-lg">
-              <IconPlay />
-            </div>
-          </div>
+          {entry?.subStatus && (
+            <span className="rounded-full bg-(--color-surface-muted) px-1.75 py-0.5 text-[9.5px] font-bold text-(--color-text-secondary)">
+              {entry.subStatus}
+            </span>
+          )}
         </div>
       </div>
+
+      {isUpcoming && entry?.fullAirDateTime ? (
+        <div className="shrink-0 text-[10.5px] font-black tabular-nums text-primary">
+          <CountdownDisplay fullAirDateTime={entry.fullAirDateTime} compact />
+        </div>
+      ) : (
+        <div className="flex h-6.5 w-6.5 shrink-0 items-center justify-center rounded-full bg-(--color-surface-muted) text-(--color-text-secondary) transition-colors group-hover:bg-primary group-hover:text-(--color-ink-strong)">
+          <IconPlay />
+        </div>
+      )}
     </button>
+  );
+}
+
+// ── Vertical timeline for a day's entries, grouped by time-of-day band ─────────
+function ScheduleTimeline({ sortedEntries, isToday, onSelect }) {
+  const bandGroups = useMemo(() => groupIntoBands(sortedEntries), [sortedEntries]);
+  const now = useNowMarker(isToday);
+  const nowHour = now ? now.getUTCHours() : null;
+
+  // Index of the first band group that starts after "now" — the marker renders just before it.
+  const nowMarkerIndex = useMemo(() => {
+    if (!isToday || nowHour == null) return -1;
+    return bandGroups.findIndex((group, gi) => {
+      if (!group.band || gi === 0) return false;
+      return group.band.start <= group.band.end ? nowHour < group.band.start : false;
+    });
+  }, [bandGroups, isToday, nowHour]);
+
+  return (
+    <div className="relative">
+      <div className="absolute bottom-6 left-18.25 top-3 w-0.5 bg-linear-to-b from-(--color-border-soft) to-transparent" aria-hidden />
+      {bandGroups.map((group, gi) => {
+        const showNowBefore = gi === nowMarkerIndex;
+
+        return (
+          <div key={group.band?.id || `unscheduled-${gi}`}>
+            {showNowBefore && (
+              <div className="relative my-1 ml-18.25 flex items-center gap-2 pl-0">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary shadow-[0_0_0_4px_rgba(198,255,0,0.2)]" />
+                <span className="h-px flex-1 bg-primary/40" />
+                <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-primary">
+                  Now · {now?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC
+                </span>
+              </div>
+            )}
+            <div className="sticky top-0 z-2 flex items-center gap-2.5 bg-linear-to-b from-(--color-surface-soft) via-(--color-surface-soft)/80 to-transparent py-2.5">
+              <span className="relative z-2 ml-13.5 h-2.75 w-2.75 shrink-0 rounded-full border-2 border-(--color-border-soft) bg-(--color-surface)" />
+              <span className="text-[11px] font-black uppercase tracking-wide text-(--color-text-secondary)">
+                {group.band?.label || "Unscheduled"}
+              </span>
+              {group.band && (
+                <span className="text-[10px] tabular-nums text-(--color-text-secondary) opacity-70">{group.band.range}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2 py-0.5 pb-4 pl-18.25">
+              {group.entries.map((entry, i) => (
+                <TimelineEntry key={entry?.slug || entry?.id || i} entry={entry} onSelect={onSelect} />
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -185,7 +293,7 @@ function useCountdown(fullAirDateTime) {
   return timeLeft;
 }
 
-function CountdownDisplay({ fullAirDateTime }) {
+function CountdownDisplay({ fullAirDateTime, compact = false }) {
   const ms = useCountdown(fullAirDateTime);
   if (ms == null) return null;
   if (ms <= 0) return <span className="text-[11px] font-semibold text-emerald-500">Airing now / aired</span>;
@@ -200,10 +308,10 @@ function CountdownDisplay({ fullAirDateTime }) {
   if (d > 0) parts.push(`${d}d`);
   if (h > 0 || d > 0) parts.push(`${h}h`);
   if (m > 0 || h > 0 || d > 0) parts.push(`${m}m`);
-  parts.push(`${s}s`);
+  if (!compact || parts.length === 0) parts.push(`${s}s`);
 
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-mono font-semibold text-primary">
+    <span className={`inline-flex items-center gap-1 font-mono font-semibold text-primary ${compact ? "text-[10.5px]" : "text-[11px]"}`}>
       <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
         <circle cx="12" cy="12" r="9" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 7v5l3 3" />
       </svg>
@@ -248,27 +356,33 @@ function DetailDrawer({ entry, onClose, onWatch }) {
         </div>
 
         <div className="p-5">
-          <div className="flex gap-4">
-            <div className="relative h-[96px] w-[66px] shrink-0 overflow-hidden rounded-xl bg-(--color-surface-muted)">
-              {pic && <img src={pic} alt="" className="h-full w-full object-cover" loading="lazy" />}
+          <div className="relative flex gap-3.5">
+            <div className="relative h-32.5 w-23 shrink-0 overflow-hidden rounded-2xl bg-(--color-surface-muted) shadow-[0_12px_28px_-12px_rgba(0,0,0,0.5)]">
+              {pic ? (
+                <img src={pic} alt="" className="h-full w-full object-cover" loading="lazy" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-(--color-text-secondary)">
+                  <IconTv />
+                </div>
+              )}
+              {entry?.episodeNumber != null && (
+                <span className="absolute bottom-1.5 right-1.5 rounded-md bg-primary px-1.5 py-0.5 text-[9px] font-black text-(--color-ink-strong)">
+                  EP {entry.episodeNumber}
+                </span>
+              )}
             </div>
-            <div className="min-w-0 flex-1 pr-6">
-              <h2 className="line-clamp-3 text-[15px] font-bold leading-snug text-(--color-text-primary)">
+            <div className="min-w-0 flex-1 pt-0.5 pr-7">
+              <h2 className="line-clamp-3 text-[17px] font-black leading-tight tracking-tight text-(--color-text-primary)">
                 {entry?.title}
               </h2>
-              <div className="mt-1.5 flex flex-wrap gap-1">
-                {entry?.episodeNumber != null && (
-                  <span className="rounded-lg bg-primary/15 px-2 py-0.5 text-[10px] font-bold text-primary">
-                    EP {entry.episodeNumber}
-                  </span>
-                )}
+              <div className="mt-2 flex flex-wrap gap-1.25">
                 {releaseStatus && statusColor && (
-                  <span className={`rounded-lg px-2 py-0.5 text-[10px] font-bold ${statusColor}`}>
+                  <span className={`rounded-full px-2 py-0.75 text-[9.5px] font-black ${statusColor}`}>
                     {releaseStatus}
                   </span>
                 )}
                 {subStatus && (
-                  <span className="rounded-lg bg-(--color-surface-muted) px-2 py-0.5 text-[10px] font-semibold text-(--color-text-secondary)">
+                  <span className="rounded-full bg-(--color-surface-muted) px-2 py-0.75 text-[9.5px] font-black text-(--color-text-secondary)">
                     {subStatus}
                   </span>
                 )}
@@ -277,7 +391,7 @@ function DetailDrawer({ entry, onClose, onWatch }) {
             <button
               type="button"
               onClick={onClose}
-              className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-(--color-surface-muted) text-(--color-text-secondary) hover:text-(--color-text-primary) transition"
+              className="absolute right-0 top-0 flex h-7 w-7 items-center justify-center rounded-full bg-(--color-surface-muted) text-(--color-text-secondary) hover:text-(--color-text-primary) transition"
             >
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -287,18 +401,40 @@ function DetailDrawer({ entry, onClose, onWatch }) {
 
           {/* Air time + countdown */}
           {(displayTime || entry?.fullAirDateTime) && (
-            <div className="mt-3.5 overflow-hidden rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-3 py-2.5">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-(--color-border-soft) bg-linear-to-br from-primary/9 to-(--color-surface) px-4 py-3.5">
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                {displayTime && (
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-(--color-text-secondary)">
-                    <IconClock />
-                    {displayTime}
-                  </span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9.5px] font-black uppercase tracking-wide text-(--color-text-secondary)">Airs</span>
+                  {displayTime && (
+                    <span className="inline-flex items-center gap-1.5 text-[13px] font-bold text-(--color-text-primary)">
+                      {displayTime}
+                    </span>
+                  )}
+                </div>
+                {entry?.fullAirDateTime && (
+                  <div className="text-[14px]">
+                    <CountdownDisplay fullAirDateTime={entry.fullAirDateTime} />
+                  </div>
                 )}
-                {entry?.fullAirDateTime && <CountdownDisplay fullAirDateTime={entry.fullAirDateTime} />}
               </div>
             </div>
           )}
+
+          {/* Meta stat row */}
+          <div className="mt-3.5 grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2 py-2.5 text-center">
+              <p className="text-[8.5px] font-black uppercase tracking-wide text-(--color-text-secondary)">Episode</p>
+              <p className="mt-0.5 text-[13px] font-black text-(--color-text-primary)">{entry?.episodeNumber ?? "—"}</p>
+            </div>
+            <div className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2 py-2.5 text-center">
+              <p className="text-[8.5px] font-black uppercase tracking-wide text-(--color-text-secondary)">Status</p>
+              <p className="mt-0.5 line-clamp-1 text-[13px] font-black text-(--color-text-primary)">{releaseStatus || "—"}</p>
+            </div>
+            <div className="rounded-xl border border-(--color-border-soft) bg-(--color-surface-muted) px-2 py-2.5 text-center">
+              <p className="text-[8.5px] font-black uppercase tracking-wide text-(--color-text-secondary)">Track</p>
+              <p className="mt-0.5 text-[13px] font-black text-(--color-text-primary)">{subStatus || "—"}</p>
+            </div>
+          </div>
 
           <div className="mt-4 flex gap-2">
             <button
@@ -526,21 +662,11 @@ export default function LifeSyncAnimeSchedule() {
           {busy && !schedule ? (
             <SkeletonCards count={8} />
           ) : sortedEntries.length > 0 ? (
-            <MotionDiv
-              className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-              variants={lifeSyncCardGridContainer}
-              initial="hidden"
-              animate="show"
-            >
-              {sortedEntries.map((entry, i) => (
-                <MotionDiv key={entry?.slug || entry?.id || i} variants={lifeSyncCardEnterVariants}>
-                  <ScheduleCard
-                    entry={entry}
-                    onSelect={setSelected}
-                  />
-                </MotionDiv>
-              ))}
-            </MotionDiv>
+            <ScheduleTimeline
+              sortedEntries={sortedEntries}
+              isToday={activeDay === todayKey}
+              onSelect={setSelected}
+            />
           ) : (
             <div className="rounded-2xl border border-(--color-border-soft) bg-(--color-surface) px-6 py-14 text-center">
               {busy ? (
