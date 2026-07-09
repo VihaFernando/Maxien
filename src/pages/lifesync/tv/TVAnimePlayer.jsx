@@ -86,7 +86,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
             const qualities = (Array.isArray(pack?.qualities) ? pack.qualities : [])
                 .filter(q => q?.url)
                 .map((q, i) => ({ id: q.id || q.label || `q${i}`, label: q.label || q.id || `Quality ${i + 1}`, url: toAbs(q.url) }))
-            return { title: ep.title, iframeUrl: iframeFromPack, videoUrl: toAbs(pick.url), textTracks, qualities, mirrors: meta.mirrors || [], provider: meta.provider ?? null, audioAvailability }
+            return { title: ep.title, iframeUrl: iframeFromPack, videoUrl: toAbs(pick.url), videoType: pick.type === 'hls' || pick.type === 'mp4' ? pick.type : undefined, textTracks, qualities, mirrors: meta.mirrors || [], provider: meta.provider ?? null, audioAvailability }
         }
         if (iframeFromPack) return { title: ep.title, iframeUrl: iframeFromPack, videoUrl: null, textTracks: [], qualities: [], mirrors: meta.mirrors || [], provider: meta.provider ?? null, audioAvailability }
         return { title: ep.title, iframeUrl: null, videoUrl: null, textTracks: [], qualities: [], audioAvailability }
@@ -325,6 +325,7 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
                     <AdvancedVideoPlayer
                         key={`${stream.videoUrl}|${audioType}`}
                         src={stream.videoUrl}
+                        srcType={stream.videoType}
                         textTracks={activeTextTracks}
                         qualities={stream.qualities || []}
                         autoPlay

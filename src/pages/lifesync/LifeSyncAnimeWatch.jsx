@@ -204,6 +204,7 @@ export default function LifeSyncAnimeWatch() {
                     ...metaFields,
                     title: epObj?.title || base.title,
                     videoUrl: rawUrl,
+                    videoType: pick.type === 'hls' || pick.type === 'mp4' ? pick.type : undefined,
                     iframeUrl: iframeFromPack,
                     textTracks,
                     qualities,
@@ -792,6 +793,7 @@ export default function LifeSyncAnimeWatch() {
                                                 <AdvancedVideoPlayer
                                                     key={stream.videoUrl}
                                                     src={stream.videoUrl}
+                                                    srcType={stream.videoType}
                                                     preload={videoPreload}
                                                     textTracks={stream.textTracks || []}
                                                     qualities={stream.qualities || []}

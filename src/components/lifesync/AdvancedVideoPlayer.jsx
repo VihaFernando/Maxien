@@ -84,6 +84,13 @@ function videoSupportsNativeHls(video) {
  */
 export default function AdvancedVideoPlayer({
     src,
+    /**
+     * Authoritative source kind from the API ('hls' | 'mp4'). When set, the
+     * player trusts it instead of guessing from the URL  extensionless HLS
+     * CDN URLs handed straight to <video src> make Chrome fail with
+     * DEMUXER_ERROR_COULD_NOT_PARSE.
+     */
+    srcType,
     onEnded,
     onError,
     onPrevEpisode,
@@ -144,6 +151,10 @@ export default function AdvancedVideoPlayer({
     const skipFlashTimer = useRef(null)
     const volumeFlashTimer = useRef(null)
     const hlsRef = useRef(null)
+    // Src currently being retried through hls.js after a direct <video src>
+    // demux failure  the native error handler must not show the error screen
+    // for it while the fallback is in flight.
+    const suppressNativeErrorRef = useRef(null)
     const isSeekingRef = useRef(false)
     const dragTimeRef = useRef(0)
     const bufferingDelayTimer = useRef(null)
@@ -292,6 +303,7 @@ export default function AdvancedVideoPlayer({
 
         let hls = null
         let cancelled = false
+        let triedHlsFallback = false
         const destroyHls = () => {
             if (hls) {
                 try {
@@ -302,17 +314,11 @@ export default function AdvancedVideoPlayer({
             }
         }
 
-        const attachSource = async () => {
-            if (isHlsUrl(s)) {
-                if (videoSupportsNativeHls(v)) {
-                    v.src = s
-                    v.load()
-                    return
-                }
-
+        // Attach via hls.js (MSE). Returns false when hls.js can't run here.
+        const attachHls = async () => {
                 try {
                     const { default: Hls } = await import('hls.js')
-                    if (cancelled) return
+                    if (cancelled) return true
 
                     if (Hls.isSupported()) {
                         // Fail fast instead of hanging: hls.js default policies allow
@@ -371,18 +377,43 @@ export default function AdvancedVideoPlayer({
                         hls.loadSource(s)
                         hls.attachMedia(v)
                         hlsRef.current = hls
-                        return
+                        return true
                     }
                 } catch {
-                    // fallback to direct source assignment below
+                    // hls.js unavailable  caller falls back to direct src
                 }
+                return false
+        }
 
+        // Direct playback that fails to demux gets one silent retry through
+        // hls.js  covers HLS sources the API mislabels and extensionless CDN
+        // URLs (Chrome: DEMUXER_ERROR_COULD_NOT_PARSE).
+        const onDirectError = () => {
+            const code = v.error?.code
+            if (cancelled || hls || triedHlsFallback) return
+            if (code !== 3 && code !== 4) return // MEDIA_ERR_DECODE / SRC_NOT_SUPPORTED
+            triedHlsFallback = true
+            suppressNativeErrorRef.current = s
+            void attachHls().then(ok => {
+                if (!ok && !cancelled) {
+                    suppressNativeErrorRef.current = null
+                    setBuffering(false)
+                    setMediaError(prev => prev ?? { forSrc: s, message: v.error?.message || 'Video playback error' })
+                }
+            })
+        }
+
+        const attachSource = async () => {
+            if (srcType === 'hls' || isHlsUrl(s)) {
+                if (videoSupportsNativeHls(v)) {
+                    v.src = s
+                    v.load()
+                    return
+                }
+                if (await attachHls()) return
                 if (cancelled) return
-                v.src = s
-                v.load()
-                return
             }
-
+            v.addEventListener('error', onDirectError)
             v.src = s
             v.load()
         }
@@ -391,13 +422,15 @@ export default function AdvancedVideoPlayer({
 
         return () => {
             cancelled = true
+            v.removeEventListener('error', onDirectError)
             if (seekOnReady) v.removeEventListener('loadedmetadata', seekOnReady)
+            if (suppressNativeErrorRef.current === s) suppressNativeErrorRef.current = null
             destroyHls()
             v.removeAttribute('src')
             v.load()
         }
     // trackKey intentionally excluded  subtitle track changes must NOT reload the stream
-    }, [activeSrc, retryNonce])
+    }, [activeSrc, srcType, retryNonce])
 
     // Switch to a specific quality variant, remembering the current position
     const changeQuality = useCallback((url) => {
@@ -430,6 +463,9 @@ export default function AdvancedVideoPlayer({
         }
         const onErr = () => {
             const err = v.error
+            // Direct-src demux failure being retried through hls.js  stay on
+            // the buffering state instead of flashing the error screen.
+            if (suppressNativeErrorRef.current === activeSrc) return
             clearBuffering()
             // hls.js handles MSE errors itself; this catches direct-src failures
             if (err) setMediaError(prev => prev ?? { forSrc: activeSrc, message: err.message || 'Video playback error' })
