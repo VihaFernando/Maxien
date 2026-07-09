@@ -75,7 +75,9 @@ export function TVAnimePlayer({ animeId, episodes = [], initialEpisodeIndex = 0,
         const audioAvailability = meta.audioAvailability && typeof meta.audioAvailability === 'object'
             ? { sub: !!meta.audioAvailability.sub, dub: !!meta.audioAvailability.dub }
             : null
-        if (pick?.url) {
+        // The API ignores preferEmbed and still returns direct sources  honor
+        // the setting client-side by using the provider iframe when available.
+        if (pick?.url && !(embed && iframeFromPack)) {
             const rawSubs = Array.isArray(pack?.subtitles) ? pack.subtitles : []
             const textTracks = rawSubs.map((s, i) => ({
                 src: toAbs(s?.url),

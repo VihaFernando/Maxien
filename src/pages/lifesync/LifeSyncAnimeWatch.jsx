@@ -187,7 +187,10 @@ export default function LifeSyncAnimeWatch() {
             const pick = sources.find(s => s?.type === 'hls') || sources.find(s => s?.type === 'mp4') || sources[0]
             const rawUrl = pick?.url ? toAbs(pick.url) : null
 
-            if (rawUrl) {
+            // The API ignores preferEmbed and still returns direct sources
+            // honor the setting client-side by falling through to the iframe
+            // branch whenever the provider embed is available.
+            if (rawUrl && !(preferEmbed && iframeFromPack)) {
                 const rawSubs = Array.isArray(pack?.subtitles) ? pack.subtitles : []
                 const textTracks = rawSubs.map((s, i) => ({
                     src: toAbs(s?.url),
