@@ -2,6 +2,9 @@
  * LifeSync backend API (JWT session). See API-AUTH.md / API-PLUGINS.md.
  * Independent of Supabase; token stored as `lifesync_token`.
  */
+import { decode as msgpackDecode } from '@msgpack/msgpack'
+
+const MSGPACK_CONTENT_TYPE = 'application/msgpack'
 
 export const LIFESYNC_TOKEN_KEY = 'lifesync_token'
 
@@ -212,6 +215,11 @@ export function lifesyncOAuthStartUrl(provider) {
 }
 
 async function parseResponse(res) {
+    // gzip is handled transparently by the browser; msgpack is not, so decode it by content-type.
+    if ((res.headers.get('content-type') || '').includes(MSGPACK_CONTENT_TYPE)) {
+        const buf = await res.arrayBuffer()
+        return buf.byteLength ? msgpackDecode(new Uint8Array(buf)) : null
+    }
     const text = await res.text()
     if (!text) return null
     try {
@@ -229,6 +237,11 @@ export async function lifesyncFetch(path, options = {}) {
     const { json, token, skipAuth, headers: initHeaders, ...rest } = options
     const base = getLifesyncApiBase()
     const headers = new Headers(initHeaders)
+
+    // Prefer MessagePack responses (smaller); server falls back to JSON if it doesn't support it.
+    if (!headers.has('Accept')) {
+        headers.set('Accept', `${MSGPACK_CONTENT_TYPE}, application/json`)
+    }
 
     if (json !== undefined) {
         headers.set('Content-Type', 'application/json')
