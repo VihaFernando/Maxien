@@ -85,19 +85,25 @@ const TIME_BANDS = [
   { id: "night", label: "Night", range: "23:00 – 05:59", start: 23, end: 6 },
 ];
 
-function entryHourUTC(entry) {
-  if (entry?.fullAirDateTime) {
-    try {
-      const [datePart, timePart] = entry.fullAirDateTime.split(" ");
-      const d = new Date(datePart + "T" + timePart + "Z");
-      if (!isNaN(d.getTime())) return d.getUTCHours();
-    } catch { /* fallback */ }
-  }
-  if (typeof entry?.airTime === "string") {
-    const m = entry.airTime.match(/^(\d{1,2}):/);
-    if (m) return Number(m[1]);
-  }
-  return null;
+// fullAirDateTime is a true UTC instant ("YYYY-MM-DD HH:MM:SS"). Parse it and read the
+// hour in the viewer's local zone so bands/labels match anineko's shown (local) time.
+function entryDate(entry) {
+  if (!entry?.fullAirDateTime) return null;
+  const [datePart, timePart] = entry.fullAirDateTime.split(" ");
+  const d = new Date(datePart + "T" + timePart + "Z");
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function entryHourLocal(entry) {
+  const d = entryDate(entry);
+  return d ? d.getHours() : null;
+}
+
+// Local "HH:MM" for display, e.g. 23:44.
+function entryLocalTimeLabel(entry) {
+  const d = entryDate(entry);
+  if (!d) return null;
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 function bandForHour(hour) {
