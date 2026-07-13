@@ -116,7 +116,7 @@ function groupIntoBands(sortedEntries) {
   const groups = TIME_BANDS.map((band) => ({ band, entries: [] }));
   const unscheduled = [];
   for (const entry of sortedEntries) {
-    const band = bandForHour(entryHourUTC(entry));
+    const band = bandForHour(entryHourLocal(entry));
     if (!band) {
       unscheduled.push(entry);
       continue;
@@ -146,7 +146,7 @@ function TimelineEntry({ entry, onSelect }) {
   const releaseStatus = entry?.releaseStatus;
   const statusColor = releaseStatusColor(releaseStatus);
   const isUpcoming = String(releaseStatus || "").toLowerCase().includes("upcoming");
-  const timeLabel = entry?.airTime || (entry?.fullAirDateTime ? entry.fullAirDateTime.split(" ")[1]?.slice(0, 5) : null);
+  const timeLabel = entryLocalTimeLabel(entry);
 
   return (
     <button
@@ -158,9 +158,6 @@ function TimelineEntry({ entry, onSelect }) {
         <span className="block text-[12px] font-black tabular-nums leading-none text-(--color-text-primary)">
           {timeLabel || "--:--"}
         </span>
-        {entry?.fullAirDateTime && (
-          <span className="mt-0.5 block text-[8.5px] font-bold uppercase text-(--color-text-secondary)">UTC</span>
-        )}
       </div>
 
       <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-lg bg-(--color-surface-muted)">
@@ -213,7 +210,7 @@ function TimelineEntry({ entry, onSelect }) {
 function ScheduleTimeline({ sortedEntries, isToday, onSelect }) {
   const bandGroups = useMemo(() => groupIntoBands(sortedEntries), [sortedEntries]);
   const now = useNowMarker(isToday);
-  const nowHour = now ? now.getUTCHours() : null;
+  const nowHour = now ? now.getHours() : null;
 
   // Index of the first band group that starts after "now" — the marker renders just before it.
   const nowMarkerIndex = useMemo(() => {
@@ -237,7 +234,7 @@ function ScheduleTimeline({ sortedEntries, isToday, onSelect }) {
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-primary shadow-[0_0_0_4px_rgba(198,255,0,0.2)]" />
                 <span className="h-px flex-1 bg-primary/40" />
                 <span className="shrink-0 text-[10px] font-black uppercase tracking-wide text-primary">
-                  Now · {now?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "UTC" })} UTC
+                  Now · {now?.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })}
                 </span>
               </div>
             )}
@@ -265,14 +262,14 @@ function ScheduleTimeline({ sortedEntries, isToday, onSelect }) {
 // ── Format full datetime for display ──────────────────────────────────────────
 function formatAirDateTime(fullAirDateTime, airDate, airTime) {
   if (fullAirDateTime) {
-    // "2026-05-18 06:30:00" → "May 18, 2026 · 06:30"
+    // UTC instant "2026-05-18 06:30:00" → localized "May 18, 2026 · 12:00"
     try {
       const [datePart, timePart] = fullAirDateTime.split(" ");
       const d = new Date(datePart + "T" + timePart + "Z");
       if (!isNaN(d.getTime())) {
-        const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-        const timeStr = timePart.slice(0, 5);
-        return `${dateStr} · ${timeStr} UTC`;
+        const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        const timeStr = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+        return `${dateStr} · ${timeStr}`;
       }
     } catch { /* fallback */ }
   }
