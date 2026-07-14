@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
 import { supabase } from "../lib/supabase"
-import LifeSyncIntegration from "./LifeSyncIntegration"
 
 const GitHubIcon = ({ className }) => (
     <svg className={className} fill="currentColor" viewBox="0 0 24 24">
@@ -60,13 +59,11 @@ export default function GithubIntegrations({ embedded = false }) {
                             Integrations
                         </h1>
                         <p className="mt-1 max-w-xl text-[12px] text-[var(--mx-color-86868b)]">
-                            LifeSync and GitHub connections. Use the sidebar <span className="font-semibold text-[var(--mx-color-1d1d1f)]">GitHub</span> page for repositories, commits, and issues.
+                            GitHub connection. Use the sidebar <span className="font-semibold text-[var(--mx-color-1d1d1f)]">GitHub</span> page for repositories, commits, and issues.
                         </p>
                     </div>
                 </div>
             )}
-
-            <LifeSyncIntegration embedded={embedded} />
 
             <div className="rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] p-4 shadow-sm sm:rounded-[24px] sm:p-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">

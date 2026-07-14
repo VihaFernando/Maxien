@@ -15,51 +15,15 @@ const SpotlightIcon = ({ className }) => (
     </svg>
 )
 
-const LifeSyncIcon = ({ className }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M4 12a8 8 0 0113.657-5.657M20 12a8 8 0 01-13.657 5.657" />
-        <path d="M8 5H4V1M16 19h4v4" />
-    </svg>
-)
-
-const TVModeIcon = ({ className }) => (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="4" width="20" height="14" rx="3" />
-        <path d="M8 20h8M12 18v2" />
-        <path strokeLinecap="round" d="M9.5 10.5l5 3-5 3v-6z" fill="currentColor" stroke="none" />
-    </svg>
-)
-
-export default function AIShortcutHint({ onOpen, onOpenSpotlight, onOpenLifeSync, onOpenTVMode }) {
+export default function AIShortcutHint({ onOpen, onOpenSpotlight }) {
     const [isMac] = useState(() => /Mac|iPhone|iPad|iPod/.test(navigator.platform))
     const [activeIndex, setActiveIndex] = useState(0)
 
     const hints = useMemo(() => {
         const aiShortcut = isMac ? ["⌘", "/"] : ["Alt", "C"]
         const spotlightShortcut = isMac ? ["⌘", "K"] : ["Ctrl", "K"]
-        const tvShortcut = ["⇧", "Tab"]
 
         return [
-            {
-                id: "tvmode",
-                title: "LifeSync TV Mode",
-                description: onOpenTVMode
-                    ? "Jump into the full-screen TV experience  navigate with keyboard or gamepad."
-                    : "Enable LifeSync in Settings → Integrations to unlock TV Mode.",
-                actionLabel: onOpenTVMode ? "Launch TV Mode" : "Enable in Preferences",
-                icon: TVModeIcon,
-                shortcutParts: onOpenTVMode ? tvShortcut : [],
-                onClick: onOpenTVMode ?? onOpenLifeSync ?? (() => {}),
-            },
-            {
-                id: "lifesync",
-                title: "Introducing LifeSync",
-                description: "Manage plugins, OAuth links, and your backend session under Settings → Integrations.",
-                actionLabel: "Open Integrations",
-                icon: LifeSyncIcon,
-                shortcutParts: [],
-                onClick: onOpenLifeSync ?? (() => {}),
-            },
             {
                 id: "ai",
                 title: "Introducing AI Chat",
@@ -79,7 +43,7 @@ export default function AIShortcutHint({ onOpen, onOpenSpotlight, onOpenLifeSync
                 onClick: onOpenSpotlight || onOpen,
             },
         ]
-    }, [isMac, onOpen, onOpenSpotlight, onOpenLifeSync, onOpenTVMode])
+    }, [isMac, onOpen, onOpenSpotlight])
 
     useEffect(() => {
         const timer = setInterval(() => {

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { useLifeSync } from "../context/LifeSyncContext"
 import useTimeoutRegistry from "../hooks/useTimeoutRegistry"
 
 export default function Signup() {
@@ -14,7 +13,6 @@ export default function Signup() {
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
     const { signUp, signInWithGoogle, user, loading: authLoading } = useAuth()
-    const { lifeSyncEnsureAccount } = useLifeSync()
     const { registerTimeout } = useTimeoutRegistry()
 
     useEffect(() => {
@@ -28,34 +26,14 @@ export default function Signup() {
         setError("")
         setSuccess("")
         if (password !== confirmPassword) return setError("Passwords do not match")
-        if (password.length < 8) return setError("Password must be at least 8 characters (required for LifeSync)")
+        if (password.length < 8) return setError("Password must be at least 8 characters")
         setLoading(true)
         try {
             const { error } = await signUp(email, password, fullName)
             if (error) {
                 setError(error.message)
             } else {
-                try {
-                    await lifeSyncEnsureAccount(
-                        email.trim(),
-                        password,
-                        fullName.trim() || undefined
-                    )
-                    setSuccess("Success! Your Maxien and LifeSync accounts are ready.")
-                } catch (lsErr) {
-                    setSuccess(
-                        "Maxien account created. LifeSync setup failedyou can link it when you sign in with the same email and password."
-                    )
-                    try {
-                        sessionStorage.setItem(
-                            'maxien_lifesync_link_notice',
-                            lsErr.message ||
-                                'LifeSync did not complete. Sign in with email and password to retry.'
-                        )
-                    } catch {
-                        // ignore
-                    }
-                }
+                setSuccess("Success! Your Maxien account is ready.")
                 registerTimeout(() => navigate("/login"), 2200)
             }
         } catch {

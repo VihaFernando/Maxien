@@ -1,9 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate, Outlet, Link, useLocation } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { useLifeSync } from "../context/LifeSyncContext"
-import { getLifesyncToken, isLifeSyncAnimeNavVisible } from "../lib/lifesyncApi"
-import { isLifeSyncAdmin } from "../lib/lifeSyncRoles"
 import { listMyWorkplaces, getWorkplacesByIds } from "../lib/workplaces"
 import {
     FaHome,
@@ -16,22 +13,9 @@ import {
     FaStickyNote,
     FaDumbbell,
     FaGithub,
-    FaGamepad,
-    FaFilm,
-    FaUserShield,
     FaChartPie,
 } from "react-icons/fa"
 import AIShortcutHint from "../components/AIShortcutHint"
-import NotificationBell from "../components/lifesync/NotificationBell"
-import { FaRss } from "react-icons/fa"
-import { TVModeProvider } from "../context/TVModeContext"
-import { useTVModeContext } from "../hooks/useTVModeContext"
-import { TVModePortal } from "./lifesync/LifeSyncTVMode"
-import { TVModeStartPrompt } from "../components/lifesync/TVModeStartPrompt"
-import { setLifeSyncInputSource } from "../lib/lifeSyncKeyboardGamepad"
-import useControllerSupportEnabled from "../hooks/useControllerSupportEnabled"
-import useLifeSyncGamepadInput from "../hooks/useLifeSyncGamepadInput"
-import { XBOX_GAMEPAD_BUTTONS } from "../lib/lifeSyncControllerInput"
 
 const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-chat"))
 const openSpotlight = () => window.dispatchEvent(new CustomEvent("maxien:open-command-palette"))
@@ -64,125 +48,30 @@ function WorkplaceTabLink({ to, label, active, onClick }) {
     )
 }
 
-/**
- * Listens for START button (controller) or Shift+T (keyboard) to enter TV mode
- * (from outside TV mode only). Inside TV mode, START is handled by
- * LifeSyncTVModeInner with anti-spam.
- */
-function TVStartButtonListener() {
-    const controllerEnabled = useControllerSupportEnabled()
-    const { tvActive, enterTV } = useTVModeContext()
-    useLifeSyncGamepadInput({
-        enabled: controllerEnabled && !tvActive,
-        handlers: {
-            [XBOX_GAMEPAD_BUTTONS.START]: () => { void enterTV() },
-        },
-    })
-
-    useEffect(() => {
-        if (tvActive) return
-        const onKeyDown = (event) => {
-            if (!event.shiftKey || event.code !== 'Tab') return
-            if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return
-            const tag = String(event.target?.tagName || '').toLowerCase()
-            if (tag === 'input' || tag === 'textarea' || tag === 'select' || event.target?.isContentEditable) return
-            event.preventDefault()
-            setLifeSyncInputSource('keyboard')
-            void enterTV()
-        }
-        window.addEventListener('keydown', onKeyDown)
-        return () => window.removeEventListener('keydown', onKeyDown)
-    }, [tvActive, enterTV])
-
-    return null
-}
-
-/** Renders the TV mode portal when active. Must be inside TVModeProvider. */
-function TVModeGate() {
-    const { tvActive, exitTV } = useTVModeContext()
-    if (!tvActive) return null
-    return <TVModePortal onExit={exitTV} />
-}
-
 export default function Dashboard() {
-    return (
-        <TVModeProvider>
-            <DashboardInner />
-            <TVStartButtonListener />
-            <TVModeGate />
-            <TVModeStartPromptWrapper />
-        </TVModeProvider>
-    )
-}
-
-function TVModeStartPromptWrapper() {
-    const { tvActive } = useTVModeContext()
-    return <TVModeStartPrompt tvActive={tvActive} />
-}
-
-function DashboardInner() {
     const { user, loading, signOut } = useAuth()
-    const {
-        lifeSyncLogout,
-        isLifeSyncConnected,
-        lifeSyncLoading,
-        lifeSyncUser,
-        lifeSyncBroadcast,
-        dismissLifeSyncBroadcast,
-    } = useLifeSync()
-    const { enterTV } = useTVModeContext()
     const navigate = useNavigate()
     const location = useLocation()
-    const openLifeSyncSettings = useCallback(() => {
-        navigate("/dashboard/profile?tab=integrations")
-    }, [navigate])
-    const openTVMode = useCallback(() => { void enterTV() }, [enterTV])
 
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [workspaceMode, setWorkspaceMode] = useState("personal")
     const [workplaces, setWorkplaces] = useState([])
     const [selectedWorkplaceId, setSelectedWorkplaceId] = useState("")
-    const [lifeSyncNotice, setLifeSyncNotice] = useState(() => {
-        try {
-            const msg = sessionStorage.getItem("maxien_lifesync_link_notice")
-            if (msg) {
-                sessionStorage.removeItem("maxien_lifesync_link_notice")
-                return msg
-            }
-        } catch {
-            /* ignore */
-        }
-        return ""
-    })
-
-    const lifeSyncGamesActive = location.pathname.startsWith("/dashboard/lifesync/games")
-    const lifeSyncAnimeActive = location.pathname.startsWith("/dashboard/lifesync/anime")
-    const isLifeSyncRoute = location.pathname.startsWith("/dashboard/lifesync")
-    const hideSidebarChrome =
-        location.pathname.startsWith("/dashboard/lifesync/anime/anime/watch/") ||
-        location.pathname.startsWith("/dashboard/lifesync/anime/manga/read/")
-    const showLifeSyncSidebar = isLifeSyncConnected || (lifeSyncLoading && Boolean(getLifesyncToken()))
-    const showLifeSyncAnimeLink = isLifeSyncAnimeNavVisible(lifeSyncUser?.preferences)
-    const lifeSyncSidebarSceneClass = lifeSyncGamesActive || lifeSyncAnimeActive ? "dashboard-sidebar-scene" : ""
 
     const isProfileRoute = location.pathname === "/dashboard/profile"
 
     /** Profile/Settings needs a flex column + min-h-0 so nested scroll works; other dashboard pages keep the original outlet box so padding/layout stay unchanged. */
     const contentWrapClass = useMemo(
         () => {
-            const padded = isLifeSyncRoute ? "" : "px-4 sm:px-8 lg:px-10 py-6 sm:py-8"
             const base = isProfileRoute ? "flex w-full min-h-0 flex-1 flex-col " : "w-full flex-1 "
-            return `${base}${padded}`
+            return `${base}px-4 sm:px-8 lg:px-10 py-6 sm:py-8`
         },
-        [isLifeSyncRoute, isProfileRoute],
+        [isProfileRoute],
     )
 
     const workplaceId = location.pathname.match(/\/workplaces\/([^/?]+)/)?.[1] || ""
     const currentTab = new URLSearchParams(location.search).get("tab") || "profile"
     const isWorkplaceRoute = location.pathname.startsWith("/dashboard/workplaces")
-    /** URL is source of truth on `/workplaces/:id`; avoid effect-driven setState sync. */
-    // `workplaceId` can come from route params; fall back to last selection.
-    // Kept inline where needed to avoid unused-var lint failures.
     const isWorkplaceMode = Boolean(workplaceId) || workspaceMode === "workplace"
 
     useEffect(() => {
@@ -244,11 +133,8 @@ function DashboardInner() {
         ? profileName.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
         : user?.email?.[0]?.toUpperCase() || "U"
 
-    /** From LifeSync `/me` roles; also shown in Workplace sidebar (Admin was previously personal-only). */
-    const showLifeSyncAdminLink = useMemo(() => isLifeSyncAdmin(lifeSyncUser), [lifeSyncUser])
-
-    const personalLinks = useMemo(() => {
-        const base = [
+    const personalLinks = useMemo(() => (
+        [
             { to: "/dashboard", icon: FaHome, label: "Overview" },
             { to: "/dashboard/tasks", icon: FaCheckSquare, label: "Tasks" },
             { to: "/dashboard/projects", icon: FaFolder, label: "Projects" },
@@ -260,8 +146,7 @@ function DashboardInner() {
             { to: "/dashboard/github", icon: FaGithub, label: "GitHub" },
             { to: "/dashboard/ai-assistant", icon: FaBrain, label: "AI Assistant" },
         ]
-        return base
-    }, [])
+    ), [])
 
     const selectedWorkplace = workplaces.find((item) => item.id === selectedWorkplaceId) || null
 
@@ -291,7 +176,6 @@ function DashboardInner() {
     }
 
     const handleSignOut = async () => {
-        lifeSyncLogout()
         await signOut()
         navigate("/login")
     }
@@ -426,17 +310,13 @@ function DashboardInner() {
 
     return (
         <div className={`min-h-screen flex font-sans ${isWorkplaceMode || isWorkplaceRoute ? "workplace-theme-surface" : ""}`}>
-            {!hideSidebarChrome && (
-            <aside className={`dashboard-sidebar-surface ${lifeSyncSidebarSceneClass} z-20 w-[240px] hidden lg:flex flex-col border-r sticky top-0 h-screen`}>
+            <aside className="dashboard-sidebar-surface z-20 w-[240px] hidden lg:flex flex-col border-r sticky top-0 h-screen">
                 <div className="px-5 py-6 overflow-y-auto hide-scrollbar">
                     <div className="flex items-center gap-2.5 mb-5">
                         <div className="w-8 h-8 flex-shrink-0">
                             <img src="/logo.svg" alt="Maxien logo" className="w-full h-full" />
                         </div>
                         <span className="text-[var(--color-text-primary)] font-bold text-[16px] tracking-tight">Maxien</span>
-                        <div className="ml-auto">
-                            <NotificationBell />
-                        </div>
                     </div>
 
                     {renderWorkspaceSwitcher()}
@@ -445,31 +325,10 @@ function DashboardInner() {
                         {isWorkplaceMode ? "Workplace" : "Platform"}
                     </p>
                     {renderPlatformNav()}
-
-                    {!isWorkplaceMode && showLifeSyncSidebar && (
-                        <div className="mt-3">
-                            <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2 px-2">LifeSync</p>
-                            <nav className="space-y-0.5">
-                                <SidebarLink to="/dashboard/feed" icon={FaRss} label="Activity" active={isActive("/dashboard/feed")} />
-                                <SidebarLink to="/dashboard/lifesync/games" icon={FaGamepad} label="Games" active={lifeSyncGamesActive} />
-                                {showLifeSyncAnimeLink && (
-                                    <SidebarLink to="/dashboard/lifesync/anime" icon={FaFilm} label="Anime" active={lifeSyncAnimeActive} />
-                                )}
-                                {showLifeSyncAdminLink && (
-                                    <SidebarLink
-                                        to="/dashboard/admin"
-                                        icon={FaUserShield}
-                                        label="Admin"
-                                        active={isActive("/dashboard/admin")}
-                                    />
-                                )}
-                            </nav>
-                        </div>
-                    )}
                 </div>
 
                 <div className="mt-auto px-4 pb-4">
-                    <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} onOpenTVMode={isLifeSyncConnected ? openTVMode : null} />
+                    <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} />
                     <div className="flex items-center gap-2 mt-2 px-1 py-1.5 rounded-xl hover:bg-[var(--mx-color-f5f5f7)] transition-colors">
                         <button
                             type="button"
@@ -497,14 +356,12 @@ function DashboardInner() {
                     </div>
                 </div>
             </aside>
-            )}
 
-            {sidebarOpen && !hideSidebarChrome && (
+            {sidebarOpen && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-md z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
             )}
 
-            {!hideSidebarChrome && (
-            <aside className={`dashboard-sidebar-surface ${lifeSyncSidebarSceneClass} fixed left-0 top-0 h-full w-[240px] border-r z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+            <aside className={`dashboard-sidebar-surface fixed left-0 top-0 h-full w-[240px] border-r z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 <div className="px-5 py-6 h-full flex flex-col overflow-y-auto hide-scrollbar">
                     <div className="flex items-center justify-between mb-5">
                         <div className="flex items-center gap-2.5">
@@ -530,48 +387,8 @@ function DashboardInner() {
                     </p>
                     <div className="flex-1">{renderPlatformNav(() => setSidebarOpen(false))}</div>
 
-                    {!isWorkplaceMode && showLifeSyncSidebar && (
-                        <div className="mt-3">
-                            <p className="text-[10px] font-semibold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2 px-2">LifeSync</p>
-                            <nav className="space-y-0.5">
-                                <SidebarLink
-                                    to="/dashboard/feed"
-                                    icon={FaRss}
-                                    label="Activity"
-                                    active={isActive("/dashboard/feed")}
-                                    onClick={() => setSidebarOpen(false)}
-                                />
-                                <SidebarLink
-                                    to="/dashboard/lifesync/games"
-                                    icon={FaGamepad}
-                                    label="Games"
-                                    active={lifeSyncGamesActive}
-                                    onClick={() => setSidebarOpen(false)}
-                                />
-                                {showLifeSyncAnimeLink && (
-                                    <SidebarLink
-                                        to="/dashboard/lifesync/anime"
-                                        icon={FaFilm}
-                                        label="Anime"
-                                        active={lifeSyncAnimeActive}
-                                        onClick={() => setSidebarOpen(false)}
-                                    />
-                                )}
-                                {showLifeSyncAdminLink && (
-                                    <SidebarLink
-                                        to="/dashboard/admin"
-                                        icon={FaUserShield}
-                                        label="Admin"
-                                        active={isActive("/dashboard/admin")}
-                                        onClick={() => setSidebarOpen(false)}
-                                    />
-                                )}
-                            </nav>
-                        </div>
-                    )}
-
                     <div className="mt-auto pt-3 border-t border-[var(--mx-color-e5e5ea)]">
-                        <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} onOpenLifeSync={openLifeSyncSettings} onOpenTVMode={isLifeSyncConnected ? openTVMode : null} />
+                        <AIShortcutHint onOpen={openAIChat} onOpenSpotlight={openSpotlight} />
                         <div className="flex items-center gap-2 mt-2 px-1 py-1.5 rounded-xl hover:bg-[var(--mx-color-f5f5f7)] transition-colors">
                             <button
                                 type="button"
@@ -600,10 +417,8 @@ function DashboardInner() {
                     </div>
                 </div>
             </aside>
-            )}
 
             <main className="relative isolate flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
-                {!hideSidebarChrome && (
                 <header className="dashboard-mobile-topbar lg:hidden backdrop-blur-md border-b px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 flex-shrink-0">
@@ -612,7 +427,6 @@ function DashboardInner() {
                         <span className="text-[var(--color-text-primary)] font-bold text-[15px] tracking-tight">Maxien</span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <NotificationBell />
                         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl transition-colors">
                             {user?.user_metadata?.picture ? (
                                 <img src={user.user_metadata.picture} alt="Avatar" className="w-8 h-8 rounded-full object-cover ring-1 ring-black/5" />
@@ -624,42 +438,8 @@ function DashboardInner() {
                         </button>
                     </div>
                 </header>
-                )}
 
                 <div className={contentWrapClass}>
-                    {lifeSyncNotice && (
-                        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] font-medium text-amber-950 flex items-start gap-3">
-                            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
-                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 10-2 0v2a1 1 0 102 0v-2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            <span className="flex-1">{lifeSyncNotice}</span>
-                            <button
-                                type="button"
-                                onClick={() => setLifeSyncNotice("")}
-                                className="shrink-0 text-amber-800/80 hover:text-amber-950 font-semibold"
-                            >
-                                Dismiss
-                            </button>
-                        </div>
-                    )}
-                    {lifeSyncBroadcast?.message ? (
-                        <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-[12px] font-medium text-sky-950 flex items-start gap-3">
-                            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
-                                <path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 10-2 0v3a1 1 0 002 0V6zm-1 8a1 1 0 100-2 1 1 0 000 2z" />
-                            </svg>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800/90">LifeSync message</p>
-                                <p className="mt-1 whitespace-pre-wrap break-words">{lifeSyncBroadcast.message}</p>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={dismissLifeSyncBroadcast}
-                                className="shrink-0 text-sky-800/80 hover:text-sky-950 font-semibold"
-                            >
-                                Dismiss
-                            </button>
-                        </div>
-                    ) : null}
                     <Outlet />
                 </div>
             </main>

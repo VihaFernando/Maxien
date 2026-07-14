@@ -1,7 +1,6 @@
 ﻿import { useEffect, useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { useAuth } from "../context/AuthContext"
-import { useLifeSync } from "../context/LifeSyncContext"
 
 export default function Login() {
     const [email, setEmail] = useState("")
@@ -10,7 +9,6 @@ export default function Login() {
     const [loading, setLoading] = useState(false)
     const navigate = useNavigate()
     const { signIn, signInWithGoogle, user, loading: authLoading } = useAuth()
-    const { lifeSyncEnsureAccount } = useLifeSync()
 
     useEffect(() => {
         if (!authLoading && user) {
@@ -23,26 +21,10 @@ export default function Login() {
         setError("")
         setLoading(true)
         try {
-            const { data, error } = await signIn(email, password)
+            const { error } = await signIn(email, password)
             if (error) {
                 setError(error.message)
             } else {
-                try {
-                    const meta = data?.user?.user_metadata || {}
-                    const name =
-                        meta.full_name || meta.display_name || meta.name || ''
-                    await lifeSyncEnsureAccount(email.trim(), password, name)
-                } catch (lsErr) {
-                    try {
-                        sessionStorage.setItem(
-                            'maxien_lifesync_link_notice',
-                            lsErr.message ||
-                                'LifeSync could not be reached. Open Settings → Integrations to try again.'
-                        )
-                    } catch {
-                        // ignore
-                    }
-                }
                 navigate("/dashboard")
             }
         } catch {
@@ -78,7 +60,7 @@ export default function Login() {
                         Welcome back
                     </h1>
                     <p className="text-[var(--mx-color-86868b)] text-[15px] text-center leading-relaxed">
-                        Sign in to continue to your workspace, LifeSync hubs, and daily dashboard.
+                        Sign in to continue to your workspace and daily dashboard.
                     </p>
                 </div>
 

@@ -591,7 +591,7 @@ export default function Tasks() {
     const totalVisible = filteredTasks.length
 
     return (
-        <div className="lifesync-soft-borders mx-auto max-w-[1320px] animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
+        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
 
             <div className="mb-4 flex flex-col gap-2.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
                 <div>

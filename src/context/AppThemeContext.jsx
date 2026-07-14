@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { useLifeSync } from './LifeSyncContext'
 import {
     APP_THEME_PREFERENCE_CHANGED,
     applyAppThemePreference,
@@ -13,7 +12,6 @@ import {
 const AppThemeContext = createContext(null)
 
 export function AppThemeProvider({ children }) {
-    const { lifeSyncUser } = useLifeSync()
     const [themeTick, setThemeTick] = useState(0)
     const [resolvedTheme, setResolvedTheme] = useState(() => (
         resolveAppTheme(getAppThemePreference(null))
@@ -26,8 +24,9 @@ export function AppThemeProvider({ children }) {
     }, [])
 
     const themePreference = useMemo(
-        () => getAppThemePreference(lifeSyncUser?.preferences),
-        [lifeSyncUser?.preferences, themeTick],
+        () => getAppThemePreference(null),
+        // themeTick forces re-read after notifyAppThemePreferenceChanged()
+        [themeTick],
     )
 
     useEffect(() => {
