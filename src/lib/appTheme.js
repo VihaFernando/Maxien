@@ -22,7 +22,8 @@ export function writeStoredAppThemePreference(preference) {
 export function getAppThemePreference(prefs) {
     const serverValue = normalizeAppThemePreference(prefs?.appTheme)
     if (serverValue) return serverValue
-    return readStoredAppThemePreference() || 'system'
+    // ponytail: default to light when the user hasn't picked
+    return readStoredAppThemePreference() || 'light'
 }
 
 export function resolveAppTheme(preference) {
