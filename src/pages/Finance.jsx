@@ -663,7 +663,7 @@ export default function Finance() {
                 </div>
             </div>
 
-            {tab === "Overview" && <OverviewTab period={selectedPeriod} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} incomeEntries={filteredIncomeEntries} expenseEntries={filteredExpenseEntries} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} creditCards={creditCards} />}
+            {tab === "Overview" && <OverviewTab period={selectedPeriod} totalIncome={totalIncome} totalExpenses={totalExpenses} netBalance={netBalance} incomeEntries={filteredIncomeEntries} expenseEntries={filteredExpenseEntries} expenseByCategory={expenseByCategory} incomeByType={incomeByType} donutData={donutData} expenseCategories={expenseCategories} onNavigateTab={setTab} />}
             {tab === "Income" && <IncomeTab user={user} period={selectedPeriod} incomeTypes={incomeTypes} incomeEntries={filteredIncomeEntries} onRefresh={refreshEntries} />}
             {tab === "Expenses" && <ExpensesTab user={user} period={selectedPeriod} expenseCategories={expenseCategories} expenseEntries={filteredExpenseEntries} subscriptions={subscriptions} onRefresh={refreshEntries} />}
             {tab === "Credit Cards" && <CreditCardsTab user={user} period={selectedPeriod} creditCards={creditCards} onRefreshCards={fetchAll} />}
@@ -731,78 +731,220 @@ function CardVisual({ card }) {
     )
 }
 
+// ─── Overview helpers ─────────────────────────────────────────────────────────
+const WEEKDAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"]
+
+const BILL_ICONS = {
+    electricity: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" /></svg>,
+    internet: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 12.55a11 11 0 0114.08 0M8.5 16.43a6 6 0 017 0M12 20h.01M2 8.82a16 16 0 0120 0" /></svg>,
+    water: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3s6 6.5 6 11a6 6 0 11-12 0c0-4.5 6-11 6-11z" /></svg>,
+    mobile: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="7" y="2" width="10" height="20" rx="2" strokeLinecap="round" strokeLinejoin="round" /><line x1="11" y1="18" x2="13" y2="18" strokeLinecap="round" /></svg>,
+    default: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><rect x="3" y="4" width="18" height="16" rx="2" strokeLinecap="round" strokeLinejoin="round" /><path strokeLinecap="round" strokeLinejoin="round" d="M3 9h18" /></svg>,
+}
+const BILL_COLORS = { electricity: "#F59E0B", internet: "#3B82F6", water: "#06B6D4", mobile: "#22C55E", default: "#A855F7" }
+
+function billKind(name = "") {
+    const n = name.toLowerCase()
+    if (n.includes("electric") || n.includes("power")) return "electricity"
+    if (n.includes("internet") || n.includes("wifi") || n.includes("fiber")) return "internet"
+    if (n.includes("water")) return "water"
+    if (n.includes("mobile") || n.includes("phone") || n.includes("talk")) return "mobile"
+    return "default"
+}
+
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
-function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEntries, expenseEntries, expenseByCategory, incomeByType, donutData, expenseCategories, creditCards }) {
+function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEntries, expenseEntries, expenseByCategory, incomeByType, donutData, expenseCategories, onNavigateTab }) {
     const recentEntries = useMemo(() => {
-        const cutoff = new Date()
-        cutoff.setDate(cutoff.getDate() - 14)
         const inc = incomeEntries.map(e => ({ ...e, _kind: "income" }))
         const exp = expenseEntries.map(e => ({ ...e, _kind: "expense" }))
         return [...inc, ...exp]
-            .filter(e => new Date(e.entry_date) >= cutoff)
             .sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date))
     }, [incomeEntries, expenseEntries])
 
+    const recentExpenses = useMemo(() => {
+        return [...expenseEntries].sort((a, b) => new Date(b.entry_date) - new Date(a.entry_date))
+    }, [expenseEntries])
+
+    const weeklyActivity = useMemo(() => {
+        const now = new Date()
+        const startOfWeek = new Date(now)
+        startOfWeek.setDate(now.getDate() - now.getDay())
+        startOfWeek.setHours(0, 0, 0, 0)
+        const buckets = Array.from({ length: 7 }, () => 0)
+        incomeEntries.forEach(e => {
+            const d = new Date(e.entry_date)
+            const diff = Math.floor((d - startOfWeek) / 86400000)
+            if (diff >= 0 && diff < 7) buckets[diff] += Number(e.amount_lkr)
+        })
+        return buckets
+    }, [incomeEntries])
+
+    const weeklyTotal = weeklyActivity.reduce((s, v) => s + v, 0)
+    const weeklyMax = Math.max(...weeklyActivity, 1)
     const savingsRate = totalIncome > 0 ? ((netBalance / totalIncome) * 100).toFixed(1) : null
-    const spendRate = totalIncome > 0 ? Math.min((totalExpenses / totalIncome) * 100, 100) : 0
 
     return (
         <div className="space-y-4 min-w-0 w-full overflow-x-hidden">
-            {/* ── Hero metric cards ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-[0.04]" style={{ background: "radial-gradient(circle at 80% 20%, #22C55E 60%, transparent 100%)" }} />
-                    <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">Total Income</p>
-                    <p className="text-[20px] font-black text-emerald-600 leading-none tabular-nums">{fmtShort(totalIncome)}</p>
-                    <p className="text-[10px] text-[var(--color-text-secondary)] mt-1 font-medium">LKR · {incomeEntries.length} entries</p>
-                    <div className="mt-3 h-1 rounded-full bg-emerald-100 overflow-hidden">
-                        <div className="h-full bg-emerald-400 rounded-full w-full" />
+            <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4 items-stretch">
+                {/* ── Available Balance (hero) ── */}
+                <div className="rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[220px]"
+                    style={{ background: "linear-gradient(135deg, var(--mx-color-1d1d1f) 0%, var(--mx-color-151418) 100%)" }}>
+                    <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-[0.12]" style={{ background: "var(--mx-color-c6ff00)" }} />
+                    <div className="relative z-10 flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-white/70">
+                            <span className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><rect x="2" y="6" width="20" height="14" rx="2" strokeLinecap="round" strokeLinejoin="round" /><path strokeLinecap="round" strokeLinejoin="round" d="M2 10h20" /></svg>
+                            </span>
+                            <span className="text-[12px] font-semibold">Available Balance</span>
+                        </div>
+                        <span className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: "var(--mx-color-c6ff00)" }}>
+                            <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7 17L17 7M7 7h10v10" /></svg>
+                        </span>
+                    </div>
+                    <div className="relative z-10 mt-4 min-w-0">
+                        <p className={`text-[26px] sm:text-[30px] font-black leading-tight tabular-nums break-all ${netBalance >= 0 ? "text-white" : "text-red-400"}`}>
+                            {netBalance < 0 ? "−" : ""}{fmtShort(Math.abs(netBalance))}
+                        </p>
+                        <p className="text-white/50 text-[11px] font-medium mt-2">LKR · {period ? period.label : "This period"}</p>
+                    </div>
+                    <div className="relative z-10 flex items-center gap-1.5 mt-4 text-white/60">
+                        <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><circle cx="12" cy="12" r="9" strokeLinecap="round" strokeLinejoin="round" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5" /></svg>
+                        <span className="text-[10px] font-medium">Net of income − expenses this period</span>
                     </div>
                 </div>
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-[0.04]" style={{ background: "radial-gradient(circle at 80% 20%, #EF4444 60%, transparent 100%)" }} />
-                    <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">Total Expenses</p>
-                    <p className="text-[20px] font-black text-red-500 leading-none tabular-nums">{fmtShort(totalExpenses)}</p>
-                    <p className="text-[10px] text-[var(--color-text-secondary)] mt-1 font-medium">LKR · {expenseEntries.length} entries</p>
-                    <div className="mt-3 h-1 rounded-full bg-red-100 overflow-hidden">
-                        <div className="h-full bg-red-400 rounded-full transition-all duration-700" style={{ width: `${spendRate}%` }} />
+
+                {/* ── Total Revenue + Monthly Expense + Savings Rate stat cards ── */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="rounded-3xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 flex flex-col justify-between min-w-0">
+                        <p className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Total Revenue</p>
+                        <div className="flex items-end justify-between gap-2 mt-3 min-w-0">
+                            <p className="text-[19px] sm:text-[21px] font-black text-[var(--color-text-primary)] leading-tight tabular-nums break-all">{fmtShort(totalIncome)}</p>
+                            <span className="shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7 11l5-5 5 5M12 6v13" /></svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div className="rounded-3xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 flex flex-col justify-between min-w-0">
+                        <p className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Monthly Expense</p>
+                        <div className="flex items-end justify-between gap-2 mt-3 min-w-0">
+                            <p className="text-[19px] sm:text-[21px] font-black text-[var(--color-text-primary)] leading-tight tabular-nums break-all">{fmtShort(totalExpenses)}</p>
+                            <span className="shrink-0 w-6 h-6 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M7 13l5 5 5-5M12 18V5" /></svg>
+                            </span>
+                        </div>
+                    </div>
+                    <div className="rounded-3xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 flex flex-col justify-between min-w-0">
+                        <p className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Savings Rate</p>
+                        <div className="flex items-end justify-between gap-2 mt-3 min-w-0">
+                            <p className={`text-[19px] sm:text-[21px] font-black leading-tight tabular-nums break-all ${savingsRate == null ? "text-[var(--color-text-primary)]" : Number(savingsRate) >= 20 ? "text-emerald-600" : Number(savingsRate) >= 0 ? "text-amber-500" : "text-red-500"}`}>
+                                {savingsRate != null ? `${savingsRate}%` : "—"}
+                            </p>
+                            <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center" style={{ background: "color-mix(in srgb, var(--mx-color-c6ff00) 25%, transparent)", color: "var(--mx-color-a8db00)" }}>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l2.5 2.5M12 3a9 9 0 100 18 9 9 0 000-18z" /></svg>
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Earning Activity */}
+                    <div className="sm:col-span-3 rounded-3xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-[11px] font-semibold text-[var(--color-text-secondary)]">Earning Activity</p>
+                            <span className="text-[10px] font-bold text-[var(--color-text-secondary)] bg-[var(--mx-color-f5f5f7)] px-2 py-1 rounded-lg">This Week</span>
+                        </div>
+                        <div className="flex items-end justify-between gap-4">
+                            <div className="min-w-0">
+                                <p className="text-[22px] font-black text-[var(--color-text-primary)] leading-none tabular-nums break-all">{fmtShort(weeklyTotal)}</p>
+                                <p className="text-[11px] text-[var(--color-text-secondary)] mt-1">LKR this week</p>
+                            </div>
+                            <div className="flex items-end gap-1.5 h-12 shrink-0">
+                                {weeklyActivity.map((v, i) => (
+                                    <div key={i} className="flex flex-col items-center gap-1">
+                                        <div className="w-2 rounded-full transition-all duration-500"
+                                            style={{ height: `${Math.max(6, (v / weeklyMax) * 40)}px`, background: v > 0 ? "var(--mx-color-c6ff00)" : "var(--mx-color-e5e5ea)" }} />
+                                        <span className="text-[8px] font-bold text-[var(--color-text-secondary)]">{WEEKDAY_LETTERS[i]}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-[0.04]" style={{ background: `radial-gradient(circle at 80% 20%, ${netBalance >= 0 ? "#22C55E" : "#EF4444"} 60%, transparent 100%)` }} />
-                    <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">Net Balance</p>
-                    <p className={`text-[20px] font-black leading-none tabular-nums ${netBalance >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                        {netBalance < 0 ? "−" : ""}{fmtShort(Math.abs(netBalance))}
-                    </p>
-                    <p className="text-[10px] text-[var(--color-text-secondary)] mt-1 font-medium">LKR · {netBalance >= 0 ? "Surplus" : "Deficit"}</p>
-                    <div className="mt-3 h-1 rounded-full bg-[var(--mx-color-f5f5f7)] overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-700 ${netBalance >= 0 ? "bg-emerald-400" : "bg-red-400"}`}
-                            style={{ width: totalIncome > 0 ? `${Math.min(Math.abs(netBalance / totalIncome) * 100, 100)}%` : "0%" }} />
+            </div>
+
+            {/* ── Recent Transactions + Expenses ── */}
+            <div className="grid lg:grid-cols-2 gap-4 min-w-0">
+                {/* Recent Transactions */}
+                <div className="rounded-3xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col min-w-0">
+                    <div className="flex items-center justify-between mb-3 shrink-0">
+                        <h3 className="text-[13px] font-bold text-[var(--color-text-primary)]">Recent Transactions</h3>
+                        <button onClick={() => onNavigateTab?.("Income")}
+                            className="text-[11px] font-bold text-[var(--mx-color-c6ff00)] hover:opacity-75 transition-opacity">View All</button>
                     </div>
+                    {recentEntries.length === 0 ? (
+                        <div className="py-8 text-center">
+                            <p className="text-[12px] text-[var(--color-text-secondary)]">No transactions yet for this period.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-1 max-h-[320px] overflow-y-auto pr-0.5">
+                            {recentEntries.map(e => {
+                                const label = e._kind === "income" ? e.income_type_name : e.category_name
+                                const initial = (label || "?").trim().charAt(0).toUpperCase()
+                                const isIncome = e._kind === "income" && Number(e.amount_lkr) >= 0
+                                return (
+                                    <div key={`${e._kind}-${e.id}`} className="flex items-center gap-3 py-2.5">
+                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-[13px] font-black ${isIncome ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-500"}`}>
+                                            {initial}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[13px] font-semibold text-[var(--color-text-primary)] truncate leading-tight">{label}</p>
+                                            <p className="text-[11px] text-[var(--color-text-secondary)] truncate leading-tight mt-0.5">{fmtDate(e.entry_date)}</p>
+                                        </div>
+                                        <p className={`text-[13px] font-bold tabular-nums shrink-0 ${isIncome ? "text-emerald-600" : "text-red-500"}`}>
+                                            {isIncome ? "+" : "−"}{fmtShort(Math.abs(e.amount_lkr))}
+                                        </p>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
                 </div>
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-4 relative overflow-hidden">
-                    <div className="absolute inset-0 opacity-[0.05]" style={{ background: "radial-gradient(circle at 80% 20%, #c6ff00 60%, transparent 100%)" }} />
-                    <p className="text-[10px] font-bold text-[var(--color-text-secondary)] uppercase tracking-widest mb-2">Savings Rate</p>
-                    <p className={`text-[20px] font-black leading-none tabular-nums ${savingsRate >= 20 ? "text-emerald-600" : savingsRate >= 0 ? "text-amber-500" : "text-red-500"}`}>
-                        {savingsRate != null ? `${savingsRate}%` : "—"}
-                    </p>
-                    <p className="text-[10px] text-[var(--color-text-secondary)] mt-1 font-medium">
-                        {savingsRate != null ? (Number(savingsRate) >= 20 ? "On track ✓" : Number(savingsRate) >= 0 ? "Aim for 20%+" : "Over budget") : "No data yet"}
-                    </p>
-                    {savingsRate != null && (
-                        <div className="mt-3 h-1 rounded-full bg-[var(--mx-color-f5f5f7)] overflow-hidden">
-                            <div className="h-full rounded-full transition-all duration-700"
-                                style={{ width: `${Math.min(Math.max(Number(savingsRate), 0), 100)}%`, background: Number(savingsRate) >= 20 ? "#22C55E" : "#F59E0B" }} />
+
+                {/* Expenses */}
+                <div className="rounded-3xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col min-w-0">
+                    <div className="flex items-center justify-between mb-3 shrink-0">
+                        <h3 className="text-[13px] font-bold text-[var(--color-text-primary)]">Expenses</h3>
+                        <button onClick={() => onNavigateTab?.("Expenses")}
+                            className="text-[11px] font-bold text-[var(--mx-color-c6ff00)] hover:opacity-75 transition-opacity">View All</button>
+                    </div>
+                    {recentExpenses.length === 0 ? (
+                        <div className="py-8 text-center">
+                            <p className="text-[12px] text-[var(--color-text-secondary)]">No expenses yet for this period.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-1 max-h-[320px] overflow-y-auto pr-0.5">
+                            {recentExpenses.map(e => {
+                                const kind = billKind(e.category_name)
+                                return (
+                                    <div key={e.id} className="flex items-center gap-3 py-2.5">
+                                        <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{ background: `${BILL_COLORS[kind]}1a`, color: BILL_COLORS[kind] }}>
+                                            <span className="w-4 h-4 block">{BILL_ICONS[kind]}</span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[13px] font-semibold text-[var(--color-text-primary)] truncate leading-tight">{e.category_name}</p>
+                                            <p className="text-[11px] text-[var(--color-text-secondary)] truncate leading-tight mt-0.5">{e.note || fmtDate(e.entry_date)}</p>
+                                        </div>
+                                        <p className="text-[13px] font-bold text-red-500 tabular-nums shrink-0">−{fmtShort(e.amount_lkr)}</p>
+                                    </div>
+                                )
+                            })}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* ── Expense Breakdown + Recent Activity ── */}
-            <div className="grid lg:grid-cols-[1fr_360px] gap-4 finance-main-grid">
-                {/* Expense Breakdown */}
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col finance-main-card min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-5 shrink-0 min-w-0">
+            {/* ── Expense Breakdown + Income Sources ── */}
+            <div className="grid lg:grid-cols-2 gap-4 min-w-0">
+                <div className="rounded-3xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-4 shrink-0 min-w-0">
                         <div className="min-w-0">
                             <h3 className="text-[13px] font-bold text-[var(--color-text-primary)] truncate">Expense Breakdown</h3>
                             <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">{expenseByCategory.length} categories this period</p>
@@ -841,7 +983,7 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                        <div className="flex-1 flex flex-col items-center justify-center gap-3 py-8">
                             <div className="w-12 h-12 rounded-2xl bg-[var(--mx-color-f5f5f7)] flex items-center justify-center">
                                 <svg className="w-6 h-6 text-[var(--color-text-secondary)] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -852,70 +994,14 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
                     )}
                 </div>
 
-                {/* Recent activity */}
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 flex flex-col finance-main-card min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-4 shrink-0 min-w-0">
-                        <h3 className="text-[13px] font-bold text-[var(--color-text-primary)] truncate">Recent Activity</h3>
-                        <span className="text-[10px] font-bold text-[var(--color-text-secondary)] bg-[var(--mx-color-f5f5f7)] px-2 py-1 rounded-lg border border-[var(--mx-color-e5e5ea)] shrink-0">last 14d · {recentEntries.length}</span>
-                    </div>
-                    {recentEntries.length === 0 ? (
-                        <div className="flex-1 flex items-center justify-center">
-                            <p className="text-[12px] text-[var(--color-text-secondary)]">No entries yet for this period.</p>
+                {incomeByType.length > 0 && (
+                    <div className="rounded-3xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 min-w-0">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-[13px] font-bold text-[var(--color-text-primary)]">Income Sources</h3>
+                                <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">{incomeByType.length} source{incomeByType.length > 1 ? "s" : ""} this period</p>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="flex-1 overflow-y-auto min-h-0 space-y-1">
-                            {recentEntries.map(e => (
-                                <div key={e.id} className="flex items-center gap-3 px-2.5 py-2.5 rounded-xl hover:bg-[var(--mx-color-f5f5f7)] transition-colors">
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-[13px] font-black ${e._kind === "income" ? "bg-emerald-100 text-emerald-700" : "bg-red-50 text-red-500"}`}>
-                                        {e._kind === "income" ? "↑" : "↓"}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[12px] font-semibold text-[var(--color-text-primary)] truncate leading-tight">
-                                            {e._kind === "income" ? e.income_type_name : e.category_name}
-                                        </p>
-                                        <p className="text-[10px] text-[var(--color-text-secondary)] truncate leading-tight mt-0.5">
-                                            {e.note || fmtDate(e.entry_date)}
-                                        </p>
-                                    </div>
-                                    <div className="text-right shrink-0">
-                                        <p className={`text-[12px] font-bold tabular-nums ${e._kind === "income" && Number(e.amount_lkr) >= 0 ? "text-emerald-600" : "text-red-500"}`}>
-                                            {e._kind === "income" && Number(e.amount_lkr) >= 0 ? "+" : "−"}{fmtShort(Math.abs(e.amount_lkr))}
-                                        </p>
-                                        <p className="text-[10px] text-[var(--color-text-secondary)]">{fmtDate(e.entry_date)}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* ── Credit Card Summary ── */}
-            {creditCards.length > 0 && (
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 min-w-0">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 className="text-[13px] font-bold text-[var(--color-text-primary)]">Credit Cards</h3>
-                            <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">{creditCards.length} card{creditCards.length > 1 ? "s" : ""} · total debt {fmtShort(creditCards.reduce((s, c) => s + Number(c.current_balance_lkr), 0))} LKR</p>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {creditCards.map(card => <CardVisual key={card.id} card={card} />)}
-                    </div>
-                </div>
-            )}
-
-            {/* ── Income Sources ── */}
-            {incomeByType.length > 0 && (
-                <div className="rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] p-5 min-w-0">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <h3 className="text-[13px] font-bold text-[var(--color-text-primary)]">Income Sources</h3>
-                            <p className="text-[11px] text-[var(--color-text-secondary)] mt-0.5">{incomeByType.length} source{incomeByType.length > 1 ? "s" : ""} this period</p>
-                        </div>
-                    </div>
-                    <div className="grid lg:grid-cols-2 gap-6 items-end min-w-0">
-                        <div className="min-w-0"><BarChart bars={incomeByType.map(([label, value], i) => ({ label, value, color: CHART_COLORS[i % CHART_COLORS.length] }))} /></div>
                         <div className="space-y-2.5 min-w-0">
                             {incomeByType.map(([name, value], i) => {
                                 const pct = totalIncome > 0 ? ((value / totalIncome) * 100).toFixed(1) : 0
@@ -940,8 +1026,8 @@ function OverviewTab({ period, totalIncome, totalExpenses, netBalance, incomeEnt
                             })}
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     )
 }
