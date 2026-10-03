@@ -533,11 +533,11 @@ export default function Subscriptions() {
 
     return (
         <div className="animate-in fade-in duration-500 w-full">
-            <div className="mx-auto max-w-[1160px] space-y-4 px-0.5 sm:space-y-5">
+            <div className="space-y-4 px-0.5 sm:space-y-5">
                 <div className="rounded-2xl border border-[var(--color-border-soft)] bg-[var(--color-surface)] px-4 py-3.5 shadow-sm sm:px-5 sm:py-4.5">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                         <div>
-                            <h1 className="text-[19px] font-bold tracking-tight text-[var(--color-text-primary)] sm:text-[22px]">Subscriptions</h1>
+                            <h1 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--color-text-primary)]">Subscriptions</h1>
                             <p className="mt-1 text-[11px] text-[var(--color-text-secondary)] sm:text-[12px]">Manage recurring costs, renewal dates, and live LKR conversion in one place.</p>
                         </div>
                         <button

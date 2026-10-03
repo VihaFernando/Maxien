@@ -168,7 +168,7 @@ export default function WorkplaceUsers({
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-6 border-b border-(--color-border-soft) bg-(--color-surface-muted)">
                     <div className="mb-3 sm:mb-0">
-                        <h2 className="text-base md:text-lg font-bold tracking-tight text-[var(--mx-color-1d1d1f)] flex items-center gap-2">
+                        <h2 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--mx-color-1d1d1f)] flex items-center gap-2">
                             Team Members
                             <span className="text-[10px] md:text-xs font-semibold px-2.5 py-0.5 rounded-full bg-(--color-surface-soft) text-[var(--mx-color-86868b)]">
                                 {members.length}

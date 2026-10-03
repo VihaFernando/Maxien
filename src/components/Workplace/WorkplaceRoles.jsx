@@ -108,7 +108,7 @@ export default function WorkplaceRoles({ roles, workplace, user, loading, onRefr
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <div>
-                        <h2 className="text-[18px] sm:text-[20px] font-bold text-[var(--mx-color-1d1d1f)]">Roles</h2>
+                        <h2 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--mx-color-1d1d1f)]">Roles</h2>
                         <p className="text-[13px] text-[var(--mx-color-86868b)] mt-1">Create and manage custom roles for this workplace.</p>
                     </div>
                     <button

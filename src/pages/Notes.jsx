@@ -271,17 +271,17 @@ export default function Notes() {
     }, [notes, searchTerm])
 
     return (
-        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-10 duration-500">
+        <div className="animate-in fade-in pb-10 duration-500">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 px-0">
                 <div>
-                    <h2 className="text-[28px] sm:text-[34px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">Notes</h2>
-                    <p className="text-[var(--mx-color-86868b)] text-sm sm:text-[17px] mt-1.5 font-medium">
+                    <h2 className="text-[20px] sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-tight">Notes</h2>
+                    <p className="text-[var(--mx-color-86868b)] text-[12px] mt-1">
                         Capture quick thoughts with a rich text editor.
                     </p>
                 </div>
                 <button
                     onClick={openCreateModal}
-                    className="inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black rounded-xl font-bold text-[13px] sm:text-[14px] transition-all active:scale-[0.98] shadow-sm"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black rounded-xl font-bold text-[13px] transition-all active:scale-[0.98] shadow-sm"
                 >
                     <FaPlus className="w-3 h-3 text-black" />
                     New Note
@@ -289,7 +289,7 @@ export default function Notes() {
             </div>
 
             {(error || message) && (
-                <div className={`mb-4 sm:mb-6 px-4 py-3 rounded-2xl text-sm font-semibold border ${error
+                <div className={`mb-4 sm:mb-6 px-4 py-3 rounded-2xl text-[13px] font-semibold border ${error
                     ? "bg-red-50 text-red-700 border-red-200"
                     : "bg-[var(--mx-color-ecfdf3)] text-[var(--mx-color-166534)] border-[var(--mx-color-bbf7d0)]"
                     }`}>
@@ -297,7 +297,7 @@ export default function Notes() {
                 </div>
             )}
 
-            <div className="bg-[var(--color-surface)] rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 md:p-8 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm">
                 <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
                     <div className="relative w-full sm:max-w-md">
                         <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mx-color-86868b)] w-3.5 h-3.5" />
@@ -306,10 +306,10 @@ export default function Notes() {
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="Search notes..."
-                            className="w-full pl-9 pr-3 py-2.5 text-sm bg-[var(--mx-color-f5f5f7)] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] transition-all"
+                            className="w-full pl-9 pr-3 py-2.5 text-[13px] bg-[var(--mx-color-f5f5f7)] border border-transparent rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60 focus:bg-[var(--color-surface)] transition-all"
                         />
                     </div>
-                    <p className="text-xs sm:text-sm font-semibold text-[var(--mx-color-86868b)]">
+                    <p className="text-[12px] font-semibold text-[var(--mx-color-86868b)]">
                         {filteredNotes.length} {filteredNotes.length === 1 ? "note" : "notes"}
                     </p>
                 </div>
@@ -322,10 +322,10 @@ export default function Notes() {
                     <div className="text-center py-16 bg-[var(--mx-color-f5f5f7)]/60 border border-dashed border-[var(--mx-color-d2d2d7)] rounded-2xl">
                         <FaStickyNote className="w-7 h-7 text-[var(--mx-color-86868b)] mx-auto mb-3" />
                         <p className="text-[var(--mx-color-1d1d1f)] font-bold text-[15px]">No notes yet</p>
-                        <p className="text-[var(--mx-color-86868b)] text-sm mt-1">Create your first rich text note.</p>
+                        <p className="text-[var(--mx-color-86868b)] text-[13px] mt-1">Create your first rich text note.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 sm:gap-4">
                         {filteredNotes.map((note) => {
                             const excerpt = getPlainTextFromHtml(note.content_html || "")
                             return (
@@ -340,7 +340,7 @@ export default function Notes() {
                                         <h3 className="font-bold text-[var(--mx-color-1d1d1f)] text-[15px] leading-tight line-clamp-1">
                                             {note.title || "Untitled note"}
                                         </h3>
-                                        <p className="text-[var(--mx-color-86868b)] text-sm mt-2 line-clamp-4 min-h-[80px]">
+                                        <p className="text-[var(--mx-color-86868b)] text-[13px] mt-2 line-clamp-4 min-h-[80px]">
                                             {excerpt || "(Empty content)"}
                                         </p>
                                         <p className="text-[11px] font-medium text-[var(--mx-color-86868b)] mt-3">
@@ -372,13 +372,13 @@ export default function Notes() {
 
             {showEditorModal && (
                 <div className="fixed inset-0 bg-[var(--mx-color-1d1d1f)]/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 transition-opacity duration-300">
-                    <div className="bg-[var(--color-surface)] rounded-t-[32px] sm:rounded-[32px] p-6 sm:p-8 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
+                    <div className="bg-[var(--color-surface)] rounded-t-[24px] sm:rounded-[24px] p-5 sm:p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
                         <div className="flex justify-center sm:hidden mb-4">
                             <div className="w-12 h-1.5 bg-[var(--mx-color-d2d2d7)] rounded-full" />
                         </div>
 
                         <div className="flex items-center justify-between mb-5">
-                            <h3 className="text-xl sm:text-2xl font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">
+                            <h3 className="text-[15px] sm:text-[17px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">
                                 {editingNote ? "Edit Note" : "New Note"}
                             </h3>
                             <button
@@ -399,7 +399,7 @@ export default function Notes() {
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     placeholder="Untitled note"
-                                    className="w-full px-3.5 py-3 rounded-xl border border-[var(--mx-color-d2d2d7)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60 focus:border-transparent"
+                                    className="w-full px-3.5 py-3 rounded-xl border border-[var(--mx-color-d2d2d7)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60 focus:border-transparent"
                                 />
                             </div>
 
@@ -416,14 +416,14 @@ export default function Notes() {
                                 <button
                                     type="button"
                                     onClick={closeEditorModal}
-                                    className="px-4 py-2.5 rounded-xl bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-e8e8ed)] text-[var(--mx-color-1d1d1f)] font-semibold text-sm transition-all"
+                                    className="px-4 py-2.5 rounded-xl bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-e8e8ed)] text-[var(--mx-color-1d1d1f)] font-semibold text-[13px] transition-all"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="px-5 py-2.5 rounded-xl bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-60"
+                                    className="px-5 py-2.5 rounded-xl bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black font-bold text-[13px] transition-all active:scale-[0.98] disabled:opacity-60"
                                 >
                                     {saving ? "Saving..." : editingNote ? "Update Note" : "Save Note"}
                                 </button>
@@ -446,7 +446,7 @@ export default function Notes() {
                                     <div className="w-7 h-7 rounded-xl bg-[var(--mx-color-c6ff00)]/55 text-[var(--mx-color-1d1d1f)] flex items-center justify-center">
                                         <FaStickyNote className="w-3.5 h-3.5" />
                                     </div>
-                                    <h3 className="text-[18px] sm:text-[22px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight truncate">
+                                    <h3 className="text-[15px] sm:text-[17px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight truncate">
                                         {selectedNote.title || "Untitled note"}
                                     </h3>
                                 </div>

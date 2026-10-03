@@ -186,7 +186,7 @@ export default function WorkplaceAnalytics({
         <p className="text-[10px] font-bold text-[var(--mx-color-7a8392)] uppercase tracking-[0.2em] mb-3">Workplace Intelligence</p>
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-[var(--mx-color-121417)]">Analytics</h1>
+            <h1 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--mx-color-121417)]">Analytics</h1>
             <p className="text-[13px] text-[var(--mx-color-6a7280)] mt-1.5 max-w-[680px] leading-relaxed">
               {isAdmin
                 ? "Company-wide progress plus individual performance insights."

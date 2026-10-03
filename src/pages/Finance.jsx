@@ -622,11 +622,11 @@ export default function Finance() {
     const TABS = ["Overview", "Income", "Expenses", "Credit Cards", "Reports"]
 
     return (
-        <div className="max-w-7xl mx-auto space-y-5 min-w-0 overflow-x-hidden">
+        <div className="space-y-5 min-w-0 overflow-x-hidden">
             {/* ── Header ── */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
                 <div>
-                    <h1 className="text-[22px] font-black text-[var(--color-text-primary)] tracking-tight">Finance</h1>
+                    <h1 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--color-text-primary)]">Finance</h1>
                     <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5 font-medium">
                         {selectedPeriod
                             ? `${selectedPeriod.label} · ${fmtDate(selectedPeriod.start_date)} – ${fmtDate(selectedPeriod.end_date)}`

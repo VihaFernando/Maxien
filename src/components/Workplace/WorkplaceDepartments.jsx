@@ -174,7 +174,7 @@ export default function WorkplaceDepartments({
             <div className="bg-[var(--color-surface)] rounded-[22px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-5 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                     <div>
-                        <h2 className="text-[18px] sm:text-[20px] font-bold text-[var(--mx-color-1d1d1f)]">Departments</h2>
+                        <h2 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--mx-color-1d1d1f)]">Departments</h2>
                         <p className="text-[12px] text-[var(--mx-color-86868b)] mt-1">
                             Organize workplace members and tag projects/tasks by department.
                         </p>

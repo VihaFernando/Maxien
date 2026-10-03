@@ -110,7 +110,7 @@ export default function Profile() {
 
             {/* Page header */}
             <div className="shrink-0 mb-4 px-0.5">
-                <h1 className="text-[18px] sm:text-[22px] font-bold text-[var(--color-text-primary)] tracking-tight">Settings</h1>
+                <h1 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--color-text-primary)]">Settings</h1>
                 <p className="text-[12px] text-[var(--color-text-secondary)] mt-0.5">You can find all settings here</p>
             </div>
 

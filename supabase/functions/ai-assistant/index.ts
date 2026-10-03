@@ -169,14 +169,18 @@ RULES:
                 "Authorization": `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-                model: "llama-3.3-70b-versatile",
+                model: "openai/gpt-oss-120b",
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: userMessage },
                 ],
                 response_format: { type: "json_object" },
                 temperature: 0.1,
-                max_tokens: 1024,
+                // gpt-oss is a reasoning model: reasoning tokens count against the completion budget,
+                // so keep effort low and leave headroom for the JSON answer.
+                reasoning_effort: "low",
+                include_reasoning: false,
+                max_completion_tokens: 2048,
             }),
         }
     )

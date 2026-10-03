@@ -45,7 +45,7 @@ export default function GithubIntegrations({ embedded = false }) {
             className={
                 embedded
                     ? "w-full min-w-0 space-y-5"
-                    : "mx-auto w-full min-w-0 max-w-[1600px] animate-in space-y-5 pb-10 duration-500 fade-in sm:space-y-6"
+                    : "w-full min-w-0 animate-in space-y-5 pb-10 duration-500 fade-in sm:space-y-6"
             }
         >
             {!embedded && (

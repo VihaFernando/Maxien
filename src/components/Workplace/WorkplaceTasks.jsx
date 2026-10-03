@@ -490,7 +490,7 @@ export default function WorkplaceTasks({
                 <h3 className="text-[14px] font-bold text-[var(--mx-color-1d1d1f)] uppercase tracking-wide">{title}</h3>
                 <span className="text-[12px] font-semibold text-[var(--mx-color-86868b)] bg-[var(--mx-color-f5f5f7)] px-2.5 py-1 rounded-full">{taskList.length}</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3">
                 {taskList.length === 0 ? (
                     <p className="text-[13px] text-[var(--mx-color-86868b)]">No tasks</p>
                 ) : (
@@ -524,7 +524,7 @@ export default function WorkplaceTasks({
                 <p className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-3">WORKSPACE</p>
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                     <div>
-                        <h1 className="text-[32px] font-bold text-[var(--mx-color-1d1d1f)]">Tasks</h1>
+                        <h1 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--mx-color-1d1d1f)]">Tasks</h1>
                     </div>
                     <div className="flex items-center gap-2">
                         <Link

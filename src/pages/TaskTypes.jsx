@@ -160,7 +160,7 @@ export default function TaskTypes() {
     }
 
     return (
-        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
+        <div className="animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
             <div className="mb-4 flex flex-col gap-2.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-[var(--mx-color-6b7280)]">Workspace</p>
@@ -203,7 +203,7 @@ export default function TaskTypes() {
                         <p className="text-[12px] text-[var(--mx-color-6b7280)]">Create your first type to get started.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
                         {types.map((t) => (
                             <div key={t.id} className={`rounded-xl border p-3 transition-all ${t.status === "Active" ? "border-[var(--mx-color-e2e8f0)] bg-[var(--color-surface)]" : "border-[var(--mx-color-e2e8f0)] bg-[var(--mx-color-f8fafc)] opacity-70"}`}>
                                 <div className="mb-2.5 flex items-start justify-between gap-2">

@@ -115,7 +115,7 @@ export default function WorkplaceTaskTypes({
             <div className="bg-[var(--color-surface)] rounded-[22px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm p-5 sm:p-6">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
                     <div>
-                        <h2 className="text-[18px] sm:text-[20px] font-bold text-[var(--mx-color-1d1d1f)]">Workplace Task Types</h2>
+                        <h2 className="text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--mx-color-1d1d1f)]">Workplace Task Types</h2>
                         <p className="text-[12px] text-[var(--mx-color-86868b)] mt-1">Manage categories used across workplace tasks and projects.</p>
                     </div>
                     <button

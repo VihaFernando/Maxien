@@ -108,10 +108,10 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
     if (isEditing) {
         return (
             <div className="animate-in fade-in duration-300 mb-8">
-                <div className="bg-[var(--color-surface)] rounded-[28px] shadow-sm border border-[var(--mx-color-e5e5ea)] p-6 sm:p-8 max-w-5xl mx-auto">
+                <div className="bg-[var(--color-surface)] rounded-[28px] shadow-sm border border-[var(--mx-color-e5e5ea)] p-5 sm:p-6 max-w-5xl">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
                         <div>
-                            <h2 className="text-2xl sm:text-3xl font-bold text-[var(--mx-color-1d1d1f)]">Edit Workplace</h2>
+                            <h2 className="text-[15px] sm:text-[17px] font-bold text-[var(--mx-color-1d1d1f)]">Edit Workplace</h2>
                             <p className="text-sm text-[var(--mx-color-6b7280)] mt-1">Update your workspace information</p>
                         </div>
                         <button
@@ -208,7 +208,7 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
             </div>
 
             {/* Main Card */}
-            <div className="mx-auto max-w-[1680px] overflow-hidden rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] shadow-sm transition duration-300 hover:shadow-md sm:rounded-[28px]">
+            <div className="overflow-hidden rounded-2xl border border-[var(--mx-color-e5e5ea)] bg-[var(--color-surface)] shadow-sm transition duration-300 hover:shadow-md sm:rounded-[28px]">
                 {/* Banner Section */}
                 <div className="relative h-28 sm:h-40 md:h-44 lg:h-48 bg-gradient-to-br from-[var(--mx-color-c6ff00)] via-[var(--mx-color-b8f000)] to-[var(--mx-color-a8e000)] overflow-hidden">
                     {workplace?.banner_url && !imageLoadError ? (
@@ -257,7 +257,7 @@ export default function WorkplaceProfile({ workplace, loading, isOwner, onRefres
                             ) : (
                                 <>
                                     <div className="mb-2.5 flex flex-col gap-2 sm:mb-3 sm:flex-row sm:items-center sm:gap-4">
-                                        <h1 className="max-w-full text-xl font-bold tracking-tight text-[var(--mx-color-111827)] sm:text-3xl lg:text-4xl">
+                                        <h1 className="max-w-full text-[20px] sm:text-[24px] font-bold tracking-tight leading-tight text-[var(--mx-color-111827)]">
                                             {workplace?.name || "Untitled Workspace"}
                                         </h1>
                                         {(currentMembership?.role === "owner" || currentMembership?.role === "member") && (

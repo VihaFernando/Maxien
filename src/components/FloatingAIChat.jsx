@@ -934,7 +934,7 @@ function FloatingAIChatInner({
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2 flex-wrap">
-                                    <p className="text-[10.5px] text-white/50 truncate">Powered by Groq · llama-3.3-70b</p>
+                                    <p className="text-[10.5px] text-white/50 truncate">Powered by Groq · gpt-oss-120b</p>
                                 </div>
                             </div>
 

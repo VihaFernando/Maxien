@@ -116,7 +116,7 @@ export default function Workplaces() {
   }
 
   return (
-    <div className="workplace-theme-surface animate-in fade-in duration-500 max-w-[1200px] mx-auto pb-10">
+    <div className="workplace-theme-surface animate-in fade-in duration-500 pb-10">
       <div className="flex items-end justify-between gap-3 mb-6">
         <div>
           <p className="text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-widest mb-1">

@@ -570,7 +570,7 @@ export default function Calendar() {
         return (
             <div className="space-y-4">
                 <div className="flex items-center justify-between mb-4 sm:mb-6">
-                    <h3 className="text-xl sm:text-2xl font-bold text-[var(--mx-color-1d1d1f)]">
+                    <h3 className="text-[15px] sm:text-[17px] font-bold text-[var(--mx-color-1d1d1f)]">
                         {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                     </h3>
                     {calendarConnected && (
@@ -587,7 +587,7 @@ export default function Calendar() {
                 {!hasAnything ? (
                     <div className="text-center py-12 bg-[var(--mx-color-f5f5f7)]/50 rounded-2xl border border-dashed border-[var(--mx-color-d2d2d7)] text-[var(--mx-color-86868b)]">
                         <p className="font-medium">No events scheduled</p>
-                        <p className="text-sm mt-1">Take a breather for the day!</p>
+                        <p className="text-[13px] mt-1">Take a breather for the day!</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -605,7 +605,7 @@ export default function Calendar() {
                                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-1">
-                                                <h4 className="font-bold text-[var(--mx-color-1d1d1f)] truncate group-hover:text-blue-600 transition-colors text-sm sm:text-base">{task.title}</h4>
+                                                <h4 className="font-bold text-[var(--mx-color-1d1d1f)] truncate group-hover:text-blue-600 transition-colors text-[13px] sm:text-[14px]">{task.title}</h4>
                                                 {(isOverdueTask(task) || isOverdueSoon(task)) && (
                                                     <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${isOverdueTask(task) ? "bg-red-100 text-red-600" : "bg-orange-100 text-orange-600"}`}>{isOverdueTask(task) ? "OVERDUE" : "SOON"}</span>
                                                 )}
@@ -669,7 +669,7 @@ export default function Calendar() {
                                                 <div className="w-5 h-5 bg-indigo-100 rounded-md flex items-center justify-center flex-shrink-0">
                                                     <FaCalendarAlt className="w-2.5 h-2.5 text-indigo-600" />
                                                 </div>
-                                                <h4 className="font-bold text-[var(--mx-color-1d1d1f)] truncate group-hover:text-indigo-600 transition-colors text-sm sm:text-base">
+                                                <h4 className="font-bold text-[var(--mx-color-1d1d1f)] truncate group-hover:text-indigo-600 transition-colors text-[13px] sm:text-[14px]">
                                                     {gEvent.summary || '(No title)'}
                                                 </h4>
                                             </div>
@@ -709,10 +709,10 @@ export default function Calendar() {
     }
 
     return (
-        <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto">
+        <div className="space-y-4 sm:space-y-6">
             <header className="space-y-1 sm:space-y-2 px-2 sm:px-1">
-                <h2 className="text-2xl sm:text-[32px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">Calendar</h2>
-                <p className="text-[var(--mx-color-86868b)] text-sm sm:text-[17px] font-medium">
+                <h2 className="text-[20px] sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-tight">Calendar</h2>
+                <p className="text-[var(--mx-color-86868b)] text-[12px]">
                     View your tasks{calendarConnected ? ' and Google Calendar events' : ''} by date across all views.
                 </p>
             </header>
@@ -764,7 +764,7 @@ export default function Calendar() {
             )}
 
             {/* Controls & Main Content Area */}
-            <div className="bg-[var(--color-surface)] rounded-[24px] sm:rounded-[32px] p-4 sm:p-6 md:p-8 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm">
+            <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm">
 
                 {/* Responsive Header Controls */}
                 <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 mb-4 sm:mb-5">
@@ -839,7 +839,7 @@ export default function Calendar() {
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 text-[var(--mx-color-86868b)] space-y-4">
                             <div className="w-8 h-8 border-4 border-[var(--mx-color-c6ff00)] border-t-transparent rounded-full animate-spin"></div>
-                            <p className="font-medium text-sm">Loading calendar...</p>
+                            <p className="font-medium text-[13px]">Loading calendar...</p>
                         </div>
                     ) : viewMode === "month" ? (
                         <MonthView />
@@ -867,7 +867,7 @@ export default function Calendar() {
             {/* Google Event Detail Modal */}
             {selectedGoogleEvent && !editingGoogleEvent && (
                 <div className="fixed inset-0 bg-[var(--mx-color-1d1d1f)]/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 transition-opacity duration-300">
-                    <div className="bg-[var(--color-surface)] rounded-t-[32px] sm:rounded-[32px] p-6 sm:p-8 w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl relative">
+                    <div className="bg-[var(--color-surface)] rounded-t-[24px] sm:rounded-[24px] p-5 sm:p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl relative">
                         <div className="flex justify-center sm:hidden mb-4">
                             <div className="w-12 h-1.5 bg-[var(--mx-color-d2d2d7)] rounded-full" />
                         </div>
@@ -876,7 +876,7 @@ export default function Calendar() {
                                 <div className="w-9 h-9 bg-indigo-500 rounded-xl flex items-center justify-center flex-shrink-0">
                                     <FaCalendarAlt className="w-4 h-4 text-white" />
                                 </div>
-                                <h2 className="text-xl font-bold text-[var(--mx-color-1d1d1f)] tracking-tight truncate">
+                                <h2 className="text-[17px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight truncate">
                                     {selectedGoogleEvent.summary || '(No title)'}
                                 </h2>
                             </div>
@@ -892,19 +892,19 @@ export default function Calendar() {
                             {selectedGoogleEvent.description && (
                                 <div className="bg-[var(--mx-color-f5f5f7)]/50 rounded-2xl p-4 border border-[var(--mx-color-d2d2d7)]/30">
                                     <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">Description</label>
-                                    <p className="text-sm text-[var(--mx-color-1d1d1f)] leading-relaxed">{selectedGoogleEvent.description}</p>
+                                    <p className="text-[13px] text-[var(--mx-color-1d1d1f)] leading-relaxed">{selectedGoogleEvent.description}</p>
                                 </div>
                             )}
                             <div className="bg-[var(--mx-color-f5f5f7)]/50 rounded-2xl p-4 border border-[var(--mx-color-d2d2d7)]/30">
                                 <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">Time</label>
                                 {selectedGoogleEvent.start?.dateTime ? (
-                                    <p className="text-[15px] font-semibold text-[var(--mx-color-1d1d1f)]">
+                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">
                                         {new Date(selectedGoogleEvent.start.dateTime).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                                         {' \u2013 '}
                                         {new Date(selectedGoogleEvent.end?.dateTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                                     </p>
                                 ) : (
-                                    <p className="text-[15px] font-semibold text-[var(--mx-color-1d1d1f)]">All day &mdash; {selectedGoogleEvent.start?.date}</p>
+                                    <p className="text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">All day &mdash; {selectedGoogleEvent.start?.date}</p>
                                 )}
                                 {selectedGoogleEvent.start?.timeZone && (
                                     <p className="text-[12px] text-[var(--mx-color-86868b)] mt-1">{selectedGoogleEvent.start.timeZone}</p>
@@ -967,7 +967,7 @@ export default function Calendar() {
             {/* Day Overlay Modal */}
             {showDayOverlay && (
                 <div className="fixed inset-0 bg-[var(--mx-color-1d1d1f)]/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-40 sm:p-4 transition-opacity duration-300">
-                    <div className="bg-[var(--color-surface)] rounded-t-[32px] sm:rounded-[32px] p-6 sm:p-8 w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl relative animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
+                    <div className="bg-[var(--color-surface)] rounded-t-[24px] sm:rounded-[24px] p-5 sm:p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto shadow-2xl relative animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
                         <div className="flex justify-center sm:hidden mb-4">
                             <div className="w-12 h-1.5 bg-[var(--mx-color-d2d2d7)] rounded-full"></div>
                         </div>
@@ -985,13 +985,13 @@ export default function Calendar() {
             {/* Task Detail Modal */}
             {selectedTask && (
                 <div className="fixed inset-0 bg-[var(--mx-color-1d1d1f)]/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4 transition-opacity duration-300">
-                    <div className="bg-[var(--color-surface)] rounded-t-[32px] sm:rounded-[32px] p-6 sm:p-8 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl relative animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
+                    <div className="bg-[var(--color-surface)] rounded-t-[24px] sm:rounded-[24px] p-5 sm:p-6 w-full max-w-2xl max-h-[85vh] overflow-y-auto shadow-2xl relative animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
                         <div className="flex justify-center sm:hidden mb-4">
                             <div className="w-12 h-1.5 bg-[var(--mx-color-d2d2d7)] rounded-full"></div>
                         </div>
 
                         <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">Task Details</h2>
+                            <h2 className="text-[15px] sm:text-[17px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">Task Details</h2>
                             <button
                                 onClick={() => setSelectedTask(null)}
                                 className="p-2 bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-e8e8ed)] rounded-full transition-colors"
@@ -1002,16 +1002,16 @@ export default function Calendar() {
 
                         <div className="space-y-6">
                             <div>
-                                <h3 className="text-lg sm:text-[20px] font-bold text-[var(--mx-color-1d1d1f)] leading-snug">{selectedTask.title}</h3>
+                                <h3 className="text-[15px] sm:text-[17px] font-bold text-[var(--mx-color-1d1d1f)] leading-snug">{selectedTask.title}</h3>
                                 {selectedTask.description && (
-                                    <p className="text-sm sm:text-[15px] text-[var(--mx-color-86868b)] mt-2 leading-relaxed">{selectedTask.description}</p>
+                                    <p className="text-[13px] text-[var(--mx-color-86868b)] mt-2 leading-relaxed">{selectedTask.description}</p>
                                 )}
                             </div>
 
                             {selectedTask.due_at && (
                                 <div className="bg-[var(--mx-color-f5f5f7)]/50 rounded-2xl p-4 border border-[var(--mx-color-d2d2d7)]/30">
                                     <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider">Due Date & Time</label>
-                                    <p className="text-sm sm:text-[15px] font-bold text-[var(--mx-color-1d1d1f)] mt-1.5">
+                                    <p className="text-[13px] font-bold text-[var(--mx-color-1d1d1f)] mt-1.5">
                                         {new Date(selectedTask.due_at).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                                     </p>
                                     {(isOverdueTask(selectedTask) || isOverdueSoon(selectedTask)) && (

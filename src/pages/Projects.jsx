@@ -315,7 +315,7 @@ export default function Projects() {
     const filteredProjects = filterAndSearchProjects()
 
     return (
-        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-10 duration-500">
+        <div className="animate-in fade-in pb-10 duration-500">
 
             {/* Top Header */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8 px-0">
@@ -391,7 +391,7 @@ export default function Projects() {
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-3 sm:gap-4">
                     {filteredProjects.map(project => {
                         const typeInfo = getTypeInfo(project.type_id)
                         const stats = getProjectStats(project)
@@ -400,21 +400,21 @@ export default function Projects() {
                         return (
                             <div
                                 key={project.id}
-                                className={`bg-[var(--color-surface)] rounded-[20px] border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden transition-all ${project.status === "Archived" ? "opacity-50 hover:shadow-sm" : "hover:shadow-md"}`}
+                                className={`flex flex-col bg-[var(--color-surface)] rounded-2xl border border-[var(--mx-color-d2d2d7)]/50 shadow-sm overflow-hidden transition-all ${project.status === "Archived" ? "opacity-50 hover:shadow-sm" : "hover:shadow-md"}`}
                             >
                                 {/* Header */}
-                                <div className="p-4 sm:p-5 md:p-6 border-b border-[var(--mx-color-f0f0f0)]">
+                                <div className="p-4 border-b border-[var(--mx-color-f0f0f0)]">
                                     <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
                                         <div className="flex-1 min-w-0">
                                             <h3 className="text-[14px] sm:text-[15px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight mb-2 truncate">
                                                 {project.name}
                                             </h3>
                                             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                                <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold border ${statusColors[project.status]}`}>
+                                                <span className={`inline-block px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold border ${statusColors[project.status]}`}>
                                                     {project.status}
                                                 </span>
                                                 {typeInfo && (
-                                                    <span className="inline-block px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-semibold bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)] truncate">
+                                                    <span className="inline-block px-2 py-0.5 rounded-md text-[10px] sm:text-[11px] font-semibold bg-[var(--mx-color-f5f5f7)] text-[var(--mx-color-1d1d1f)] truncate">
                                                         {typeInfo.name}
                                                     </span>
                                                 )}
@@ -490,12 +490,12 @@ export default function Projects() {
                                 </div>
 
                                 {/* Progress */}
-                                <div className="px-4 sm:px-5 md:px-6 py-3 border-b border-[var(--mx-color-f0f0f0)]">
+                                <div className="px-4 py-3 border-b border-[var(--mx-color-f0f0f0)]">
                                     <div className="flex items-center justify-between mb-2">
                                         <span className="text-[10px] sm:text-[11px] font-semibold text-[var(--mx-color-86868b)] uppercase tracking-wide">Progress</span>
                                         <span className="text-[12px] sm:text-[13px] font-semibold text-[var(--mx-color-1d1d1f)]">{progress}%</span>
                                     </div>
-                                    <div className="w-full h-2 bg-[var(--mx-color-f5f5f7)] rounded-full overflow-hidden">
+                                    <div className="w-full h-1.5 bg-[var(--mx-color-f5f5f7)] rounded-full overflow-hidden">
                                         <div
                                             className="h-full bg-[var(--mx-color-c6ff00)] transition-all duration-300"
                                             style={{ width: `${progress}%` }}
@@ -508,7 +508,7 @@ export default function Projects() {
 
                                 {/* Dates */}
                                 {(project.start_date || project.target_end_date) && (
-                                    <div className="px-4 sm:px-5 md:px-6 py-3 border-b border-[var(--mx-color-f0f0f0)]">
+                                    <div className="px-4 py-3 border-b border-[var(--mx-color-f0f0f0)]">
                                         <div className="space-y-1.5">
                                             {project.start_date && (
                                                 <div className="flex justify-between items-center text-[12px] sm:text-[13px]">
@@ -527,7 +527,7 @@ export default function Projects() {
                                 )}
 
                                 {/* Timestamps */}
-                                <div className="px-4 sm:px-5 md:px-6 py-2.5 bg-(--color-surface-muted) text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] space-y-0.5">
+                                <div className="mt-auto px-4 py-2.5 bg-(--color-surface-muted) text-[10px] sm:text-[11px] text-[var(--mx-color-86868b)] space-y-0.5">
                                     <div className="flex justify-between">
                                         <span>Created:</span>
                                         <span>{formatTimestamp(project.created_at)}</span>

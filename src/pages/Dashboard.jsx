@@ -15,10 +15,21 @@ import {
     FaGithub,
     FaChartPie,
 } from "react-icons/fa"
+import { LiquidGlass } from "@creativoma/liquid-glass"
 import AIShortcutHint from "../components/AIShortcutHint"
 
 const openAIChat = () => window.dispatchEvent(new CustomEvent("maxien:open-ai-chat"))
 const openSpotlight = () => window.dispatchEvent(new CustomEvent("maxien:open-command-palette"))
+
+/** Liquid glass panel for the floating sidebar. The tint and edge use theme tokens, so one config covers light and dark. */
+const SIDEBAR_GLASS = {
+    backdropBlur: 14,
+    displacementScale: 90,
+    tintColor: "color-mix(in srgb, var(--color-surface-soft) 62%, transparent)",
+    className: "h-full rounded-[28px] border border-[color-mix(in_srgb,var(--color-text-primary)_10%,transparent)]",
+    contentClassName: "flex h-full flex-col",
+    style: { boxShadow: "0 18px 44px -18px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.05)" },
+}
 
 const NAV_BASE = "flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all duration-200"
 const NAV_ACTIVE = "bg-[var(--mx-color-c6ff00)] text-black shadow-sm"
@@ -64,7 +75,7 @@ export default function Dashboard() {
     const contentWrapClass = useMemo(
         () => {
             const base = isProfileRoute ? "flex w-full min-h-0 flex-1 flex-col " : "w-full flex-1 "
-            return `${base}px-4 sm:px-8 lg:px-10 py-6 sm:py-8`
+            return `${base}px-4 sm:px-8 lg:px-12 py-6 sm:py-8 lg:py-10`
         },
         [isProfileRoute],
     )
@@ -309,8 +320,14 @@ export default function Dashboard() {
     }
 
     return (
-        <div className={`min-h-screen flex font-sans ${isWorkplaceMode || isWorkplaceRoute ? "workplace-theme-surface" : ""}`}>
-            <aside className="dashboard-sidebar-surface z-20 w-[240px] hidden lg:flex flex-col border-r sticky top-0 h-screen">
+        <div className={`min-h-screen flex font-sans lg:bg-[color-mix(in_srgb,var(--color-apple-bg)_94%,black)] ${isWorkplaceMode || isWorkplaceRoute ? "workplace-theme-surface" : ""}`}>
+            <aside className="z-20 w-[256px] shrink-0 hidden lg:block sticky top-0 h-screen p-3 pr-0">
+                {/* Soft brand glow behind the panel so the glass has something to refract */}
+                <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+                    <div className="absolute -top-12 -left-12 h-60 w-60 rounded-full bg-[var(--mx-color-c6ff00)]/40 blur-3xl"></div>
+                    <div className="absolute bottom-20 -right-8 h-52 w-52 rounded-full bg-[var(--mx-color-c6ff00)]/25 blur-3xl"></div>
+                </div>
+                <LiquidGlass {...SIDEBAR_GLASS}>
                 <div className="px-5 py-6 overflow-y-auto hide-scrollbar">
                     <div className="flex items-center gap-2.5 mb-5">
                         <div className="w-8 h-8 flex-shrink-0">
@@ -355,13 +372,15 @@ export default function Dashboard() {
                         </button>
                     </div>
                 </div>
+                </LiquidGlass>
             </aside>
 
             {sidebarOpen && (
                 <div className="fixed inset-0 bg-black/30 backdrop-blur-md z-30 lg:hidden" onClick={() => setSidebarOpen(false)} />
             )}
 
-            <aside className={`dashboard-sidebar-surface fixed left-0 top-0 h-full w-[240px] border-r z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+            <aside className={`fixed left-2 top-2 bottom-2 w-[256px] max-w-[calc(100vw-1rem)] z-40 lg:hidden transform transition-transform duration-300 ease-out ${sidebarOpen ? "translate-x-0" : "-translate-x-[110%]"}`}>
+                <LiquidGlass {...SIDEBAR_GLASS}>
                 <div className="px-5 py-6 h-full flex flex-col overflow-y-auto hide-scrollbar">
                     <div className="flex items-center justify-between mb-5">
                         <div className="flex items-center gap-2.5">
@@ -416,9 +435,12 @@ export default function Dashboard() {
                         </div>
                     </div>
                 </div>
+                </LiquidGlass>
             </aside>
 
-            <main className="relative isolate flex-1 flex flex-col h-screen overflow-y-auto hide-scrollbar">
+            {/* Desktop: the page sits in its own floating panel beside the sidebar; mobile stays edge-to-edge */}
+            <div className="flex-1 flex flex-col h-screen lg:p-3">
+            <main className="relative isolate flex-1 min-h-0 flex flex-col overflow-y-auto hide-scrollbar lg:rounded-[28px] lg:border lg:border-[color-mix(in_srgb,var(--color-text-primary)_10%,transparent)] lg:bg-[var(--color-apple-bg)] lg:shadow-[0_18px_44px_-18px_rgba(0,0,0,0.28),0_2px_6px_rgba(0,0,0,0.05)]">
                 <header className="dashboard-mobile-topbar lg:hidden backdrop-blur-md border-b px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-20">
                     <div className="flex items-center gap-2">
                         <div className="w-8 h-8 flex-shrink-0">
@@ -443,6 +465,7 @@ export default function Dashboard() {
                     <Outlet />
                 </div>
             </main>
+            </div>
         </div>
     )
 }

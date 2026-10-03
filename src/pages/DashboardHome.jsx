@@ -204,7 +204,7 @@ export default function DashboardHome() {
     }, [])
 
     return (
-        <div className="animate-in fade-in duration-500 max-w-[1600px] mx-auto pb-10">
+        <div className="animate-in fade-in duration-500 pb-10">
 
             {/* Top Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-1 mb-6 sm:mb-8 px-0.5">

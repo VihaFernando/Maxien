@@ -15,9 +15,9 @@ import WeekStrip from "../components/workouts/WeekStrip"
 import DayView from "../components/workouts/DayView"
 
 const PRIMARY_BTN =
-    "inline-flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 sm:py-3 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black rounded-xl font-bold text-[13px] sm:text-[14px] transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
+    "inline-flex items-center justify-center gap-2 px-4 py-2 bg-[var(--mx-color-c6ff00)] hover:bg-[var(--mx-color-b8f000)] text-black rounded-xl font-bold text-[13px] transition-all active:scale-[0.98] shadow-sm disabled:opacity-60"
 const GHOST_BTN =
-    "inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-e8e8ed)] text-[var(--mx-color-1d1d1f)] font-semibold text-sm transition-all"
+    "inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-e8e8ed)] text-[var(--mx-color-1d1d1f)] font-semibold text-[13px] transition-all"
 
 // "create" | "import" — how the editor modal was opened.
 const MODAL_STEP = { INPUT: "input", REVIEW: "review" }
@@ -287,12 +287,12 @@ export default function Workouts() {
     const activeDayCount = WEEKDAYS.filter((d) => !draftDays[d].rest && draftDays[d].exercises.length > 0).length
 
     return (
-        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-10 duration-500">
+        <div className="animate-in fade-in pb-10 duration-500">
             {/* Header */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6 sm:mb-8">
                 <div>
-                    <h2 className="text-[28px] sm:text-[34px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">Workouts</h2>
-                    <p className="text-[var(--mx-color-86868b)] text-sm sm:text-[17px] mt-1.5 font-medium">
+                    <h2 className="text-[20px] sm:text-[24px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-tight">Workouts</h2>
+                    <p className="text-[var(--mx-color-86868b)] text-[12px] mt-1">
                         Plan your training week by week. Import, duplicate, and adjust anytime.
                     </p>
                 </div>
@@ -307,7 +307,7 @@ export default function Workouts() {
             </div>
 
             {(error || message) && (
-                <div className={`mb-5 px-4 py-3 rounded-2xl text-sm font-semibold border ${error
+                <div className={`mb-5 px-4 py-3 rounded-2xl text-[13px] font-semibold border ${error
                     ? "bg-red-50 text-red-700 border-red-200"
                     : "bg-[var(--mx-color-ecfdf3)] text-[var(--mx-color-166534)] border-[var(--mx-color-bbf7d0)]"
                     }`}>
@@ -339,15 +339,15 @@ export default function Workouts() {
             )}
 
             {loading ? (
-                <div className="bg-[var(--color-surface)] rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm py-20 flex items-center justify-center">
+                <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm py-20 flex items-center justify-center">
                     <div className="w-8 h-8 border-4 border-[var(--mx-color-c6ff00)] border-t-transparent rounded-full animate-spin" />
                 </div>
             ) : weeks.length === 0 ? (
-                <div className="bg-[var(--color-surface)] rounded-[24px] sm:rounded-[32px] p-4 sm:p-8 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm">
+                <div className="bg-[var(--color-surface)] rounded-[20px] sm:rounded-[24px] p-4 sm:p-6 border border-[var(--mx-color-d2d2d7)]/40 shadow-sm">
                     <div className="text-center py-16 bg-[var(--mx-color-f5f5f7)]/60 border border-dashed border-[var(--mx-color-d2d2d7)] rounded-2xl">
                         <FaDumbbell className="w-7 h-7 text-[var(--mx-color-86868b)] mx-auto mb-3" />
                         <p className="text-[var(--mx-color-1d1d1f)] font-bold text-[15px]">No workout plans yet</p>
-                        <p className="text-[var(--mx-color-86868b)] text-sm mt-1 mb-4">Create a week from scratch or import one from ChatGPT.</p>
+                        <p className="text-[var(--mx-color-86868b)] text-[13px] mt-1 mb-4">Create a week from scratch or import one from ChatGPT.</p>
                         <div className="flex items-center justify-center gap-2">
                             <button onClick={openImport} className={GHOST_BTN}><FaFileImport className="w-3.5 h-3.5" /> Import</button>
                             <button onClick={openCreate} className={PRIMARY_BTN}><FaPlus className="w-3 h-3" /> New Week</button>
@@ -355,15 +355,15 @@ export default function Workouts() {
                     </div>
                 </div>
             ) : (
-                <div className="space-y-6 sm:space-y-8">
+                <div className="space-y-4 sm:space-y-5">
                     {/* ---- THIS WEEK hero ---- */}
                     {currentWeek ? (
-                        <section className="rounded-[24px] sm:rounded-[32px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm overflow-hidden">
-                            <div className="relative px-4 sm:px-7 pt-5 pb-5 sm:pt-6 sm:pb-6 border-b border-[var(--mx-color-e5e5ea)]">
+                        <section className="rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/50 bg-[var(--color-surface)] shadow-sm overflow-hidden">
+                            <div className="relative px-4 sm:px-6 py-4 sm:py-5 border-b border-[var(--mx-color-e5e5ea)]">
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                                     <div className="min-w-0">
                                         <span className="text-[11px] font-black uppercase tracking-widest text-[var(--mx-color-a8db00)]">This Week</span>
-                                        <h3 className="text-[22px] sm:text-[28px] font-black text-[var(--mx-color-1d1d1f)] tracking-tight leading-none mt-1">
+                                        <h3 className="text-[17px] sm:text-[20px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight leading-none mt-1">
                                             {currentWeek.title || "Workout week"}
                                         </h3>
                                         <p className="text-[13px] font-semibold text-[var(--mx-color-86868b)] mt-1.5">
@@ -388,11 +388,11 @@ export default function Workouts() {
                             </div>
                         </section>
                     ) : (
-                        <section className="rounded-[24px] sm:rounded-[32px] border border-dashed border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)]/50 p-6 sm:p-8 text-center">
+                        <section className="rounded-[20px] sm:rounded-[24px] border border-dashed border-[var(--mx-color-d2d2d7)] bg-[var(--mx-color-f5f5f7)]/50 p-5 sm:p-6 text-center">
                             <div className="w-12 h-12 rounded-2xl bg-[var(--mx-color-e8e8ed)] text-[var(--mx-color-86868b)] flex items-center justify-center mx-auto mb-3">
                                 <FaCalendarWeek className="w-5 h-5" />
                             </div>
-                            <p className="text-[16px] font-black text-[var(--mx-color-1d1d1f)]">No plan for this week yet</p>
+                            <p className="text-[15px] font-bold text-[var(--mx-color-1d1d1f)]">No plan for this week yet</p>
                             <p className="text-[13px] font-medium text-[var(--mx-color-86868b)] mt-1 mb-4">
                                 {weekRangeLabel(thisMondayStr)}
                             </p>
@@ -411,7 +411,7 @@ export default function Workouts() {
 
                     {/* ---- Other weeks (upcoming + history) ---- */}
                     {(otherWeeks.upcoming.length > 0 || otherWeeks.past.length > 0) && (
-                        <section className="rounded-[24px] sm:rounded-[32px] border border-[var(--mx-color-d2d2d7)]/40 bg-[var(--color-surface)] shadow-sm p-4 sm:p-6">
+                        <section className="rounded-[20px] sm:rounded-[24px] border border-[var(--mx-color-d2d2d7)]/40 bg-[var(--color-surface)] shadow-sm p-4 sm:p-6">
                             {otherWeeks.upcoming.length > 0 && (
                                 <div className="mb-5">
                                     <p className="text-[12px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-2.5">Upcoming</p>
@@ -448,10 +448,10 @@ export default function Workouts() {
             {/* -------- Editor / Import modal -------- */}
             {editorOpen && (
                 <div className="fixed inset-0 bg-[var(--mx-color-1d1d1f)]/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4">
-                    <div className="bg-[var(--color-surface)] rounded-t-[32px] sm:rounded-[32px] w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
+                    <div className="bg-[var(--color-surface)] rounded-t-[24px] sm:rounded-[24px] w-full max-w-3xl max-h-[92vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
                         {/* Modal header */}
                         <div className="flex items-center justify-between p-5 sm:p-6 border-b border-[var(--mx-color-e5e5ea)]">
-                            <h3 className="text-xl sm:text-2xl font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">
+                            <h3 className="text-[15px] sm:text-[17px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight">
                                 {editorMode === "edit" ? "Edit Week" : editorMode === "import" ? "Import Plan" : "New Week"}
                             </h3>
                             <button onClick={closeEditor} className="p-2 bg-[var(--mx-color-f5f5f7)] hover:bg-[var(--mx-color-e8e8ed)] rounded-full transition-colors">
@@ -511,7 +511,7 @@ export default function Workouts() {
                                         <div className="sm:col-span-1">
                                             <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">Plan name</label>
                                             <input value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} placeholder="e.g. Home HIIT"
-                                                className="w-full px-3 py-2.5 rounded-xl border border-[var(--mx-color-d2d2d7)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60" />
+                                                className="w-full px-3 py-2.5 rounded-xl border border-[var(--mx-color-d2d2d7)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60" />
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">Week starts (Mon)</label>
@@ -520,12 +520,12 @@ export default function Workouts() {
                                                     const picked = fromDateString(e.target.value)
                                                     setDraftStart(picked ? toDateString(mondayOf(picked)) : e.target.value)
                                                 }}
-                                                className="w-full px-3 py-2.5 rounded-xl border border-[var(--mx-color-d2d2d7)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60" />
+                                                className="w-full px-3 py-2.5 rounded-xl border border-[var(--mx-color-d2d2d7)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60" />
                                         </div>
                                         <div>
                                             <label className="text-[11px] font-bold text-[var(--mx-color-86868b)] uppercase tracking-wider mb-1.5 block">Total time</label>
                                             <input value={draftTotal} onChange={(e) => setDraftTotal(e.target.value)} placeholder="optional"
-                                                className="w-full px-3 py-2.5 rounded-xl border border-[var(--mx-color-d2d2d7)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60" />
+                                                className="w-full px-3 py-2.5 rounded-xl border border-[var(--mx-color-d2d2d7)] text-[13px] focus:outline-none focus:ring-2 focus:ring-[var(--mx-color-c6ff00)]/60" />
                                         </div>
                                     </div>
                                     <p className="text-[11px] font-medium text-[var(--mx-color-86868b)] -mt-2">
@@ -595,14 +595,14 @@ export default function Workouts() {
             {/* -------- Detail view -------- */}
             {selectedWeek && (
                 <div className="fixed inset-0 bg-[var(--mx-color-1d1d1f)]/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 sm:p-4">
-                    <div className="bg-[var(--color-surface)] rounded-t-[32px] sm:rounded-[32px] w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
+                    <div className="bg-[var(--color-surface)] rounded-t-[24px] sm:rounded-[24px] w-full max-w-2xl max-h-[92vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:fade-in-20">
                         <div className="flex items-start justify-between gap-3 p-5 sm:p-6 border-b border-[var(--mx-color-e5e5ea)]">
                             <div className="min-w-0">
                                 <div className="flex items-center gap-2">
                                     <span className="w-8 h-8 rounded-xl bg-[var(--mx-color-c6ff00)] text-black flex items-center justify-center shrink-0">
                                         <FaDumbbell className="w-4 h-4" />
                                     </span>
-                                    <h3 className="text-[18px] sm:text-[22px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight truncate">
+                                    <h3 className="text-[15px] sm:text-[17px] font-bold text-[var(--mx-color-1d1d1f)] tracking-tight truncate">
                                         {selectedWeek.title || "Workout week"}
                                     </h3>
                                 </div>

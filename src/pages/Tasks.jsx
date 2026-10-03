@@ -581,7 +581,7 @@ export default function Tasks() {
                     <h3 className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--mx-color-64748b)]">{title}</h3>
                     <span className="rounded-full bg-[var(--mx-color-f1f5f9)] px-2 py-0.5 text-[10px] font-semibold text-[var(--mx-color-64748b)]">{taskList.length}</span>
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2">
                     {taskList.map((task) => <TaskCard key={task.id} task={task} />)}
                 </div>
             </section>
@@ -591,7 +591,7 @@ export default function Tasks() {
     const totalVisible = filteredTasks.length
 
     return (
-        <div className="mx-auto max-w-[1320px] animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
+        <div className="animate-in fade-in pb-8 duration-500" onClick={() => setActionMenu(null)}>
 
             <div className="mb-4 flex flex-col gap-2.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
                 <div>
