@@ -379,6 +379,12 @@ export default function AIAssistant() {
             const timezoneOffsetMinutes = now.getTimezoneOffset() // minutes (positive = behind UTC, negative = ahead)
 
             // If disambiguation is pending, send clarify_resolve instead of chat
+            // Recent turns, so the assistant can follow up on what was just said
+            const history = messages
+                .filter(m => m.status !== "loading" && m.status !== "error" && typeof m.content === "string" && m.content.trim())
+                .slice(-10)
+                .map(m => ({ role: m.role === "user" ? "user" : "assistant", content: m.content.slice(0, 1500) }))
+
             const reqBody = pendingClarification
                 ? {
                     type: "clarify_resolve",
@@ -389,7 +395,7 @@ export default function AIAssistant() {
                     userLocalNow,
                     timezoneOffsetMinutes,
                 }
-                : { type: "chat", message: text, userLocalNow, timezoneOffsetMinutes }
+                : { type: "chat", message: text, history, userLocalNow, timezoneOffsetMinutes }
 
             const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`, {
                 method: "POST",

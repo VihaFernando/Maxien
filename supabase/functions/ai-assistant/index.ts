@@ -47,7 +47,489 @@ async function decryptKey(ciphertext: string, iv: string, secret: string): Promi
     return dec.decode(decrypted)
 }
 
-// ─── Groq call ───────────────────────────────────────────────────────────────
+// ─── Agent: the model reads and changes the user's data through tools ─────────
+const GROQ_MODEL = "openai/gpt-oss-120b"
+const MAX_AGENT_STEPS = 8
+const MAX_ROWS = 60
+
+const TASK_STATUSES = ["To Do", "In Progress", "Done", "Cancelled"]
+const TASK_PRIORITIES = ["Low", "Medium", "High", "Urgent"]
+const PROJECT_STATUSES = ["Active", "On Hold", "Completed", "Archived"]
+
+type Db = ReturnType<typeof createClient>
+type Args = Record<string, unknown>
+interface ChatItem { type: "task" | "project"; id: string; title: string; meta: string }
+interface AgentCtx {
+    supabase: Db
+    userId: string
+    now: Date
+    /** Minutes to ADD to a local wall-clock time to get UTC (JS getTimezoneOffset). */
+    tz: number
+    touched: Map<string, ChatItem>
+    listed: ChatItem[]
+    actions: Set<string>
+}
+interface ChatTurn { role: "user" | "assistant"; content: string }
+
+// The model works in the user's local wall-clock time ("YYYY-MM-DD" or "YYYY-MM-DDTHH:mm").
+function localToUtcIso(value: unknown, tz: number, endOfDay = true): string | null {
+    if (typeof value !== "string" || !value.trim()) return null
+    const m = value.trim().match(/^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}):(\d{2}))?/)
+    if (!m) return null
+    const time = m[2] ? `${m[2]}:${m[3]}` : (endOfDay ? "23:59" : "00:00")
+    const asUtc = Date.parse(`${m[1]}T${time}:00Z`)
+    if (Number.isNaN(asUtc)) return null
+    return new Date(asUtc + tz * 60000).toISOString()
+}
+
+function utcToLocal(iso: string | null | undefined, tz: number): string | null {
+    if (!iso) return null
+    const t = Date.parse(iso)
+    if (Number.isNaN(t)) return null
+    return new Date(t - tz * 60000).toISOString().slice(0, 16)
+}
+
+const strList = (v: unknown, allowed?: string[]): string[] => {
+    const arr = Array.isArray(v) ? v : (typeof v === "string" && v ? [v] : [])
+    const out = arr.filter((x): x is string => typeof x === "string" && x.trim() !== "").map(x => x.trim())
+    return allowed ? out.filter(x => allowed.includes(x)) : out
+}
+const idList = (v: unknown): string[] => strList(v).filter(x => /^[0-9a-f-]{36}$/i.test(x)).slice(0, 200)
+const likeSafe = (v: string) => v.replace(/[%_,()]/g, " ").trim()
+
+const taskItem = (t: Record<string, any>, tz: number): ChatItem => ({
+    type: "task", id: t.id, title: t.title,
+    meta: [t.status, t.priority, t.due_at ? utcToLocal(t.due_at, tz)!.replace("T", " ") : "No due date"].filter(Boolean).join(" • "),
+})
+const projectItem = (p: Record<string, any>): ChatItem => ({
+    type: "project", id: p.id, title: p.name,
+    meta: [p.status, p.target_end_date ? `ends ${p.target_end_date}` : "No end date"].filter(Boolean).join(" • "),
+})
+
+const TASK_COLS = "id, title, description, status, priority, due_at, project_id, type_id"
+const PROJECT_COLS = "id, name, description, status, start_date, target_end_date, type_id"
+
+const taskForModel = (t: Record<string, any>, tz: number) => ({
+    id: t.id, title: t.title, status: t.status, priority: t.priority,
+    due: utcToLocal(t.due_at, tz), project_id: t.project_id || null, type_id: t.type_id || null,
+    ...(t.description ? { description: String(t.description).slice(0, 200) } : {}),
+})
+
+async function defaultTypeId(ctx: AgentCtx): Promise<string | null> {
+    const { data } = await ctx.supabase.from("task_types").select("id").eq("user_id", ctx.userId).eq("status", "Active").order("created_at", { ascending: true }).limit(1)
+    return data?.[0]?.id || null
+}
+
+function taskChanges(c: Args, ctx: AgentCtx): Record<string, unknown> {
+    const u: Record<string, unknown> = {}
+    if (typeof c.title === "string" && c.title.trim()) u.title = c.title.trim()
+    if (typeof c.description === "string") u.description = c.description.trim() || null
+    if (typeof c.priority === "string" && TASK_PRIORITIES.includes(c.priority)) u.priority = c.priority
+    if (typeof c.status === "string" && TASK_STATUSES.includes(c.status)) {
+        u.status = c.status
+        u.completed_at = c.status === "Done" ? ctx.now.toISOString() : null
+    }
+    if (c.due === null || c.due === "") u.due_at = null
+    else if (c.due !== undefined) { const d = localToUtcIso(c.due, ctx.tz); if (d) u.due_at = d }
+    if (c.project_id === null || c.project_id === "") u.project_id = null
+    else if (typeof c.project_id === "string") u.project_id = c.project_id
+    if (typeof c.type_id === "string" && c.type_id) u.type_id = c.type_id
+    return u
+}
+
+function projectChanges(c: Args): Record<string, unknown> {
+    const u: Record<string, unknown> = {}
+    if (typeof c.name === "string" && c.name.trim()) u.name = c.name.trim()
+    if (typeof c.description === "string") u.description = c.description.trim() || null
+    if (typeof c.status === "string" && PROJECT_STATUSES.includes(c.status)) u.status = c.status
+    for (const k of ["start_date", "target_end_date"]) {
+        if (c[k] === null || c[k] === "") u[k] = null
+        else if (typeof c[k] === "string" && /^\d{4}-\d{2}-\d{2}/.test(c[k] as string)) u[k] = (c[k] as string).slice(0, 10)
+    }
+    if (typeof c.type_id === "string" && c.type_id) u.type_id = c.type_id
+    return u
+}
+
+const textToHtml = (text: string) =>
+    text.split(/\n+/).map(l => `<p>${l.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`).join("")
+const htmlToText = (html: string) => html.replace(/<\/(p|div|li|h\d)>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim()
+
+// ── Tool implementations ──────────────────────────────────────────────────────
+const TOOL_HANDLERS: Record<string, (a: Args, ctx: AgentCtx) => Promise<unknown>> = {
+    async find_tasks(a, ctx) {
+        let q = ctx.supabase.from("tasks").select(TASK_COLS).eq("user_id", ctx.userId).is("workplace_id", null)
+        if (typeof a.text === "string" && likeSafe(a.text)) {
+            const s = likeSafe(a.text)
+            q = q.or(`title.ilike.%${s}%,description.ilike.%${s}%`)
+        }
+        const statuses = strList(a.status, TASK_STATUSES)
+        if (statuses.length) q = q.in("status", statuses)
+        const priorities = strList(a.priority, TASK_PRIORITIES)
+        if (priorities.length) q = q.in("priority", priorities)
+        if (a.overdue === true) {
+            // Same rule the dashboard uses: past its due time and still open.
+            q = q.lt("due_at", ctx.now.toISOString()).not("status", "in", '("Done","Cancelled")')
+        }
+        const from = localToUtcIso(a.due_from, ctx.tz, false)
+        const to = localToUtcIso(a.due_to, ctx.tz, true)
+        if (from) q = q.gte("due_at", from)
+        if (to) q = q.lte("due_at", to)
+        if (a.has_due_date === true) q = q.not("due_at", "is", null)
+        if (a.has_due_date === false) q = q.is("due_at", null)
+        if (a.no_project === true) q = q.is("project_id", null)
+        else if (typeof a.project_id === "string" && a.project_id) q = q.eq("project_id", a.project_id)
+        if (typeof a.type_id === "string" && a.type_id) q = q.eq("type_id", a.type_id)
+
+        const { data, error } = await q.order("due_at", { ascending: true, nullsFirst: false }).limit(MAX_ROWS)
+        if (error) throw new Error(error.message)
+        const rows = data || []
+        ctx.listed = rows.map(t => taskItem(t, ctx.tz))
+        return { count: rows.length, truncated: rows.length === MAX_ROWS, tasks: rows.map(t => taskForModel(t, ctx.tz)) }
+    },
+
+    async create_tasks(a, ctx) {
+        const list = Array.isArray(a.tasks) ? (a.tasks as Args[]).slice(0, 25) : []
+        if (!list.length) throw new Error("Provide at least one task.")
+        const fallbackType = await defaultTypeId(ctx)
+        const nowIso = ctx.now.toISOString()
+        const rows = list.map(t => {
+            if (typeof t.title !== "string" || !t.title.trim()) throw new Error("Every task needs a title.")
+            const c = taskChanges(t, ctx)
+            return {
+                user_id: ctx.userId, title: c.title, description: c.description ?? null,
+                type_id: c.type_id ?? fallbackType, project_id: c.project_id ?? null, due_at: c.due_at ?? null,
+                priority: c.priority ?? "Medium", status: c.status ?? "To Do",
+                ...(c.status === "Done" ? { completed_at: nowIso } : {}),
+                created_at: nowIso, updated_at: nowIso,
+            }
+        })
+        const { data, error } = await ctx.supabase.from("tasks").insert(rows).select(TASK_COLS)
+        if (error) throw new Error(error.message)
+        for (const t of data || []) ctx.touched.set(t.id, taskItem(t, ctx.tz))
+        ctx.actions.add("create_task")
+        return { created: (data || []).map(t => taskForModel(t, ctx.tz)) }
+    },
+
+    async update_tasks(a, ctx) {
+        const ids = idList(a.ids)
+        if (!ids.length) throw new Error("Provide the ids of the tasks to change (get them from find_tasks).")
+        const updates = taskChanges((a.changes || {}) as Args, ctx)
+        if (!Object.keys(updates).length) throw new Error("No valid changes given.")
+        updates.updated_at = ctx.now.toISOString()
+        const { data, error } = await ctx.supabase.from("tasks").update(updates).eq("user_id", ctx.userId).in("id", ids).select(TASK_COLS)
+        if (error) throw new Error(error.message)
+        for (const t of data || []) ctx.touched.set(t.id, taskItem(t, ctx.tz))
+        ctx.actions.add("update_task")
+        return { updated_count: (data || []).length, requested: ids.length, titles: (data || []).map(t => t.title) }
+    },
+
+    async delete_tasks(a, ctx) {
+        const ids = idList(a.ids)
+        if (!ids.length) throw new Error("Provide the ids of the tasks to delete.")
+        const { data, error } = await ctx.supabase.from("tasks").delete().eq("user_id", ctx.userId).in("id", ids).select("id, title")
+        if (error) throw new Error(error.message)
+        ctx.actions.add("delete")
+        return { deleted_count: (data || []).length, titles: (data || []).map(t => t.title) }
+    },
+
+    async find_projects(a, ctx) {
+        let q = ctx.supabase.from("projects").select(PROJECT_COLS).eq("user_id", ctx.userId)
+        if (typeof a.text === "string" && likeSafe(a.text)) {
+            const s = likeSafe(a.text)
+            q = q.or(`name.ilike.%${s}%,description.ilike.%${s}%`)
+        }
+        const statuses = strList(a.status, PROJECT_STATUSES)
+        if (statuses.length) q = q.in("status", statuses)
+        const { data, error } = await q.order("created_at", { ascending: false }).limit(MAX_ROWS)
+        if (error) throw new Error(error.message)
+        const rows = data || []
+        ctx.listed = rows.map(projectItem)
+        return { count: rows.length, projects: rows.map(p => ({ ...p, description: p.description ? String(p.description).slice(0, 200) : null })) }
+    },
+
+    async create_project(a, ctx) {
+        const c = projectChanges(a)
+        if (!c.name) throw new Error("A project needs a name.")
+        const typeId = c.type_id ?? await defaultTypeId(ctx)
+        if (!typeId) throw new Error("The user has no task types yet; create one with create_task_type first.")
+        const nowIso = ctx.now.toISOString()
+        const { data, error } = await ctx.supabase.from("projects").insert({
+            user_id: ctx.userId, name: c.name, description: c.description ?? null, type_id: typeId,
+            status: c.status ?? "Active", start_date: c.start_date ?? null, target_end_date: c.target_end_date ?? null,
+            created_at: nowIso, updated_at: nowIso,
+        }).select(PROJECT_COLS).single()
+        if (error) throw new Error(error.message)
+        ctx.touched.set(data.id, projectItem(data))
+        ctx.actions.add("create_project")
+        return { created: data }
+    },
+
+    async update_projects(a, ctx) {
+        const ids = idList(a.ids)
+        if (!ids.length) throw new Error("Provide the ids of the projects to change (get them from find_projects).")
+        const updates = projectChanges((a.changes || {}) as Args)
+        if (!Object.keys(updates).length) throw new Error("No valid changes given.")
+        updates.updated_at = ctx.now.toISOString()
+        const { data, error } = await ctx.supabase.from("projects").update(updates).eq("user_id", ctx.userId).in("id", ids).select(PROJECT_COLS)
+        if (error) throw new Error(error.message)
+        for (const p of data || []) ctx.touched.set(p.id, projectItem(p))
+        ctx.actions.add("update_project")
+        return { updated_count: (data || []).length, requested: ids.length, names: (data || []).map(p => p.name) }
+    },
+
+    async delete_projects(a, ctx) {
+        const ids = idList(a.ids)
+        if (!ids.length) throw new Error("Provide the ids of the projects to delete.")
+        const { data, error } = await ctx.supabase.from("projects").delete().eq("user_id", ctx.userId).in("id", ids).select("id, name")
+        if (error) throw new Error(error.message)
+        ctx.actions.add("delete")
+        return { deleted_count: (data || []).length, names: (data || []).map(p => p.name) }
+    },
+
+    async list_task_types(_a, ctx) {
+        const { data, error } = await ctx.supabase.from("task_types").select("id, name, description, color, status").eq("user_id", ctx.userId).order("created_at", { ascending: true })
+        if (error) throw new Error(error.message)
+        return { task_types: data || [] }
+    },
+
+    async create_task_type(a, ctx) {
+        if (typeof a.name !== "string" || !a.name.trim()) throw new Error("A task type needs a name.")
+        const color = typeof a.color === "string" && /^#[0-9a-f]{6}$/i.test(a.color) ? a.color : "#c6ff00"
+        const { data, error } = await ctx.supabase.from("task_types").insert({
+            user_id: ctx.userId, name: a.name.trim(), description: typeof a.description === "string" ? a.description.trim() || null : null, color, status: "Active",
+        }).select("id, name").single()
+        if (error) throw new Error(error.message)
+        ctx.actions.add("other")
+        return { created: data }
+    },
+
+    async find_notes(a, ctx) {
+        let q = ctx.supabase.from("notes").select("id, title, content_html, updated_at").eq("user_id", ctx.userId)
+        if (typeof a.text === "string" && likeSafe(a.text)) {
+            const s = likeSafe(a.text)
+            q = q.or(`title.ilike.%${s}%,content_html.ilike.%${s}%`)
+        }
+        const { data, error } = await q.order("updated_at", { ascending: false }).limit(30)
+        if (error) throw new Error(error.message)
+        return { count: (data || []).length, notes: (data || []).map(n => ({ id: n.id, title: n.title, updated: utcToLocal(n.updated_at, ctx.tz), text: htmlToText(n.content_html || "").slice(0, 400) })) }
+    },
+
+    async save_note(a, ctx) {
+        const nowIso = ctx.now.toISOString()
+        const fields: Record<string, unknown> = { updated_at: nowIso }
+        if (typeof a.title === "string") fields.title = a.title.trim() || null
+        if (typeof a.content === "string") fields.content_html = textToHtml(a.content)
+        if (typeof a.id === "string" && a.id) {
+            const { data, error } = await ctx.supabase.from("notes").update(fields).eq("user_id", ctx.userId).eq("id", a.id).select("id, title")
+            if (error) throw new Error(error.message)
+            if (!data?.length) throw new Error("No note with that id.")
+            ctx.actions.add("other")
+            return { updated: data[0] }
+        }
+        if (fields.content_html === undefined && !fields.title) throw new Error("A new note needs a title or content.")
+        const { data, error } = await ctx.supabase.from("notes").insert({ user_id: ctx.userId, title: fields.title ?? null, content_html: fields.content_html ?? "<p></p>", created_at: nowIso, updated_at: nowIso }).select("id, title").single()
+        if (error) throw new Error(error.message)
+        ctx.actions.add("other")
+        return { created: data }
+    },
+
+    async delete_notes(a, ctx) {
+        const ids = idList(a.ids)
+        if (!ids.length) throw new Error("Provide the ids of the notes to delete.")
+        const { data, error } = await ctx.supabase.from("notes").delete().eq("user_id", ctx.userId).in("id", ids).select("id, title")
+        if (error) throw new Error(error.message)
+        ctx.actions.add("delete")
+        return { deleted_count: (data || []).length }
+    },
+
+    async list_subscriptions(_a, ctx) {
+        const { data, error } = await ctx.supabase.from("subscriptions").select("id, name, amount, currency, renewal_date").eq("user_id", ctx.userId).order("renewal_date", { ascending: true })
+        if (error) throw new Error(error.message)
+        return { count: (data || []).length, note: "renewal_date repeats monthly on that day of the month", subscriptions: data || [] }
+    },
+
+    async save_subscription(a, ctx) {
+        const fields: Record<string, unknown> = { updated_at: ctx.now.toISOString() }
+        if (typeof a.name === "string" && a.name.trim()) fields.name = a.name.trim()
+        if (a.amount !== undefined && Number.isFinite(Number(a.amount)) && Number(a.amount) >= 0) fields.amount = Number(a.amount)
+        if (typeof a.currency === "string" && /^[A-Za-z]{3}$/.test(a.currency)) fields.currency = a.currency.toUpperCase()
+        if (typeof a.renewal_date === "string" && /^\d{4}-\d{2}-\d{2}/.test(a.renewal_date)) fields.renewal_date = a.renewal_date.slice(0, 10)
+        if (typeof a.id === "string" && a.id) {
+            const { data, error } = await ctx.supabase.from("subscriptions").update(fields).eq("user_id", ctx.userId).eq("id", a.id).select("id, name, amount, currency, renewal_date")
+            if (error) throw new Error(error.message)
+            if (!data?.length) throw new Error("No subscription with that id.")
+            ctx.actions.add("other")
+            return { updated: data[0] }
+        }
+        if (!fields.name || fields.amount === undefined || !fields.renewal_date) throw new Error("A new subscription needs name, amount and renewal_date.")
+        const { data, error } = await ctx.supabase.from("subscriptions").insert({ user_id: ctx.userId, currency: "LKR", ...fields }).select("id, name, amount, currency, renewal_date").single()
+        if (error) throw new Error(error.message)
+        ctx.actions.add("other")
+        return { created: data }
+    },
+
+    async delete_subscriptions(a, ctx) {
+        const ids = idList(a.ids)
+        if (!ids.length) throw new Error("Provide the ids of the subscriptions to delete.")
+        const { data, error } = await ctx.supabase.from("subscriptions").delete().eq("user_id", ctx.userId).in("id", ids).select("id, name")
+        if (error) throw new Error(error.message)
+        ctx.actions.add("delete")
+        return { deleted_count: (data || []).length, names: (data || []).map(s => s.name) }
+    },
+}
+
+// ── Tool schemas sent to the model ────────────────────────────────────────────
+const S = { type: "string" }
+const fn = (name: string, description: string, properties: Record<string, unknown>, required: string[] = []) =>
+    ({ type: "function", function: { name, description, parameters: { type: "object", properties, required } } })
+const IDS = { type: "array", items: S, description: "Exact ids returned by a find/list tool. Never invent ids." }
+const DUE = { type: "string", description: "User-local 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm'. Empty string clears it." }
+const TASK_FIELDS = {
+    title: S, description: S, due: DUE,
+    priority: { type: "string", enum: TASK_PRIORITIES }, status: { type: "string", enum: TASK_STATUSES },
+    type_id: S, project_id: { type: "string", description: "Project id. Empty string removes the task from its project." },
+}
+const PROJECT_FIELDS = {
+    name: S, description: S, status: { type: "string", enum: PROJECT_STATUSES }, type_id: S,
+    start_date: { type: "string", description: "YYYY-MM-DD. Empty string clears it." }, target_end_date: { type: "string", description: "YYYY-MM-DD. Empty string clears it." },
+}
+
+const TOOLS = [
+    fn("find_tasks", "Search the user's tasks. All filters are optional and combine with AND; no filters returns everything. Use this before changing or deleting tasks and to answer questions.", {
+        text: { type: "string", description: "Words to look for in the title or description." },
+        status: { type: "array", items: { type: "string", enum: TASK_STATUSES } },
+        priority: { type: "array", items: { type: "string", enum: TASK_PRIORITIES } },
+        overdue: { type: "boolean", description: "true = due time has passed and the task is not Done or Cancelled." },
+        due_from: { type: "string", description: "Due on/after this user-local date or datetime." },
+        due_to: { type: "string", description: "Due on/before this user-local date or datetime (a bare date means end of that day)." },
+        has_due_date: { type: "boolean" },
+        project_id: { type: "string", description: "Only tasks in this project." },
+        no_project: { type: "boolean", description: "true = only tasks that are in no project." },
+        type_id: S,
+    }),
+    fn("create_tasks", "Create one or more tasks.", { tasks: { type: "array", items: { type: "object", properties: TASK_FIELDS, required: ["title"] } } }, ["tasks"]),
+    fn("update_tasks", "Apply the same changes to one or many tasks at once (status, priority, due, title, project, type...).", { ids: IDS, changes: { type: "object", properties: TASK_FIELDS } }, ["ids", "changes"]),
+    fn("delete_tasks", "Permanently delete tasks.", { ids: IDS }, ["ids"]),
+    fn("find_projects", "Search the user's projects. No filters returns all.", { text: S, status: { type: "array", items: { type: "string", enum: PROJECT_STATUSES } } }),
+    fn("create_project", "Create a project.", PROJECT_FIELDS, ["name"]),
+    fn("update_projects", "Apply the same changes to one or many projects.", { ids: IDS, changes: { type: "object", properties: PROJECT_FIELDS } }, ["ids", "changes"]),
+    fn("delete_projects", "Permanently delete projects.", { ids: IDS }, ["ids"]),
+    fn("list_task_types", "List the user's task types (categories).", {}),
+    fn("create_task_type", "Create a task type (category).", { name: S, description: S, color: { type: "string", description: "Hex colour like #3b82f6" } }, ["name"]),
+    fn("find_notes", "Search the user's notes; no text returns the most recent.", { text: S }),
+    fn("save_note", "Create a note, or update one when id is given. content is plain text.", { id: S, title: S, content: S }),
+    fn("delete_notes", "Permanently delete notes.", { ids: IDS }, ["ids"]),
+    fn("list_subscriptions", "List the user's recurring subscriptions.", {}),
+    fn("save_subscription", "Create a subscription, or update one when id is given.", { id: S, name: S, amount: { type: "number" }, currency: { type: "string", description: "3-letter code, e.g. LKR, USD" }, renewal_date: { type: "string", description: "YYYY-MM-DD" } }),
+    fn("delete_subscriptions", "Permanently delete subscriptions.", { ids: IDS }, ["ids"]),
+]
+
+function buildSystemPrompt(ctx: AgentCtx, taskTypes: { id: string; name: string }[], projects: { id: string; name: string; status: string }[]): string {
+    const local = new Date(ctx.now.getTime() - ctx.tz * 60000)
+    const weekday = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][local.getUTCDay()]
+    return `You are the assistant built into Maxien, a personal productivity app. You act on the user's own data (tasks, projects, task types, notes, subscriptions) by calling tools.
+
+User's local date and time right now: ${local.toISOString().slice(0, 16)} (${weekday}). All dates you send or receive are in this local time.
+
+Task types: ${taskTypes.length ? taskTypes.map(t => `${t.name} [${t.id}]`).join("; ") : "(none)"}
+Projects: ${projects.length ? projects.map(p => `${p.name} (${p.status}) [${p.id}]`).join("; ") : "(none)"}
+
+How to work:
+- Understand what the user means however they phrase it, then do it. Do not require special wording.
+- Look things up with the find/list tools before changing them. Never guess or invent ids, and never say something was done unless a tool call confirmed it.
+- "all", "every", "these", "my overdue tasks" and similar mean every matching item: find them with the right filters, then change them all in ONE update call with all their ids. Do not ask the user to pick one.
+- Use precise filters. "Overdue" is find_tasks with overdue=true, not all unfinished tasks. "Pending" or "open" means status To Do or In Progress. "Today" is due_from and due_to on today's date.
+- Only ask a short question when the request truly cannot be resolved, for example a name that matches several different items and the user clearly meant one. If there is one sensible reading, act on it.
+- Deleting is permanent. Delete only when the user asked to delete or remove. If a delete would remove more than 5 items and the user did not clearly say all of them, ask for confirmation first.
+- Earlier turns of the conversation are provided; use them to resolve follow-ups like "yes", "the second one", or "do the same for tomorrow".
+- You cannot change finance records, workouts, calendar events or workplace data. Say so plainly if asked.
+
+Replying:
+- Plain text, short. Say exactly what you did with real counts and names from the tool results, or answer the question.
+- When listing items, use a short numbered list. No tables, no markdown headings.`
+}
+
+async function groqChat(apiKey: string, messages: unknown[]): Promise<Record<string, any>> {
+    let lastErr = ""
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: JSON.stringify({
+                model: GROQ_MODEL,
+                messages,
+                tools: TOOLS,
+                tool_choice: "auto",
+                temperature: 0.2,
+                reasoning_effort: "medium",
+                include_reasoning: false,
+                max_completion_tokens: 4096,
+            }),
+        })
+        if (res.ok) {
+            const data = await res.json()
+            const msg = data?.choices?.[0]?.message
+            if (msg) return msg
+            lastErr = "Groq returned an empty response"
+            continue
+        }
+        lastErr = `Groq API error (${res.status}): ${await res.text()}`
+        // Only a malformed tool call (400) or a server hiccup is worth one retry.
+        if (res.status !== 400 && res.status < 500) break
+    }
+    throw new Error(lastErr)
+}
+
+async function runAgent(
+    apiKey: string,
+    userMessage: string,
+    history: ChatTurn[],
+    ctx: AgentCtx,
+    taskTypes: { id: string; name: string }[],
+    projects: { id: string; name: string; status: string }[],
+): Promise<{ summary: string; action: string; items?: ChatItem[] }> {
+    const messages: unknown[] = [
+        { role: "system", content: buildSystemPrompt(ctx, taskTypes, projects) },
+        ...history,
+        { role: "user", content: userMessage },
+    ]
+
+    let summary = ""
+    for (let step = 0; step < MAX_AGENT_STEPS; step++) {
+        const msg = await groqChat(apiKey, messages)
+        const calls: any[] = Array.isArray(msg.tool_calls) ? msg.tool_calls : []
+        if (!calls.length) { summary = (msg.content || "").trim(); break }
+
+        messages.push({ role: "assistant", content: msg.content || "", tool_calls: calls })
+        for (const call of calls) {
+            let result: unknown
+            try {
+                const handler = TOOL_HANDLERS[call.function?.name]
+                if (!handler) throw new Error(`Unknown tool "${call.function?.name}".`)
+                const args = call.function?.arguments ? JSON.parse(call.function.arguments) : {}
+                result = await handler(args || {}, ctx)
+            } catch (err) {
+                // Hand the failure back so the model can correct itself or tell the user.
+                result = { error: err instanceof Error ? err.message : String(err) }
+            }
+            messages.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) })
+        }
+    }
+
+    if (!summary) {
+        summary = ctx.actions.size
+            ? "I made the changes shown below, but ran out of steps before I could finish. Please check the result and tell me what is left."
+            : "I couldn't finish working that out. Please try again or rephrase."
+    }
+
+    // Badge shown in the chat: only when the turn did one clear kind of change.
+    const badgeable = ["create_task", "update_task", "create_project", "update_project"]
+    const action = ctx.actions.size === 1 && badgeable.includes([...ctx.actions][0]) ? [...ctx.actions][0] : "none"
+    const items = ctx.touched.size ? [...ctx.touched.values()] : ctx.listed
+    return { summary, action, items: items.length ? items.slice(0, 30) : undefined }
+}
+
+// ─── Legacy single-intent shape (still used to resolve an already-open "pick one" prompt) ──
 interface GeminiResult {
     action: "create_task" | "create_project" | "update_task" | "update_project" | "link_task_project" | "query_tasks" | "query_projects" | "none"
     summary: string
@@ -64,224 +546,7 @@ interface GeminiResult {
     query_filter?: { due_date?: string; date_range?: string; status?: string; priority?: string }
     items?: Array<{ type: "task" | "project"; id: string; title: string; meta: string }>
 }
-
-async function callGroq(
-    userMessage: string,
-    apiKey: string,
-    taskTypes: { id: string; name: string }[],
-    projects: { id: string; name: string }[],
-    userLocalNow: string = new Date().toISOString(),
-    timezoneOffsetMinutes: number = 0
-): Promise<GeminiResult> {
-    const now = userLocalNow
-
-    // Convert UTC ISO time to user's local time string for the prompt
-    const utcDate = new Date(now)
-    const localDate = new Date(utcDate.getTime() - timezoneOffsetMinutes * 60000)
-    const localTimeString = localDate.toLocaleString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric',
-        hour: '2-digit', minute: '2-digit', second: '2-digit',
-        hour12: true
-    })
-
-    const systemPrompt = `You are an AI assistant for Maxien, a productivity app.
-Current date/time (user's local): ${localTimeString}
-
-Available task types (use exact name when possible):
-${taskTypes.length > 0 ? taskTypes.map(t => `- "${t.name}"`).join("\n") : "- (none created yet)"}
-
-Available projects:
-${projects.length > 0 ? projects.map(p => `- "${p.name}"`).join("\n") : "- (none created yet)"}
-
-You MUST respond with ONLY a valid JSON object matching this exact schema. No other text.
-
-{
-  "action": "create_task" | "create_project" | "update_task" | "update_project" | "link_task_project" | "none",
-  "summary": "Human-readable confirmation or response (1-2 sentences)",
-  "task": {
-    "title": "string (required for create_task; for update_task, leave empty and use update_filter instead)",
-    "description": "string or empty",
-    "due_at": "ISO 8601 datetime string or empty (compute from relative phrases like 'tomorrow')",
-    "priority": "Low" | "Medium" | "High" | "Urgent" (default Medium),
-    "status": "To Do" | "In Progress" | "Done" | "Cancelled" (default To Do),
-    "type_name": "string matching an available task type name, or empty"
-  },
-  "project": {
-    "name": "string (required for create_project; for update_project, leave empty and use update_filter instead)",
-    "description": "string or empty",
-    "status": "Active" | "On Hold" | "Completed" | "Archived" (default Active),
-    "type_name": "string matching an available task type, or empty",
-    "target_end_date": "YYYY-MM-DD or empty",
-    "start_date": "YYYY-MM-DD or empty"
-  },
-  "update_filter": {
-    "task_title": "partial title to find the task  use when user specifies a task name",
-    "project_name": "partial name to find the project  use when user specifies a project name",
-    "due_date": "'today', 'tomorrow', 'next week', or YYYY-MM-DD  use when user refers to tasks/projects by time instead of name (e.g., 'tomorrow task', 'today's projects', 'tasks due next week')"
-  },
-  "query_filter": {
-    "due_date": "'today', 'tomorrow', 'this week', 'next week', 'overdue', or YYYY-MM-DD for single day queries",
-    "date_range": "If user asks about a period: 'today_to_tomorrow', 'this_week', 'next_week', 'this_month'",
-    "status": "Filter by status: 'To Do', 'In Progress', 'Done', or 'All' for all statuses",
-    "priority": "Filter by priority: 'Low', 'Medium', 'High', 'Urgent', or 'All'"
-  },
-  "linking": {
-    "task_title": "title of the task to link (for link_task_project or when creating a task under a project)",
-    "project_name": "name of the project to link to"
-  }
-}
-
-RULES:
-- QUERY ACTIONS (when user asks for information, not to modify):
-  * "What do I have today?" → action="query_tasks", query_filter.due_date="today"
-  * "Show me tomorrow's tasks" → action="query_tasks", query_filter.due_date="tomorrow"
-  * "What's overdue?" → action="query_tasks", query_filter.status="All", query_filter.date_range="overdue"
-  * "Tasks due this week" → action="query_tasks", query_filter.date_range="this_week"
-  * "Show my active projects" → action="query_projects", query_filter.status="Active"
-  * "What tasks are in progress?" → action="query_tasks", query_filter.status="In Progress"
-  * "High priority tasks" → action="query_tasks", query_filter.priority="High"
-- MODIFICATION ACTIONS (when user wants to create/update):
-  * "Create task X" → action="create_task"
-  * "Update task X" → action="update_task"
-  * "Mark task X as done" → action="update_task", task.status="Done"
-- When user asks about dates/counts/lists → use query actions
-- When user wants to change something → use create/update actions
-  * "update tomorrow task status to done" → action="update_task", update_filter.due_date="tomorrow", task.status="Done"
-  * "mark the task called X as done" → action="update_task", update_filter.task_title="X", task.status="Done"
-  * "finish today's tasks" → action="update_task", update_filter.due_date="today", task.status="Done"
-  * "update project X" OR "update tomorrow project" → action="update_project", use update_filter.project_name OR update_filter.due_date
-  * "link task X to project Y" → action="link_task_project", linking.task_title="X", linking.project_name="Y"
-- When user mentions a TIME instead of a name (today, tomorrow, next week, etc.): put it in update_filter.due_date, NOT task_title
-- When user says "task" or "project" without a specific name but mentions a time reference → use time in update_filter.due_date
-- For update actions, put search text in update_filter (either task_title, project_name, OR due_date)
-- If user says "create task X under project Y": set action="create_task", fill task fields, set linking.project_name="Y"
-- Resolve relative dates like "tomorrow", "today", "next week" using current date (convert to YYYY-MM-DD or leave as "today"/"tomorrow" string)
-- Omit fields that are empty (use "" for strings, not null)
-- Always fill "summary" with a friendly confirmation
-- If the request is unclear or not about tasks/projects: set action="none" and explain in summary`
-
-    const response = await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model: "openai/gpt-oss-120b",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: userMessage },
-                ],
-                response_format: { type: "json_object" },
-                temperature: 0.1,
-                // gpt-oss is a reasoning model: reasoning tokens count against the completion budget,
-                // so keep effort low and leave headroom for the JSON answer.
-                reasoning_effort: "low",
-                include_reasoning: false,
-                max_completion_tokens: 2048,
-            }),
-        }
-    )
-
-    if (!response.ok) {
-        const errText = await response.text()
-        throw new Error(`Groq API error (${response.status}): ${errText}`)
-    }
-
-    const data = await response.json()
-    const rawContent = data?.choices?.[0]?.message?.content
-
-    if (!rawContent) throw new Error("Groq returned an empty response")
-
-    // Parse JSON  strip markdown code fences if present
-    const cleaned = rawContent.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```$/i, "").trim()
-    return JSON.parse(cleaned) as GeminiResult
-}
-
-// ─── Disambiguation types ─────────────────────────────────────────────────────
 interface ClarifyOption { id: string; label: string; extra: string }
-type ActionResult =
-    | { type: "done"; summary: string }
-    | { type: "clarify"; entityType: "task" | "project"; options: ClarifyOption[]; pendingAction: GeminiResult }
-
-// ─── Parse relative/absolute due date string → YYYY-MM-DD ────────────────────
-function parseDueDate(dateStr: string, userLocalNow: string = new Date().toISOString(), timezoneOffsetMinutes: number = 0): string | null {
-    const s = dateStr.toLowerCase().trim()
-    const now = new Date(userLocalNow)
-    let targetDate: Date
-
-    if (s === "today") {
-        targetDate = new Date(now)
-    } else if (s === "tomorrow") {
-        targetDate = new Date(now.getTime() + 86400000)
-    } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        targetDate = new Date(dateStr)
-    } else {
-        return null
-    }
-
-    // LLM outputs local time with no TZ suffix → JS on server parses it as UTC.
-    // To get true UTC: add timezoneOffsetMinutes (negative for UTC+ zones).
-    const utcDate = new Date(targetDate.getTime() + timezoneOffsetMinutes * 60000)
-    return utcDate.toISOString().split("T")[0]
-}
-
-// ─── Convert local datetime string to UTC ISO string ───────────────────────────
-function localDateTimeToUTC(dateStr: string, timeStr: string, timezoneOffsetMinutes: number = 0): string | null {
-    // dateStr: "2026-03-03", timeStr: "14:30"
-    try {
-        // Create a date treating the date/time as LOCAL time
-        const localDate = new Date(`${dateStr}T${timeStr}:00`)
-        // LLM outputs local time → server JS parses no-TZ string as UTC.
-        // To get true UTC: add timezoneOffsetMinutes.
-        const utcDate = new Date(localDate.getTime() + timezoneOffsetMinutes * 60000)
-        return utcDate.toISOString()
-    } catch {
-        return null
-    }
-}
-
-// ─── Parse date range for queries ─────────────────────────────────────────────
-function getDateRange(rangeStr: string, userLocalNow: string = new Date().toISOString(), timezoneOffsetMinutes: number = 0): { start: string; end: string } | { overdue: true } | null {
-    const s = rangeStr.toLowerCase().trim()
-    const now = new Date(userLocalNow)
-    const localNow = new Date(now.getTime() - timezoneOffsetMinutes * 60000)
-    const today = localNow.toISOString().split("T")[0]
-
-    if (s === "overdue") return { overdue: true }
-
-    if (s === "today") return { start: today, end: today }
-    if (s === "tomorrow") {
-        const tom = new Date(localNow.getTime() + 86400000)
-        const tomStr = tom.toISOString().split("T")[0]
-        return { start: tomStr, end: tomStr }
-    }
-
-    if (s === "this_week") {
-        const dayOfWeek = localNow.getDay()
-        const start = new Date(localNow.getTime() - dayOfWeek * 86400000).toISOString().split("T")[0]
-        const end = new Date(localNow.getTime() + (6 - dayOfWeek) * 86400000).toISOString().split("T")[0]
-        return { start, end }
-    }
-
-    if (s === "next_week") {
-        const dayOfWeek = localNow.getDay()
-        const weekStart = new Date(localNow.getTime() - dayOfWeek * 86400000).getTime()
-        const start = new Date(weekStart + 7 * 86400000).toISOString().split("T")[0]
-        const end = new Date(weekStart + 13 * 86400000).toISOString().split("T")[0]
-        return { start, end }
-    }
-
-    if (s === "this_month") {
-        const start = new Date(localNow.getFullYear(), localNow.getMonth(), 1).toISOString().split("T")[0]
-        const end = new Date(localNow.getFullYear(), localNow.getMonth() + 1, 0).toISOString().split("T")[0]
-        return { start, end }
-    }
-
-    return null
-}
 
 // ─── Apply an action to a known entity ID (used after disambiguation) ─────────
 async function executeActionById(
@@ -355,366 +620,6 @@ async function executeActionById(
     }
 
     throw new Error("Unknown entity type")
-}
-
-// ─── DB action executor ────────────────────────────────────────────────────────
-async function executeAction(
-    result: GeminiResult,
-    supabase: ReturnType<typeof createClient>,
-    userId: string,
-    userLocalNow: string = new Date().toISOString(),
-    timezoneOffsetMinutes: number = 0
-): Promise<ActionResult> {
-    const { action } = result
-
-    const resolveTypeId = async (typeName: string): Promise<string | null> => {
-        if (!typeName) return null
-        const { data } = await supabase.from("task_types").select("id, name").eq("user_id", userId).eq("status", "Active").ilike("name", `%${typeName}%`).limit(1)
-        return data?.[0]?.id || null
-    }
-
-    const resolveProjectId = async (projectName: string): Promise<string | null> => {
-        if (!projectName) return null
-        const { data } = await supabase.from("projects").select("id, name").eq("user_id", userId).ilike("name", `%${projectName}%`).limit(1)
-        return data?.[0]?.id || null
-    }
-
-    // ── create_task ──────────────────────────────────────────────────────────────
-    if (action === "create_task") {
-        const t = result.task || {}
-        if (!t.title?.trim()) throw new Error("Task title is required")
-
-        const typeId = await resolveTypeId(t.type_name || "")
-        let projectId: string | null = null
-        const projectName = result.linking?.project_name || ""
-        if (projectName) {
-            projectId = await resolveProjectId(projectName)
-            if (!projectId) {
-                const projTypeId = await resolveTypeId("")
-                const { data: newProj, error: projErr } = await supabase.from("projects").insert({
-                    user_id: userId, name: projectName, type_id: projTypeId, status: "Active",
-                }).select("id").single()
-                if (!projErr && newProj) projectId = newProj.id
-            }
-        }
-
-        const validPriority = ["Low", "Medium", "High", "Urgent"].includes(t.priority || "") ? t.priority : "Medium"
-        const validStatus = ["To Do", "In Progress", "Done", "Cancelled"].includes(t.status || "") ? t.status : "To Do"
-
-        // Convert due_at from local to UTC if it includes a time component
-        let finalDueAt = t.due_at || null
-        if (finalDueAt && finalDueAt.includes("T")) {
-            // Has time component - needs timezone conversion
-            try {
-                const parsed = new Date(finalDueAt)
-                // LLM outputs local time → server JS parses no-TZ string as UTC.
-                // True UTC = parsed-as-UTC + timezoneOffsetMinutes (negative for UTC+ zones).
-                const utcDate = new Date(parsed.getTime() + timezoneOffsetMinutes * 60000)
-                finalDueAt = utcDate.toISOString()
-            } catch {
-                // If parsing fails, use as-is
-            }
-        }
-
-        const { error } = await supabase.from("tasks").insert({
-            user_id: userId, title: t.title.trim(), description: t.description || null,
-            type_id: typeId, project_id: projectId, due_at: finalDueAt,
-            priority: validPriority, status: validStatus,
-            created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        })
-        if (error) throw new Error(`Failed to create task: ${error.message}`)
-        return { type: "done", summary: result.summary || `Task "${t.title}" created successfully.` }
-    }
-
-    // ── create_project ───────────────────────────────────────────────────────────
-    if (action === "create_project") {
-        const p = result.project || {}
-        if (!p.name?.trim()) throw new Error("Project name is required")
-
-        const typeId = await resolveTypeId(p.type_name || "")
-        const resolvedTypeId = typeId || (await (async () => {
-            const { data } = await supabase.from("task_types").select("id").eq("user_id", userId).eq("status", "Active").limit(1)
-            return data?.[0]?.id || null
-        })())
-        if (!resolvedTypeId) throw new Error("Please create at least one Task Type before creating a project.")
-
-        const validStatus = ["Active", "On Hold", "Completed", "Archived"].includes(p.status || "") ? p.status : "Active"
-        const { error } = await supabase.from("projects").insert({
-            user_id: userId, name: p.name.trim(), description: p.description || null,
-            type_id: resolvedTypeId, status: validStatus,
-            start_date: p.start_date || null, target_end_date: p.target_end_date || null,
-            created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-        })
-        if (error) throw new Error(`Failed to create project: ${error.message}`)
-        return { type: "done", summary: result.summary || `Project "${p.name}" created successfully.` }
-    }
-
-    // ── update_task ──────────────────────────────────────────────────────────────
-    if (action === "update_task") {
-        const searchTitle = result.update_filter?.task_title || result.task?.title || ""
-        const dueDate = result.update_filter?.due_date || ""
-        if (!searchTitle && !dueDate) throw new Error("Please specify which task to update.")
-
-        let query = supabase.from("tasks")
-            .select("id, title, due_at, priority, status")
-            .eq("user_id", userId)
-            .neq("status", "Cancelled")
-        if (searchTitle) query = query.ilike("title", `%${searchTitle}%`)
-        if (dueDate) {
-            const targetDate = parseDueDate(dueDate, userLocalNow, timezoneOffsetMinutes)
-            if (targetDate) query = query.gte("due_at", `${targetDate}T00:00:00.000Z`).lte("due_at", `${targetDate}T23:59:59.999Z`)
-        }
-
-        const { data: found } = await query.limit(5)
-
-        // If no tasks found, ask for clarification instead of erroring
-        if (!found?.length) {
-            // Get tasks from nearby dates to suggest alternatives
-            const todayStr = new Date(userLocalNow).toISOString().split("T")[0]
-            const { data: todayTasks } = await supabase.from("tasks")
-                .select("id, title, due_at, priority, status")
-                .eq("user_id", userId).neq("status", "Cancelled")
-                .gte("due_at", `${todayStr}T00:00:00.000Z`)
-                .lte("due_at", `${todayStr}T23:59:59.999Z`).limit(5)
-
-            const suggests: ClarifyOption[] = (todayTasks || []).map(t => ({
-                id: t.id,
-                label: t.title,
-                extra: [t.priority, t.status, t.due_at ? "today" : ""].filter(Boolean).join(" · "),
-            }))
-
-            const msg = dueDate
-                ? `I didn't find any tasks due on ${dueDate}. ${suggests.length > 0 ? "Did you mean one of these tasks from today?" : "Do you have a specific task in mind?"}`
-                : `I didn't find any tasks matching "${searchTitle}". Please describe which task you want to update.`
-
-            return {
-                type: "clarify",
-                entityType: "task",
-                options: suggests.length > 0 ? suggests : [{ id: "cancel", label: "Cancel – I'll be more specific", extra: "" }],
-                pendingAction: { ...result, summary: msg },
-            }
-        }
-
-        if (found.length > 1) {
-            return {
-                type: "clarify",
-                entityType: "task",
-                options: found.map(t => ({
-                    id: t.id,
-                    label: t.title,
-                    extra: [t.priority, t.status, t.due_at ? new Date(t.due_at).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""].filter(Boolean).join(" · "),
-                })),
-                pendingAction: result,
-            }
-        }
-
-        const summary = await executeActionById(result, found[0].id, "task", supabase, userId, userLocalNow, timezoneOffsetMinutes)
-        return { type: "done", summary }
-    }
-
-    // ── update_project ───────────────────────────────────────────────────────────
-    if (action === "update_project") {
-        const searchName = result.update_filter?.project_name || result.project?.name || ""
-        if (!searchName) throw new Error("Please specify which project to update.")
-
-        const { data: found } = await supabase
-            .from("projects").select("id, name, status, target_end_date")
-            .eq("user_id", userId).ilike("name", `%${searchName}%`).limit(5)
-
-        // If no projects found, ask for clarification instead of erroring
-        if (!found?.length) {
-            // Get all active projects to suggest
-            const { data: allProjects } = await supabase
-                .from("projects").select("id, name, status, target_end_date")
-                .eq("user_id", userId).in("status", ["Active", "On Hold"]).limit(5)
-
-            const suggests: ClarifyOption[] = (allProjects || []).map(p => ({
-                id: p.id,
-                label: p.name,
-                extra: [p.status, p.target_end_date ? `ends ${new Date(p.target_end_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""].filter(Boolean).join(" · "),
-            }))
-
-            return {
-                type: "clarify",
-                entityType: "project",
-                options: suggests.length > 0 ? suggests : [{ id: "none", label: "No projects found – create a new one?", extra: "" }],
-                pendingAction: { ...result, summary: suggests.length > 0 ? `Did you mean one of these projects?` : `I didn't find any matching project. Check the name or spell it differently.` },
-            }
-        }
-
-        if (found.length > 1) {
-            return {
-                type: "clarify",
-                entityType: "project",
-                options: found.map(p => ({
-                    id: p.id,
-                    label: p.name,
-                    extra: [p.status, p.target_end_date ? `ends ${new Date(p.target_end_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""].filter(Boolean).join(" · "),
-                })),
-                pendingAction: result,
-            }
-        }
-
-        const summary = await executeActionById(result, found[0].id, "project", supabase, userId, userLocalNow, timezoneOffsetMinutes)
-        return { type: "done", summary }
-    }
-
-    // ── link_task_project ────────────────────────────────────────────────────────
-    if (action === "link_task_project") {
-        const taskTitle = result.linking?.task_title || result.update_filter?.task_title || ""
-        const projectName = result.linking?.project_name || result.update_filter?.project_name || ""
-        if (!taskTitle || !projectName) throw new Error("Specify both the task title and project name to link.")
-
-        const { data: taskRows } = await supabase
-            .from("tasks").select("id, title, priority, status").eq("user_id", userId).ilike("title", `%${taskTitle}%`).limit(5)
-        if (!taskRows?.length) throw new Error(`Task matching "${taskTitle}" not found.`)
-
-        if (taskRows.length > 1) {
-            return {
-                type: "clarify",
-                entityType: "task",
-                options: taskRows.map(t => ({
-                    id: t.id,
-                    label: t.title,
-                    extra: [t.priority, t.status].filter(Boolean).join(" · "),
-                })),
-                pendingAction: result,
-            }
-        }
-
-        const projectId = await resolveProjectId(projectName)
-        if (!projectId) throw new Error(`Project matching "${projectName}" not found.`)
-        const { error } = await supabase.from("tasks").update({ project_id: projectId, updated_at: new Date().toISOString() }).eq("id", taskRows[0].id)
-        if (error) throw new Error(`Failed to link task: ${error.message}`)
-        return { type: "done", summary: result.summary || `Task "${taskTitle}" linked to project "${projectName}".` }
-    }
-
-    // ── query_tasks ──────────────────────────────────────────────────────────────
-    if (action === "query_tasks") {
-        const qf = result.query_filter || {}
-        const dueDateStr = qf.due_date || ""
-        const rangeStr = qf.date_range || ""
-        const status = qf.status || "All"
-        const priority = qf.priority || "All"
-
-        let query = supabase.from("tasks").select("id, title, due_at, priority, status, type_id").eq("user_id", userId)
-
-        // Apply date filters
-        if (dueDateStr) {
-            const targetDate = parseDueDate(dueDateStr, userLocalNow, timezoneOffsetMinutes)
-            if (targetDate) {
-                query = query.gte("due_at", `${targetDate}T00:00:00.000Z`).lte("due_at", `${targetDate}T23:59:59.999Z`)
-            }
-        } else if (rangeStr) {
-            const range = getDateRange(rangeStr, userLocalNow, timezoneOffsetMinutes)
-            if (range && "overdue" in range && range.overdue) {
-                query = query.lt("due_at", new Date(userLocalNow).toISOString()).neq("status", "Done")
-            } else if (range && "start" in range) {
-                query = query.gte("due_at", `${range.start}T00:00:00.000Z`).lte("due_at", `${range.end}T23:59:59.999Z`)
-            }
-        }
-
-        // Apply status filter
-        if (status !== "All") {
-            query = query.eq("status", status)
-        }
-
-        // Apply priority filter
-        if (priority !== "All") {
-            query = query.eq("priority", priority)
-        }
-
-        const { data: tasks } = await query.order("due_at", { ascending: true }).limit(50)
-
-        if (!tasks || tasks.length === 0) {
-            return { type: "done", summary: `No tasks found for ${dueDateStr || rangeStr || "your search"}.` }
-        }
-
-        // Format task list with clickable items
-        const taskList = tasks.map((t, i) => {
-            const dueDate = t.due_at ? new Date(t.due_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "No due date"
-            const badge = `[${t.status}] • ${t.priority} • ${dueDate}`
-            return `${i + 1}. ${t.title}\n   ${badge}`
-        }).join("\n\n")
-
-        return {
-            type: "done",
-            summary: `Found ${tasks.length} task${tasks.length > 1 ? "s" : ""}:\n\n${taskList}`,
-            items: tasks.map(t => {
-                let dueDateStr = "No due date"
-                if (t.due_at) {
-                    const date = new Date(t.due_at)
-                    const dateStr = date.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined
-                    })
-                    const timeStr = date.toLocaleTimeString("en-US", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true
-                    })
-                    dueDateStr = `${dateStr}  ${timeStr}`
-                }
-                return {
-                    type: "task",
-                    id: t.id,
-                    title: t.title,
-                    meta: `${t.status} • ${t.priority} • ${dueDateStr}`
-                }
-            })
-        }
-    }
-
-    // ── query_projects ───────────────────────────────────────────────────────────
-    if (action === "query_projects") {
-        const qf = result.query_filter || {}
-        const status = qf.status || "All"
-
-        let query = supabase.from("projects").select("id, name, status, target_end_date, created_at").eq("user_id", userId)
-
-        if (status !== "All") {
-            query = query.eq("status", status)
-        } else {
-            query = query.in("status", ["Active", "On Hold", "Completed", "Archived"])
-        }
-
-        const { data: projects } = await query.order("created_at", { ascending: false }).limit(50)
-
-        if (!projects || projects.length === 0) {
-            return { type: "done", summary: `No projects found${status !== "All" ? ` with status "${status}"` : ""}.` }
-        }
-
-        const projList = projects.map((p, i) => {
-            const endDate = p.target_end_date ? new Date(p.target_end_date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "No end date"
-            return `${i + 1}. ${p.name}\n   [${p.status}] • ends ${endDate}`
-        }).join("\n\n")
-
-        return {
-            type: "done",
-            summary: `Found ${projects.length} project${projects.length > 1 ? "s" : ""}:\n\n${projList}`,
-            items: projects.map(p => {
-                let endDateStr = "No end date"
-                if (p.target_end_date) {
-                    const date = new Date(p.target_end_date)
-                    endDateStr = date.toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined
-                    })
-                }
-                return {
-                    type: "project",
-                    id: p.id,
-                    title: p.name,
-                    meta: `${p.status} • ${endDateStr}`
-                }
-            })
-        }
-    }
-
-    // ── none / fallback ──────────────────────────────────────────────────────────
-    return { type: "done", summary: result.summary || "I couldn't determine an action to take. Please try rephrasing." }
 }
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
@@ -813,9 +718,17 @@ serve(async (req) => {
         // ── Chat ───────────────────────────────────────────────────────────────────
         if (body.type === "chat") {
             const userMessage = (body.message || "").trim()
-            const userLocalNow = (body.userLocalNow || new Date().toISOString()).toString()
-            const timezoneOffsetMinutes = body.timezoneOffsetMinutes || 0
             if (!userMessage) return new Response(JSON.stringify({ error: "Message cannot be empty" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } })
+
+            const parsedNow = new Date((body.userLocalNow || "").toString())
+            const now = Number.isNaN(parsedNow.getTime()) ? new Date() : parsedNow
+            const tz = Number.isFinite(Number(body.timezoneOffsetMinutes)) ? Number(body.timezoneOffsetMinutes) : 0
+
+            // Recent turns let the model handle follow-ups ("yes", "the second one", "same for tomorrow").
+            const history: ChatTurn[] = (Array.isArray(body.history) ? body.history : [])
+                .filter((h: any) => h && (h.role === "user" || h.role === "assistant") && typeof h.content === "string" && h.content.trim())
+                .slice(-12)
+                .map((h: any) => ({ role: h.role, content: h.content.slice(0, 2000) }))
 
             const { data: aiSettings } = await supabase
                 .from("user_ai_settings")
@@ -831,44 +744,17 @@ serve(async (req) => {
 
             const [{ data: taskTypes }, { data: projects }] = await Promise.all([
                 supabase.from("task_types").select("id, name").eq("user_id", user.id).eq("status", "Active"),
-                supabase.from("projects").select("id, name").eq("user_id", user.id).in("status", ["Active", "On Hold"]),
+                supabase.from("projects").select("id, name, status").eq("user_id", user.id).in("status", ["Active", "On Hold"]).limit(60),
             ])
 
-            let groqResult: GeminiResult
-            try {
-                groqResult = await callGroq(userMessage, groqKey, taskTypes || [], projects || [], userLocalNow, timezoneOffsetMinutes)
-            } catch (firstErr) {
-                try {
-                    groqResult = await callGroq(userMessage, groqKey, taskTypes || [], projects || [], userLocalNow, timezoneOffsetMinutes)
-                } catch { throw firstErr }
-            }
-
-            const actionResult = await executeAction(groqResult, supabase, user.id, userLocalNow, timezoneOffsetMinutes)
-
-            if (actionResult.type === "clarify") {
-                const optionLines = actionResult.options.map((o, i) => `${i + 1}. ${o.label}${o.extra ? ` (${o.extra})` : ""}`).join("\n")
-                const entityLabel = actionResult.entityType === "task" ? "tasks" : "projects"
-                return new Response(JSON.stringify({
-                    success: true,
-                    action: "clarify",
-                    summary: `I found ${actionResult.options.length} ${entityLabel} that could match. Which one did you mean?\n\n${optionLines}`,
-                    clarify: {
-                        entityType: actionResult.entityType,
-                        options: actionResult.options,
-                        pendingAction: actionResult.pendingAction,
-                    },
-                }), { headers: { ...cors, "Content-Type": "application/json" } })
-            }
+            const ctx: AgentCtx = { supabase, userId: user.id, now, tz, touched: new Map(), listed: [], actions: new Set() }
+            const result = await runAgent(groqKey, userMessage, history, ctx, taskTypes || [], projects || [])
 
             return new Response(JSON.stringify({
                 success: true,
-                action: groqResult.action,
-                summary: actionResult.summary,
-                items: actionResult.items || undefined,
-                details: {
-                    task: groqResult.action.includes("task") ? groqResult.task : undefined,
-                    project: groqResult.action.includes("project") ? groqResult.project : undefined,
-                },
+                action: result.action,
+                summary: result.summary,
+                items: result.items,
             }), { headers: { ...cors, "Content-Type": "application/json" } })
         }
 
