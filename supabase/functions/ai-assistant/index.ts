@@ -380,8 +380,25 @@ const TOOL_HANDLERS: Record<string, (a: Args, ctx: AgentCtx) => Promise<unknown>
 
 // ── Tool schemas sent to the model ────────────────────────────────────────────
 const S = { type: "string" }
+// The model often sends null for optional params and Groq validates strictly, so optional props accept null.
+function nullableOptionals(schema: Record<string, any>): Record<string, any> {
+    if (schema.type === "array" && schema.items) return { ...schema, items: nullableOptionals(schema.items) }
+    if (schema.type !== "object" || !schema.properties) return schema
+    const required: string[] = schema.required || []
+    const properties = Object.fromEntries(Object.entries(schema.properties as Record<string, Record<string, any>>).map(([k, p]) => {
+        const inner = nullableOptionals(p)
+        if (required.includes(k)) return [k, inner]
+        return [k, { ...inner, type: [inner.type, "null"], ...(inner.enum ? { enum: [...inner.enum, null] } : {}) }]
+    }))
+    return { ...schema, properties }
+}
 const fn = (name: string, description: string, properties: Record<string, unknown>, required: string[] = []) =>
-    ({ type: "function", function: { name, description, parameters: { type: "object", properties, required } } })
+    ({ type: "function", function: { name, description, parameters: nullableOptionals({ type: "object", properties, required }) } })
+// Null means "not provided"; clearing a field is done with an empty string.
+const stripNulls = (v: unknown): unknown =>
+    Array.isArray(v) ? v.filter(x => x !== null).map(stripNulls)
+        : v && typeof v === "object" ? Object.fromEntries(Object.entries(v).filter(([, x]) => x !== null).map(([k, x]) => [k, stripNulls(x)]))
+            : v
 const IDS = { type: "array", items: S, description: "Exact ids returned by a find/list tool. Never invent ids." }
 const DUE = { type: "string", description: "User-local 'YYYY-MM-DD' or 'YYYY-MM-DDTHH:mm'. Empty string clears it." }
 const TASK_FIELDS = {
@@ -507,7 +524,7 @@ async function runAgent(
                 const handler = TOOL_HANDLERS[call.function?.name]
                 if (!handler) throw new Error(`Unknown tool "${call.function?.name}".`)
                 const args = call.function?.arguments ? JSON.parse(call.function.arguments) : {}
-                result = await handler(args || {}, ctx)
+                result = await handler((stripNulls(args) || {}) as Args, ctx)
             } catch (err) {
                 // Hand the failure back so the model can correct itself or tell the user.
                 result = { error: err instanceof Error ? err.message : String(err) }
